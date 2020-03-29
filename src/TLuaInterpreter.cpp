@@ -3192,6 +3192,62 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScript
+int TLuaInterpreter::enableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "enableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(true);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScript
+int TLuaInterpreter::disableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(false);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTimer
 int TLuaInterpreter::killTimer(lua_State* L)
 {
@@ -3322,10 +3378,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setFont: bad argument #%d type for the optional window name - expected string, got %s!",
-                            s,
-                            luaL_typename(L, s));
+            lua_pushfstring(L, "setFont: bad argument #%d type for the optional window name - expected string, got %s!", s, luaL_typename(L, s));
             return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
@@ -3525,10 +3578,10 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-//Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = host.mpConsole->mLabelMap.value(text);
     if (pL) {
-        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!",text.toUtf8().constData());
+        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!", text.toUtf8().constData());
         lua_error(L);
         return 1;
     }
@@ -8180,10 +8233,7 @@ int TLuaInterpreter::exists(lua_State* L)
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
     } else if (type == "script") {
-        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
-        for (auto script : scripts) {
-          cnt += (script->getName() == name);
-        }
+        cnt += host.getScriptUnit()->findScriptId(name).size();
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -8243,7 +8293,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             it1++;
         }
     } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
-        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
         for (auto script : scripts) {
             if (script->getName() == name && script->isActive()) {
                 ++cnt;
@@ -8292,6 +8342,118 @@ int TLuaInterpreter::permAlias(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     lua_pushnumber(L, pLuaInterpreter->startPermAlias(name, parent, regex, script));
+    return 1;
+}
+
+int TLuaInterpreter::getScript(lua_State* L)
+{
+    int n = lua_gettop(L);
+    int pos = 1;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (n > 1) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "getScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 2);
+    }
+    Host& host = getHostFromLua(L);
+    pos--;
+
+    auto ids = host.getScriptUnit()->findScriptId(name);
+    auto pS = host.getScriptUnit()->getScript(ids.value(pos, -1));
+    if (!pS) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
+        return 2;
+    }
+
+    int id = pS->getID();
+    lua_pushstring(L, pS->getScript().toUtf8().constData());
+    lua_pushnumber(L, id);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setScript
+int TLuaInterpreter::setScript(lua_State* L)
+{
+    int n = lua_gettop(L);
+    int pos = 1;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setScript: bad argument #2 type (script lua code as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setScript: bad argument #3 type (script position as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 3);
+    }
+    pos--;
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
+    lua_pushnumber(L, id);
+    if (id == -1) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permScript
+int TLuaInterpreter::permScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "permScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "permScript: bad argument #2 type (script parent name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (!lua_isstring(L, 3)) {
+        lua_pushfstring(L, "permScript: bad argument #3 type (script as string expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 3));
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
+    lua_pushnumber(L, id);
+    if (id == -1) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
     return 1;
 }
 
@@ -16156,6 +16318,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "insertText", TLuaInterpreter::insertText);
     lua_register(pGlobalLua, "enableTrigger", TLuaInterpreter::enableTrigger);
     lua_register(pGlobalLua, "disableTrigger", TLuaInterpreter::disableTrigger);
+    lua_register(pGlobalLua, "enableScript", TLuaInterpreter::enableScript);
+    lua_register(pGlobalLua, "disableScript", TLuaInterpreter::disableScript);
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
@@ -16271,6 +16435,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
+    lua_register(pGlobalLua, "permScript", TLuaInterpreter::permScript);
+    lua_register(pGlobalLua, "getScript", TLuaInterpreter::getScript);
+    lua_register(pGlobalLua, "setScript", TLuaInterpreter::setScript);
     lua_register(pGlobalLua, "permAlias", TLuaInterpreter::permAlias);
     lua_register(pGlobalLua, "permKey", TLuaInterpreter::permKey);
     lua_register(pGlobalLua, "tempKey", TLuaInterpreter::tempKey);
@@ -16988,6 +17155,63 @@ void TLuaInterpreter::loadUtf8Filenames()
     }
 }
 #endif
+
+// No documentation available in wiki - internal function
+QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const QString& parent, const QString& luaCode)
+{
+    TScript* pS;
+    if (parent.isEmpty()) {
+        pS = new TScript(QStringLiteral("newPermScriptWithoutAnId"), mpHost);
+    } else {
+        // FIXME: There can be more than one script with the same name - we will
+        // use only the FIRST one for now, but we really ought to enhance the
+        // API to handle more than one potential parent with the same name:
+        auto ids = mpHost->getScriptUnit()->findScriptId(parent);
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
+        if (!pParentScript) {
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+        }
+        pS = new TScript(pParentScript, mpHost);
+    }
+    pS->setIsFolder((luaCode.isEmpty()));
+    pS->setName(name);
+    // This will lead to the generation of the id number:
+    mpHost->getScriptUnit()->registerScript(pS);
+    if (!pS->setScript(luaCode)) {
+        QString errMsg = pS->getError();
+        delete pS;
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
+    }
+
+    int id = pS->getID();
+    pS->setIsActive(false);
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return qMakePair(id, QString());
+}
+
+// No documentation available in wiki - internal function
+QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
+{
+    if (name.isEmpty()) {
+        return qMakePair(-1, QStringLiteral("cannot have an empty string as name"));
+    }
+
+    auto ids = mpHost->getScriptUnit()->findScriptId(name);
+    TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
+    if (!pS) {
+        return qMakePair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
+    }
+    auto oldCode = pS->getScript();
+    if (!pS->setScript(luaCode)) {
+        QString errMsg = pS->getError();
+        pS->setScript(oldCode);
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
+    }
+    pS->setScript(luaCode);
+    int id = pS->getID();
+    mpHost->mpEditorDialog->writeScript(id);
+    return qMakePair(id, QString());
+}
 
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
