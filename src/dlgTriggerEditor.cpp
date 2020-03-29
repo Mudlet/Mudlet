@@ -6708,7 +6708,7 @@ void dlgTriggerEditor::slot_show_timers()
         mpSourceEditorArea->show();
         slot_timer_selected(treeWidget_timers->currentItem());
     }
-    if (mTimerEditorSplitterState.length() > 0) {
+    if (!mTimerEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mTimerEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
