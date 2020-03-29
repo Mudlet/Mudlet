@@ -86,12 +86,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mSavingAs(false)
 , mAutosaveInterval{}
 , mTriggerEditorSplitterState{}
-, mAliasEditorSplitterState(QByteArray())
-, mScriptEditorSplitterState(QByteArray())
-, mActionEditorSplitterState(QByteArray())
-, mKeyEditorSplitterState(QByteArray())
-, mTimerEditorSplitterState(QByteArray())
-, mVarEditorSplitterState(QByteArray())
+, mAliasEditorSplitterState{}
+, mScriptEditorSplitterState{}
+, mActionEditorSplitterState{}
+, mKeyEditorSplitterState{}
+, mTimerEditorSplitterState{}
+, mVarEditorSplitterState{}
 {
     // init generated dialog
     setupUi(this);
