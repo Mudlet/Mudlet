@@ -142,8 +142,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
   if ($Script:PublicTestBuild) {
+    Write-Output "=== Generating a changelog ==="
+    $Script:Changelog = lua generate-ptb-changelog.lua --osx win -- architecture x86
     Write-Output "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m "(changelogs for public test builds are not yet available)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
+    dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
     Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
