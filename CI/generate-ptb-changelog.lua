@@ -1,3 +1,7 @@
+-- for appveyor
+mingw_base_dir = os.getenv("MINGW_BASE_DIR")
+package.path = package.path .. ";"..mingw_base_dir.."/share/lua/5.1/?.lua"
+
 local argparse = require "argparse"
 local http_request = require "http.request"
 local lunajson = require "lunajson"
