@@ -6926,7 +6926,7 @@ void dlgTriggerEditor::slot_show_actions()
         mpSourceEditorArea->show();
         slot_action_selected(treeWidget_actions->currentItem());
     }
-    if (mActionEditorSplitterState.length() > 0) {
+    if (!mActionEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mActionEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
