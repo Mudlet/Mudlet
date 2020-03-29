@@ -123,7 +123,7 @@ end
 
 
 --- Determines if a table contains a value as a key or as a value (recursive).
-function table.contains(t, value)
+function table._contains(t, value)
   if type(t) ~= "table" then
     return nil, "first parameter passed isn't a table"
   end
@@ -142,6 +142,12 @@ function table.contains(t, value)
   return false
 end
 
+function table.contains(tbl, ...)
+  for _,item in ipairs({...}) do
+    if table._contains(tbl, item) then return true end
+  end
+  return false
+end
 
 
 --- Table Union.
