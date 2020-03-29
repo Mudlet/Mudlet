@@ -5,7 +5,8 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -140,6 +141,8 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
                  SearchResultIsValue = 0x8
     };
 
+public:
+    // This needs to be public so that the options can be used from the Host class:
     enum SearchOption {
         // Unset:
         SearchOptionNone = 0x0,
@@ -149,8 +152,6 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
         SearchOptionWholeWord = 0x8 */
     };
 
-
-public:
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
@@ -210,6 +211,7 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
+    void setSearchOptions(const SearchOptions);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
