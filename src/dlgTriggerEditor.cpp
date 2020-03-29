@@ -6753,7 +6753,7 @@ void dlgTriggerEditor::slot_show_triggers()
         mpSourceEditorArea->show();
         slot_trigger_selected(treeWidget_triggers->currentItem());
     }
-    if (mTriggerEditorSplitterState.length() > 0) {
+    if (!mTriggerEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mTriggerEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
@@ -6777,7 +6777,7 @@ void dlgTriggerEditor::slot_show_scripts()
         mpSourceEditorArea->show();
         slot_scripts_selected(treeWidget_scripts->currentItem());
     }
-    if (mScriptEditorSplitterState.length() > 0) {
+    if (!mScriptEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mScriptEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
@@ -6801,7 +6801,7 @@ void dlgTriggerEditor::slot_show_keys()
         mpSourceEditorArea->show();
         slot_key_selected(treeWidget_keys->currentItem());
     }
-    if (mKeyEditorSplitterState.length() > 0) {
+    if (!mKeyEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mKeyEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
@@ -6829,7 +6829,7 @@ void dlgTriggerEditor::slot_show_vars()
         mpSourceEditorArea->show();
         slot_var_selected(treeWidget_variables->currentItem());
     }
-    if (mVarEditorSplitterState.length() > 0) {
+    if (!mVarEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mVarEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
@@ -6875,7 +6875,7 @@ void dlgTriggerEditor::slot_show_aliases()
         mpSourceEditorArea->show();
         slot_alias_selected(treeWidget_aliases->currentItem());
     }
-    if (mAliasEditorSplitterState.length() > 0) {
+    if (!mAliasEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mAliasEditorSplitterState);
     } else {
         const QList<int> sizes = {30, 900, 30};
