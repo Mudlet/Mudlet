@@ -85,7 +85,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mCleanResetQueued(false)
 , mSavingAs(false)
 , mAutosaveInterval{}
-, mTriggerEditorSplitterState(QByteArray())
+, mTriggerEditorSplitterState{}
 , mAliasEditorSplitterState(QByteArray())
 , mScriptEditorSplitterState(QByteArray())
 , mActionEditorSplitterState(QByteArray())
