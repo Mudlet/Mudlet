@@ -133,6 +133,25 @@ describe("Tests TableUtils.lua functions", function()
       assert.is_true(table.contains(tbl, "levels"))
     end)
 
+    it("should return true if any of the passed arguments is in the table", function()
+      local tbl = {
+        one = 1,
+        two = 2,
+        three = {
+          {
+            ludicrous = {
+              levels = {
+                of = {
+                  buried = "beeblebrox"
+                }
+              }
+            }
+          }
+        }
+      }
+      assert.is_true(table.contains(tbl, "transparent", "things", "buried"))
+    end)
+
     it("should return false if item is not in the table at all", function()
       local tbl = {
         one = 1,
@@ -151,6 +170,7 @@ describe("Tests TableUtils.lua functions", function()
       }
       assert.is_false(table.contains(tbl, "five"))
     end)
+
   end)
 
   describe("table.index_of(tbl,item)", function()
