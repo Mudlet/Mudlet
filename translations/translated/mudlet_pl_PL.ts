@@ -3895,19 +3895,20 @@ Powód odłączenia: </translation>
       <location filename="../src/ctelnet.cpp" line="576"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba połączenia do %1:%2 przez serwer pośredniczący proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2106"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>BŁĄD</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2118"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2129"/>
@@ -3925,24 +3926,25 @@ Powód odłączenia: </translation>
       <location filename="../src/ctelnet.cpp" line="2151"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2162"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2351"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ładowanie pliku powtórki:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2370"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można wykonać powtórki, inna może być już w toku. Spróbuj ponownie po zakończeniu.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2372"/>
@@ -4384,22 +4386,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wskazuje, czy istnieje już niestandardowa linia dla tego specjalnego wyjścia, zostanie zastąpiona, jeśli wyjście zostanie wybrane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokój do którego prowadzi to specjalne wyjście.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Komenda lub skrypt LUA, który przechodzi do danego pomieszczenia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aby usunąć niestandardową linię: anuluj to okno dialogowe, zaznacz linię i kliknij prawym przyciskiem myszy, aby uzyskać &amp;cytat; usuń&amp;cytat; opcje.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -4466,24 +4468,26 @@ Jeśli tak, wpisz nazwę profilu w celu potwierdzenia:</translation>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>Symbol
+(Ustaw czcionkę)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation type="unfinished"/>
+      <translation>Symbol
+(Wszystkie czcionki)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>Punkty Kodowania</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>Licznik użycia</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
@@ -4599,7 +4603,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16677"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16679"/>
@@ -4611,7 +4615,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16681"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16683"/>
@@ -4623,7 +4627,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16685"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16687"/>
@@ -4635,7 +4639,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16689"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
   </context>
   <context>
@@ -4648,19 +4652,24 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://discord.gg/kuYvMQ9&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;HomePage&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Forums&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentation&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://discord.gg/kuYvMQ9&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="148"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <comment>about:Heiko</comment>
-      <translation type="unfinished"/>
+      <translation>Oryginalny autor, oryginalny kierownik projektu, kodowanie rdzenia Mudlet, w stanie spoczynku.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="151"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>Projektowanie gui i wstępne planowanie funkcji. Jest odpowiedzialny za stronę główną projektu i instrukcję obsługi. Opiekun windows, macOS, Ubuntu i ogólnych instalatorów Linuksa. Utrzymuje mudlet wiki, Lua API i obsługuje zarządzanie projektami, public relations &amp; pomocy użytkownika. Z projektem od samego początku i jest oficjalnym rzecznikiem projektu. Od czasu przejścia na emeryturę Heiko został szefem projektu Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
