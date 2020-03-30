@@ -5274,7 +5274,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[Error] MSGLIMIT wymaga &lt;limit&gt; aby być liczbą całkowitą większą niż zero!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -5284,32 +5284,32 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="408"/>
       <source>[HELP] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[HELP] składnia: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="416"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Podłączono do %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Dołączenie %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Łączenie %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! Odłączono od %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="489"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[BŁĄD] Składna: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="491"/>
@@ -5319,12 +5319,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="636"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! Pseudonim %1 jest zarezerwowany. Automatyczna zmiana pseudonimu na: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Twój pseudonim się zmienił.</translation>
     </message>
   </context>
   <context>
@@ -5332,7 +5332,7 @@ Count</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="244"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Maper 3D nie jest dostępny w tej wersji programu Mudleta</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="264"/>
@@ -5393,68 +5393,68 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>What do you wish to call the package:</source>
-      <translation type="unfinished"/>
+      <translation>Co chcesz nazwać pakietem:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="154"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but the code cannot open it.</comment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się otworzyć pliku &quot;%1&quot; aby umieścić go w pakiecie. Komunikat o błędzie był: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="162"/>
       <source>Failed to add file &quot;%1&quot; to package &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się dodać pliku &quot;%1&quot; do pakietu &quot;%2&quot;. Komunikat błędu brzmi: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="181"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing in. - Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Eksport nie powiódł się. Nie można otworzyć folderu &quot;%1&quot; do zapisu. - Czy masz niezbędne uprawnienia i wolną przestrzeń dyskową do zapisywania do tego folderu?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="261"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się wyeksportować. Nie można zapisać elementów Mudleta do pliku &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="344"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
-      <translation type="unfinished"/>
+      <translation>Nie można otworzyć pliku pakietu. Błąd to: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="438"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można dodać katalogu &quot;%1&quot; do pakietu. Błąd to: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="494"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>Wymagany plik &quot;%1&quot; nie znaleziono w miejscu postoju. Ten obszar zawiera elementy Mudlet wybrane dla pakietu, które zostały wybrane do włączenia do pliku pakietu. Sugeruje to, że może być problem z tym katalogiem: &quot;%2&quot; - Czy masz niezbędne uprawnienia i wolne miejsce na dysku?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="516"/>
       <source>Failed to write files into and then close the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Nie można zapisać plików, a następnie zamknąć pakiet. Błąd to: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="536"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>Pakiet &quot;%1&quot; wyeksportowany do: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="832"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
-      <translation type="unfinished"/>
+      <translation>Dlaczego nie &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;Przesłać&lt;/a&gt; twójego pakietu dla innych użytkowników Mudlet?</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
       <source>Do you want to add additional files to the package e. g. images, sounds etc. ? The add files button will bring up the file explorer. Copy all files and folders that you want to add to the package in the temporary package directory that is shown in the file explorer. When you are done click on the export button below to start package creation.</source>
-      <translation type="unfinished"/>
+      <translation>Czy chcesz dodać do pakietu dodatkowe pliki, np. obrazy, dźwięki itp. ? Przycisk dodawania plików spowoduje uruchomienie eksploratora plików. Skopiuj wszystkie pliki i foldery, które chcesz dodać do pakietu w tymczasowym katalogu pakietów, który jest pokazany w eksploratorze plików. Kiedy skończysz, kliknij na przycisk eksportu poniżej, aby rozpocząć tworzenie pakietu.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="45"/>
