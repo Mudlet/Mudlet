@@ -6832,27 +6832,27 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4139"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>Alias &lt;em&gt;%1&lt;/em&gt; ma nieskończoną pętlę - podstawienie pasuje do własnego wzoru. Proszę go naprawić - ten alias jest&apos;t dobry, jak będzie&apos;uruchamiać się nie na zawsze.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4660"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Sprawdzone zmienne zostaną zapisane i załadowane wraz z Twoim profilem.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4812"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>dopasować w wierszu monitu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4815"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>dopasowywanie w wierszu monitu (wyłączone)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4816"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Sygnał Go-Ahead (GA) z gry jest wymagany, aby ta funkcja działała</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4865"/>
@@ -6860,7 +6860,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8311"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor pierwszego etapu ignorowany</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4869"/>
@@ -6868,7 +6868,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8314"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Domyślny kolor pierwszego planu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4873"/>
@@ -6876,7 +6876,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8317"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor pierwszego planu [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4880"/>
@@ -6884,7 +6884,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8374"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor tła ignorowany</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4884"/>
@@ -6892,7 +6892,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8377"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Domyślny kolor tła</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4888"/>
@@ -6900,13 +6900,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8380"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor tła [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5009"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5011"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>usterka</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5509"/>
@@ -6932,7 +6932,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5754"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Aliasy — wyzwalacze wejściowe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5766"/>
@@ -6965,7 +6965,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7639"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj pakiet:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7379"/>
@@ -6993,7 +6993,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7639"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Najpierw musisz wybrać przedmiot do wyeksportowania. Wybierz element drzewa, a następnie kliknij ponownie na eksport.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7388"/>
@@ -7003,7 +7003,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7484"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7509"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Pakiet %1 zapisany</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7533"/>
@@ -7013,50 +7013,52 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7625"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7649"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Skopiowano %1 do schowka</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7655"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Eksportuj Wyzwalacze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7655"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Pakiety mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7669"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>pakiet eksportowy:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7669"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można zapisać pliku %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7904"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7911"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7925"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7911"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można odczytać pliku %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7925"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Pakiet %1 jest już zainstalowany.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8050"/>
@@ -7071,22 +7073,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8057"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil kopii zapasowej</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8057"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>pliki wyzwalacza (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8173"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz Ikone</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8173"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Obrazy (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8182"/>
@@ -7096,33 +7098,33 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8203"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz kolor pierwszego planu, aby zastosować je do dopasowań</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8223"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie koloru tła do dopasowania do dopasowania</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8235"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie pliku dźwiękowego</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8239"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
-      <translation type="unfinished"/>
+      <translation>Pliki audio(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);; Zaawansowane kodowanie dźwięku-strumień(*.aac);; MPEG-2 Warstwa audio 3(*.mp3);; MPEG-4 Audio(*.mp4a);;O gg Vorbis(*.oga *.ogg);; PCM Audio(*.pcm);; Fala(*.wav);; Windows Media Audio(*.wma);; Wszystkie pliki(*.*)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8292"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie koloru wyzwalacza pierwszego planu dla elementu %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8356"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Wybieranie koloru wyzwalacza tła dla elementu %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8405"/>
@@ -7149,12 +7151,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8704"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Plik dźwiękowy do odtwożenia po uruchomieniu wyzwalacza.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="711"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>wycinek tekstu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="92"/>
