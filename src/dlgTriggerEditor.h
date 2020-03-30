@@ -478,6 +478,15 @@ private:
     // profile autosave interval in minutes
     int mAutosaveInterval;
 
+    // tracks location of the splitter in the trigger editor for each tab
+    QByteArray mTriggerEditorSplitterState;
+    QByteArray mAliasEditorSplitterState;
+    QByteArray mScriptEditorSplitterState;
+    QByteArray mActionEditorSplitterState;
+    QByteArray mKeyEditorSplitterState;
+    QByteArray mTimerEditorSplitterState;
+    QByteArray mVarEditorSplitterState;
+
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax;
 
