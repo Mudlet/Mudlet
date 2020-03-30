@@ -6036,7 +6036,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="1919"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Pokój&lt;/b&gt; Waga miejsca przeznaczenia: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="147"/>
@@ -6055,60 +6055,60 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="1799"/>
       <location filename="../src/dlgRoomExits.cpp" line="1918"/>
       <source>Exit to unnamed room is valid</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście do nienazwanego pokoju jest poprawne</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw numer pokoju, do których prowadzi to specjalne wyjście, zmieni kolor na niebieski dla prawidłowego numeru; jeśli pozostanie tak, to wyjście zostanie usunięte, gdy &amp;lt;i&amp;gt;zapisz&amp;lt;/i&amp;gt; zostanie kliknięty.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer pomieszczenia, do których prowadzi to specjalne wyjście, zmieni kolor na niebieski dla prawidłowego numeru; jeśli pozostanie tak, to wyjście zostanie usunięte, gdy &amp;lt;i&amp;gt;zapisz&amp;lt;/i&amp;gt; zostanie kliknięty.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1939"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>Zapobiec tworzonej trasie za pośrednictwem tego wyjścia, co odpowiada nieskończonej masie wyjściowej.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
       <location filename="../src/dlgRoomExits.cpp" line="1950"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw dodatnią wartość, aby nadpisać domyślną (Room) wagę dla tej trasy wyjścia, wartość zerowa przypisuje domyślną.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <location filename="../src/dlgRoomExits.cpp" line="1957"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
-      <translation type="unfinished"/>
+      <translation>Na mapie 2D nie jest rysowany symbol drzwi dla tego wyjścia (obecnie tylko wybór funkcjonalny).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="234"/>
       <location filename="../src/dlgRoomExits.cpp" line="1961"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>Zielony (otwarty) symbol drzwi zostanie narysowany na niestandardowej linii wyjściowej dla tego wyjścia na mapie 2D (ale nie obecnie).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="237"/>
       <location filename="../src/dlgRoomExits.cpp" line="1966"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>Pomarańczowy (zamknięty) symbol drzwi zostanie narysowany na niestandardowej linii wyjściowej dla tego wyjścia na mapie 2D (ale nie obecnie).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="240"/>
       <location filename="../src/dlgRoomExits.cpp" line="1969"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony (zablokowany) symbol drzwi zostanie narysowany na niestandardowej linii wyjściowej dla tego wyjścia na mapie 2D (ale nie obecnie).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="87"/>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(ID pokoju)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -6118,7 +6118,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(polecenie lub skrypt Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
@@ -6137,139 +6137,139 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="1793"/>
       <location filename="../src/dlgRoomExits.cpp" line="1911"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście do &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzona liczba jest nieprawidłowa, ustaw liczbę pokoju na północny zachód od tej przestrzeni, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na północny zachód od tego polu, będzie niebieski dla poprawnej liczby lub czerwonego za nieprawidłowe.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pomieszczeń na północ od tego polu, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
       <location filename="../src/dlgRoomExits.cpp" line="1406"/>
       <source>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na północ od tego polu, będzie niebieski dla poprawnego numeru lub czerwonego za nieprawidłowy.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="862"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pomieszczeń na północnym wschodzie tego pokoju, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="872"/>
       <location filename="../src/dlgRoomExits.cpp" line="1437"/>
       <source>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na północnym wschodzie tego pokoju, będzie niebieski dla poprawnej liczby lub czerwonego za nieprawidłową.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="914"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest niepoprawny, ustaw liczbę pokoju w górę od tego miejsca zmieni kolor niebieski dla prawidłowej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="924"/>
       <location filename="../src/dlgRoomExits.cpp" line="1468"/>
       <source>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest niepoprawny, ustaw liczbę pokoju w górę od tego miejsca zmieni kolor niebieski dla prawidłowej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="966"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pomieszczeń na zachód od tego pomieszczenia, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="976"/>
       <location filename="../src/dlgRoomExits.cpp" line="1499"/>
       <source>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na zachód od tego polu, będzie niebieski dla poprawnej liczby lub czerwonego za nieprawidłową.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1018"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pokoju na wschód od tego polu, zmieni niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1028"/>
       <location filename="../src/dlgRoomExits.cpp" line="1530"/>
       <source>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na wschód od tego pokoju, będzie niebieski dla poprawnego numeru lub czerwonego za nieprawidłowe.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1070"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pokoju w dół od tego zmieni kolor dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1080"/>
       <location filename="../src/dlgRoomExits.cpp" line="1561"/>
       <source>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju w dół od tego będzie niebieski dla prawidłowego numeru lub czerwonego za nieprawidłowe.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1122"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzona liczba jest nieprawidłowa, ustaw liczbę pokoju na południowy zachód od tego polu, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1132"/>
       <location filename="../src/dlgRoomExits.cpp" line="1592"/>
       <source>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na południowy zachód od tego polu, będzie niebieski dla poprawnej liczby lub czerwonego za nieprawidłową.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1174"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw numer pokoju na południe od niego, zmieni niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1184"/>
       <location filename="../src/dlgRoomExits.cpp" line="1623"/>
       <source>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na południe od tego polu, będzie niebieski dla poprawnego numeru lub czerwonego za nieprawidłowy.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
       <source>Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pokoju na południowym wschodzie tego pokoju, zmieni kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1654"/>
       <source>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju na południowym wschodzie tego pokoju, będzie niebieski dla poprawnej liczby lub czerwonej za niepoprawną.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pomieszczeń z tego miejsca, zmieni kolor niebieski dla prawidłowej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1288"/>
       <location filename="../src/dlgRoomExits.cpp" line="1685"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju z tego polu, będzie niebieski dla prawidłowego numeru lub czerwonego za nieprawidłowe.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1330"/>
       <source>Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy, ustaw liczbę pomieszczenia poza tym obraca kolor niebieski dla poprawnej liczby.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju poza tą pozycją, będzie niebieski dla poprawnej liczby lub czerwonego za nieprawidłową.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
@@ -6286,7 +6286,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomExits.cpp" line="1708"/>
       <location filename="../src/dlgRoomExits.cpp" line="1823"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation type="unfinished"/>
+      <translation>Wyczyść wyjście z listy dla tego wyjścia, aby wejść do Id opuszczania pokoju.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
@@ -6351,22 +6351,22 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
       <source>Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw liczbę pokoju %1 dla tego pokoju, będzie niebieski dla poprawnego numeru lub czerwonego za nieprawidłowy.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Wyjścia dla pokoju: &quot;%1&quot;[*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Wyjścia dla pokoju Id: %1 [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1927"/>
       <source>Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Id pokoju jest nieprawidłowy, ustaw liczbę pokoju, do którego prowadzi to specjalne wyjście, zmieni kolor na kolor niebieski dla prawidłowej liczby.</translation>
     </message>
   </context>
   <context>
@@ -6375,13 +6375,15 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgTriggerEditor.cpp" line="238"/>
       <source>-- Enter your lua code here
 </source>
-      <translation type="unfinished"/>
+      <translation>-- Wprowadź tutaj swój kod lua
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="280"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** rozpoczęcie nowej sesji ***
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="368"/>
@@ -6392,7 +6394,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="369"/>
       <source>Show Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Wyzwalacze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="372"/>
@@ -6413,7 +6415,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Aliasy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
@@ -6424,7 +6426,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="383"/>
       <source>Show Timers</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Timery</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
@@ -6445,7 +6447,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="391"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Kombinacji Klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="394"/>
@@ -6456,7 +6458,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="395"/>
       <source>Show Variables</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Zmienne</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="398"/>
@@ -6791,41 +6793,41 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3511"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Nowa grupa aliasów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3513"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4125"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4195"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Nowy alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3602"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>Nowe menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3604"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>Nowy Przycisk</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3645"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Nowy pasek narzędzi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3703"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4421"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>Nowa grupa skryptów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3705"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4421"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>Nowy skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4139"/>
