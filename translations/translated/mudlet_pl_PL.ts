@@ -2055,7 +2055,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Równowartość powyższej informacji o ostatniej operacji na mapie,
+została zapisana do wiadomości jako ostatni raport w pliku:
+&quot;%1&quot;
+- poszukaj (ostatniego) raportu z tytułem:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2192"/>
@@ -2063,7 +2067,10 @@ the file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można używać lub tworzyć katalogu do przechowywania mapy.
+Proszę sprawdzić, czy masz uprawnienia/dostęp do:
+&quot;%1&quot;
+i jest wystarczająco dużo miejsca na dysku. Operacja pobierania nie powiodła się.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2218"/>
@@ -2091,13 +2098,14 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2226"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Pobieranie pliku mapy do użycia w %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2256"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: nie można wykonać żądania, mapa jest już pobierana lub
+importowana na żądanie użytkownika.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2288"/>
@@ -2108,42 +2116,46 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2316"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: niepowodzenie importowania pliku mapy XML, dalsze informacje mogą być dostępne w głównej konsoli!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2351"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Pobieranie mapy zostało anulowane, na żądanie użytkownika.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2370"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR]-Pobieranie mapy napotkało błąd:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2402"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Pobieranie mapy nie powiodło się, zgłoszony błąd:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2410"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Pobieranie mapy nie powiodło się, nie można otworzyć pliku docelowego:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2415"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT] - Pobieranie mapy nie powiodło się, nie można zapisać pliku docelowego:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2428"/>
       <location filename="../src/TMap.cpp" line="2445"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO] - ... mapa pobrana i zapisana, teraz analizuje ja ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2436"/>
