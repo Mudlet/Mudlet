@@ -8939,32 +8939,32 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="813"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Shtokavian (były stan Jugosławii)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
       <source>Sinhala</source>
-      <translation type="unfinished"/>
+      <translation>Syngaleski</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="815"/>
       <source>Sinhala (Sri Lanka)</source>
-      <translation type="unfinished"/>
+      <translation>Syngaleski (Sri Lanka)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="816"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>Słowacki</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="817"/>
       <source>Slovak (Slovakia)</source>
-      <translation type="unfinished"/>
+      <translation>Słowacki (Słowacja)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="818"/>
       <source>Slovenian</source>
-      <translation type="unfinished"/>
+      <translation>Słoweński</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="819"/>
@@ -9220,12 +9220,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="180"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="215"/>
       <source>Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Główny Pasek Narzędzi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="254"/>
@@ -9237,17 +9237,17 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Odłącz</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="382"/>
