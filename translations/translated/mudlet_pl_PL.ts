@@ -5482,7 +5482,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Lokalizacja, która będzie używana do przechowywania plików dziennika - pasujące dzienniki zostaną dołączone do.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="138"/>
@@ -5493,39 +5493,39 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="184"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Spowoduje to wyświetlenie wyświetlania wszystkich symboli używanych na bieżącej mapie i tego, czy można je narysować przy użyciu tylko czcionki ze specyfiką, dowolnej innej czcionki, czy w ogóle.  Pokazuje również sekwencję Unicode &lt;i&gt;punkty kodu&lt;/i&gt; które tworzą ten symbol, tak aby można je było zidentyfikować, nawet jeśli nie mogą być wyświetlane; również, do pierwszych trzydziestu dwóch pomieszczeń, które używają tego symbolu są wymienione, co może pomóc w identyfikacji wszelkich nieoczekiwanych lub dziwnych przypadkach.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="190"/>
       <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz jedyną lub używaną czcionkę podstawową (w zależności od &lt;i&gt;Używaj tylko symboli (glifów) z wybranej czcionki&lt;/i&gt; ), aby uzyskać symbole pokoju mapperów 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="224"/>
       <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propogate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre środowiska pulpitu informują aplikacje Qt, takie jak Mudlet, czy powinny być wyświetlane ikony w menu, inne jednak nie. Ta kontrolka umożliwia użytkownikowi zastąpienie ustawienia, w razie potrzeby, w następujący sposób:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Niezaznaczone&lt;/b&gt; &apos;&lt;i&gt;wył.&lt;/i&gt;&apos; = Zapobiegaj rysowaniu menu z ikonami.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Sprawdzane&lt;/b&gt; &apos;&lt;i&gt;Na&lt;/i&gt;&apos; = Zezwalaj na rysowanie menu z ikonami.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Częściowo sprawdzone&lt;/b&gt; &lt;i&gt;(Domyślnie) &apos;Automatycznie&apos;&lt;/i&gt; = Użyj ustawienia, które zapewnia system.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;To ustawienie jest przetwarzane tylko wtedy, gdy tworzone są poszczególne menu, a zmiany mogą nie propagować wszędzie, dopóki mudlet nie zostanie ponownie uruchomiony.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="281"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% zrobiono)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="334"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>Przeniesiono wszystkie hasła do zabezpieczonej pamięci.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="341"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
-      <translation type="unfinished"/>
+      <translation>Przeniesiono %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="345"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>Przeniesiono wszystkie hasła do pamięci profilowej.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="725"/>
@@ -5555,7 +5555,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="765"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Inne profile do Mapy:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
@@ -5565,33 +5565,33 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="816"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Uaktualniony, eksperymentalny/testowy, NIE zalecany}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="818"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {starty poziom, dla użytkowników starej wersji, NIE zalecany}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="827"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Współczynnik skalowania symbolu pokoju 2D:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="847"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż &quot;%1&quot; w wyborze obszaru mapy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="987"/>
       <location filename="../src/dlgProfilePreferences.cpp" line="3712"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Preferencje profilu - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1257"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferencje profilu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1964"/>
@@ -5657,12 +5657,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2056"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Przenoszenie haseł do bezpiecznego przechowywania...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2063"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Trwa migrowanie haseł do profili...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2095"/>
@@ -5670,52 +5670,55 @@ Count</source>
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można użyć lub utworzyć katalogu do przechowywania mapy dla innego profilu &quot;%1&quot;.
+Sprawdź, czy masz uprawnienia/dostęp do:
+&quot;%2&quot;
+i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2102"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Tworzenie katalogu docelowego nie powiodło się...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2189"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Tworzenie kopii zapasowej aktualnej mapy - proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2199"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Nie udało się zrobić kopii zapasowej mapy - zapisanie jej nie powiodło się.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2224"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>Nie można skopiować mapy - nie udało się sprawdzić, który plik mapy właśnie zapisaliśmy jako mapę!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2236"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Kopiowanie mapy do %1 - proszę czekać...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2242"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można skopiować mapy do %1 - nie można skopiować nowego pliku mapy.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2246"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa skopiowana pomyślnie do innego profilu %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2258"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa skopiowana, teraz daj znać innym profilom, aby ją przeładować.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2294"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Gdzie Mudlet powinien zapisywać pliki dziennika?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2671"/>
@@ -5995,7 +5998,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3485"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (łącz miesiąc loguje się, np. 1970-01.txt)</translation>
     </message>
   </context>
   <context>
