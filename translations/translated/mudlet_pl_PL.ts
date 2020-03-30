@@ -1599,12 +1599,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2412"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Wstępne ładowanie mapy(2) raport</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2422"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Wczytywanie mapy(2) w raporcie %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2822"/>
@@ -1627,7 +1627,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="72"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Pasek ŁatwychPrzycisków - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1640,21 +1640,21 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15176"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>BŁĄD</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15177"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15188"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>obiekt</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15177"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15188"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>funkcja</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16494"/>
@@ -1665,7 +1665,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16598"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16774"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>brak komunikatu o błędzie z Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16496"/>
@@ -1676,7 +1676,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16600"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16776"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Błąd Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16499"/>
@@ -1687,12 +1687,12 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16603"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie mogę znaleźć modułu Lua %1.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16503"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Niektóre funkcje mogą być niedostępne.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16507"/>
@@ -1703,69 +1703,72 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16611"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Moduł Lua %1 załadowany.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16544"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Prawdopodobnie nie będzie w stanie uzyskać dostępu do kodu Mudlet Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16565"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Obsługa bazy danych nie będzie dostępna.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16586"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* funkcje Lua nie będą dostępne.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16607"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.* funkcje Lua nie będą dostępne.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16779"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można załadować formatera kodu, funkcja wcięcia nie będzie dostępna.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16849"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (nie istnieje)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (nie ma pliku lub symlinku do pliku)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16863"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (nie ma pliku do odczytu lub symlinku do pliku do odczytu)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (niemożna odczytać plik)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16887"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wczytano Mudlet-lua API i Geyser menedżer układu.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16895"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można znaleźć, pobrać i uruchomić LuaGlobal.Lua - twój Mudlet jest uszkodzony!
+próbowałem te miejsca:
+%1</translation>
     </message>
   </context>
   <context>
@@ -1887,24 +1890,28 @@ Tried these locations:
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Zapisywanie mapy w formacie {%1}, który jest inny niż ten który został
+załadowany jako {%2}. To może być problem jeśli chcesz udostępnić wynikową
+mapę innym opierającym się na oryginalnym formacie.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="188"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[BŁĄD MAPY:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Rozpoczęcie audytu mapy...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1029"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Format {%1} z którym próbujesz zapisać mapę jest zbyt nowy
+dla tej wersji Mudleta. Wspierane są tylko formaty do wersji {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1055"/>
@@ -2735,7 +2742,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - W pliku mapy wykryto puste i zduplikowane nazwy obszarów!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1180"/>
@@ -2753,12 +2760,24 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFORMACJA ] - Ze względu na pewne sytuacje, które nie były sprawdzane w przeszłości, Mudlet 
+ pozwalał na posiadanie na mapie więcej niż jednego obszaru o tej samej lub bez nazwy.
+Sprawiają one, że niektóre rzeczy są mylące, dwuznaczne i teraz są niedozwolone. Aby rozwiązać te przypadki, obszar bez nazwy tutaj (lub utworzony w
+w przyszłości) zostanie automatycznie przypisany do nazwy &quot;%1&quot;.
+  Duplikowane nazwy obszarów spowodują, że wszystkie oprócz pierwszego napotkanego
+uzyskają &quot;_###&quot; przyrostek stylu, gdzie każdy &quot;###&quot; jest rosnącym
+numerem; możesz chcieć je zmienić, być może zastępując je
+a &quot;(nazwa podobszaru)&quot; , ale to zależy wyłącznie od Ciebie, jak to zrobisz,
+inny niż nie będziesz mógł ustawić jednego obszaru&apos;s nazwy na
+inny, który istnieje w tym czasie.
+  Jeśli było więcej niż jeden obszar bez nazwy, to wszystkie oprócz
+najpierw uzyskają w ten sposób przyrostek.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1196"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - W pliku mapy wykryto zduplikowane nazwy obszarów!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1197"/>
@@ -2774,12 +2793,22 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ze względu na pewne sytuacje, które nie były sprawdzane w przeszłości, Mudlet pozwalał użytkownikowi na posiadanie więcej niż jednego obszaru o tej samej nazwie.
+Sprawiają one, że niektóre rzeczy są mylące i teraz są niedozwolone.
+  Duplikowane nazwy obszarów spowodują, że wszystkie z wyjątkiem pierwszego napotkanego
+uzyskają &quot;_###&quot; przyrostek stylu, gdzie każdy &quot;###&quot; jest rosnącym
+numerem; możesz chcieć je zmienić, być może zastępując je
+a &quot;(nazwa podobszaru)&quot; , ale to zależy wyłącznie od Ciebie, jak to zrobisz,
+inny wtedy nie będziesz mógł ustawić jednego obszaru&apos;s nazwy na
+inny, który istnieje w tym czasie.
+  Jeśli było więcej niż jeden obszar bez nazwy, wtedy wszystkie oprócz
+najpierw uzyskają przyrostek w ten sposób.
+%1)</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1212"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - W pliku mapy wykryto pustą nazwę obszaru!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1215"/>
