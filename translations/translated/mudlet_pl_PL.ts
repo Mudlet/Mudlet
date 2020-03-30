@@ -631,7 +631,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2384"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor pierwszego planu</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
@@ -799,7 +799,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2873"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Odblokuj</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2874"/>
@@ -811,7 +811,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Waga</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2878"/>
@@ -823,7 +823,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2881"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Wyjścia</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2882"/>
@@ -835,7 +835,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2885"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Symbol</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2886"/>
@@ -847,7 +847,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przesuń do</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
@@ -859,19 +859,19 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Obszar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw lokację&apos;s numer obszaru</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2897"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Niestandardowa linia wyjścia</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2899"/>
@@ -889,7 +889,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2907"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz Etykietę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
@@ -901,7 +901,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2911"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw położenie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2913"/>
@@ -913,7 +913,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Można ustawić lokalizację tylko wtedy, gdy wyłącznie jeden pokój jest zaznaczony</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
@@ -943,7 +943,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Dodaj punkt</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2971"/>
@@ -961,7 +961,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2978"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Usuń punkt</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2985"/>
@@ -979,7 +979,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="2994"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>użyj &quot;usuń linię&quot;, aby usunąć jedynie segment kończący się w punkcie edytowalnym</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3000"/>
@@ -1003,7 +1003,7 @@ to z nowym symbolem dla tego pokoju:</translation>
       <location filename="../src/T2DMap.cpp" line="3012"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Usuń linię</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3013"/>
@@ -1023,7 +1023,7 @@ podświetlonej lokacji (%1), do:</translation>
       <location filename="../src/T2DMap.cpp" line="3503"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3508"/>
@@ -1069,7 +1069,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3805"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3810"/>
@@ -1232,13 +1232,13 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="171"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (grecki)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="190"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (hebrajski wizualny)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="209"/>
@@ -1909,33 +1909,36 @@ for this version of Mudlet. Supported are only formats up to version {%2}.</sour
       <location filename="../src/TMap.cpp" line="1055"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ UWAGA ] - Zapisywanie mapy w formacie {%1} innym niż
+zalecany format {%2} dla tej wersji Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1345"/>
       <location filename="../src/TMap.cpp" line="1650"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można otworzyć (do odczytu) pliku mapy: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1367"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Plik mapy jest zbyt nowy, jego format pliku (%1) jest wyższy niż ta wersja, którą może obsłużyć Mudlet (%2)!  Plik jest:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1374"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Musisz zaktualizować swój Mudlet lub znaleźć plik mapy zapisany w starszym formacie.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1381"/>
       <source>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Plik mapy jest naprawdę stary, jego format pliku (%1) jest tak starożytny, że
+ta wersja Mudlet może nie odczytać informacji z niego, ale będzie się starał!  Plik ma wartość: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1388"/>
