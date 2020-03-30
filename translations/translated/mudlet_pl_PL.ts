@@ -3757,7 +3757,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>wprowadź wzorzec perl regex dla swojego aliasu; alias są wyzwalaczami(triggerami) na danych wejściowych</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
@@ -3772,7 +3772,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="129"/>
       <source>Plain</source>
-      <translation type="unfinished"/>
+      <translation>Zwykły</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
@@ -3782,7 +3782,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które chcesz wysłać alias bezpośrednio do gry, jeśli wprowadzone klawisze są zgodne ze wzorcem. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;Zamiast&lt;/i&gt; w obszarze edytora poniżej.  Wszystko, co tu we wpisane jest dosłownie, po prostu wysłane na serwer gry.&lt;/p&gt;&lt;p&gt;Można wykorzystać zarówno to, jak &lt;i&gt;I&lt;/i&gt; skrypt Lua - zostanie wysłany &lt;b&gt;przed&lt;/b&gt; uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -3791,7 +3791,8 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
       <location filename="../src/ctelnet.cpp" line="572"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Adres IP %1 został znaleziony. Jest to: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="581"/>
@@ -3799,58 +3800,63 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Niepowodzenie wyszukiwania nazwy serwera!
+Nie można nawiązać połączenia.
+Nazwa serwera jest nieprawidłowa, serwer nie działa poprawnie lub serwery nazw (DNS) nie działają prawidłowo.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="416"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - BŁĄD gniazda TCP/IP:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="443"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Bezpieczne połączenie zostało pomyślnie nawiązane.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="445"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Połączenie zostało nawiązane pomyślnie.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="481"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Czas połączenia: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="520"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Bezpieczne połączenia nie są obsługiwane przez tę grę na tym porcie - spróbuj wyłączyć opcję.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="565"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba bezpiecznego połączenia z %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1442"/>
       <location filename="../src/ctelnet.cpp" line="1809"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Serwer chce uaktualnić GUI do nowej wersji &apos;%1&apos;.
+Odinstalowywanie starej wersji &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1453"/>
       <location filename="../src/ctelnet.cpp" line="1820"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Pakiet jest już zainstalowany.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1462"/>
       <location filename="../src/ctelnet.cpp" line="1829"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>pobieranie GUI gry z serwera</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1462"/>
@@ -3863,25 +3869,27 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1451"/>
       <location filename="../src/ctelnet.cpp" line="1818"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Serwer oferuje GUI do pobrania (url=&apos;%1&apos;) (pakiet=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="385"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wyszukiwanie adresu IP serwera: %1:%2...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="509"/>
       <location filename="../src/ctelnet.cpp" line="522"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Połączenie zostało odłączone. Może przeżyjesz! 
+Powód odłączenia: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="574"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba połączenia do %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="576"/>
