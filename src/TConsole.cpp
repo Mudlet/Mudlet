@@ -1139,24 +1139,7 @@ void TConsole::changeColors()
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
     } else if (mType & (ErrorConsole|SubConsole|UserWindow|Buffer)) {
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoAntialias | QFont::PreferQuality));
-        QPixmap pixmap = QPixmap(2000, 600);
-        QPainter p(&pixmap);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        p.setFont(mDisplayFont);
-        const QRectF r = QRectF(0, 0, 2000, 600);
-        QRectF r2;
-        const QString t = "123";
-        p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
-        mUpperPane->mLetterSpacing = letterSpacing;
-        mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->setDisplayFontSpacing(letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
-#endif
         mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
@@ -1185,24 +1168,6 @@ void TConsole::changeColors()
         }
         mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-        QPixmap pixmap = QPixmap(2000, 600);
-        QPainter p(&pixmap);
-        QFont _font = mpHost->getDisplayFont();
-        _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        p.setFont(_font);
-        const QRectF r = QRectF(0, 0, 2000, 600);
-        QRectF r2;
-        const QString t = "123";
-        p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mpHost->getDisplayFont() ).height();
-        int mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
-        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
-        mUpperPane->mLetterSpacing = letterSpacing;
-        mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->setDisplayFontSpacing(letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
-#endif
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;

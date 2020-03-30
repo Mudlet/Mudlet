@@ -106,7 +106,6 @@ public:
     bool mShowTimeStamps;
     int mWrapAt;
     int mWrapIndentCount {};
-    qreal mLetterSpacing;
 
 public slots:
     void slot_toggleTimeStamps(const bool);
