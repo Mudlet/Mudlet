@@ -1244,19 +1244,19 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="209"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (turecki)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="228"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (kraje bałtyckie/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="247"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-11 (Latin/tajski)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="266"/>
@@ -1268,13 +1268,13 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="285"/>
       <source>ISO 8859-14 (Celtic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-14 (celtycki)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="304"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (Zachodni)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="323"/>
@@ -1383,31 +1383,31 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="657"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet ▼B │ propozycje słownikowe │ ▲ Użytkownik▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼System ▼│ propozycje słownikowe │ ▲ Użytkownik▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="735"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>brak sugestii (system)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="761"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>brak sugestii (udostępnione)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="765"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>brak sugestii (profil)</translation>
     </message>
   </context>
   <context>
@@ -1470,14 +1470,15 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2600"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Komunikat systemowy: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2747"/>
       <location filename="../src/TConsole.cpp" line="2786"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Brak wyników wyszukiwania, przepraszam!
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="368"/>
@@ -1497,7 +1498,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="402"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; jest opóźnieniem serwera i sieci gry (czyli ping, w sekundach), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; to czas przetwarzania systemu - jak długo twoje skrypty przetwarzały ostatnią linię tekstu.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="439"/>
@@ -1524,43 +1525,43 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1065"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Loguj sesję zaczynającą się o &apos;hh:mm:ss&apos; na &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1070"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zatrzymaj logowanie wyjścia gry do pliku logu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1074"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sesja dziennika kończy się o &apos;Ss&apos; na &apos;Dddd&apos;, &apos;D&apos; &apos;Mmmm&apos; &apos;Rrrr&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1087"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rozpocznij logowanie wyjścia gry do pliku logu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1615"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Wstępne ładowanie mapy(1) raport</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1633"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (1) w raporcie %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1635"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (1) &quot;%1&quot; w raporcie %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1677"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Raport importu mapy przed odwzorowaniem (1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1700"/>
@@ -1582,12 +1583,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1722"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy(1) &quot;%1&quot; w raporcie %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1725"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Plik mapy zlokalizowany, ale nie można go otworzyć, proszę sprawdzić uprawnienia dostępu do pliku:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1728"/>
@@ -2162,13 +2163,13 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2471"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Problem z pobieraniem mapy, niepowodzenie w analizowaniu pliku docelowego: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2476"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Problem z pobieraniem mapy, brak możliwości odczytania pliku docelowego: %1.</translation>
     </message>
   </context>
   <context>
@@ -2244,75 +2245,78 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Inne</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Nieznane</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Nie utworzono żadnego obszaru!  Żądany obszar ID=%1. Uwaga: Identyfikatory obszaru muszą być &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="274"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Ostrzeżenie: Podczas ustawiania obszaru dla pokoju (Id: %1) nie ma bieżącego obszaru!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Północny wschód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Północny zachód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1022"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Południowy wschód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1036"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Południowy zachód</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1141"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - W pokoju id:%1 usunięcie nieprawidłowego (specjalnego) wyjścia do %2 {bez nazwy!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1145"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Pokój miał nieprawidłowe (specjalne) wyjście do %1 {bez nazwy!} został usunięty.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1155"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-W pokoju id:%1 poprawiono {wewnętrzna naprawa} dla (special) wyjscie do
+%2, było: &quot;%3&quot; teraz: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1163"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pokój wymagał poprawienia {wewnętrzna naprawa} (specjalnego) wyjścia do %1, było: &quot;%2&quot; teraz: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1189"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 korygując wyjście specjalne &quot;%2&quot;
+było w pokoju z wyjściem do nieprawidłowego pokoju: %3 teraz idź
+do: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1199"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pokój wymaga korekty specjalnego wyjścia &quot;%1&quot; , który był w pokoju z wyjściem do nieprawidłowego pokoju: %2 , aby teraz przejść do: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1230"/>
@@ -2321,12 +2325,16 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE] - Pokój o identyfikatorze: %1 ma specjalne wyjście &quot;%2&quot; z
+wyjściem do: %3 , ale ten pokój nie istnieje. Wyjście zostanie usunięte
+(ale ID pokoju docelowego będzie przechowywane w
+dane użytkownika pokoju pod kluczem:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1243"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE] - Pokój ma specjalne wyjście &quot;%1&quot; z wyjściem do: %2 , ale ten pokój nie istnieje. Wyjście zostanie usunięte (ale ID pokoju docelowego będzie przechowywane w danych użytkownika pokoju pod kluczem:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1282"/>
@@ -2335,12 +2343,16 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju o ID: %1 specjalne wyjście &quot;%2&quot;
+które było na pokój z nieprawidłowym pomieszczeniem: %3 który nie istnieje.
+Wyjście zostanie usunięte (złe ID pokoju docelowego zostanie zapisane w danych użytkownika
+pod kluczem:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1295"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-Pokój miał specjalne wyjście &quot;%1&quot; , które miało miejsce w pokoju z niepoprawnym pokojem: %2 , który nie istnieje.  Wyjście zostanie usunięte (zły identyfikator pokoju docelowego będzie zapisany w danych użytkownika pokoju pod kluczem:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
@@ -2371,29 +2383,32 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1344"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - W pokoju z id: %1 znaleziono jeden lub więcej nadwyżek drzwi, które zostały usunięte:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1351"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Pokój miał jeden lub więcej nadwyżek elementów drzwi, które zostały usunięte:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1367"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 znaleziono jeden lub więcej elementów wagi nadmiarowo, które zostały usunięte:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1374"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Pokój miał jeden lub więcej nadwyżek wagi, które zostały usunięte: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1390"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 znaleziono jeden lub więcej nadwyżek elementów blokady wyjścia, które zostały usunięte:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1397"/>
