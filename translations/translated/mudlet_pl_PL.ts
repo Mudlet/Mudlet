@@ -2823,13 +2823,22 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Ze względu na pewne sytuacje, które w przeszłości nie były sprawdzane, Mudlet pozwalał na posiadanie na mapie obszaru bez nazwy. Może to sprawić, że niektóre rzeczy będą mylące i jest to teraz niedozwolone.
+  Aby rozwiązać ten przypadek, obszar bez nazwy tutaj (lub utworzony
+w przyszłości) zostanie automatycznie przypisany do nazwy &quot;%1&quot;.
+  Jeśli zdarzy się to więcej niż raz, to powielanie nazw obszarów spowoduje, że
+wszystkie z wyjątkiem pierwszego napotkanego obszaru uzyskają &quot;_###&quot; styl
+przyrostek, gdzie każdy &quot;###&quot; jest rosnącą liczbą; możesz chcieć
+zmienić je, być może dodając bardziej znaczące nazwy obszarów, ale to
+całkowicie zależy od Ciebie, co jest używane, inne wtedy nie będziesz mógł
+ustawić jednego obszaru nazwę do innego, który istnieje w tym czasie.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1239"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Domyślna (resetowana) nazwa obszaru (dla pokoi, które nie zostały przypisane do
+obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -1 id.</translation>
     </message>
   </context>
   <context>
@@ -2857,17 +2866,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1233"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Szukaj na %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1251"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Analizowanie znaków</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1260"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przesuń kursor na tę pozycję, aby wyświetlić punkty kodowe Unicode w zaznaczeniu &lt;i&gt;(tylko pierwsza linia!)&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1269"/>
@@ -2877,7 +2886,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1271"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Użyj tego, aby przywrócić Menu Główne w celu uzyskania dostępu do elementów sterujących.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1273"/>
@@ -2887,99 +2896,99 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1275"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Użyj tego, aby przywrócić Główny Pasek Narzędzi w celu uzyskania dostępu do kontroli.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1326"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, wyciąg z konsoli debugowania</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1328"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 mini-konsola wyciąg z %2 proﬁlu</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1330"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, %1 wyciąg z okna użytkownika z %2 proﬁlu</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1332"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, wyciąg z konsoli głównej %1 proﬁlu</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1804"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{carriage-return}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1807"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1808"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1809"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{soft hyphen}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
-      <translation type="unfinished"/>
+      <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1811"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{ogham space mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1813"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1814"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; spacja}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1815"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1816"/>
@@ -2997,133 +3006,133 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{digit space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{punctuation wide space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1821"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{5-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1822"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
-      <translation type="unfinished"/>
+      <translation>{hair width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1823"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1824"/>
       <source>{Zero width non-joiner}</source>
       <comment>Unicode U+200C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Zero width non-joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1825"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1826"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1827"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1828"/>
       <source>{line separator}</source>
       <comment>Unicode 0x2028 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{line separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1829"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{paragraph separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1830"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1831"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1832"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional formatting}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1833"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1834"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1835"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{narrow width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1836"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1837"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1838"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation type="unfinished"/>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1839"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{invisible times}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1840"/>
@@ -3479,32 +3488,33 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% jest dostępna (masz %CURRENT_VERSION%).
+Czy chciałbyś teraz zaktualizować?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="142"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Lista zmian dla %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Używasz wersji %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>Obecnie nie ma dostępnych aktualizacji.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Używasz %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Automatycznie pobieraj przyszłe aktualizacje</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
@@ -3514,27 +3524,27 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Zainstaluj aktualizację teraz</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Przypomnij mi później</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Pomiń tę wersję</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>Nie można otworzyć pobranego pliku %1</translation>
     </message>
   </context>
   <context>
@@ -3560,7 +3570,10 @@ Would you like to update now?</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Niestety, plik jest odczytywany:
+&quot;%1&quot;
+raporty, że ma wersję (%2) musi pochodzić z późniejszej wersji Mudlet,
+a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
@@ -3575,7 +3588,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="358"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Analizowanie danych środowiska...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="366"/>
@@ -3585,7 +3598,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="516"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Analizowanie danych pokoju [liczba: %1]...</translation>
     </message>
   </context>
   <context>
@@ -3603,7 +3616,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Wspierający</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
@@ -3613,7 +3626,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Zasoby zewnętrzne</translation>
     </message>
   </context>
   <context>
@@ -3631,32 +3644,32 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Liczba kolumn/wierszy (w zależności od orientacji):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Orientacja pozioma</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Orientacja pionowa</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>Góra obszaru doku</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Obszar doku lewy</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
       <source>Dock Area Right</source>
-      <translation type="unfinished"/>
+      <translation>Obszar doku prawy</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
@@ -3706,7 +3719,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które przycisk ma wysłać bezpośrednio do gry, gdy ten przycisk zmieni stan z &lt;i&gt;dół&lt;/i&gt; do &lt;i&gt;w góry&lt;/i&gt; pozycje.&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;Zamiast wpisanych komend&lt;/i&gt; w obszarze edytora poniżej.  Wszystko, co tu we wpisane jest dosłownie, po prostu wysłane na serwer gry.&lt;/p&gt;&lt;p&gt;Można wykorzystać zarówno to, jak &lt;i&gt;I&lt;/i&gt; skrypt Lua - zostanie wysłany &lt;b&gt;przed&lt;/b&gt; uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
@@ -3716,12 +3729,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą, idealnie unikalną nazwę przycisku, menu lub paska narzędzi. Zostanie to wyświetlone w drzewie przycisków.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Arkusz stylów:</translation>
     </message>
   </context>
   <context>
