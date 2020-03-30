@@ -85,6 +85,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mCleanResetQueued(false)
 , mSavingAs(false)
 , mAutosaveInterval{}
+, mTriggerEditorSplitterState{}
+, mAliasEditorSplitterState{}
+, mScriptEditorSplitterState{}
+, mActionEditorSplitterState{}
+, mKeyEditorSplitterState{}
+, mTimerEditorSplitterState{}
+, mVarEditorSplitterState{}
 {
     // init generated dialog
     setupUi(this);
@@ -849,6 +856,14 @@ void dlgTriggerEditor::readSettings()
     move(pos);
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
+
+    mTriggerEditorSplitterState = settings.value("mTriggerEditorSplitterState", QByteArray()).toByteArray();
+    mAliasEditorSplitterState = settings.value("mAliasEditorSplitterState", QByteArray()).toByteArray();
+    mScriptEditorSplitterState = settings.value("mScriptEditorSplitterState", QByteArray()).toByteArray();
+    mActionEditorSplitterState = settings.value("mActionEditorSplitterState", QByteArray()).toByteArray();
+    mKeyEditorSplitterState = settings.value("mKeyEditorSplitterState", QByteArray()).toByteArray();
+    mTimerEditorSplitterState = settings.value("mTimerEditorSplitterState", QByteArray()).toByteArray();
+    mVarEditorSplitterState = settings.value("mVarEditorSplitterState", QByteArray()).toByteArray();
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -861,6 +876,14 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("script_editor_pos", pos());
     settings.setValue("script_editor_size", size());
     settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
+
+    settings.setValue("mTriggerEditorSplitterState", mTriggerEditorSplitterState);
+    settings.setValue("mAliasEditorSplitterState", mAliasEditorSplitterState);
+    settings.setValue("mScriptEditorSplitterState", mScriptEditorSplitterState);
+    settings.setValue("mActionEditorSplitterState", mActionEditorSplitterState);
+    settings.setValue("mKeyEditorSplitterState", mKeyEditorSplitterState);
+    settings.setValue("mTimerEditorSplitterState", mTimerEditorSplitterState);
+    settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -6704,6 +6727,13 @@ void dlgTriggerEditor::slot_show_timers()
         mpSourceEditorArea->show();
         slot_timer_selected(treeWidget_timers->currentItem());
     }
+    if (!mTimerEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mTimerEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mTimerEditorSplitterState = splitter_right->saveState();
+    }
 }
 
 void dlgTriggerEditor::slot_show_current()
@@ -6742,6 +6772,13 @@ void dlgTriggerEditor::slot_show_triggers()
         mpSourceEditorArea->show();
         slot_trigger_selected(treeWidget_triggers->currentItem());
     }
+    if (!mTriggerEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mTriggerEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mTriggerEditorSplitterState = splitter_right->saveState();
+    }
 }
 
 void dlgTriggerEditor::slot_show_scripts()
@@ -6759,6 +6796,13 @@ void dlgTriggerEditor::slot_show_scripts()
         mpSourceEditorArea->show();
         slot_scripts_selected(treeWidget_scripts->currentItem());
     }
+    if (!mScriptEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mScriptEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mScriptEditorSplitterState = splitter_right->saveState();
+    }
 }
 
 void dlgTriggerEditor::slot_show_keys()
@@ -6775,6 +6819,13 @@ void dlgTriggerEditor::slot_show_keys()
         mpKeysMainArea->show();
         mpSourceEditorArea->show();
         slot_key_selected(treeWidget_keys->currentItem());
+    }
+    if (!mKeyEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mKeyEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mKeyEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6796,6 +6847,13 @@ void dlgTriggerEditor::slot_show_vars()
         mpVarsMainArea->show();
         mpSourceEditorArea->show();
         slot_var_selected(treeWidget_variables->currentItem());
+    }
+    if (!mVarEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mVarEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mVarEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6835,6 +6893,13 @@ void dlgTriggerEditor::slot_show_aliases()
         mpAliasMainArea->show();
         mpSourceEditorArea->show();
         slot_alias_selected(treeWidget_aliases->currentItem());
+    }
+    if (!mAliasEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mAliasEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mAliasEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -6879,6 +6944,13 @@ void dlgTriggerEditor::slot_show_actions()
         mpActionsMainArea->show();
         mpSourceEditorArea->show();
         slot_action_selected(treeWidget_actions->currentItem());
+    }
+    if (!mActionEditorSplitterState.isEmpty()) {
+        splitter_right->restoreState(mActionEditorSplitterState);
+    } else {
+        const QList<int> sizes = {30, 900, 30};
+        splitter_right->setSizes(sizes);
+        mActionEditorSplitterState = splitter_right->saveState();
     }
 }
 
@@ -8756,6 +8828,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
     const int hysteresis = 10;
     static int bottomWidgetHeight = 0;
     if (mpTriggersMainArea->isVisible()) {
+        mTriggerEditorSplitterState = splitter_right->saveState();
         // The triggersMainArea is visible
         if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
             // The extra controls are visible in the triggersMainArea
@@ -8775,5 +8848,17 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
                 slot_showAllTriggerControls(true);
             }
         }
+    } else if (mpActionsMainArea->isVisible()) {
+        mActionEditorSplitterState = splitter_right->saveState();
+    } else if (mpAliasMainArea->isVisible()) {
+        mAliasEditorSplitterState = splitter_right->saveState();
+    } else if (mpKeysMainArea->isVisible()) {
+        mKeyEditorSplitterState = splitter_right->saveState();
+    } else if (mpScriptsMainArea->isVisible()) {
+        mScriptEditorSplitterState = splitter_right->saveState();
+    } else if (mpTimersMainArea->isVisible()) {
+        mTimerEditorSplitterState = splitter_right->saveState();
+    } else if (mpVarsMainArea->isVisible()) {
+        mVarEditorSplitterState = splitter_right->saveState();
     }
 }
