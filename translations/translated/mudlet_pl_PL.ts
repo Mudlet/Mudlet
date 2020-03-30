@@ -4675,85 +4675,85 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
-      <translation type="unfinished"/>
+      <translation>Po dołączeniu w 2013 roku, został i grzebie różne bity kodu C ++ i GUI szpiczastym kijem; następnie próbuje załatać niektóre dziury wykonane lub znalezione. Ostatnio pracuje nad I18n i L10n dla Mudlet 4.0.0 więc jeśli grasz Mudlet w języku innym niż amerykański czy angielski będzie można zobaczyć jego wyniki oraz dość różnic ortograficznych między nimi, co było używane i brytyjski-angielski jego mózg chciał zobaczyć.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>Były opiekun wczesnych pakietów Windows i Apple OSX. Zarządza także naszym serwerem i pomaga projektowi na wiele sposobów.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="169"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
-      <translation type="unfinished"/>
+      <translation>Przyczynił się wiele ulepszeń do Mudlet&apos;s db: interfejs, system zdarzeń i jest wokół projektu od bardzo dawna, pomagając użytkownikom.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="173"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <comment>about:Leris</comment>
-      <translation type="unfinished"/>
+      <translation>Wykonuje mnóstwo przy tworzeniu Mudlet, strona internetowa i wiki dostępne dla ciebie niezależnie od języka, który mówisz - i promocja naszego rodzaju!</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="177"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
-      <translation type="unfinished"/>
+      <translation>Wkład w integrację Travis, CMake i Visual C++ kompilacji, wiele ulepszeń jakości kodu i zarządzania pamięcią.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
-      <translation type="unfinished"/>
+      <translation>Opracował wspólny system modułów, który umożliwia udostępnianie pakietów skryptów między profilami, interfejs użytkownika do przeglądania zmiennych Lua, ulepszenia w maperze i na całości.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="185"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <comment>about:Ben Carlsen</comment>
-      <translation type="unfinished"/>
+      <translation>Opracował pierwszą wersję instalatora Mac OSX. Twórca i były opiekun wersji Mac.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="189"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
-      <translation type="unfinished"/>
+      <translation>Dołączył w grudniu 2009 r., choć współpracował już znacznie dłużej. Przyczynił się do rozwoju Lua API i jest byłym opiekunem LUA API.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="193"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
-      <translation type="unfinished"/>
+      <translation>Dołączył w grudniu 2009 roku. Przyczynił się do rozwoju API Lua, przesłał małe poprawki błędów i pomógł w zarządzaniu wydaniem 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="197"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <comment>about:Bruno Bigras</comment>
-      <translation type="unfinished"/>
+      <translation>Opracował oryginalny skrypt kompilacji cmake i popełnił szereg poprawek.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
-      <translation type="unfinished"/>
+      <translation>Przyczynił się do rozwoju lua API.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="203"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <comment>about:Oneymus</comment>
-      <translation type="unfinished"/>
+      <translation>Opracował Vyzor GUI Manager dla Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
       <source>Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
-      <translation type="unfinished"/>
+      <translation>Wykonał cuda na naszej stronie w 2017 roku, ale kto woli trochę anonimowość - jeśli jesteś &lt;i&gt;SpamBot&lt;/i&gt; nie dostaniesz się na nasze Fora teraz. Poczynili oni również pewne użyteczne uwagi dotyczące kodu podstawowego C++ i czekamy na przyszłe przeglądy i prace w tym obszarze.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="211"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <comment>about:Dicene</comment>
-      <translation type="unfinished"/>
+      <translation>Dołączając do nas 2017 dał nam przydatny wkład w C++ i Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="214"/>
@@ -4765,37 +4765,37 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
-      <translation type="unfinished"/>
+      <translation>Pomaga rozwinąć i debugować API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
-      <translation type="unfinished"/>
+      <translation>Przyczynił się do kilku ulepszeń i nowych funkcji dla Geyser.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>Oryginalny autor naszego instalatora Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="227"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <comment>about:Maksym Grinenko</comment>
-      <translation type="unfinished"/>
+      <translation>Pracował nad instrukcją, pomocą na forum i pomaga w projektowaniu GUI i dokumentacji.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="230"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <comment>about:Stephen Hansen</comment>
-      <translation type="unfinished"/>
+      <translation>Stworzył bazę danych Lua API, która pozwala na znacznie łatwiejsze korzystanie z baz danych i jednego z oryginalnych instalatorów OSX.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="233"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
-      <translation type="unfinished"/>
+      <translation>Zaprojektował nasze piękne logo, nasz splash screen, okno dialogowe, naszą stronę internetową, kilka ikon i odznaki. Odwiedź jego stronę internetową pod &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="242"/>
@@ -4805,74 +4805,80 @@ Count</source>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inni też odcisnęli swoje piętno na różnych aspektach projektu Mudlet i jeśli nie zostały tu wymienione, to w żadnym wypadku nie jest to celowe! Wcześniejsi współpracownicy mogą zobaczyć ich wspomnienia na liście &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; (na naszej dawnej stronie śledzenia błędów), lub dla stałych współpracowników mogą oni zostać włączeni do listy &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Uczestników&lt;/a&gt;&lt;/b&gt; na GitHubie.&lt;/p&gt;
+&lt;br&gt;
+&lt;p&gt;Wiele ikon zostało pobranych z &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 temat ikony tlenu&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; na &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; lub &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;.  Większość pozostałych pochodzi od Thorstena Wilmsa, lub od Stephena Lyonsa łączącego bity Thorstena&apos;s pracy z innymi źródłami.&lt;/p&gt;
+&lt;p&gt;Specjalne podziękowania dla &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzewicz&lt;/b&gt;&lt;/span&gt; oraz &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. Przyczyniły się one do powstania wielu dobrych pomysłów i w ten sposób przyczyniły się do znacznego ulepszenia ram skryptowych.&lt;/p&gt;
+&lt;p&gt;Dzięki &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;), który połączył nas wszystkich i zainspirował swoim projektem KMuddy. Mudlet wykorzystuje część kodu telnetowego, który napisał dla swojego projektu KMuddy (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;Specjalne podziękowania dla &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) za udzielenie nam kilku cennych rad.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="286"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet został pierwotnie napisany przez Heiko Köhna, KoehnHeiko@googlemail.com.&lt;/p&gt;
+&lt;p&gt;Mudlet został wydany na licencji GPL w wersji 2, która została powielona poniżej:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="582"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; jest zbudowany przy wsparciu innych projektów ze świata FOSS; oprócz tego, że korzystamy z wielu komponentów GPL, korzystamy także z niektórych programów innych firm na innych licencjach:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="824"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Komunalna Biblioteka IRC&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Prawa autorskie © 2008-2016 The Communi Projec&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="827"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="833"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="836"/>
       <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="846"/>
       <source>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="849"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
+      <translation>Widżet &lt;b&gt;edbee-lib&lt;/b&gt; sam w sobie zawiera inne komponenty z licencjami, które muszą być odnotowane, są one również:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="851"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="856"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="860"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="864"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="871"/>
@@ -5263,7 +5269,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Restartowanie klienta IRC</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
