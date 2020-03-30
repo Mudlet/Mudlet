@@ -1945,31 +1945,34 @@ ta wersja Mudlet może nie odczytać informacji z niego, ale będzie się stara�
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-Może chcesz przekazać ten plik mapy do Mudlet Museum!
+Jest tyle danych, ale lepiej zacząć od nowa ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1397"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO] - Czytanie mapy (format wersji:%1) plik:
+&quot;%2&quot;,
+proszę czekać ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1398"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO] - Czytanie mapy (format wersji:%1) plik: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1507"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Domyślny (reset) obszar (dla pokoi, które nie zostały przypisane do żadnego obszaru) nie został znaleziony, dodanie zarezerwowanego identyfikatora -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1591"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO] - Pomyślnie odczytany plik mapy (%1s), sprawdzanie niektórych szczegółów spójności...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1606"/>
@@ -1989,7 +1992,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1666"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO] - Sprawdzanie pliku mapy: &quot;%1&quot;, format wersji:%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2079"/>
@@ -2004,7 +2007,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2092"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Identyfikator obszaru: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2094"/>
@@ -2019,7 +2022,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2110"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>ID pokoju: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2112"/>
@@ -2039,7 +2042,10 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Przynajmniej jedna rzecz została wykryta podczas ostatniej operacji na mapie, zaleca się przejrzenie ostatniego raportu w pliku:
+&quot;%1&quot;
+- poszukaj (ostatniego) raportu z tytułem:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2136"/>
