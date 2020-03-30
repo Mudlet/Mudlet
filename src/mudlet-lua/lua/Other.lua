@@ -183,10 +183,7 @@ end
 function appendScript(name, luaCode, pos)
   pos = pos or 1
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
-  assert(type(name) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
-  if getScript(name, pos) == -1 then
-    return getScript(name, pos)
-  end
+  assert(type(luaCode) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
   return setScript(name, getScript(name, pos).."\n"..luaCode, pos)
 end
 
