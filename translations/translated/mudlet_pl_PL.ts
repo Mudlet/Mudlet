@@ -7662,32 +7662,32 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="149"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Graj</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
       <source>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Skonfiguruj szczegóły połączenia z serwerami gry.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="160"/>
       <source>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Odłącz się od aktualnego serwera gry.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="168"/>
       <source>&lt;p&gt;Disconnect and then reconnect to the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rozłącz się, a następnie połącz ponownie z bieżącym serwerem gry.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="176"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Skonfiguruj ustawienia dla aplikacji Mudlet globalnie i dla bieżącego profilu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="184"/>
       <source>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera edytor dla różnych typów rzeczy, które mogą być skryptowane przez użytkownika.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="213"/>
@@ -7698,83 +7698,83 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="216"/>
       <location filename="../src/ui/main_window.ui" line="253"/>
       <source>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera wbudowany czat IRC na kanale #mudletowym na serwerach IRC Freenode.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="224"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera (on-line) kolekcję &quot;Ekrany edukacyjne Mudlet&quot; w przeglądarce internetowej systemu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Załaduj wcześniej zapisaną sesję gry, która może być użyta do testowania systemów Mudlet lua (off-line!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="240"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera (on-line) Forum Mudleta w przeglądarce internetowej systemu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="261"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokaż lub ukryj mapę.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="269"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Instalacja i usuwanie kolekcji elementów (pakietów) Mudlet lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="277"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zainstaluj i usuń (share- &amp; sync-able) kolekcje elementów Mudlet lua (moduły).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="285"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zbierz i zapakuj kolekcje przedmiotów Mudlet Lua i innych zasobów do modułu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="293"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Udostępnij obszar ekranu między wieloma otwartymi profilami.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="301"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ukryj lub pokaż obszar wyszukiwania i dolne przyciski po prawej stronie obszaru wejściowego w wierszu wejściowym.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="306"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Kanał pomocy Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Zgłaszanie problemu</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>Zgłaszanie problemu z kompilacją testów publicznych</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Rozłącz się</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Połącz ponownie</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferencje</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="181"/>
@@ -7784,12 +7784,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="189"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Notatnik</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>Odwołanie do interfejsu API</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="237"/>
@@ -7804,38 +7804,38 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera okno edytora tekstu w formie swobodnej dla tego profilu, który jest zapisywany między sesjami.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="200"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwiera podręcznik Mudlet w przeglądarce internetowej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="208"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Poinformuj się o tej wersji Mudlet, o ludziach, którzy go stworzyli i o licencji, na której możesz się nim dzielić.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Samouczki wideo</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>Wczytaj powtórkę</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>Sprawdź dostępność aktualizacji...</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>Czat pomocy na żywo</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
@@ -7850,22 +7850,22 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="274"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer modułów</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="282"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Eksporter pakietów (eksperymentalny)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="290"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>MultiView</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="298"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompaktowa linia wprowadzania</translation>
     </message>
   </context>
   <context>
