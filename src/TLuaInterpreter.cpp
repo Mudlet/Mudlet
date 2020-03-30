@@ -4778,71 +4778,30 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_remove(L, 1);
     }
 
-    QString eventName;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    void* func;
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        eventName = QString::fromUtf8(lua_tostring(L, 1));
-        lua_remove(L, 1);
     }
-
-    TEvent event {};
-    int n = lua_gettop(L);
-    // Iterate from the top down thru the stack because luaL_ref requires
-    // the object (table or function in our case) to be on top
-    for (int i = n; i >= 1; --i) {
-        if (lua_isnumber(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
-            lua_pop(L, 1);
-        } else if (lua_isstring(L, -1)) {
-            event.mArgumentList.prepend(QString::fromUtf8(lua_tostring(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
-            lua_pop(L, 1);
-        } else if (lua_isboolean(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
-            lua_pop(L, 1);
-        } else if (lua_isnil(L, -1)) {
-            event.mArgumentList.prepend(QString());
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
-            lua_pop(L, 1);
-        } else if (lua_istable(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
-            // luaL_ref pops the object, so we don't have to
-        } else if (lua_isfunction(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
-            // luaL_ref pops the object, so we don't have to
-        } else {
-            lua_pushfstring(L,
-                            "%s: bad argument #%d type (boolean, number, string, table, function,\n"
-                            "or nil expected, got a %s!)",
-                            funcName.toUtf8().constData(),
-                            i,
-                            luaL_typename(L, -1));
-            return lua_error(L);
-        }
-
-    }
+    lua_pushlightuserdata(L, func);
+    lua_pushvalue(L, 1);
+    lua_settable(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
-        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
-        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelReleaseCallback"))
-        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelMoveCallback"))
-        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelWheelCallback"))
-        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnEnter"))
-        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
-        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, func);
     else {
         lua_pushnil(L);
         lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());

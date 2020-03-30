@@ -38,53 +38,46 @@ TLabel::TLabel(Host* pH, QWidget* pW)
     setMouseTracking(true);
 }
 
-void TLabel::setClick(const QString& func, const TEvent& args)
+void TLabel::setClick(void* func)
 {
-    releaseParams(mClickParams);
     mClick = func;
-    mClickParams = args;
+    mHaveClick = true;
 }
 
-void TLabel::setDoubleClick(const QString& func, const TEvent& args)
+void TLabel::setDoubleClick(void *func)
 {
-    releaseParams(mDoubleClickParams);
     mDoubleClick = func;
-    mDoubleClickParams = args;
+    mHaveDoubleClick = true;
 }
 
-void TLabel::setRelease(const QString& func, const TEvent& args)
+void TLabel::setRelease(void* func)
 {
-    releaseParams(mReleaseParams);
     mRelease = func;
-    mReleaseParams = args;
+    mHaveRelease = true;
 }
 
-void TLabel::setMove(const QString& func, const TEvent& args)
+void TLabel::setMove(void* func)
 {
-    releaseParams(mMoveParams);
     mMove = func;
-    mMoveParams = args;
+    mHaveMove = true;
 }
 
-void TLabel::setWheel(const QString& func, const TEvent& args)
+void TLabel::setWheel(void* func)
 {
-    releaseParams(mWheelParams);
     mWheel = func;
-    mWheelParams = args;
+    mHaveWheel = true;
 }
 
-void TLabel::setEnter(const QString& func, const TEvent& args)
+void TLabel::setEnter(void* func)
 {
-    releaseParams(mEnterParams);
     mEnter = func;
-    mEnterParams = args;
+    mHaveEnter = func;
 }
 
-void TLabel::setLeave(const QString& func, const TEvent& args)
+void TLabel::setLeave(void* func)
 {
-    releaseParams(mLeaveParams);
     mLeave = func;
-    mLeaveParams = args;
+    mHaveLeave = func;
 }
 
 void TLabel::mousePressEvent(QMouseEvent* event)
@@ -93,8 +86,8 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && !mClick.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams, event);
+    if (mpHost && mHaveClick) {
+        mpHost->getLuaInterpreter()->call_luafunction(mClick);
         event->accept();
     } else {
         QWidget::mousePressEvent(event);
@@ -107,8 +100,8 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && !mDoubleClick.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
+    if (mpHost && mHaveDoubleClick) {
+        mpHost->getLuaInterpreter()->call_luafunction(mDoubleClick);
         event->accept();
     } else {
         QWidget::mouseDoubleClickEvent(event);
@@ -121,8 +114,8 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && !mRelease.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
+    if (mpHost && mHaveRelease) {
+        mpHost->getLuaInterpreter()->call_luafunction(mRelease);
         event->accept();
     } else {
         QWidget::mouseReleaseEvent(event);
@@ -134,9 +127,8 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
     if (forwardEventToMapper(event)) {
         return;
     }
-
-    if (mpHost && !mMove.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mMove, mMoveParams, event);
+    if (mpHost && mHaveMove) {
+        mpHost->getLuaInterpreter()->call_luafunction(mMove);
         event->accept();
     } else {
         QWidget::mouseMoveEvent(event);
@@ -149,8 +141,8 @@ void TLabel::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    if (mpHost && !mWheel.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mWheel, mWheelParams, event);
+    if (mpHost && mHaveWheel) {
+        mpHost->getLuaInterpreter()->call_luafunction(mWheel);
         event->accept();
     } else {
         QWidget::wheelEvent(event);
@@ -163,8 +155,8 @@ void TLabel::leaveEvent(QEvent* event)
         return;
     }
 
-    if (mpHost && !mLeave.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
+    if (mpHost && mHaveLeave) {
+        mpHost->getLuaInterpreter()->call_luafunction(mLeave);
         event->accept();
     } else {
         QWidget::leaveEvent(event);
@@ -177,8 +169,8 @@ void TLabel::enterEvent(QEvent* event)
         return;
     }
 
-    if (mpHost && !mEnter.isEmpty()) {
-        mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
+    if (mpHost && mHaveEnter) {
+        mpHost->getLuaInterpreter()->call_luafunction(mEnter);
         event->accept();
     } else {
         QWidget::enterEvent(event);
@@ -270,24 +262,6 @@ bool TLabel::forwardEventToMapper(QEvent* event)
     }
     }
     return false;
-}
-
-// This function iterates through the provided event parameters,
-// searching for parameters that are references to values in the
-// Lua registry, and correctly dereferences them. This allows
-// the parameters to be safely overwritten.
-void TLabel::releaseParams(TEvent& params)
-{
-    if (params.mArgumentList.isEmpty()) {
-        return;
-    }
-
-    for (int i = 0; i < params.mArgumentList.size(); i++) {
-        if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION) {
-            mpHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
-        }
-    }
-
 }
 
 void TLabel::setClickThrough(bool clickthrough)
