@@ -4778,14 +4778,12 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_remove(L, 1);
     }
 
-    void* func;
+    int func;
     if (!lua_isfunction(L, 1)) {
         lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     }
-    lua_pushlightuserdata(L, func);
-    lua_pushvalue(L, 1);
-    lua_settable(L, LUA_REGISTRYINDEX);
+    func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
@@ -15523,6 +15521,165 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     } else {
         return std::make_pair(false, returnValue);
     }
+}
+
+// No documentation available in wiki - internal function
+bool TLuaInterpreter::setLabelCallbackEvent(const int& func, const QEvent* qE)
+{
+    lua_State* L = pGlobalLua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func);
+    int error;
+    if (qE) {
+        // Create Lua table with QEvent data if needed
+        switch (qE->type()) {
+        // This means the default argument value was used, so ignore
+        case (QEvent::None):
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
+            break;
+        // These are all QMouseEvents
+        case (QEvent::MouseButtonPress):
+            [[fallthrough]];
+        case (QEvent::MouseButtonDblClick):
+            [[fallthrough]];
+        case (QEvent::MouseButtonRelease):
+            [[fallthrough]];
+        case (QEvent::MouseMove): {
+            auto qME = static_cast<const QMouseEvent*>(qE);
+            lua_newtable(L);
+
+            // push button()
+            lua_pushstring(L, mMouseButtons.value(qME->button()).toUtf8().constData());
+            lua_setfield(L, -2, QStringLiteral("button").toUtf8().constData());
+
+            // push buttons()
+            lua_newtable(L);
+            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            int counter = 1;
+            while (iter != mMouseButtons.constEnd()) {
+                if (iter.key() & qME->buttons()) {
+                    lua_pushnumber(L, counter);
+                    lua_pushstring(L, iter.value().toUtf8().constData());
+                    lua_settable(L, -3);
+                    counter++;
+                }
+                ++iter;
+            }
+            lua_setfield(L, -2, QStringLiteral("buttons").toUtf8().constData());
+
+            // Push globalX()
+            lua_pushnumber(L, qME->globalX());
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
+
+            // Push globalY()
+            lua_pushnumber(L, qME->globalY());
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
+
+            // Push x()
+            lua_pushnumber(L, qME->x());
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
+
+            // Push y()
+            lua_pushnumber(L, qME->y());
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
+
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            break;
+        }
+        // These are QEvents
+        case (QEvent::Enter): {
+            auto qME = static_cast<const QEnterEvent*>(qE);
+            lua_newtable(L);
+
+            // Push globalX()
+            lua_pushnumber(L, qME->globalX());
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
+
+            // Push globalY()
+            lua_pushnumber(L, qME->globalY());
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
+
+            // Push x()
+            lua_pushnumber(L, qME->x());
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
+
+            // Push y()
+            lua_pushnumber(L, qME->y());
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
+
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            break;
+        }
+        case (QEvent::Leave): {
+            // Seems there isn't a QLeaveEvent, so no
+            // extra information to be gotten
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
+            break;
+        }
+        // This is a QWheelEvent
+        case (QEvent::Wheel): {
+            auto qME = static_cast<const QWheelEvent*>(qE);
+            lua_newtable(L);
+
+            // push buttons()
+            lua_newtable(L);
+            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            int counter = 1;
+            while (iter != mMouseButtons.constEnd()) {
+                if (iter.key() & qME->buttons()) {
+                    lua_pushnumber(L, counter);
+                    lua_pushstring(L, iter.value().toUtf8().constData());
+                    lua_settable(L, -3);
+                    counter++;
+                }
+                ++iter;
+            }
+            lua_setfield(L, -2, QStringLiteral("buttons").toUtf8().constData());
+
+            // Push globalX()
+            lua_pushnumber(L, qME->globalX());
+            lua_setfield(L, -2, QStringLiteral("globalX").toUtf8().constData());
+
+            // Push globalY()
+            lua_pushnumber(L, qME->globalY());
+            lua_setfield(L, -2, QStringLiteral("globalY").toUtf8().constData());
+
+            // Push x()
+            lua_pushnumber(L, qME->x());
+            lua_setfield(L, -2, QStringLiteral("x").toUtf8().constData());
+
+            // Push y()
+            lua_pushnumber(L, qME->y());
+            lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
+
+            // Push angleDelta()
+            lua_pushnumber(L, qME->angleDelta().x());
+            lua_setfield(L, -2, QStringLiteral("angleDeltaX").toUtf8().constData());
+            lua_pushnumber(L, qME->angleDelta().y());
+            lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
+
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            break;
+        }
+        }
+    } else {
+        error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    }
+
+    if (error) {
+        std::string err = "";
+        if (lua_isstring(L, -1)) {
+            err += lua_tostring(L, -1);
+        }
+        QString name = "event handler function";
+        QString function = "LabelEventFunction";
+        logError(err, name, function);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
+        }
+    }
+
+    lua_pop(L, lua_gettop(L));
+    return !error;
 }
 
 // No documentation available in wiki - internal function

@@ -43,13 +43,13 @@ class TLabel : public QLabel
 public:
     Q_DISABLE_COPY(TLabel)
     TLabel(Host* pH, QWidget* pW = nullptr);
-    void setClick(void *func);
-    void setDoubleClick(void* func);
-    void setRelease(void* func);
-    void setMove(void* func);
-    void setWheel(void* func);
-    void setEnter(void* func);
-    void setLeave(void* func);
+    void setClick(const int& func);
+    void setDoubleClick(const int& func);
+    void setRelease(const int& func);
+    void setMove(const int& func);
+    void setWheel(const int& func);
+    void setEnter(const int& func);
+    void setLeave(const int& func);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -62,21 +62,13 @@ public:
     bool forwardEventToMapper(QEvent*);
 
     QPointer<Host> mpHost;
-    void* mClick;
-    void* mDoubleClick;
-    void* mRelease;
-    void* mMove;
-    void* mWheel;
-    void* mEnter;
-    void* mLeave;
-    bool mHaveClick = false;
-    bool mHaveDoubleClick = false;
-    bool mHaveRelease = false;
-    bool mHaveMove = false;
-    bool mHaveWheel = false;
-    bool mHaveEnter = false;
-    bool mHaveLeave = false;
-
+    int mClick = 0;
+    int mDoubleClick = 0;
+    int mRelease = 0;
+    int mMove = 0;
+    int mWheel = 0;
+    int mEnter = 0;
+    int mLeave = 0;
 };
 
 #endif // MUDLET_TLABEL_H

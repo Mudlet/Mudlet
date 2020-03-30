@@ -1952,3 +1952,71 @@ function resetLabelCursor(name)
   assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
   return setLabelCursor(name, -1)
 end
+
+local setLabelCursorLayer = setLabelCursor
+function setLabelCursor(labelname, cursorShape)
+  if type(cursorShape) == "string" then
+    cursorShape = mudlet.cursor[cursorShape]
+  end
+  return setLabelCursorLayer(labelname, cursorShape)
+end
+
+
+function unpacknil (t, i)
+  local i = i or 1
+    if i > t.n then
+      return t[i]
+    end
+     return t[i], unpacknil(t, i + 1)
+end
+
+local setLC = setLC or setLabelClickCallback
+function setLabelClickCallback(labelname, func, ...)
+ local nr = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+    return setLC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
+  end 
+    setLC(labelname, func) 
+end
+
+local setLRC = setLRC or setLabelReleaseCallback
+
+function setLabelReleaseCallback(labelname, func, ...)
+  local nr = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+    return setLRC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
+  end
+    
+end
+
+local setOnE = setOnE or setLabelOnEnter
+function setLabelOnEnter(labelname, func, ...)
+  local nr = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+    return setOnE(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
+    end
+    setOnE(labelname, func)
+end
+
+local setOnL = setOnL or setLabelOnLeave
+function setLabelOnLeave(labelname, func, ...)
+  local nr = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+    return setOnL(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
+    end
+    setOnL(labelname, func)
+end
+
+local setLMC = setLMC or setLabelMoveCallback
+function setLabelMoveCallback(labelname, func, ...)
+  local nr = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+    return setLMC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
+  end
+    setLMC(labelname, func)
+end
