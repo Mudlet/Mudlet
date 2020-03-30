@@ -403,12 +403,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 wybranych znaków</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | zakres: </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
@@ -418,12 +418,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Błąd przetwarzania motywu %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Nie znaleziono motywu błędu %1.</translation>
     </message>
   </context>
   <context>
@@ -454,31 +454,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3208"/>
       <location filename="../src/T2DMap.cpp" line="4876"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Linia ciągła</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3209"/>
       <location filename="../src/T2DMap.cpp" line="4877"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linia kropkowana</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3210"/>
       <location filename="../src/T2DMap.cpp" line="4878"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Linia kreskowa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3211"/>
       <location filename="../src/T2DMap.cpp" line="4879"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linia kreska-kropka</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3212"/>
       <location filename="../src/T2DMap.cpp" line="4880"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linia kreska-kropka-kropka</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3486"/>
@@ -501,7 +501,9 @@ please wait...</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Symbolem jest &quot;%1&quot; w wybranym pokoju,
+usuń to, aby skasować symbol lub zamienić
+to z nowym symbolem dla tego pokoju:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
@@ -513,12 +515,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3779"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Usuń kolor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3797"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Zdefiniuj nowy kolor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4111"/>
@@ -532,7 +534,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2380"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>brak tekstu</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -549,13 +551,14 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij na linię, aby zaznaczyć lub odznaczyć numer pokoju (z podaną nazwą, jeśli pokoje są nazwane), aby dodać lub usunąć pokój z zaznaczenia.  Kliknij na odpowiedni nagłówek, aby posortować go według tej metody.  Zwróć uwagę, że kolumna z nazwą będzie wyświetlana tylko wtedy, gdy przynajmniej jeden z pokoi ma swoją nazwę.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Nie może znaleźć ścieżki od %1 do %2 używając znanych wyjść.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -570,14 +573,16 @@ it with a new symbol for this room:</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Pokój%1ID:%1%2 Pozycja%1na%1mapie: (%3,%4,%5) -%1aktualna lokacja gracza
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2262"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Pokój%1ID:%1%2 Pozycja%1na%1mapie: (%3,%4,%5) -%1wybrany pokój
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2280"/>
