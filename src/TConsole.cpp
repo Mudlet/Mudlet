@@ -2483,11 +2483,15 @@ bool TConsole::raiseWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->raise();
         return true;
     } else if (pL) {
         pL->raise();
+        return true;
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->raise();
         return true;
     } else {
         return false;
@@ -2498,12 +2502,17 @@ bool TConsole::lowerWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
         return true;
     } else if (pL) {
         pL->lower();
+        mpMainDisplay->lower();
+        return true;
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->lower();
         mpMainDisplay->lower();
         return true;
     } else {

@@ -190,6 +190,41 @@ function Geyser.Container:lower ()
 	lowerWindow(self.name)
 end
 
+function Geyser.Container:raiseAll(container, me)
+  me = me or true
+  container = container or self
+  -- raise myself
+  if me then 
+    container:raise() 
+  end
+  
+  local v
+  for i=1,#container.windows do
+    v = container.windows[i]
+    container.windowList[v]:raise()
+    container.windowList[v]:raiseAll(container.windowList[v], false)
+  end
+end
+
+local function createReverseTable(container)
+ local v
+  Geyser.Container.reverseTable = Geyser.Container.reverseTable or {}
+    for i=1,#container.windows do
+    v = container.windows[i]
+    table.insert(Geyser.Container.reverseTable, container.windowList[v])
+    createReverseTable(container.windowList[v])
+  end
+end
+
+function Geyser.Container:lowerAll()
+  createReverseTable(self)
+  for i=#Geyser.Container.reverseTable,1,-1 do
+    Geyser.Container.reverseTable[i]:lower()
+  end
+  Geyser.Container.reverseTable = nil
+  self:lower()
+end
+
 --- Moves this window according to the new x and y contraints set.
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
