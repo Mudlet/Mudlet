@@ -4980,7 +4980,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby ustawić wyzwalacz koloru, gdy tekst kolor pierwszoplanowy nie został zmodyfikowany z wartości normalnej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
@@ -5830,12 +5830,12 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="136"/>
       <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw niestandardową nazwę dla swojego logu. (Nowe logi są dołączone, jeśli plik dziennika o tej samej nazwie już istnieje.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="157"/>
       <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Automatyczne aktualizacje są wyłączone w wersjach programistycznych, aby zapobiec nadpisaniu aktualizacji twojego Mudleta&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="178"/>
