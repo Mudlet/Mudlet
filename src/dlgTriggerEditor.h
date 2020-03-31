@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2015-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -140,16 +141,17 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
                  SearchResultIsValue = 0x8
     };
 
+public:
+    // This needs to be public so that the options can be used from the Host class:
     enum SearchOption {
         // Unset:
         SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1 /*,
-        SearchOptionRegExp = 0x2,
-        SearchOptionWholeWord = 0x4 */
+        SearchOptionCaseSensitive = 0x1,
+        SearchOptionIncludeVariables = 0x2 /*,
+        SearchOptionRegExp = 0x4,
+        SearchOptionWholeWord = 0x8 */
     };
 
-
-public:
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
@@ -210,6 +212,7 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
+    void setSearchOptions(const SearchOptions);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -275,6 +278,7 @@ private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -461,6 +465,7 @@ private:
     QIcon mIcon_searchOptions;
 
     QAction* mpAction_searchCaseSensitive;
+    QAction* mpAction_searchIncludeVariables;
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;

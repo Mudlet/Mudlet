@@ -151,8 +151,10 @@
         <file>icons/reinosdeleyenda_mud.png</file>
         <file>icons/run-build-clean.png</file>
         <file>icons/searchOptions-caseSensitive.png</file>
+        <file>icons/searchOptions-caseSensitive+withVariables.png</file>
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>
+        <file>icons/searchOptions-withVariables.png</file>
         <file>icons/Slothmud.png</file>
         <file>icons/solid-line.png</file>
         <file>icons/stickmud_icon.jpg</file>

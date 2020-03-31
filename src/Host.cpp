@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -35,7 +35,6 @@
 #include "TScript.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -378,6 +377,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -2503,4 +2503,14 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     secondaryColor = mPlayerRoomInnerColor;
     // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
+}
+
+// Used to set the searchOptions here and the one in the editor if present, for
+// use by the XMLimporter class:
+void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    if (mpEditorDialog) {
+        mpEditorDialog->setSearchOptions(optionsState);
+    }
 }
