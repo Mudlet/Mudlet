@@ -9867,88 +9867,88 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="806"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Szerokość lewej krawędzi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="850"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Wysokość dolnej krawędzi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="894"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Szerokość prawej krawędzi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="935"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Zawijanie wyrazów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="959"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Zawijanie linii w:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="979"/>
       <location filename="../src/ui/profile_preferences.ui" line="1027"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>znaków</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1007"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Wcięcie zawiniętych wierszy przez:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1040"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Podwójne kliknięcie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1046"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>Przestań wybierać słowo na tych znakach:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1056"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1069"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Opcje wyświetlania</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1078"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Napraw niepotrzebne podziały linii na serwerach GA</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1088"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż spacje/tabulację</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1098"/>
       <source>Use Mudlet on a netbook with a small screen</source>
-      <translation type="unfinished"/>
+      <translation>Użyj Mudlet komputerach z małym ekranem</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1108"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż Wiersze/Akapity</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1118"/>
       <source>Echo Lua errors to the main console</source>
-      <translation type="unfinished"/>
+      <translation>Błędy Echo Lua na głównej konsoli</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1125"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Zrób &apos;Niejednoznaczne&apos; E. Znaki szerokości azjatyckiej szerokie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1224"/>
@@ -9958,7 +9958,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1230"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Szablon</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1300"/>
@@ -9968,12 +9968,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1340"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>Widok koloru</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1346"/>
       <source>Select your color preferences</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz swoje ustawienia kolorów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
@@ -10008,12 +10008,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza GMCP - należy pamiętać, że jeśli masz włączone również MSDP, niektóre serwery będą preferować jeden nad drugim&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="276"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza MSDP - zwróć uwagę, że jeśli masz również włączony GMCP, niektóre serwery będą preferować jeden nad drugim&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="339"/>
@@ -10325,7 +10325,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1592"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1605"/>
@@ -10336,7 +10336,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1612"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1625"/>
@@ -10347,7 +10347,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1632"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1645"/>
@@ -10358,7 +10358,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1652"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1665"/>
@@ -10369,7 +10369,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1672"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1685"/>
@@ -10380,7 +10380,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1692"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1705"/>
@@ -10391,7 +10391,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1712"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1725"/>
@@ -10402,7 +10402,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1732"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1745"/>
@@ -10413,7 +10413,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1752"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1765"/>
@@ -10424,7 +10424,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1785"/>
@@ -10435,139 +10435,139 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1805"/>
       <location filename="../src/ui/profile_preferences.ui" line="2577"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Resetuj wszystkie kolory do domyślnych</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1812"/>
       <source>&lt;p&gt;If this option is checked the Mud Server may send codes to change the above 16 colors or to reset them to their defaults by using standard ANSI &lt;tt&gt;OSC&lt;/tt&gt; Escape codes.&lt;/p&gt;&lt;p&gt;Specifically &lt;tt&gt;&amp;lt;OSC&amp;gt;Pirrggbb&amp;lt;ST&amp;gt;&lt;/tt&gt; will set the color with index &lt;i&gt;i&lt;/i&gt; to have the color with the given &lt;i&gt;rr&lt;/i&gt; red, &lt;i&gt;gg&lt;/i&gt; green and &lt;i&gt;bb&lt;/i&gt;  blue components where i is a single hex-digit (&apos;0&apos; to &apos;9&apos; or &apos;a&apos; to &apos;f&apos; or &apos;A&apos; to &apos;F&apos; to give a number between 0 an d15) and rr, gg and bb are two digit hex-digits numbers (between 0 to 255); &amp;lt;OSC&amp;gt; is &lt;i&gt;Operating System Command&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;[&lt;/tt&gt; and &amp;lt;ST&amp;gt; is the &lt;i&gt;String Terminator&lt;/i&gt; which is normally encoded as the ASCII &amp;lt;ESC&amp;gt; character followed by &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Conversely &lt;tt&gt;&amp;lt;OSC&amp;gt;R&amp;lt;ST&amp;gt;&lt;/tt&gt; will reset the colors to the defaults like the button to the right does.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli ta opcja jest zaznaczona, Mud Server może wysłać kody, aby zmienić powyższe 16 kolorów lub zresetować je do ustawień domyślnych przy użyciu standardowego ANSI &lt;tt&gt;Osc&lt;/tt&gt; Kody ucieczki.&lt;/p&gt;&lt;p&gt;Specjalnie &lt;tt&gt;&amp;lt;OSC&amp;gt; Pirrggbb ( Pirrggbb )&amp;lt; St&amp;gt;&lt;/tt&gt; ustawi kolor z indeksem &lt;i&gt;I&lt;/i&gt; aby mieć kolor z danym &lt;i&gt;Rr&lt;/i&gt; Czerwony &lt;i&gt;Gg&lt;/i&gt; zielony i &lt;i&gt;Bb&lt;/i&gt;  niebieskie komponenty, w których i jest pojedynczą cyfrą szesnastkową (&apos;0&apos; do &apos;9&apos; Lub &apos;A&apos; do &apos;F&apos; Lub &apos;A&apos; do &apos;F&apos; aby podać liczbę między 0 a d15) i rr, gg i bb są dwucyfrowymi cyframi sześciokątnych (od 0 do 255); &amp;lt;OSC&amp;gt; Jest &lt;i&gt;Polecenie systemu operacyjnego&lt;/i&gt; który jest zwykle kodowany jako ASCII &amp;lt; Esc&amp;gt; charakter, po którym następuje &lt;tt&gt;[&lt;/tt&gt; I &amp;lt; St&amp;gt; jest &lt;i&gt;Terminator strun&lt;/i&gt; który jest zwykle kodowany jako ASCII &amp;lt; Esc&amp;gt; charakter, po którym następuje &lt;tt&gt;\&lt;tt&gt;.&lt;/p&gt;&lt;p&gt;Odwrotnie &lt;tt&gt;&amp;lt;OSC&amp;gt; R&amp;lt; St&amp;gt;&lt;/tt&gt; zresetuje kolory do ustawień domyślnych, takich jak przycisk po prawej stronie.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1815"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>Serwer może ponownie zdefiniować te kolory</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1839"/>
       <source>Mapper</source>
-      <translation type="unfinished"/>
+      <translation>Maper</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1845"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>Pliki mapy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1851"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz aktualną mapę:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1861"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>Naciśnij aby wybrać lokalizację i zapisać</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1868"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Wczytaj inny plik mapy w:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1878"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>Naciśnij, aby wybrać plik i załadować</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1885"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet teraz sprawdza i naprawia problemy, które mogły powstać w poprzedniej wersji z powodu błędnego kodu lub źle udokumentowanych poleceń. Jednakże w przypadku stwierdzenia istotnych problemów sprawozdanie może być dość obszerne, w szczególności w przypadku większych map.&lt;/p&gt;&lt;p&gt;Jeśli ta opcja nie jest ustawiona, Mudlet zmniejszy ilość wiadomości na ekranie, ukrywając wiele tekstów i pokazując sugestię, aby zamiast tego przejrzeć plik zgłoszenia.&lt;/p&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1969"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zmień to na niższą wersję, jeśli potrzebujesz zapisać swoją mapę w formacie, który może być odczytany przez starsze wersje Mudlet. W ten sposób stracisz dodatkowe dane dostępne w aktualnym formacie mapy&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1999"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Pobierz najnowszą mapę dostarczoną przez grę:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2067"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Umożliwia to antyaliasing (AA) dla widoku mapy 2D, dzięki czemu wygląda on gładko i ładniej. Wyłącz to, jeśli&apos;jesteś na bardzo wolnym komputerze.&lt;/p&gt;&lt;p&gt;Widok mapy 3D zawsze ma włączoną funkcję antyaliasingu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2077"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Domyślny obszar (identyfikator obszaru -1) jest używany przez niektóre skrypty mapujące jako tymczasowy &apos;obszar utrzymywania&apos; dla pomieszczeń, zanim&apos;zostaną umieszczone w odpowiednim obszarze&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>Styl znacznika pokoju z mapą 2D:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>Kolor pierścienia zewnętrznego</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2149"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>Kolor pierścienia wewnętrznego</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>Oryginał</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony pierścień</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>Niebieski/żółty pierścień</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>Pierścień niestandardowy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2186"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stosunek procentowy (&lt;i&gt;wartość domyślna to 120%&lt;/i&gt;) symbolu znacznika do przestrzeni dostępnej dla pomieszczenia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
       <location filename="../src/ui/profile_preferences.ui" line="2220"/>
       <source>%</source>
-      <translation type="unfinished"/>
+      <translation>%</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
       <source>Outer diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Średnica zewnętrzna: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stosunek procentowy średnicy wewnętrznej symbolu znacznika do zewnętrznej (&lt;i&gt;wartość domyślna to 70%&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
       <source>Inner diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Średnica wewnętrzna: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2607"/>
