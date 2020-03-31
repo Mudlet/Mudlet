@@ -245,6 +245,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
     //installEventFilter(mpSourceEditorFindArea);
     //mpSourceEditorFindArea->pDlgTriggerEditor = this;
+    mpSourceEditorEdbee->horizontalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorFindArea->hide();
 
     //connect(this, &dlgTriggerEditor::resizeEvent, this, &dlgTriggerEditor::slot_move_source_find);
@@ -272,10 +274,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //    mpSourceEditorSearchFindNextButton->setText("Next");
 //    mpSourceEditorSearchFindNextButton->show();
 
+    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
+    //connect(mpSourceEditorEdbee->horizontalScrollBar(), &QWidget::, this, &dlgTriggerEditor::slot_test);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_move_source_find);
+    //connect(mpSourceEditorEdbee, &, this, &dlgTriggerEditor::slot_move_source_find);
+    //connect(mpSourceEditorEdbee->horizontalScrollBar(), &QWidget::hideEvent, this, &dlgTriggerEditor::slot_move_source_find);
     connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
     connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
-    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
-
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
 
@@ -7044,12 +7049,15 @@ void dlgTriggerEditor::slot_toggle_active()
     }
 }
 
-void dlgTriggerEditor::moveSourceEditorFindArea()
+void dlgTriggerEditor::slot_move_source_find()
 {
+    int x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
+    int y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
     if (mpSourceEditorEdbee->verticalScrollBar()->isVisible())
-        mpSourceEditorFindArea->move(mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width() - mpSourceEditorEdbee->verticalScrollBar()->width(), mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height());
-    else
-        mpSourceEditorFindArea->move(mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width(), mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height());
+        x = x - mpSourceEditorEdbee->verticalScrollBar()->width();
+    if (mpSourceEditorEdbee->horizontalScrollBar()->isVisible())
+        y = y - mpSourceEditorEdbee->horizontalScrollBar()->height();
+    mpSourceEditorFindArea->move(x, y);
     mpSourceEditorFindArea->update();
 }
 
@@ -7062,7 +7070,7 @@ void dlgTriggerEditor::slot_open_source_find()
     //mpSourceEditorFindArea->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
     //mpHost->postMessage("slot_open_source_find fired(postMessage)!\n");
     //mpHost->// ("slot_source_find_previous fired!\n");
-    moveSourceEditorFindArea();
+    slot_move_source_find();
     mpSourceEditorFindArea->show();
     mpSourceEditorFindArea->lineEdit_findText->setFocus();
     mpSourceEditorFindArea->lineEdit_findText->selectAll();
@@ -7082,11 +7090,6 @@ void dlgTriggerEditor::slot_close_source_find()
     mpSourceEditorEdbee->setFocus();
 }
 
-void dlgTriggerEditor::slot_move_source_find()
-{
-    moveSourceEditorFindArea();
-}
-
 void dlgTriggerEditor::slot_source_find_previous()
 {
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
@@ -7094,7 +7097,7 @@ void dlgTriggerEditor::slot_source_find_previous()
     mpSourceEditorEdbee->controller()->textSearcher()->findPrev(mpSourceEditorEdbee);
     mpSourceEditorEdbee->controller()->scrollCaretVisible();
     mpSourceEditorEdbee->controller()->update();
-    moveSourceEditorFindArea();
+    slot_move_source_find();
 }
 
 void dlgTriggerEditor::slot_source_find_next()
@@ -7104,7 +7107,7 @@ void dlgTriggerEditor::slot_source_find_next()
     mpSourceEditorEdbee->controller()->textSearcher()->findNext(mpSourceEditorEdbee);
     mpSourceEditorEdbee->controller()->scrollCaretVisible();
     mpSourceEditorEdbee->controller()->update();
-    moveSourceEditorFindArea();
+    slot_move_source_find();
 }
 
 void dlgTriggerEditor::slot_source_find_text_changed()
@@ -8269,7 +8272,7 @@ bool dlgTriggerEditor::event(QEvent* event)
 
 void dlgTriggerEditor::resizeEvent(QResizeEvent* event){
     if (mpSourceEditorArea->isVisible())
-        moveSourceEditorFindArea();
+        slot_move_source_find();
 }
 
 
@@ -8900,6 +8903,6 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
         }
     }
     if (mpSourceEditorFindArea->isVisible()) {
-        moveSourceEditorFindArea();
+        slot_move_source_find();
     }
 }

@@ -71,15 +71,15 @@ bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
                 return true;
             }
         }
+    } else {
+        if (event->type() == QEvent::Show || event->type() == QEvent::Hide) {
+           emit signal_sourceEditorMovementNecessary();
+        }
 
-        /*if (event->type() == QEvent::FocusAboutToChange) {
-            qDebug() << "Focus changing! Obj: " << obj << " Event: " << event;
-            mpHost->postMessage("Focus changing! Obj: " + obj->objectName() + " Event: " + QString("").number(event->type()) + "\n");
-        } else if (event->type() != QEvent::Paint) {
-            qDebug() << "Misc Event! Obj: " << obj << " Event: " << event;
-            mpHost->postMessage("Misc Event! Obj: " + obj->objectName() + " Event: " + QString("").number(event->type()) + "\n");
+        /*if (event->type() != QEvent::Paint)
+        {
+            qDebug() << "obj: " << obj << " event: " << event;
         }*/
-
     }
 
     /*if (obj == parentWidget()->parentWidget()) {

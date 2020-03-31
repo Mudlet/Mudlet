@@ -213,7 +213,6 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
-    void moveSourceEditorFindArea();
 
 public slots:
     void slot_toggleHiddenVariables(bool);

@@ -45,6 +45,7 @@ public:
 signals:
     void signal_sourceEditorFindPrevious();
     void signal_sourceEditorFindNext();
+    void signal_sourceEditorMovementNecessary();
 };
 
 #endif // MUDLET_DLGSOURCEEDITORFINDAREA_H
