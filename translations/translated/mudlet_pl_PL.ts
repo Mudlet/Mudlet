@@ -10572,67 +10572,67 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2607"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Specjalne opcje potrzebne dla niektórych starszych sterowników gier (wymaga ponownego uruchomienia klienta, aby wejść w życie)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2936"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>komputera menedżer haseł (bezpieczny)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2941"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>zwykły tekst z profilem (przenośny)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2949"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre identyfikatory MUD używają błędnej interpretacji wersji graficznej ZESTAWU ANSI (&lt;b&gt;Sgr&lt;/b&gt;) sekwencje kodów dla trybu kolorów 16M, który używa tylko średników średników, a nie dwukropków do oddzielania elementów parametrów, czyli zamiast używania kodu w formularzu: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt; Identyfikator przestrzeni kolorów&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Czerwony&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Zielony&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Niebieski&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Nieużywane&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Tolerancji&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt; Tolerancja przestrzeni kolorów (0= CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;M&lt;/tt&gt;&lt;br&gt;w przypadku gdy &lt;i&gt;Identyfikator przestrzeni kolorów&lt;/i&gt; ma być pustym ciągiem, aby określić zwykłą (domyślną) sprawę i wszystkie &lt;i&gt;Elementy parametrów&lt;/i&gt; ( &quot;2&quot; oraz wartości w &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) mogą, technicznie, zostać pominięte; używają: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt; Czerwony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt; Zielony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt; Niebieski&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;M&lt;/tt&gt;&lt;br&gt;Lub: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt; Identyfikator przestrzeni kolorów&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt; Czerwony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt; Zielony&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt; Niebieski&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;M&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;Nie jest możliwe niezawodne wykrycie różnicy między tymi dwoma, więc sprawdzenie tej opcji powoduje, że Mudlet oczekuje ostatniego z dodatkowym (ale pustym!) parametrem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2952"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation type="unfinished"/>
+      <translation>Oczekiwany Id przestrzeni barw w SGR... (3 | 4) 8; 2;... m kody</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2975"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>Przechowuj hasła do logowania postaci w:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2987"/>
       <source>TextLabel</source>
-      <translation type="unfinished"/>
+      <translation>TextLabel (Etykiety tekstowa)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3017"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Bezpieczne połączenie TLS/SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5045"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>Akceptowanie certyfikatów z podpisem własnym</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5055"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>Akceptowanie wygasłych certyfikatów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3035"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>Certyfikat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3095"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>Numer seryjny:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3044"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>Wydawca:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3061"/>
@@ -10929,52 +10929,52 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2884"/>
       <source>Auto-join channels: </source>
-      <translation type="unfinished"/>
+      <translation>Automatycznie dołącz kanały: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2870"/>
       <source>Nickname:</source>
-      <translation type="unfinished"/>
+      <translation>Pseudonim:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2863"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2917"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Mechanizm wyszukiwania</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2901"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Aktualizacje Mudleta</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2907"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Wyłączanie aktualizacji automatycznych</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2929"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Inne opcje specjalne</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2959"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuj ikony w menu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3011"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Połączenie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5075"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>Połącz się z grą za pośrednictwem serwera proxy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5090"/>
