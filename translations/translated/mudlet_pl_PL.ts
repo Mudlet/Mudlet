@@ -2743,14 +2743,16 @@ zostały one usunięte.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Wykryto, że &quot;_###&quot; przyrostki formularzy zostały już użyte, aby uprościć algorytm zmiany nazwy, zostaną one usunięte i ewentualnie zmienione, gdy Mudlet uporządkuje tę sprawę, jeśli liczba przypisana w ten sposób &lt;b&gt;jest dla Ciebie&lt;/b&gt; ważna, możesz ją zmienić z powrotem pod warunkiem zmiany nazwy obszaru, który został przydzielony w pierwszej kolejności, która była pożądana. .)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1160"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wprowadzone zmiany są następujące:
+(ID) &quot;stara nazwa&quot; ==&gt; &quot;nowa nazwa&quot;
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1167"/>
@@ -2760,7 +2762,7 @@ zostały one usunięte.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1170"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zmieniono nazwę obszaru, aby zapobiec duplikatom lub nienazwanym; stara nazwa: &quot;%1&quot;, nowa nazwa: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
