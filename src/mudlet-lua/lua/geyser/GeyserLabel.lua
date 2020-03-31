@@ -353,7 +353,7 @@ end
 
 --- closes all nested labels
 function closeAllLevels(label)
-  if label.nestedLabels  then
+  if label.nestedLabels and label.nestedLabels[1] then
     label = label.nestedLabels[1]
   end
   for i, v in pairs(label.container.Label.scrollV) do
