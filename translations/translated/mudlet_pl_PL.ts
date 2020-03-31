@@ -3146,25 +3146,25 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1840"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
-      <translation type="unfinished"/>
+      <translation>{niewidoczny separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1841"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{niewidoczny plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1842"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{lewo-do-prawej izolować}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1843"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{prawo-do-lewej izolować}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
