@@ -9792,22 +9792,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="478"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczne czyszczenie wiersza wprowadzania po wysłaniu tekstu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Zezwalaj serwerowi na pobieranie i odtwarzanie multimediów (wymaga włączonego GMCP poniżej)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza MSP - zapewnia komunikaty Mud Sound Protocol podczas gry dla obsługiwanych gier&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Reaguj na wszystkie wiązania klawiszy na tym samym klawiszu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="508"/>
@@ -9827,27 +9827,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="647"/>
       <source>Main display</source>
-      <translation type="unfinished"/>
+      <translation>Główny ekran</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="659"/>
       <source>Font</source>
-      <translation type="unfinished"/>
+      <translation>Czcionka</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="665"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>Czcionka:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="688"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Wielkość:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="710"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Użyj antyaliasowania czcionek. Wygładza czcionki, jeśli masz wysoką rozdzielczość ekranu i możesz używać większych czcionek. Należy zauważyć, że w przypadku niskich rozdzielczości i małych rozmiarów czcionek czcionka staje się rozmyta. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="713"/>
@@ -9857,12 +9857,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetl obramowanie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="762"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Wysokość górnej krawędzi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="806"/>
