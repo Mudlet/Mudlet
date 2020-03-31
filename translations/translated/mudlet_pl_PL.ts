@@ -5840,54 +5840,54 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="178"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Timer z krótkim odstępem czasu szybko wypełni &lt;i&gt;Centralną konsolę debugowania&lt;/i&gt; okno z komunikatami, które działały poprawnie na &lt;i&gt;każdą&lt;/i&gt; okazję wywołania. Ten (na profil) formant dostosowuje próg, który ukryje te wiadomości w tym oknie dla tych timerów, które działają &lt;b&gt;Poprawnie&lt;/b&gt; gdy zegar jest mniejszy niż to ustawienie.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Każdy skrypt zegara, który ma błędy, nadal będzie miał swoje komunikaty o błędach zgłoszone niezależnie od tego ustawienia.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli &lt;b&gt;nie&lt;/b&gt; zaznaczone Mudlet zareaguje tylko na pierwsze pasujące skróty klawiszowe (kombinacja klawiszy i modyfikatorów), nawet jeśli więcej niż jeden z nich jest aktywny. Oznacza to, że tymczasowe powiązanie kluczy (niewidoczne w Edytorze) utworzone przez skrypt lub pakiet może być używane zamiast stałego, który jest wyświetlany i ustawiony jako aktywny. Jeśli zaznaczone, wszystkie pasujące klawisze będą uruchomione.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Zaleca się, aby nie włączać tej opcji, jeśli musisz zachować kompatybilność ze skryptami lub pakietami dla wersji Mudlet przed &lt;b&gt;3.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="205"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambigous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt; or &lt;b&gt;GBK18030&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre wschodnioazjatyckie MUD mogą używać glifów (znaków), które Unicode klasyfikuje jako &lt;i&gt;Ambigous&lt;/i&gt; szerokości po rysowaniu czcionki o tak zwanej &lt;i&gt;stałej&lt;/i&gt; ; tak naprawdę taki tekst jest &lt;i&gt;dwuodsetkowy&lt;/i&gt; , gdy nie używa proporcjonalnej czcionki. Symbole te można rysować za pomocą połowy lub całej przestrzeni pełnego znaku. Domyślnie Mudlet próbuje automatycznie wybrać właściwą szerokość, ale można nadpisać ustawienie dla każdego profilu.&lt;/p&gt;&lt;p&gt;Ta kontrola ma trzy ustawienia:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Niezaznaczone&lt;/b&gt; &apos;&lt;i&gt;wąskie&lt;/i&gt;&apos; = Narysuj dwuznaczne znaki szerokości w jednym &apos;spacji&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Sprawdzono&lt;/b&gt; &apos;&lt;i&gt;o szerokim&lt;/i&gt;&apos; = Narysuj dwuznaczne znaki szerokości dwa &apos;spacje&apos; .&lt;/li&gt;&lt;li&gt;&lt;b&gt;Częściowo sprawdzone&lt;/b&gt; &lt;i&gt;(domyślnie) &apos;auto&apos;&lt;/i&gt; = Użyj ustawienia &apos;szeroki&apos; dla kodowania serwera MUD &lt;b&gt;Big5&lt;/b&gt; &lt;b&gt;GBK&lt;/b&gt; lub &lt;b&gt;GBK18030&lt;/b&gt; i &apos;wąski&apos; dla wszystkich innych.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Jest to umowa tymczasowa i prawdopodobnie się zmieni, gdy Mudlet uzyska pełne wsparcie dla języków innych niż angielski.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="217"/>
       <source>&lt;p&gt;Enable a context (right click) menu action on any console/user window that, when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items that make up each Unicode codepoint on the &lt;b&gt;first&lt;/b&gt; line of any selection.&lt;/p&gt;&lt;p&gt;This utility feature is intended to help the user identify any grapheme (visual equivalent to a &lt;i&gt;character&lt;/i&gt;) that a Game server may send even if it is composed of multiple bytes as any non-ASCII character will be in the Lua sub-system which uses the UTF-8 encoding system.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włączenie działania menu kontekstowego (po kliknięciu prawym przyciskiem myszy) w dowolnym oknie konsoli/użytkownika, które po umieszczaniu kursora myszy nad nim spowoduje wyświetlenie pozycji UTF-16 i UTF-8, które tworzą każdy punkt kodowy Unicode na &lt;b&gt;pierwszej linii&lt;/b&gt; dowolnego wyboru.&lt;/p&gt;&lt;p&gt;Ten program narzędziowy jest przeznaczony do pomocy użytkownikowi w identyfikacji dowolnego grapheme (wizualnego odpowiednik &lt;i&gt;znak&lt;/i&gt;) że serwer gry może wysłać nawet wtedy, gdy składa się on z wielu bajtów, ponieważ każdy znak inny niż ASCII będzie w podsystemie Lua, który używa systemu kodowania UTF-8.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="558"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
-      <translation type="unfinished"/>
+      <translation>Słowniki Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>Słowniki systemowe:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Z pliku słownika &lt;tt&gt;%1.dic&lt;/tt&gt; (i jego towarzysz afiks &lt;tt&gt;.aff&lt;/tt&gt; pliku).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="593"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - nie rozpoznano</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="594"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet nie rozpoznaje kodu &quot;%1&quot;, zgłoś to do deweloperów Mudlet, abyśmy mogli je prawidłowo opisać w kolejnych wersjach Mudleta!&lt;/p&gt;&lt;p&gt;Plik &lt;tt&gt;%2. plik i&lt;/tt&gt; (i jego towarzyszący dodatek &lt;tt&gt;.aff&lt;/tt&gt; ) jest nadal użyteczny.&lt;/p&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="619"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Nie znaleziono plików słownika Hunspell, sprawdzanie pisowni nie będzie dostępne.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1966"/>
@@ -5898,12 +5898,12 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3171"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol pomieszczenia będzie wyglądał w ten sposób, jeśli używane są tylko symbole (glify) z czcionki używanej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3177"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol pomieszczenia będzie wyglądał w ten sposób, jeśli można użyć symboli (glifów) z dowolnej czcionki.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3206"/>
