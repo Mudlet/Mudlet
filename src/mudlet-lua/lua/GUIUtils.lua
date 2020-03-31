@@ -1962,61 +1962,66 @@ function setLabelCursor(labelname, cursorShape)
 end
 
 
-function unpacknil (t, i)
+--These functions ensure backward compatibility for the setLabelCallback functions
+--unpack function which also returns the nil values
+local function unpack_w_nil (t, i)
   local i = i or 1
-    if i > t.n then
+    if i >= t.n then
       return t[i]
     end
-     return t[i], unpacknil(t, i + 1)
+     return t[i], unpack_w_nil(t, i + 1)
+end
+
+local function setLabelCallback(callbackFunc, labelname, func, ...)
+ local nr = arg.n + 1
+  arg.n = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+  end
+  if nr > 1 then
+    return callbackFunc(labelname, 
+    function(event) 
+      if not event then 
+        arg.n = nr - 1 
+      end 
+      arg[nr] = event 
+      func(unpack_w_nil(arg)) 
+    end )
+  end 
+  callbackFunc(labelname, func) 
 end
 
 local setLC = setLC or setLabelClickCallback
-function setLabelClickCallback(labelname, func, ...)
- local nr = arg.n + 1
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-    return setLC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
-  end 
-    setLC(labelname, func) 
+function setLabelClickCallback (...)
+  setLabelCallback(setLC, ...)
+end
+
+local setLDC = setLDC or setLabelDoubleClickCallback
+function setLabelDoubleClickCallback (...)
+  setLabelCallback(setLDC, ...)
 end
 
 local setLRC = setLRC or setLabelReleaseCallback
+function setLabelReleaseCallback(...)
+  setLabelCallback(setLRC, ...)
+ end
 
-function setLabelReleaseCallback(labelname, func, ...)
-  local nr = arg.n + 1
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-    return setLRC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
-  end
-    
+local setLMC = setLMC or setLabelMoveCallback
+function setLabelMoveCallback(...)
+  setLabelCallback(setLMC, ...)
+end
+
+local setLWC = setLWC or setLabelWheelCallback
+function setLabelWheelCallback(...)
+  setLabelCallback(setLWC, ...)
 end
 
 local setOnE = setOnE or setLabelOnEnter
-function setLabelOnEnter(labelname, func, ...)
-  local nr = arg.n + 1
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-    return setOnE(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
-    end
-    setOnE(labelname, func)
+function setLabelOnEnter(...)
+    setLabelCallback(setOnE, ...)
 end
 
 local setOnL = setOnL or setLabelOnLeave
-function setLabelOnLeave(labelname, func, ...)
-  local nr = arg.n + 1
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-    return setOnL(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
-    end
-    setOnL(labelname, func)
-end
-
-local setLMC = setLMC or setLabelMoveCallback
-function setLabelMoveCallback(labelname, func, ...)
-  local nr = arg.n + 1
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-    return setLMC(labelname, function(event) arg[nr] = event func(unpacknil(arg)) end )
-  end
-    setLMC(labelname, func)
+function setLabelOnLeave(...)
+  setLabelCallback(setOnL,...)
 end

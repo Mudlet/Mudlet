@@ -43,13 +43,13 @@ class TLabel : public QLabel
 public:
     Q_DISABLE_COPY(TLabel)
     TLabel(Host* pH, QWidget* pW = nullptr);
-    void setClick(const int& func);
-    void setDoubleClick(const int& func);
-    void setRelease(const int& func);
-    void setMove(const int& func);
-    void setWheel(const int& func);
-    void setEnter(const int& func);
-    void setLeave(const int& func);
+    void setClick(const int func);
+    void setDoubleClick(const int func);
+    void setRelease(const int func);
+    void setMove(const int func);
+    void setWheel(const int func);
+    void setEnter(const int func);
+    void setLeave(const int func);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -69,6 +69,9 @@ public:
     int mWheel = 0;
     int mEnter = 0;
     int mLeave = 0;
+
+private:
+    void releaseFunc(const int, const int);
 };
 
 #endif // MUDLET_TLABEL_H

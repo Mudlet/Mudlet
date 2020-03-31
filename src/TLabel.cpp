@@ -26,8 +26,8 @@
 #include "Host.h"
 
 #include "pre_guard.h"
-#include <QApplication>
 #include <QtEvents>
+#include <QApplication>
 #include "post_guard.h"
 
 
@@ -36,59 +36,45 @@ TLabel::TLabel(Host* pH, QWidget* pW) : QLabel(pW), mpHost(pH)
     setMouseTracking(true);
 }
 
-void TLabel::setClick(const int& func)
+void TLabel::setClick(const int func)
 {
-    if (func != mClick) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mClick);
-    }
+    releaseFunc(mClick, func);
     mClick = func;
 }
 
-void TLabel::setDoubleClick(const int& func)
+void TLabel::setDoubleClick(const int func)
 {
-    if (func != mDoubleClick) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mDoubleClick);
-    }
+    releaseFunc(mDoubleClick, func);
     mDoubleClick = func;
 }
 
-void TLabel::setRelease(const int& func)
+void TLabel::setRelease(const int func)
 {
-    if (func != mRelease) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mRelease);
-    }
+    releaseFunc(mRelease, func);
     mRelease = func;
 }
 
-void TLabel::setMove(const int& func)
+void TLabel::setMove(const int func)
 {
-    if (func != mMove) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mMove);
-    }
+    releaseFunc(mMove, func);
     mMove = func;
 }
 
-void TLabel::setWheel(const int& func)
+void TLabel::setWheel(const int func)
 {
-    if (func != mWheel) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mWheel);
-    }
+    releaseFunc(mWheel, func);
     mWheel = func;
 }
 
-void TLabel::setEnter(const int& func)
+void TLabel::setEnter(const int func)
 {
-    if (func != mEnter) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mEnter);
-    }
+    releaseFunc(mEnter, func);
     mEnter = func;
 }
 
-void TLabel::setLeave(const int& func)
+void TLabel::setLeave(const int func)
 {
-    if (func != mLeave) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mLeave);
-    }
+    releaseFunc(mLeave, func);
     mLeave = func;
 }
 
@@ -274,6 +260,15 @@ bool TLabel::forwardEventToMapper(QEvent* event)
     }
     }
     return false;
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TLabel::releaseFunc(const int mfunc, const int func)
+{
+    if (func != mfunc) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mfunc);
+    }
 }
 
 void TLabel::setClickThrough(bool clickthrough)

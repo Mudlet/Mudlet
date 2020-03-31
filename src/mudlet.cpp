@@ -2555,7 +2555,7 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
     }
 }
 
-bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2570,7 +2570,7 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int& 
     }
 }
 
-bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2585,7 +2585,7 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
     }
 }
 
-bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2600,7 +2600,7 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int
     }
 }
 
-bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2615,7 +2615,7 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int& f
     }
 }
 
-bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2630,7 +2630,7 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int& 
     }
 }
 
-bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2645,7 +2645,7 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int& func)
     }
 }
 
-bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int& func)
+bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
