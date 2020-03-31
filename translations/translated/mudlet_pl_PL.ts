@@ -3277,103 +3277,103 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1859"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1860"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1861"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1862"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1863"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1864"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1865"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1866"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1867"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1868"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1869"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1875"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1876"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1877"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1878"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1890"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}-</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1892"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1901"/>
@@ -3397,61 +3397,61 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1904"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1905"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1909"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2182"/>
       <location filename="../src/TTextEdit.cpp" line="2244"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Indeks (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2185"/>
       <location filename="../src/TTextEdit.cpp" line="2246"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <comment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; Punkt kodu Unicode &lt;i&gt;(Wysoki:Niskie surogatki)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2189"/>
       <location filename="../src/TTextEdit.cpp" line="2250"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Wizualne</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2193"/>
       <location filename="../src/TTextEdit.cpp" line="2254"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Indeks (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2197"/>
       <location filename="../src/TTextEdit.cpp" line="2258"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Bajtów</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2201"/>
       <location filename="../src/TTextEdit.cpp" line="2262"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua znak lub kod</translation>
     </message>
   </context>
   <context>
@@ -3459,7 +3459,7 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message>
       <location filename="../src/TToolBar.cpp" line="74"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Pasek narzędzi - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -5908,7 +5908,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3206"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Są to sekwencja numerów szesnastowych, które są używane przez konsorcjum Unicode do identyfikacji grafemów potrzebnych do utworzenia symbolu.  Liczby te mogą być wykorzystane do dokładnego określenia, co ma być rysowane, nawet jeśli niektóre czcionki mają glify, które są takie same dla różnych punktów kodowych lub kombinacji punktów kodowych.&lt;/p&gt;&lt;p&gt;Narzędzia wprowadzania znaków, takie jak &lt;i&gt;charmap.exe&lt;/i&gt; Na &lt;i&gt;Windows&lt;/i&gt; Lub &lt;i&gt;mapa gucharmap&lt;/i&gt; w wielu systemach operacyjnych typu Unix będą również korzystać z tych numerów, które obejmują wszystko od U+0020 {Space} do U+10FFFD ostatni numer użytkowy w &lt;i&gt;Planowane do użytku prywatnego 16&lt;/i&gt; przez większość pisemnych znaków, które ludzkość kiedykolwiek stworzyła.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3219"/>
@@ -5918,109 +5918,109 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3231"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>więcej - nie pokazano...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3238"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokoje z tym symbolem, maksymalnie do trzydziestu dwóch, jeśli jest ich więcej, jest to wskazane, ale nie są one wyświetlane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3247"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol może być wykonany w całości z glifów w określonej czcionce.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3257"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol nie może być wykonany w całości z glifów w określonej czcionce, ale przy użyciu innych czcionek w systemie, może. Albo odznacz kontrolkę &lt;i&gt;Używaj tylko symboli (glifów) z wybranej czcionki&lt;/i&gt; lub spróbuj wybrać inną czcionkę, która ma potrzebne glify.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Nie musisz zamykać tej tabeli, aby wypróbować inną czcionkę, zmieniając ją w głównym oknie preferencji, zaktualizuje tę tabelę po niewielkim opóźnieniu.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3267"/>
       <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol nie może być rysowany przy użyciu żadnej z czcionek w systemie, jako symbol wskazanych pomieszczeń wprowadzono nieprawidłowy ciąg znaków lub mapa została utworzona w różnych systemach z innym zestawem czcionek dostępnych do użycia. Można to poprawić, instalując dodatkową czcionkę przy użyciu dowolnej metody odpowiedniej dla tego systemu lub edytując mapę w celu użycia innego symbolu. Może to być możliwe za pomocą skryptu lua za pomocą &lt;i&gt;getRoomChar&lt;/i&gt; &lt;i&gt;setRoomChar&lt;/i&gt; Funkcje.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3356"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Duża ikona</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3357"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Szczegóły</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3359"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Mała ikona</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3360"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Stan</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3362"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Rozmiar grupy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3363"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
-      <translation type="unfinished"/>
+      <translation>Maksymalna wielkość grupy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3364"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>Czas</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3399"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>Użycie symbolu mapy - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3476"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (np. 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3477"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (np. 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3478"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (łączenie codziennych logowań, np. 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3479"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (łączenie miesięcznych logowań się, np. 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3482"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (np. 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3483"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (np. 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3484"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (łączenie codziennych logowań, np. 1970-01-01.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3485"/>
@@ -6490,66 +6490,67 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="398"/>
       <source>Activate</source>
-      <translation type="unfinished"/>
+      <translation>Aktywuj</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="399"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
-      <translation type="unfinished"/>
+      <translation>Przełącz tryb Aktywny lub Nieaktywny dla wyzwalaczy, skryptów itp.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="409"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj element</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="410"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy wyzwalacz, skrypt, alias lub filtr</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="413"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="415"/>
       <source>Delete Item</source>
-      <translation type="unfinished"/>
+      <translation>Usuń element</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="414"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wyzwalacz, skrypt, alias lub filtr</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
       <source>Add Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
       <source>Add new Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodawanie nowej grupy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
       <source>Save Item</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz element</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8103"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8122"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje zaznaczony element. (Ctrl+S)&lt;/p&gt;Zapisywanie powoduje, że wszelkie zmiany elementu zostaną wprowadzone.
+Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii komputera / programu (ale Zapisz profil po prawej stronie będzie bezpieczny).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany wyzwalacz, skrypt, alias itp., powodując wprowadzenie nowych zmian - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
@@ -6562,7 +6563,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj wyzwalacz/script/alias/itp</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
@@ -6575,12 +6576,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Wklej wyzwalacze / skrypty / aliasy / etc ze schowka</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
       <source>Import</source>
-      <translation type="unfinished"/>
+      <translation>Importuj</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="470"/>
@@ -7376,7 +7377,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2138"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2143"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>Obsługa zdarzeń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1526"/>
@@ -7396,7 +7397,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2214"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2219"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Komenda {Down}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1557"/>
@@ -7404,7 +7405,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2233"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2238"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Komenda {Up}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1586"/>
@@ -7418,7 +7419,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2262"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2267"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>Arkusz stylów {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1454"/>
@@ -7428,7 +7429,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2338"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2368"/>
       <source>Timer</source>
-      <translation type="unfinished"/>
+      <translation>Zegar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1382"/>
@@ -7459,52 +7460,52 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczny Typ</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>klucz (ciąg znaków)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation type="unfinished"/>
+      <translation>indeks (liczba całkowita)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
       <source>table (use &quot;Add Group&quot; to create)</source>
-      <translation type="unfinished"/>
+      <translation>tabela (użyj &quot;Dodaj grupę&quot;, aby utworzyć)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="55"/>
       <source>function (cannot create from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>funkcja (nie można tworzyć z GUI)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>ciąg znaków</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>liczba</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>wartość logiczna</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabela</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>funkcja</translation>
     </message>
   </context>
   <context>
@@ -7535,7 +7536,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/irc.ui" line="25"/>
       <source>Mudlet IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Klient IRC Mudleta</translation>
     </message>
   </context>
   <context>
