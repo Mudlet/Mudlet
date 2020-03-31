@@ -4073,7 +4073,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw na wartość skali szarości</translation>
     </message>
   </context>
   <context>
@@ -4081,7 +4081,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>Nowości i kompozytor wiadomości</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
@@ -4091,7 +4091,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zapisz (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -4109,7 +4109,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>lista profili</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
@@ -4129,7 +4129,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>wiadomość powitalna</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4154,7 +4154,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Zabezpieczenie:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
@@ -4189,13 +4189,13 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz integrację Discorda (nie jest obsługiwana przez grę)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Opis gry na twojej notatce</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
@@ -4215,22 +4215,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2407"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz profil przy startowaniu Mudleta</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2417"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Połącz się ponownie automatycznie</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Integracja z Discordem</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Informacyjne</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2502"/>
@@ -4243,7 +4243,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości wiersza niestandardowego [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
@@ -4263,7 +4263,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz styl, kolor i czy chcesz zakończyć linię nagłówkiem strzałki.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
@@ -4296,12 +4296,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>Wybór niestandardowej linii</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz format linii, kolor i opcje strzałki, a następnie wybierz wyjście, aby rozpocząć rysowanie</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
