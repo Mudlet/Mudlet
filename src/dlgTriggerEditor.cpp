@@ -257,14 +257,27 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* openSourceFindAction = new QAction(this);
     openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
-    splitter_right->addAction(openSourceFindAction);
+    mpSourceEditorArea->addAction(openSourceFindAction);
     connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_open_source_find);
 
     QAction* closeSourceFindAction = new QAction(this);
     closeSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
-    splitter_right->addAction(closeSourceFindAction);
+    mpSourceEditorArea->addAction(closeSourceFindAction);
     connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
+
+    QAction* sourceFindNextAction = new QAction(this);
+    sourceFindNextAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindNextAction->setShortcut(QKeySequence(QKeySequence::FindNext));
+    mpSourceEditorArea->addAction(sourceFindNextAction);
+    connect(sourceFindNextAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_next);
+
+    QAction* sourceFindPreviousAction = new QAction(this);
+    sourceFindPreviousAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
+    mpSourceEditorArea->addAction(sourceFindPreviousAction);
+    connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_previous);
+
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
