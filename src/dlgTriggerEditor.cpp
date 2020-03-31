@@ -622,18 +622,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
     mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
     mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<p>%1</p>")
-        .arg(tr("If checked then what is searched for must match the case precisely, otherwise the case is ignored.")));
+        .arg(tr("Match case precisely")));
     mpAction_searchCaseSensitive->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
 
     mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
     mpAction_searchIncludeVariables->setObjectName(QStringLiteral("mpAction_searchIncludeVariables"));
     mpAction_searchIncludeVariables->setToolTip(QStringLiteral("<p>%1</p>")
-        .arg(tr("If checked, then the search will include variables, which will"
-                "include hidden variables if the control to show them is "
-                "active, in this case there can be a noticable delay to "
-                "generate results. If unchecked, variables will be ignored "
-                "but the remaining results should be produced faster.")));
+        .arg(tr("Search variables (slower)")));
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 
