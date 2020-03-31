@@ -2608,61 +2608,65 @@ Mudlet - is your system running out of memory?</source>
       <location filename="../src/TRoomDB.cpp" line="748"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Zły, (mniej niż +1 i nie zastrzeżone -1) identyfikatory obszaru znaleziono (liczba wystąpień: %1)
+na mapie, teraz kombinuję, jakie nowe numery użyć ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="753"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Zły, (mniej niż +1 i nie zastrzeżone -1) identyfikatory obszaru znaleziono (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym dla każdego obszaru którego to dotyczy ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="760"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zmienione numery ID obszaru będą takie:
+Stary ==&gt; Nowe</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Obszar o złym ID został zmieniony na %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="779"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ten obszar został przenumerowany ze złego identyfikatora: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Numerowanie identyfikatorów obszarów jest zadowalające.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="833"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz działam
+jakich nowych numerów identyfikatorów użyć.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="838"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym, dla każdego pokoju którego to dotyczy...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zmienione numery pokoi będą następujące:
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="861"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ten pokój ze złym identyfikatorem został przenumerowany na: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="862"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ten pokój został przenumerowany od złego identyfikatora: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="898"/>
@@ -2674,28 +2678,30 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="918"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zduplikowane identyfikatory wyjść znajdują się w pomieszczeniu ID: %1, jest to
+anomalia, ale została łatwo oczyszczona.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="923"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zduplikowane identyfikatory wyjść znalezione w pokoju, jest to anomala, ale została łatwo oczyszczona.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="932"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Zduplikowane identyfikatory blokady wyjścia znalezione w pokoju id: %1, to jest
+anomala, ale została łatwo oczyszczona.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="937"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Duplikowane identyfikatory blokady wyjścia znalezione w pokoju, jest to anomala, ale łatwa do usunięcia.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1008"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ten pokój twierdzi, że jest w obszarze id: %1, ale to nie było w rekordzie tego obszaru. Obszar został zaktualizowany, aby włączyć ten pokój.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1014"/>
@@ -2703,17 +2709,20 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W obszarze z id: %1 były %2 pokoje brakuje z tych jakie
+powinny być zapisane jako posiadające, były:
+%3
+zostały one dodane.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1022"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W tym obszarze %1 brakuje pomieszczeń z tych, które powinny być rejestrowane jako posiadające.  Są to: %2.  Zostały one dodane.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1043"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ten pokój został zgłoszony przez ID obszaru: %1, ale nie należy do niego.  Obszar został zaktualizowany, aby nie uwzględnić tego pokoju.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1049"/>
@@ -2721,12 +2730,15 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W obszarze z id: %1 były %2 dodatkowych pokoi w porównaniu z tymi, które
+powinny być nagrywane jako posiadające, były:
+%3
+zostały one usunięte.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1057"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W tym obszarze nie było %1 dodatkowych pomieszczeń, których nie należy rejestrować jako posiadających.  Były: %2.  Zostały one usunięte.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
