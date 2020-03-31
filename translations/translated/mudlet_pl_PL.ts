@@ -2509,23 +2509,26 @@ Został zablokowany, jest to rejestrowane jako dane użytkownika z kluczem:
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+Miał wagę, jest to rejestrowane jako dane użytkownika z kluczem:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1691"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  Miał wagę, jest to rejestrowane jako dane użytkownika z kluczem: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1702"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Istniała niestandardowa linia wyjścia powiązana z nieprawidłowym zakończeniem, ale
+nie było możliwe jej odzyskanie, stracona!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1707"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Istniała niestandardowa linia wyjścia powiązana z nieprawidłowym zakończeniem, ale nie było możliwe jej odzyskanie, stracona!</translation>
     </message>
   </context>
   <context>
@@ -2566,17 +2569,17 @@ Mudlet - is your system running out of memory?</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="618"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Problem ze strukturą danych związaną z tym pomieszczeniem. Dane zostały utracone, więc identyfikator jest teraz usuwany. Sugeruje to poważne problemy z obecnie uruchomioną wersją Mudlet - czy system nie ma pamięci?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="665"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Obszar z id: %1 spodziewany, ale nie znaleziony, zostanie utworzony.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Obszar o tym id oczekiwany, ale nie znaleziony zostanie utworzony.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="697"/>
@@ -2665,7 +2668,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="898"/>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Numerowanie identyfikatorów pomieszczeń jest zadowalające.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="918"/>
