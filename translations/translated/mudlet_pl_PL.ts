@@ -2548,7 +2548,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="521"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Obszar bez nazwy jest nie jest już dozwolony!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
