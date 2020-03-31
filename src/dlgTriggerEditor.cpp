@@ -241,44 +241,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
     // edbee editor find area
-    //mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorArea);
     mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
-    //installEventFilter(mpSourceEditorFindArea);
-    //mpSourceEditorFindArea->pDlgTriggerEditor = this;
     mpSourceEditorEdbee->horizontalScrollBar()->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorFindArea->hide();
 
-    //connect(this, &dlgTriggerEditor::resizeEvent, this, &dlgTriggerEditor::slot_move_source_find);
-
-//    mpSourceEditorSearchGroupBox = new QGroupBox(mpSourceEditorArea);
-//    mpSourceEditorSearchGroupBox->hide();
-//    mpSourceEditorSearchGroupBox->setStyleSheet(QStringLiteral("QGroupBox{background-color: #334422 border: 2px solid gray; border-radius: 3px;}"));
-
-//    mpSourceEditorSearchTextEdit = new QTextEdit(mpSourceEditorSearchGroupBox);
-//    mpSourceEditorSearchTextEdit->show();
-//    mpSourceEditorSearchTextEdit->installEventFilter(sourceEditorFindEventFilter);
-//    //mpSourceEditorSearchTextEdit->grabShortcut()
-
-//    QShortcut* sourceFindPreviousShortcut = new QShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Enter), mpSourceEditorSearchTextEdit);
-//    connect(sourceFindPreviousShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_source_find_previous);
-//    QShortcut* sourceFindNextShortcut = new QShortcut(QKeySequence(Qt::Key_Enter), mpSourceEditorSearchTextEdit);
-//    connect(sourceFindNextShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_source_find_next);
-
-
-//    mpSourceEditorSearchFindPreviousButton = new QPushButton(mpSourceEditorSearchGroupBox);
-//    mpSourceEditorSearchFindPreviousButton->setText("Prev");
-//    mpSourceEditorSearchFindPreviousButton->show();
-
-//    mpSourceEditorSearchFindNextButton = new QPushButton(mpSourceEditorSearchGroupBox);
-//    mpSourceEditorSearchFindNextButton->setText("Next");
-//    mpSourceEditorSearchFindNextButton->show();
-
     connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
-    //connect(mpSourceEditorEdbee->horizontalScrollBar(), &QWidget::, this, &dlgTriggerEditor::slot_test);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_move_source_find);
-    //connect(mpSourceEditorEdbee, &, this, &dlgTriggerEditor::slot_move_source_find);
-    //connect(mpSourceEditorEdbee->horizontalScrollBar(), &QWidget::hideEvent, this, &dlgTriggerEditor::slot_move_source_find);
     connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
     connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
@@ -295,14 +264,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
     splitter_right->addAction(closeSourceFindAction);
     connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
-
-    /*QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(QStringLiteral(":/icons/edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))), tr("Delete Item"), this);
-    deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
-    deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
-    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
-    frame_left->addAction(deleteTriggerAction);
-    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_delete_item);*/
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
@@ -7063,13 +7024,6 @@ void dlgTriggerEditor::slot_move_source_find()
 
 void dlgTriggerEditor::slot_open_source_find()
 {
-    //int x, y;
-    //x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
-    //y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
-    //qDebug() << "Moving mpSourceEditorFindArea to: " << x << ", " << y;
-    //mpSourceEditorFindArea->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-    //mpHost->postMessage("slot_open_source_find fired(postMessage)!\n");
-    //mpHost->// ("slot_source_find_previous fired!\n");
     slot_move_source_find();
     mpSourceEditorFindArea->show();
     mpSourceEditorFindArea->lineEdit_findText->setFocus();
@@ -7078,35 +7032,35 @@ void dlgTriggerEditor::slot_open_source_find()
 
 void dlgTriggerEditor::slot_close_source_find()
 {
-    //mpSourceEditorEdbee->textRenderer()->
-    /*auto controller = mpSourceEditorEdbee->controller();
-    auto textRanges = controller->textSelection();//borderedTextRanges();
-    textRanges->clear();
-    controller->update();*/
-    mpSourceEditorEdbee->controller()->borderedTextRanges()->clear();
-    mpSourceEditorEdbee->controller()->textSelection()->range(0).clearSelection();
-    mpSourceEditorEdbee->controller()->update();
+    auto controller = mpSourceEditorEdbee->controller();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();
+    controller->update();
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbee->setFocus();
 }
 
 void dlgTriggerEditor::slot_source_find_previous()
 {
-    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
-    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(false);
-    mpSourceEditorEdbee->controller()->textSearcher()->findPrev(mpSourceEditorEdbee);
-    mpSourceEditorEdbee->controller()->scrollCaretVisible();
-    mpSourceEditorEdbee->controller()->update();
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findPrev(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
     slot_move_source_find();
 }
 
 void dlgTriggerEditor::slot_source_find_next()
 {
-    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
-    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(false);
-    mpSourceEditorEdbee->controller()->textSearcher()->findNext(mpSourceEditorEdbee);
-    mpSourceEditorEdbee->controller()->scrollCaretVisible();
-    mpSourceEditorEdbee->controller()->update();
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findNext(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
     slot_move_source_find();
 }
 
@@ -7115,7 +7069,7 @@ void dlgTriggerEditor::slot_source_find_text_changed()
     auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
     controller->borderedTextRanges()->clear();
-    controller->textSelection()->range(0).clearSelection();// .clear();
+    controller->textSelection()->range(0).clearSelection();
     searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
     searcher->markAll(controller->borderedTextRanges());
     controller->update();

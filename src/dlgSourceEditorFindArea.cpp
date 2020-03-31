@@ -29,36 +29,11 @@ dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    //setWindowFlag(Qt::Popup);
-    //setAttribute(QT_CORE_LIB::WA) WA_StyledBackground)
-    //setAutoFillBackground(true);
-    //setAttribute(Qt::WA_StyledBackground);
-    //setWindowFlag(Qt::WA_StyledBackground, true);
-    //installEventFilter(this);
-    //installEventFilter(this);
     lineEdit_findText->installEventFilter(this);
-    //connect(pushButton_findPrevious, &QPushButton::click, this, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious);
-    //connect(pushButton_findNext, &QPushButton::click, this, &dlgSourceEditorFindArea::signal_sourceEditorFindNext);
 }
 
 bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
 {
-    /*if (obj->objectName() == "trigger_editor") {
-        if (event->type() == QEvent::Resize) {
-            if (!isHidden()) {
-
-            }
-        }
-    }
-
-    if (obj == qApp) {
-        qDebug() << "qApp Event: " << event->type();
-        if (event->type() == QEvent::ActivationChange) {
-            qDebug() << "Activation change on app!";
-        }
-        return QObject::eventFilter(obj, event);
-    }*/
-
     if (obj == lineEdit_findText) {
         if (event->type() == QEvent::KeyPress) {
             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
@@ -73,43 +48,8 @@ bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
         }
     } else {
         if (event->type() == QEvent::Show || event->type() == QEvent::Hide) {
-           emit signal_sourceEditorMovementNecessary();
+            emit signal_sourceEditorMovementNecessary();
         }
-
-        /*if (event->type() != QEvent::Paint)
-        {
-            qDebug() << "obj: " << obj << " event: " << event;
-        }*/
     }
-
-    /*if (obj == parentWidget()->parentWidget()) {
-        qDebug() << "Parent of parent of dlgSourceEditorFindArea!";
-    }*/
-
-//    qDebug() << "obj: " << obj << " (" << obj->objectName() << "), event: " << event << " (" << event->type() << ")";
-
-//    if (obj == this || obj->parent() == this) {
-//        /*QObject* oParent = parent();
-
-//        while(oParent != nullptr){
-//            oParent = oParent->parent();
-//        }
-
-//        qDebug() << obj->objectName() << " parent -> " << oParent << " (" << oParent->objectName() << ")";*/
-//        if (QFocusEvent* focusEvent = static_cast<QFocusEvent*>(event)) {
-//            if (focusEvent->lostFocus()) {
-//                qDebug() << "FocusOut in eventFilter!";
-//                hide();
-//                return QObject::eventFilter(obj, event);
-//            }
-//        }
-//        if (event->type() == QEvent::Resize) {
-//            qDebug() << "Resize event!";
-//            hide();
-//            return QObject::eventFilter(obj, event);
-//        }
-//        qDebug() << "dlgSourceEditorFindArea event: " << event->type();
-//    }
-
     return QObject::eventFilter(obj, event);
 }
