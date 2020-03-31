@@ -88,6 +88,18 @@ function Geyser:remove (window)
   table.remove(self.windows, index)
 end
 
+local function changeNestContainer(windowname, label)
+  for k,v in ipairs(label.nestedLabels) do
+    if windowname ~= "main" then
+      v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
+    else
+      v:changeContainer(Geyser)
+    end
+    if v.nestedLabels then
+      changeNestContainer(windowname, v)
+    end
+  end
+end
 
 --- Removes a window from the parent it is in and puts it in a new one
 -- This is only used internally.
@@ -102,13 +114,7 @@ local function setMyWindow(self, windowname)
 
   -- Change containerwindow for nested Labels
   if self.type == "label" and self.nestedLabels then
-    for k,v in ipairs(self.nestedLabels) do
-      if windowname ~= "main" then
-        v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
-      else
-        v:changeContainer(Geyser)
-      end
-    end
+    changeNestContainer(windowname, self)
     closeAllLevels(self)
   end
   
