@@ -11663,12 +11663,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
       <source>&lt;p&gt;Enter text here to search through your code.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz tutaj tekst, aby przeszukać kod.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="513"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przełącza wyświetlanie wyników wyszukiwania.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -11681,7 +11681,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użyj tego elementu sterującego, aby pokazać lub ukryć dodatkowe elementy sterujące dla wyzwalacza. Można to wykorzystać, aby umożliwić więcej miejsca na wyświetlenie wyzwalacza &lt;i&gt;pozycji&lt;/i&gt; na mniejszym ekranie.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
@@ -11692,52 +11692,53 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="198"/>
       <source>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wyzwalacz wystrzeli tylko wtedy, gdy &lt;u&gt;wszystkie&lt;/u&gt; warunki na liście zostały spełnione w obrębie określonej delty linii, a przechwyty zostaną zapisane w &lt;tt&gt;wielowątkowości&lt;/tt&gt; zamiast &lt;tt&gt;dopasowań&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Jeśli opcja ta jest &lt;b&gt;nie&lt;/b&gt; ustawi spust zostanie uruchomiony, jeśli &lt;u&gt;jakikolwiek&lt;/u&gt; warunek na liście został spełniony.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="205"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>AND / Multi-line (delta)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gdy jest zaznaczone, tylko przefiltrowana zawartość (=grupy przechwytujące) zostanie przekazana do pochodnych wyzwalaczy, a nie linia początkowa (patrz instrukcja dotycząca filtrów).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="263"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>tylko pasujące wyniki</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="299"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>Nie należy przekazywać całej linii pochodnym-dzieciom.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz tę opcję, jeśli chcesz włączyć wszystkie możliwe dopasowania wzoru do linii.&lt;/p&gt;&lt;p&gt;Bez tej opcji, dopasowanie wzorca zatrzyma się po pierwszym udanym dopasowaniu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="357"/>
       <source>Match all occurences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Dopasuj wszystkie wystąpienia wzorca w linii.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
       <source>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Po dopasowaniu wyzwalacza lub łańcucha nadal dopasowuj dla wielu kolejnych linii.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="418"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>długość wyzwalacza (dodatkowe linie)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="476"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Odtwórz plik dźwiękowy, jeśli wyzwalacz zostanie uruchomiony.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="521"/>
@@ -11745,7 +11746,8 @@ or LUA script</source>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użyj tego, aby otworzyć okno wyboru pliku, aby znaleźć plik dźwiękowy do odtworzenia po uruchomieniu wyzwalacza.&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;Anulowanie z okna pliku nie spowoduje żadnych zmian;, aby wyczyścić plik, użyj przycisku wyczyść po prawej stronie wyświetlanej nazwy pliku.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="525"/>
@@ -11755,12 +11757,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="556"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>brak pliku</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącz to, aby wyróżnić pasujący tekst, zmieniając kolory liter i tła na te zaznaczone w tym miejscu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
@@ -11775,43 +11777,43 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>odtwarzanie dźwięku</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="78"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą (najlepiej, choć nie musi być, unikalną) nazwę dla grupy wyzwalacza lub wyzwalacza. Zostanie to wyświetlone w drzewie wyzwalaczy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które ma wysłać wyzwalacz bezpośrednio do gry, jeśli zostanie ono uruchomione. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;Zamiast&lt;/i&gt; w obszarze edytora poniżej.  Wszystko, co tu we wpisane jest dosłownie, po prostu wysłane na serwer gry.&lt;/p&gt;&lt;p&gt;Można wykorzystać zarówno to, jak &lt;i&gt;I&lt;/i&gt; skrypt Lua - zostanie wysłany &lt;b&gt;Przed&lt;/b&gt; skrypt jest uruchamiany.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="244"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;W ilu liniach muszą być spełnione wszystkie warunki, aby wystrzeliwać wyzwalacz?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="327"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>dopasować wszystkie</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="460"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ile kolejnych linii, po tej, która uruchomi wyzwalacz, powinno być przesłanych do pochodnych wyzwalacza?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="547"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Plik dźwiękowy do odtwożenia po uruchomieniu wyzwalacza.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="569"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby usunąć plik dźwiękowy ustawiony dla tego wyzwalacza.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="623"/>
@@ -11824,17 +11826,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Ignorowany kolor pierwszego planu</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Kolor tła ignorowany</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>dopasować w wierszu monitu</translation>
     </message>
   </context>
   <context>
@@ -11847,12 +11849,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ Typ klucza:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw &lt;i&gt;zmienna globalna&lt;/i&gt; lub &lt;i&gt;wpis tabeli&lt;/i&gt; nazwę tutaj. Nazwa musi zaczynać się od litery, ale może zawierać kombinację liter i cyfr.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
@@ -11863,7 +11865,7 @@ or LUA script</source>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <location filename="../src/ui/vars_main_area.ui" line="145"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczny Typ</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
@@ -11873,25 +11875,27 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>klucz (ciąg znaków)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="155"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>indeks (liczba całkowita)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
       <location filename="../src/ui/vars_main_area.ui" line="160"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>tabela</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="165"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>funkcja
+(nie można utworzyć
+z GUI)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
@@ -11901,32 +11905,32 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>ukryta zmienna</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Typ wartości:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>ciąg znaków</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>liczba</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>Wartość logiczna</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>funkcja</translation>
     </message>
   </context>
 </TS>
