@@ -921,6 +921,9 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
+        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value("EditorSearchOptions").toInt()));
+    }
     pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
     pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {

@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -457,6 +457,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         ignore = ignore.append(it.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
+    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toLatin1().constData();
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
