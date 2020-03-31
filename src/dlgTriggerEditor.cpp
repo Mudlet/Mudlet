@@ -46,6 +46,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QToolBar>
+#include <QScrollBar>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -238,6 +239,65 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbeeDocument->setText(tr("-- Enter your lua code here\n"));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
+
+    // edbee editor find area
+    //mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorArea);
+    mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
+    //installEventFilter(mpSourceEditorFindArea);
+    //mpSourceEditorFindArea->pDlgTriggerEditor = this;
+    mpSourceEditorFindArea->hide();
+
+    //connect(this, &dlgTriggerEditor::resizeEvent, this, &dlgTriggerEditor::slot_move_source_find);
+
+//    mpSourceEditorSearchGroupBox = new QGroupBox(mpSourceEditorArea);
+//    mpSourceEditorSearchGroupBox->hide();
+//    mpSourceEditorSearchGroupBox->setStyleSheet(QStringLiteral("QGroupBox{background-color: #334422 border: 2px solid gray; border-radius: 3px;}"));
+
+//    mpSourceEditorSearchTextEdit = new QTextEdit(mpSourceEditorSearchGroupBox);
+//    mpSourceEditorSearchTextEdit->show();
+//    mpSourceEditorSearchTextEdit->installEventFilter(sourceEditorFindEventFilter);
+//    //mpSourceEditorSearchTextEdit->grabShortcut()
+
+//    QShortcut* sourceFindPreviousShortcut = new QShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Enter), mpSourceEditorSearchTextEdit);
+//    connect(sourceFindPreviousShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_source_find_previous);
+//    QShortcut* sourceFindNextShortcut = new QShortcut(QKeySequence(Qt::Key_Enter), mpSourceEditorSearchTextEdit);
+//    connect(sourceFindNextShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_source_find_next);
+
+
+//    mpSourceEditorSearchFindPreviousButton = new QPushButton(mpSourceEditorSearchGroupBox);
+//    mpSourceEditorSearchFindPreviousButton->setText("Prev");
+//    mpSourceEditorSearchFindPreviousButton->show();
+
+//    mpSourceEditorSearchFindNextButton = new QPushButton(mpSourceEditorSearchGroupBox);
+//    mpSourceEditorSearchFindNextButton->setText("Next");
+//    mpSourceEditorSearchFindNextButton->show();
+
+    connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
+
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
+
+    QAction* openSourceFindAction = new QAction(this);
+    openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
+    splitter_right->addAction(openSourceFindAction);
+    connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_open_source_find);
+
+    QAction* closeSourceFindAction = new QAction(this);
+    closeSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
+    splitter_right->addAction(closeSourceFindAction);
+    connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
+
+    /*QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(QStringLiteral(":/icons/edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))), tr("Delete Item"), this);
+    deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    deleteTriggerAction->setToolTip(QStringLiteral("<html><head/><body><p>%1 (%2)</p></body></html>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
+    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
+    frame_left->addAction(deleteTriggerAction);
+    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_delete_item);*/
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
@@ -6984,6 +7044,80 @@ void dlgTriggerEditor::slot_toggle_active()
     }
 }
 
+void dlgTriggerEditor::moveSourceEditorFindArea()
+{
+    if (mpSourceEditorEdbee->verticalScrollBar()->isVisible())
+        mpSourceEditorFindArea->move(mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width() - mpSourceEditorEdbee->verticalScrollBar()->width(), mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height());
+    else
+        mpSourceEditorFindArea->move(mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width(), mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height());
+    mpSourceEditorFindArea->update();
+}
+
+void dlgTriggerEditor::slot_open_source_find()
+{
+    //int x, y;
+    //x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
+    //y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
+    //qDebug() << "Moving mpSourceEditorFindArea to: " << x << ", " << y;
+    //mpSourceEditorFindArea->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+    //mpHost->postMessage("slot_open_source_find fired(postMessage)!\n");
+    //mpHost->// ("slot_source_find_previous fired!\n");
+    moveSourceEditorFindArea();
+    mpSourceEditorFindArea->show();
+    mpSourceEditorFindArea->lineEdit_findText->setFocus();
+    mpSourceEditorFindArea->lineEdit_findText->selectAll();
+}
+
+void dlgTriggerEditor::slot_close_source_find()
+{
+    //mpSourceEditorEdbee->textRenderer()->
+    /*auto controller = mpSourceEditorEdbee->controller();
+    auto textRanges = controller->textSelection();//borderedTextRanges();
+    textRanges->clear();
+    controller->update();*/
+    mpSourceEditorEdbee->controller()->borderedTextRanges()->clear();
+    mpSourceEditorEdbee->controller()->textSelection()->range(0).clearSelection();
+    mpSourceEditorEdbee->controller()->update();
+    mpSourceEditorFindArea->hide();
+    mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_move_source_find()
+{
+    moveSourceEditorFindArea();
+}
+
+void dlgTriggerEditor::slot_source_find_previous()
+{
+    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(false);
+    mpSourceEditorEdbee->controller()->textSearcher()->findPrev(mpSourceEditorEdbee);
+    mpSourceEditorEdbee->controller()->scrollCaretVisible();
+    mpSourceEditorEdbee->controller()->update();
+    moveSourceEditorFindArea();
+}
+
+void dlgTriggerEditor::slot_source_find_next()
+{
+    mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    mpSourceEditorEdbee->controller()->textSearcher()->setCaseSensitive(false);
+    mpSourceEditorEdbee->controller()->textSearcher()->findNext(mpSourceEditorEdbee);
+    mpSourceEditorEdbee->controller()->scrollCaretVisible();
+    mpSourceEditorEdbee->controller()->update();
+    moveSourceEditorFindArea();
+}
+
+void dlgTriggerEditor::slot_source_find_text_changed()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();// .clear();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->markAll(controller->borderedTextRanges());
+    controller->update();
+}
+
 void dlgTriggerEditor::slot_delete_item()
 {
     switch (mCurrentView) {
@@ -8133,6 +8267,11 @@ bool dlgTriggerEditor::event(QEvent* event)
     return QMainWindow::event(event);
 }
 
+void dlgTriggerEditor::resizeEvent(QResizeEvent* event){
+    if (mpSourceEditorArea->isVisible())
+        moveSourceEditorFindArea();
+}
+
 
 void dlgTriggerEditor::slot_key_grab()
 {
@@ -8434,6 +8573,7 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
 {
+    mpSourceEditorFindArea->hide();
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
@@ -8758,5 +8898,8 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
                 slot_showAllTriggerControls(true);
             }
         }
+    }
+    if (mpSourceEditorFindArea->isVisible()) {
+        moveSourceEditorFindArea();
     }
 }
