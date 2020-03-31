@@ -10979,7 +10979,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5090"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>Adres</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5110"/>
@@ -10989,22 +10989,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
       <source>Username for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa użytkownika do logowania do serwera proxy, jeśli jest wymagana</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5126"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>nazwa użytkownika (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5136"/>
       <source>Password for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Hasło do logowania do serwera proxy, jeśli jest wymagane</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5142"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>hasło (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5200"/>
@@ -11017,12 +11017,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Ogólne wyjścia:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>NW wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -11038,27 +11038,27 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw dodatnią wartość, aby zastąpić domyślną (pokoju) wagę dla tej trasy wyjścia, wartość zerowa przypisuje wartość domyślną.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>N wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>NE wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Na górę...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>W wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
@@ -11068,42 +11068,42 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Waga:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>E wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1003"/>
       <source>Down exit...</source>
-      <translation type="unfinished"/>
+      <translation>W dół wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>SW wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>S wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>SE wyjście...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1581"/>
       <source>In exit...</source>
-      <translation type="unfinished"/>
+      <translation>Na wyjściu...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Out exit...</source>
-      <translation type="unfinished"/>
+      <translation>Na wyjściu...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
@@ -11113,12 +11113,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>Brak ścieżki</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
       <source>Stub Exit</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście odcinek</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="67"/>
@@ -11135,7 +11135,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Unikaj tworzenia trasy za pośrednictwem tego wyjścia, co odpowiada nieskończonej wadze wyjścia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -11151,12 +11151,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utwórz wyjście w tym kierunku z nieznanym miejscem docelowym, wzajemnie wykluczające się z rzeczywistym exit roomID.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
       <source>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju na północny zachód od tego, będzie niebieski dla prawidłowej liczby lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="119"/>
@@ -11172,7 +11172,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nie rysuje się symbolu drzwi na mapie 2D dla tego wyjścia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
@@ -11184,7 +11184,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1343"/>
       <location filename="../src/ui/room_exits.ui" line="1483"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zielony (otwarty) symbol drzwi jest rysowany na mapie 2D, można ustawić na wycinku lub rzeczywistym wyjściu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="154"/>
@@ -11196,7 +11196,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1359"/>
       <location filename="../src/ui/room_exits.ui" line="1499"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pomarańczowy (zamknięty) symbol drzwi jest rysowany na mapie 2D, można ustawić na wycinku lub rzeczywistym wyjściu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="170"/>
@@ -11208,22 +11208,22 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Czerwony (zablokowany) symbol drzwi jest rysowany na mapie 2D, można ustawić na wycinek lub prawdziwe wyjście.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
       <source>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju na północ od tego, będzie niebieski dla prawidłowego numeru lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
       <source>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju na północny wschód od tego, będzie niebieski dla prawidłowej liczby lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju w górę od tego, będzie niebieski dla prawidłowego numeru lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -11231,7 +11231,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1623"/>
       <location filename="../src/ui/room_exits.ui" line="1763"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol jest rysowany zielonym (otwartym) kolorem wypełnienia na mapie 2D, można ustawić na wycinku lub rzeczywistym wyjściu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="574"/>
@@ -11239,7 +11239,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1779"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol jest rysowany pomarańczowym (zamkniętym) kolorem wypełnienia na mapie 2D, można ustawić na wycinku lub rzeczywistym wyjściu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="590"/>
@@ -11247,32 +11247,32 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
       <location filename="../src/ui/room_exits.ui" line="1795"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Symbol jest rysowany czerwonym (zablokowanym) kolorem wypełnienia na mapie 2D, można ustawić na wycinku lub rzeczywistym wyjściu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju na zachód od tego, będzie niebieski dla prawidłowego numeru lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jest to numer ID pokoju dla tego pokoju - nie można go tu zmienić!</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jest to domyślna waga dla tego pokoju, która będzie używana dla każdego wyjścia &lt;i&gt;, który prowadzi do &lt;u&gt;tego pokoju&lt;/u&gt;&lt;/i&gt; który nie ma własnego zestawu wartości - ta wartość nie może zostać tutaj zmieniona.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju na wschód od tego, będzie niebieski dla prawidłowego numeru lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
       <source>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw numer pokoju w dół od tego, będzie niebieski dla prawidłowego numeru lub czerwony dla nieprawidłowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
@@ -11577,33 +11577,33 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="136"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;milisekund&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;H &lt;b&gt;Godziny&lt;/b&gt; część interwału, w której wyłączy się czasomierz.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="217"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="250"/>
       <location filename="../src/ui/timers_main_area.ui" line="316"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;M &lt;b&gt;Minuyt&lt;/b&gt; część interwału, w której wyłączy się czasomierz.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="328"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;S &lt;b&gt;Sekundy&lt;/b&gt; część interwału, w której wyłączy się czasomierz.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="331"/>
@@ -11623,22 +11623,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="352"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="385"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="421"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -11653,12 +11653,12 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="593"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
       <source>Show normally hidden variables</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż zmienne zwykle ukryte</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
