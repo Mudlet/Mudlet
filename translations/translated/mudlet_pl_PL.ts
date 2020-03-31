@@ -284,7 +284,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="411"/>
       <source>[WHOWAS] %1 was %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[KTOBYŁ] %1 był %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
@@ -2420,29 +2420,29 @@ pod kluczem:
     <message>
       <location filename="../src/TRoom.cpp" line="1397"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pokój miał jeden lub więcej nadwyżek elementów blokady wyjścia, które zostały usunięte: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1476"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 znaleźć jeden lub więcej nadwyżek elementów linii niestandardowych, które usunięto: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1482"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pokój miał jeden lub więcej nadwyżek elementów linii niestandardowych, które zostały usunięte: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1505"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 korygowanie wyjścia &quot;%2&quot; to było do pokoju z wyjściem do nieprawidłowego pokoju: %3 , aby przejść do: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1514"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Korekta wyjścia &quot;%1&quot; , która była nieprawidłowym id pokoju: %2 teraz prowadzi do: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1525"/>
@@ -2451,24 +2451,26 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Pokój z identyfikatorem: %1 ma wyjście &quot;%2&quot; do: %3 ale ten pokój nie istnieje.  Wyjście zostanie usunięte (ale pomieszczenie docelowe
+Identyfikator będzie przechowywany w danych użytkownika pokoju pod kluczem:
+&quot;%4&quot;) a wyjście zostanie przekształcone w zalążek.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1538"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Pokój ma wyjście &quot;%1&quot; do: %2 ale ten pokój nie istnieje.  Wyjście zostanie usunięte (ale identyfikator pokoju docelowego będzie przechowywany w danych użytkownika pokoju pod kluczem: &quot;%4&quot;), a wyjście zostanie przekształcone w zalążek.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1582"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Pokój z identyfikatorem: %1 ma wyjście &quot;%2&quot; do: %3 ale także ma zalażek wyjścia  (stub)!  Ponieważ prawdziwe wyjście wyklucza zalążek, ten ostatni zostanie usunięty.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1592"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Pokój ma wyjście &quot;%1&quot; do: %2 ale ma również zalążek wyjścia (stub) w tym samym kierunku!  Ponieważ prawdziwe wyjście wyklucza zalążek, ten ostatni zostanie usunięty.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1648"/>
@@ -2477,12 +2479,16 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - W pokoju z id: %1 Wyjścia &quot;%2&quot; który był do pokoju z nieprawidłowym
+pokojem: %3 który nie istnieje.  Wyjście zostanie usunięte (zły cel
+id pokoju będą przechowywane w danych użytkownika pokoju pod kluczem:
+&quot;%4&quot;)
+a wyjście zostanie przekształcone w zalążek.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1659"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Wyjście z pokoju &quot;%1&quot; który był do pokoju z nieprawidłowym id: %2 który nie istnieje.  Wyjście zostanie usunięte (zły identyfikator pokoju docelowego będzie przechowywany w danych użytkownika pokoju pod kluczem:&quot;%4&quot;), a wyjście zostanie przekształcone w zalążek.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1675"/>
@@ -7928,7 +7934,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Round</source>
-      <translation>Runda</translation>
+      <translation>Okrągłe</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="683"/>
