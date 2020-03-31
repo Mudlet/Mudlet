@@ -3187,55 +3187,55 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{first strong isolate}</source>
       <comment>Unicode U+2068 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{first strong isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{pop directional isolate}</source>
       <comment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1848"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibit arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1849"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activate arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1850"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{national digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1851"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1852"/>
       <source>{ideaographic space}</source>
       <comment>Unicode U+3000 codepoint - ideaographic (CJK Wide) space</comment>
-      <translation type="unfinished"/>
+      <translation>{ideaographic space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1853"/>
@@ -3265,13 +3265,13 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTextEdit.cpp" line="1857"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1858"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1859"/>
@@ -4058,17 +4058,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Szary (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
