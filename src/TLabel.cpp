@@ -26,12 +26,14 @@
 #include "Host.h"
 
 #include "pre_guard.h"
-#include <QtEvents>
 #include <QApplication>
+#include <QtEvents>
 #include "post_guard.h"
 
 
-TLabel::TLabel(Host* pH, QWidget* pW) : QLabel(pW), mpHost(pH)
+TLabel::TLabel(Host* pH, QWidget* pW)
+: QLabel(pW)
+, mpHost(pH)
 {
     setMouseTracking(true);
 }
