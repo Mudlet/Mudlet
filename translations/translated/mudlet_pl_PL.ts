@@ -3994,7 +3994,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2411"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Powtórka została zakończona.</translation>
     </message>
   </context>
   <context>
@@ -4002,7 +4002,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 256 Wybór kolorów</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="39"/>
@@ -4011,37 +4011,40 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;Wybierz:&lt;ul&gt;&lt;li&gt;jeden z podstawowych 16 kolorów poniżej&lt;/li&gt;
+&lt;li&gt;kliknij przycisk &lt;i&gt;Więcej&lt;/i&gt; , aby uzyskać dostęp do innych kolorów w zestawie 256 kolorów, a następnie postępuj zgodnie z instrukcjami, aby wybrać kolor z tej części obsługiwanych kolorów 256; jeśli taki kolor jest już w użyciu, to ta część będzie już&lt;/li&gt;
+&lt;li&gt;kliknij przycisk &lt;i&gt;Domyślny&lt;/i&gt; Lub &lt;i&gt;Ignoruj&lt;/i&gt; przyciski na dole dla pary innych specjalnych przypadków&lt;/li&gt;
+&lt;li&gt;Kliknij &lt;i&gt;Anuluj&lt;/i&gt; , aby zamknąć to okno dialogowe bez wprowadzania zmian&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
       <source>Basic ANSI Colors [0-15] - click a button to select that color number directly:</source>
-      <translation type="unfinished"/>
+      <translation>Podstawowe kolory ANSI [0-15] - kliknij przycisk, aby wybrać ten numer koloru bezpośrednio:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="240"/>
       <source>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 6R x 6G x 6B Kolory [16-231] - dostosuj czerwony R, zielony G, niebieski B i naciśnij przycisk, aby wybrać pasujący numer koloru:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Zielony (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Niebieski (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
