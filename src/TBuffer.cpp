@@ -1673,7 +1673,6 @@ COMMIT_LINE:
                     lineBuffer << QString();
                 }
                 buffer.push_back(mMudBuffer);
-                dirty << true;
                 timeBuffer << QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
@@ -1691,7 +1690,6 @@ COMMIT_LINE:
                     lineBuffer.back().append(QString());
                 }
                 buffer.back() = mMudBuffer;
-                dirty.back() = true;
                 timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
@@ -1715,7 +1713,6 @@ COMMIT_LINE:
             lineBuffer.push_back(QString());
             timeBuffer.push_back(QString());
             promptBuffer << false;
-            dirty << true;
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
                 shrinkBuffer();
             }
@@ -3114,7 +3111,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         lineBuffer.push_back(QString());
         timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
-        dirty << true;
         last = 0;
     }
     bool firstChar = (lineBuffer.back().size() == 0);
@@ -3136,7 +3132,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             lineBuffer.push_back(QString());
             timeBuffer << blankTimeStamp;
             promptBuffer << false;
-            dirty << true;
             firstChar = true;
             continue;
         }
@@ -3169,7 +3164,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     }
                     timeBuffer << blankTimeStamp;
                     promptBuffer << false;
-                    dirty << true;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
@@ -3209,7 +3203,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         lineBuffer.push_back(QString());
         timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
-        dirty << true;
         last = 0;
     }
     bool firstChar = (lineBuffer.back().size() == 0);
@@ -3230,7 +3223,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             lineBuffer.push_back(QString());
             timeBuffer << blankTimeStamp;
             promptBuffer << false;
-            dirty << true;
             firstChar = true;
             continue;
         }
@@ -3263,7 +3255,6 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     }
                     timeBuffer << blankTimeStamp;
                     promptBuffer << false;
-                    dirty << true;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
@@ -3302,7 +3293,6 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         lineBuffer.push_back(QString());
         timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
-        dirty << true;
         lastLine = 0;
     }
 
@@ -3567,7 +3557,6 @@ inline int TBuffer::wrap(int startLine)
         lineBuffer.pop_back();
         timeBuffer.pop_back();
         promptBuffer.pop_back();
-        dirty.pop_back();
     }
 
     int insertedLines = queue.size() - 1;
@@ -3585,7 +3574,6 @@ inline int TBuffer::wrap(int startLine)
             timeBuffer.append(timeList[i]);
             promptBuffer.push_back(promptList[i]);
         }
-        dirty.push_back(true);
     }
 
     log(startLine, startLine + tempList.size());
@@ -3729,7 +3717,6 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     timeBuffer.removeAt(startLine);
     bool isPrompt = promptBuffer.at(startLine);
     promptBuffer.removeAt(startLine);
-    dirty.removeAt(startLine);
 
     int insertedLines = queue.size() - 1;
     int i = 0;
@@ -3743,7 +3730,6 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         lineBuffer.insert(startLine + i, tempList[i]);
         timeBuffer.insert(startLine + i, time);
         promptBuffer.insert(startLine + i, isPrompt);
-        dirty.insert(startLine + i, true);
     }
     log(startLine, startLine + tempList.size() - 1);
     return insertedLines > 0 ? insertedLines : 0;
@@ -3880,7 +3866,6 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
-    dirty.push_back(true);
 }
 
 bool TBuffer::deleteLine(int y)
@@ -3894,7 +3879,6 @@ void TBuffer::shrinkBuffer()
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
-        dirty.pop_front();
         buffer.pop_front();
         mCursorY--;
     }
@@ -3909,7 +3893,6 @@ bool TBuffer::deleteLines(int from, int to)
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
-            dirty.removeAt(i);
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);

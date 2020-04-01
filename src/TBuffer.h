@@ -204,7 +204,6 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    QList<bool> dirty;
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
     int mLinkID;
