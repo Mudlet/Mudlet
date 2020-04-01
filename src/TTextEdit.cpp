@@ -593,7 +593,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
-        mpBuffer->dirty[lineOffset + i] = false;
         drawLine(p, i + lineOffset, i);
     }
     p.end();
@@ -695,7 +694,6 @@ void TTextEdit::highlightSelection()
             }
             if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
                 mpBuffer->buffer.at(currentY).at(currentX).select();
-                mpBuffer->dirty[currentY] = true;
             }
         }
     }
@@ -723,7 +721,6 @@ void TTextEdit::unHighlight()
         for (; x < static_cast<int>(mpBuffer->buffer.at(y).size()); ++x)
             if (mpBuffer->buffer.at(y).at(x).isSelected()) {
                 mpBuffer->buffer.at(y).at(x).deselect();
-                mpBuffer->dirty[y] = true;
             }
     }
     mForceUpdate = true;
@@ -791,7 +788,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
                 bufferLine[xIndex].deselect();
-                mpBuffer->dirty[yIndex] = true;
             }
         }
     }
