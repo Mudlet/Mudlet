@@ -15696,7 +15696,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     if (error) {
         std::string err;
         if (lua_isstring(L, 1)) {
-            err = "Lua error:";
+            err = "Lua error: ";
             err += lua_tostring(L, 1);
         }
         QString name = "event handler function";

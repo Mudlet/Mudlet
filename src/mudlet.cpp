@@ -2549,10 +2549,8 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
-
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int func)
@@ -2565,9 +2563,8 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int f
     if (pL) {
         pL->setClick(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const int func)
@@ -2580,9 +2577,8 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
     if (pL) {
         pL->setDoubleClick(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int func)
@@ -2595,9 +2591,8 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int
     if (pL) {
         pL->setRelease(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int func)
@@ -2610,9 +2605,8 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int fu
     if (pL) {
         pL->setMove(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int func)
@@ -2625,9 +2619,8 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int f
     if (pL) {
         pL->setWheel(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int func)
@@ -2640,9 +2633,8 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int func)
     if (pL) {
         pL->setEnter(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int func)
@@ -2655,9 +2647,8 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int func)
     if (pL) {
         pL->setLeave(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)

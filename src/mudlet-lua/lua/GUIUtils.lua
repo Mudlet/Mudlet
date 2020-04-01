@@ -1969,11 +1969,11 @@ local function unpack_w_nil (t, i)
     if i >= t.n then
       return t[i]
     end
-     return t[i], unpack_w_nil(t, i + 1)
+      return t[i], unpack_w_nil(t, i + 1)
 end
 
 local function setLabelCallback(callbackFunc, labelname, func, ...)
- local nr = arg.n + 1
+  local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
