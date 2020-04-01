@@ -10249,29 +10249,29 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1135"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Włącz analizator tekstu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1163"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with minimum interval of (h:mm:ss.zzz):</source>
       <comment>The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!</comment>
-      <translation type="unfinished"/>
+      <translation>Pokaż &apos;LUA OK&apos; wiadomości dla timerów z minimalnym odstępem (h:mm:ss.zzz):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1197"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1310"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>Auto-uzupełnianie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>Autouzupełniaj funkcje Lua w edytorze kodu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1359"/>
@@ -10286,27 +10286,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1402"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kolor pierwszego planu używany dla głównego obszaru wejściowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1419"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kolor tła używany dla głównego obszaru wejściowego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1436"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kolor pierwszego planu używany dla tekstu wysyłanego do serwera gry.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1456"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kolor tła używany do tekstu wysyłanego na serwer gry.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1475"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Te preferencje określają sposób, w jaki dany kolor ma być reprezentowany wizualnie na ekranie głównym:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1485"/>
@@ -10317,7 +10317,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1492"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1505"/>
@@ -10328,7 +10328,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1512"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1525"/>
@@ -10339,7 +10339,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1532"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1545"/>
@@ -10350,7 +10350,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1552"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1565"/>
@@ -10361,7 +10361,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1572"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>Numer koloru ANSI 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1585"/>
@@ -10684,53 +10684,53 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3061"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>Wydane dla:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3078"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Kończy się:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5065"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>Zaakceptuj wszystkie błędy certyfikatów (niebezpieczne)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1888"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Zgłoś problemy na ekranie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1902"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj mapę do innych profili:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1918"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Naciśnij, aby wybrać miejsca docelowe</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Kopiowanie do miejsc docelowych</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1943"/>
       <source>An action above happened</source>
-      <translation type="unfinished"/>
+      <translation>Powyższa akcja miała miejsce</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1950"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Wersja formatu mapy:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <location filename="../src/ui/profile_preferences.ui" line="1979"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {domyślna wersja}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1990"/>
@@ -10740,58 +10740,58 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2012"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Pobierz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2025"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>Kopie zapasowe map</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>Usuń kopie zapasowe map starsze niż:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2048"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>dni od dziś, zachowując nowsze i miesięczne kopie zapasowe</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2061"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Widok mapy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2090"/>
       <source>2D Map Room Symbol Font</source>
-      <translation type="unfinished"/>
+      <translation>Czcionka symbolu pokoju mapy 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2070"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Użyj wysokiej jakości grafiki, w widoku 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="184"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Czy potrafisz pomóc w tłumaczeniu Mudleta?&lt;/p&gt;&lt;p&gt;Jeśli tak, odwiedź &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz profile, do których chcesz skopiować mapę, a następnie naciśnij przycisk Kopiuj po prawej&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kopiowanie mapy do wybranych profili po lewej stronie&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1996"/>
       <location filename="../src/ui/profile_preferences.ui" line="2009"/>
       <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;W grach, które zapewniają mapy do pobrania, możesz nacisnąć ten przycisk, aby pobrać najnowszą mapę. Zauważ, że &lt;span style=&quot; font-weight:600;&quot;&gt;nadpisze&lt;/span&gt; wszelkie zmiany, które&apos;zrobiłeś na mapie, i będzie używać tylko nowej mapy (stracisz starą)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2080"/>
