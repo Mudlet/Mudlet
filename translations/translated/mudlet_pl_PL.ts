@@ -4049,7 +4049,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
