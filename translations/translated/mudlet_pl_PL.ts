@@ -3488,7 +3488,8 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
       <location filename="../src/TTrigger.cpp" line="1062"/>
       <source>Trigger name=%1 expired.
 </source>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacz o nazwie=%1 Wygasł.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1065"/>
@@ -3502,12 +3503,12 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="47"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>Pobieranie aktualnych informacji …</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="84"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>Nowa wersja %APPNAME% jest dostępna!</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
@@ -3975,18 +3976,20 @@ Powód odłączenia: </translation>
       <location filename="../src/ctelnet.cpp" line="2372"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Nie można wykonać powtórki, inna może być już w toku.
+Spróbuj ponownie po jej zakończeniu.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2380"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można odczytać pliku &quot;%1&quot;, komunikat o błędzie to: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2383"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można odczytać pliku &quot;%1&quot;,
+komunikat o błędzie to: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2411"/>
