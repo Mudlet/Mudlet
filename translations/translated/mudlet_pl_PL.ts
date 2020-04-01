@@ -4991,12 +4991,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij na kolor, aby wyzwalać tylko wtedy, gdy kolor tła odpowiada wskazanemu numerowi koloru.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij na kolor, aby wyzwalać tylko wtedy, gdy kolor na pierwszym planie odpowiada wskazanemu numerowi koloru.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5036,12 +5036,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Biały (jasnoszary)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Jasny czarny (ciemnoszary)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -5087,7 +5087,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetlane są wszystkie opcje kolorów.</translation>
     </message>
   </context>
   <context>
@@ -5100,12 +5100,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1197"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Ten profil jest aktualnie załadowany — zamknij go przed zmianą parametrów połączenia.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>Znak %1 jest niedozwolony. Użyj jednego z poniższych znaków:</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
@@ -5120,18 +5120,18 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="473"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można zmienić nazwy danych twojego profilu na komputerze.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="89"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Witamy w Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Kliknij na jedną z gier na liście, aby zagrać.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Aby zagrać w inną grę, która nie znajduje się na liście (tłumacz poleca Arkadia MUD), kliknij %1 &lt;span style=&quot; color:#555753;&quot;&gt;Nowy&lt;/span&gt;, wypełnij &lt;i&gt;Nazwa profilu&lt;/i&gt;, &lt;i&gt;Adres serwera&lt;/i&gt;I &lt;i&gt;Portu&lt;/i&gt; pól w &lt;i&gt;Wymagane &lt;/i&gt; Obszar.&lt;/p&gt;&lt;p&gt;Następnie kliknij przycisk %2 &lt;span style=&quot; color:#555753;&quot;&gt;Połączyć&lt;/span&gt; aby zagrać.&lt;/p&gt;&lt;p&gt;Baw się dobrze!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Zespół Mudleta. &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Bez połączenia</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
@@ -5141,12 +5141,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj tylko ustawienia</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation type="unfinished"/>
+      <translation>Hasło postaci przechowywane bezpiecznie w komputerowym menedżerze danych logowania</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
@@ -5156,7 +5156,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można utworzyć nowego katalogu na profil postaci.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="576"/>
@@ -5171,39 +5171,39 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1250"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>Integracja z Discordem niedostępna na tej platformie</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1256"/>
       <source>Discord integration not supported by game</source>
-      <translation type="unfinished"/>
+      <translation>Integracja Discord nie jest obsługiwana przez grę</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1259"/>
       <source>Check to enable Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Zaznacz aby włączyć integrację z Discordem</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1916"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>Zresetuj ikony</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Ustawianie ikony niestandardowej</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1928"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz własny obraz profilu (powinien być 120x30)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1930"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Obrazy (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
@@ -5213,37 +5213,37 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet nie może załadować obsługi dla bezpiecznych połączeń.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź adres URL lub adres IP serwera Gry.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
       <source>SSL connections require the URL of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Połączenia SSL wymagają adresu URL serwera Gry.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wczytaj profil bez połączenia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Proszę ustawić prawidłową nazwę profilu, adres serwera gry i port gry przed załadowaniem&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Proszę ustawić prawidłową nazwę profilu, adres serwera gry i port gry przed połączeniem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2505"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby ukryć hasło; ukryje również po wybraniu innego profilu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2509"/>
@@ -6774,35 +6774,36 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3054"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Próba zdezaktywowania przycisku/menu/paska narzędzi lub części modułu &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; , który je zawiera &lt;em&gt;, powiodła się&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3058"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Nie można aktywować przycisku/menu/paska narzędziowego lub części modułu &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; , który je zawiera; powód: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Trzeba to ponownie uaktywnić po usunięciu problemu.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3172"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4017"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>Nowa grupa wyzwalaczy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3174"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4017"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Nowy wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3273"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>Nowa grupa zegarów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3275"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>Nowy zegar</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3363"/>
@@ -6817,12 +6818,12 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3427"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>Nowa grupa kluczy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3429"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>Nowy sekwencja klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3511"/>
@@ -7231,32 +7232,32 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="712"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>perl regex</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="714"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>dokładne dopasowanie</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="715"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>funkcja lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="716"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>separator linii</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="717"/>
       <source>color trigger</source>
-      <translation type="unfinished"/>
+      <translation>wyzwalacz kolorowy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="718"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>zachęta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1819"/>
@@ -7317,7 +7318,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="1960"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1965"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>Wzorzec {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1424"/>
@@ -7345,7 +7346,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="2442"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2447"/>
       <source>Lua code (%1:%2)</source>
-      <translation type="unfinished"/>
+      <translation>Kod Lua (%1:%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1732"/>
@@ -7555,7 +7556,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą, idealnie unikalną, nazwę klucza lub grupy znaków. Będzie ona wyświetlana w drzewie kluczy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
