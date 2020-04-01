@@ -10796,12 +10796,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2080"/>
       <source>Show the default area in map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż domyślny obszar w zaznaczonym obszarze mapy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2100"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Używaj tylko symboli (glifów) z wybranej czcionki</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2107"/>
@@ -11472,7 +11472,7 @@ Weight</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustaw dodatnią wartość całkowitą, aby zastąpić domyślną wagę (Pokój) dla korzystania z tej trasy zakończenia, wartość zero przypisuje wartość domyślną.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
@@ -11511,12 +11511,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
       <source>&amp;Add special exit</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Dodaj specjalne wyjście</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>&amp;End S. Kończy edycję</translation>
     </message>
   </context>
   <context>
@@ -11529,37 +11529,37 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Zarejestrowane podmioty obsługujące zdarzenia:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą (najlepiej, choć nie musi być, unikalną) nazwę dla skryptu lub grupy skryptów. Zostanie ona wyświetlona w drzewie skryptów.&lt;/p&gt;&lt;p&gt;Jeśli funkcja wewnątrz skryptu ma być używany do obsługi zdarzeń wprowadzonych na poniższej liście &lt;b&gt;&lt;u&gt;musi mieć taką samą nazwę, jak jest wprowadzona w tym miejscu.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Usuń (wybraną) obsługę zdarzeń z listy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj Obsługę Zdarzeń użytkownika:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodaj wprowadzoną nazwę obsługi zdarzeń do listy.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -11603,27 +11603,27 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą (najlepiej, choć nie musi być, unikalną) nazwę dla timera, czasomierza lub grupy czasomierza. Zostanie to wyświetlone w drzewie zegarów.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które ma być wysyłane bezpośrednio do gry po upływie tego czasu. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;Zamiast&lt;/i&gt; w obszarze edytora poniżej.  Wszystko, co tu we wpisane jest dosłownie, tak jak wpisane, wysłane do serwera gry.&lt;/p&gt;&lt;p&gt;Można wykorzystać zarówno to, jak &lt;i&gt;I&lt;/i&gt; skrypt Lua - zostanie wysłane &lt;b&gt;Przed&lt;/b&gt; tym jak skrypt jest uruchamiany.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="91"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;godzin&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="106"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;minut&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="121"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;sekund&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="136"/>
@@ -11659,17 +11659,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="331"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interwał &lt;b&gt;sekundowy&lt;/b&gt; wyłączony w&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="397"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt; &lt;b&gt;milisekunda&lt;/b&gt; część przedziału, w której zegar będzie wyłączony (1000 milisekund = 1 sekunda).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="400"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interwał &lt;b&gt;milisekundowy&lt;/b&gt; wyłączony w czasie (1000 milisekund = 1 sekunda)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
@@ -11910,7 +11910,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tabele mogą przechowywać wartości na liście i/lub hashmapie.&lt;/p&gt;&lt;p&gt;W &lt;b&gt;Listy&lt;/b&gt;, &lt;i&gt;unikalne klawisze indeksowane&lt;/i&gt; reprezentują wartości, dzięki czemu można mieć wartości na &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;W &lt;b&gt;Mapę&lt;/b&gt; {vel &lt;i&gt;tablica asocyjna}&lt;/i&gt;, &lt;i&gt;unikalne klucze&lt;/i&gt; reprezentują wartości - dzięki czemu można mieć wartości pod dowolnym identyfikatorem, który chcesz (teoretycznie nawet funkcji lub innej jednostki lua chociaż ten GUI obsługuje tylko ciągi).&lt;/p&gt;&lt;p&gt;W przypadku nowo utworzonej tabeli (grupy) wybiera się zawsze, gdy chcesz, aby tabela była indeksowana lub asiecyjna.&lt;/p&gt;&lt;p&gt;W innych przypadkach wyświetla inne jednostki (&lt;span style=&quot; font-style:italic;&quot;&gt;Funkcje&lt;/span&gt;), które nie mogą być tu modyfikowane.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
@@ -11951,7 +11951,7 @@ z GUI)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli ten element jest zaznaczony (i jego elementy podrzędne, jeśli ma zastosowanie), nie jest wyświetlany w obszarze po lewej stronie, chyba że zaznaczono opcję &lt;b&gt;Pokaż normalnie ukryte zmienne&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
