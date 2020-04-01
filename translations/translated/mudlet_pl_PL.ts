@@ -4054,12 +4054,12 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Ustawianie wartości RGB</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>Skala skali szarości ANSI 24 [232-255] - dostosuj szary i kliknij przycisk, aby wybrać pasujący numer kolorów:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
