@@ -2487,15 +2487,17 @@ bool TConsole::raiseWindow(const QString& name)
     if (pC) {
         pC->raise();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->raise();
         return true;
-    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+    }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->raise();
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 bool TConsole::lowerWindow(const QString& name)
@@ -2507,17 +2509,18 @@ bool TConsole::lowerWindow(const QString& name)
         pC->lower();
         mpMainDisplay->lower();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->lower();
         mpMainDisplay->lower();
         return true;
-    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+    }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
         mpMainDisplay->lower();
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 bool TConsole::showWindow(const QString& name)
