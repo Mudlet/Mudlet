@@ -7639,7 +7639,9 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
-      <translation type="unfinished"/>
+      <translation>To jest wolne oprogramowanie: możesz go zmieniać i rozpowszechniać.
+NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="217"/>
@@ -7651,24 +7653,33 @@ There is NO WARRANTY, to the extent permitted by law.
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Użycie: %1 [OPCJE...]
+       -h, --help wyświetla ten komunikat.
+       -v, --version wyświetla informacje o wersji.
+       -q, --quiet nie wyświetlany ekran powitalny przy starcie.
+
+Istnieją inne odziedziczone opcje, które wynikają z bibliotek Qt, które są
+mniej prawdopodobnie użyteczne do normalnego użytkowania tej aplikacji:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="264"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation type="unfinished"/>
+      <translation>Zgłaszanie błędów do: https://github.com/Mudlet/Mudlet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="265"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
-      <translation type="unfinished"/>
+      <translation>Strona główna projektu: http://www.mudlet.org/
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="301"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>Wersja: %1</translation>
     </message>
   </context>
   <context>
@@ -7676,12 +7687,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="95"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Narzędzia</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Opcje</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="116"/>
@@ -7696,7 +7707,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="134"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Gry</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="149"/>
@@ -7992,37 +8003,37 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="904"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>dół -1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="917"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>góra - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="930"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>1 poziom</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="949"/>
       <source>default</source>
-      <translation type="unfinished"/>
+      <translation>domyślny</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="962"/>
       <source>top view</source>
-      <translation type="unfinished"/>
+      <translation>widok z góry</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="975"/>
       <source>side view</source>
-      <translation type="unfinished"/>
+      <translation>widok z boku</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="988"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>wszystkie poziomy</translation>
     </message>
   </context>
   <context>
@@ -8035,7 +8046,12 @@ less likely to be useful for normal use of this application:
 &lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are currently unable to be synced, only &lt;b&gt;.xml&lt;/b&gt; packages are able to be synchronized across profiles at the moment.&lt;/i&gt;&lt;/p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Moduły są sposobem na wykorzystanie wspólnego pakietu w wielu sesjach — w przeciwieństwie do pakietów, które są instalowane na profilu.&lt;/p&gt;
+&lt;p&gt;Moduły są ładowane z rosnącym priorytetem (1 zostanie załadowany przed 2 i tak dalej), moduły o tym samym priorytecie zostaną załadowane w kolejności alfabetycznej.&lt;/p&gt;
+&lt;p&gt; Opcja &lt;b&gt;&lt;i&gt;Synchronizacji&lt;/i&gt;&lt;/b&gt; jeśli jest włączona, gdy moduł w &lt;b&gt;tym profilu&lt;/b&gt; jest zapisywany &lt;b&gt;na dysk&lt;/b&gt;, ponieważ zostanie ponownie załadowany do wszystkich profili, które również używają tego samego pliku, który zawiera moduł. Aby kilka profili używało tego samego modułu, zainstaluj go w każdym profilu za pośrednictwem tego menedżera modułów (który powinien zostać otwarty, gdy dany profil jest obecnie na pierwszym planie).&lt;/p&gt;&lt;p&gt;
+&lt;i&gt;Uwaga: &lt;b&gt;.zip&lt;/b&gt; I &lt;b&gt;.mpackage (pakiet).&lt;/b&gt; modułów nie można obecnie synchronizować, tylko &lt;b&gt;Xml&lt;/b&gt; pakiety mogą być synchronizowane między profilami w tej chwili.&lt;/i&gt;&lt;/p&gt;
+&lt;p&gt;Dla każdej operacji zapisywania moduły są archiwizowane w katalogu, &lt;i&gt;moduleBackups&lt;/i&gt;, w katalogu profilu Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -9694,12 +9710,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="90"/>
       <source>Icon size in tree views:</source>
-      <translation type="unfinished"/>
+      <translation>Rozmiar ikony w widokach drzewa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="110"/>
       <source>Show menu bar:</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż pasek menu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="121"/>
@@ -9711,7 +9727,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
       <location filename="../src/ui/profile_preferences.ui" line="155"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>Dopóki profil nie zostanie załadowany</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
@@ -9722,12 +9738,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="139"/>
       <source>Show main toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż główny pasek narzędzi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation type="unfinished"/>
+      <translation>Powiadomienie na pasku narzędzi, jeśli Mudlet jest zminimalizowany i pojawiają się nowe dane</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="236"/>
@@ -10049,22 +10065,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="339"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli zaznaczone, to znacznik daty o nazwie jest HTML (rozszerzenie pliku &apos;). tml&apos;), który może przekazywać kolor, czcionkę i inne informacje formatujące zamiast zwykłego tekstu (rozszerzenie pliku &apos;. format xt&apos;). Jeśli zmiana następuje podczas logowania, konieczne jest zatrzymanie i ponowne uruchomienie logowania, aby to ustawienie zaczęło obowiązywać w nowym pliku dziennika.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="171"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Kodowanie języka i danych</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="177"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>Wybór języka:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="191"/>
       <source>Server data encoding:</source>
-      <translation type="unfinished"/>
+      <translation>Kodowanie danych serwera:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
