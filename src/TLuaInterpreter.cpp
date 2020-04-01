@@ -8364,10 +8364,9 @@ int TLuaInterpreter::getScript(lua_State* L)
         pos = lua_tonumber(L, 2);
     }
     Host& host = getHostFromLua(L);
-    pos--;
 
     auto ids = host.getScriptUnit()->findScriptId(name);
-    auto pS = host.getScriptUnit()->getScript(ids.value(pos, -1));
+    auto pS = host.getScriptUnit()->getScript(ids.value(--pos, -1));
     if (!pS) {
         lua_pushnumber(L, -1);
         lua_pushstring(L, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
@@ -8405,12 +8404,11 @@ int TLuaInterpreter::setScript(lua_State* L)
         }
         pos = lua_tonumber(L, 3);
     }
-    pos--;
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
+    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
     lua_pushnumber(L, id);
     if (id == -1) {
         lua_pushstring(L, message.toUtf8().constData());
