@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="149"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>via Mudlet</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Teveel doorverwijzingen.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Geen gegevens ontvangen van de server</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>De integriteit van het gedownloadde bestand kon niet geverifiëerd worden.</translation>
     </message>
   </context>
   <context>
