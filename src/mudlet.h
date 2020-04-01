@@ -442,7 +442,7 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void layoutModules();
-    void startAutoLogin();
+    void startAutoLogin(const QString&);
     QPointer<QTableWidget> moduleTable;
     int64_t getPhysicalMemoryTotal();
 
