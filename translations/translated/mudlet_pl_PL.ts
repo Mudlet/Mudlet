@@ -10085,47 +10085,47 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli grasz w inną niż po angielsku i widzisz � zamiast tekstu; lub specjalne litery takie jak &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; pokazujące w niepoprawnie - spróbuj zmienić enkodowanie na UTF-8 lub na zasugerowane przez Twoją grę.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="213"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>Uruchom ponownie Mudlet, aby zastosować nowy język</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>Pozostałe</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz GMCP (Generic Mud Communication Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MSDP (Mud Server Data Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
       <source>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza MSSP - zapewnia informacje o protokole Mud Server Status Protocol po połączeniu z grami go obsługującymi&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MSSP (Mud Server Status Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MSP (Mud Sound Protocol, eksperymentalne w Mudlet)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="485"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Powtórz tekst wysłany w polu wyświetlania.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Może to być wyłączone przez serwer gry, jeśli negocjuje użycie opcji telnet ECHO&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="495"/>
@@ -10135,81 +10135,81 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>Sprawdzanie pisowni</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="557"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ta opcja kontroluje sprawdzanie pisowni w wierszu polecenia w głównej konsoli dla tego profilu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="560"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Słownik system/mudlet:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="567"/>
       <source>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz jeden słownik, który będzie dostępny w wierszu polecenia i w podsystemie lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
       <source>User dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Słownik użytkownika:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="601"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dostępny będzie słownik użytkownika specyficzny dla tego profilu. Będzie to w wierszu polecenia (słowa, które są w nim pojawią się z przerywanym podkreśleniem koloru cyjanu) i w podsystemie lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="604"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>Proﬁl</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="611"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dostępny będzie słownik użytkownika współużytkowane przez wszystkie profile (których opcja jest zaznaczona). Będzie to w wierszu polecenia (słowa, które są w nim pojawią się z przerywanym podkreśleniem koloru cyjanu) i w podsystemie lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="614"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>Współdzielone</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="703"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>Wybrana czcionka nie pracuje z Mudlete, proszę wybrać inną</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="725"/>
       <source>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</source>
-      <translation type="unfinished"/>
+      <translation>Ta czcionka nie jest monospace(jednakowej szerokości znaku), może nie być dobra do grania w niektóre gry tekstowe: można jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn tekstu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="759"/>
       <location filename="../src/ui/profile_preferences.ui" line="775"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, które można mieć przed tekstem na górze - można ustawić na ujemny, aby przenieść tekst poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="803"/>
       <location filename="../src/ui/profile_preferences.ui" line="819"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce przed tekstem po lewej stronie - można ustawić na ujemny, aby przenieść tekst w lewo poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="847"/>
       <location filename="../src/ui/profile_preferences.ui" line="863"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, aby mieć przed tekstem na dole - można ustawić na ujemny, aby umożliwić tekst zejść poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="891"/>
       <location filename="../src/ui/profile_preferences.ui" line="907"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodatkowe miejsce, aby mieć przed tekstem po prawej stronie - można ustawić na negatywne, aby przenieść tekst bezpośrednio poza ekran&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1053"/>
@@ -10219,32 +10219,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1059"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>(znaki do zignorowania przy wyborze, na przykład &apos; lub &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1075"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre gry (zwłaszcza wszystkie IRE MUDs) cierpią z powodu błędu, w którym&apos;t prawidłowo komunikować się z klientem, gdzie powinna znajdować się nowa linia. Włącz to, aby naprawić tekst z coraz dołączone do poprzedniego wiersza monitu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1085"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Podczas wyświetlania zawartości Lua w głównym obszarze edytora tekstu edytora pokaż tabulatory i spacje z widocznymi znacznikami zamiast odstępów.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1095"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz tę opcję, aby uzyskać lepszą zgodność, jeśli używasz netbooka lub innego typu komputera z małym ekranem.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1105"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Podczas wyświetlania zawartości Lua w głównym obszarze edytora tekstu Edytor pokaże wiersze i akapity kończe się widocznymi znacznikami, a także odstępami.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1115"/>
       <source>&lt;p&gt;Prints Lua errors to the main console in addition to the error tab in the editor.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wyświetla błędy Lua na głównej konsoli gry poza zakładką podglądu błędu w edytorze.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1135"/>
