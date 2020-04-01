@@ -3467,22 +3467,22 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message>
       <location filename="../src/TTrigger.cpp" line="179"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd: Ten wyzwalacz nie ma ciągle zdefiniowanych wzorców. Dodaj jakiś, aby go aktywować.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="210"/>
       <source>Error: in item %1, perl regex &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd: w elemencie %1, perl regex &quot;%2&quot; nie udało się skompilować, powód: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="231"/>
       <source>Error: in item %1, lua function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd: w elemencie %1, funkcja lua &quot;%2&quot; nie udało się skompilować, powód: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="251"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd: w elemencie %1, nie ustawiono żadnych kolorów do dopasowania - co najmniej &lt;i&gt;jeden&lt;/i&gt; pierwszego planu lub tła nie może być &lt;i&gt;ignorowany&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1062"/>
