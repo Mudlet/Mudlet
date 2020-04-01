@@ -7566,17 +7566,17 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wpisz jedno lub więcej poleceń, które ma wysłać klawisz bezpośrednio do gry po naciśnięciu. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Aby wysyłać bardziej złożone polecenia, które mogą zależeć od zmiennych w tym profilu lub muszą je zmodyfikować, należy wprowadzić skrypt Lua &lt;i&gt;Zamiast&lt;/i&gt; w obszarze edytora poniżej.  Wszystko, co tu jest wpisane zostanie dosłownie, po prostu wysłane na serwer gry.&lt;/p&gt;&lt;p&gt;Można wykorzystać zarówno to, jak &lt;i&gt;I&lt;/i&gt; skrypt Lua - zostanie wysłany &lt;b&gt;Przed&lt;/b&gt; skrypt jest uruchamiany.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
       <source>Key Binding:</source>
-      <translation type="unfinished"/>
+      <translation>Powiązanie klawiszy:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Pobierz nowy klucz</translation>
     </message>
   </context>
   <context>
@@ -7584,12 +7584,12 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="23"/>
       <source>No mapping script found</source>
-      <translation type="unfinished"/>
+      <translation>Nie znaleziono skryptu mapowania</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wygląda na to, że nie masz jeszcze zainstalowanego żądnego &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;skryptu mapującego&lt;/a&gt; - mapa musi mieć jeden skrypt dla gry, aby móc śledzić gdzie jesteś i automatycznie Cię śledzić. Możesz stworzyć siebie albo zaimportować istniejący już inny skrypt.&lt;/p&gt;&lt;p&gt;Czy chciałbyś zobaczyć, czy ktoś jest dostępny?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -7599,7 +7599,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="93"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Znajdź skrypty</translation>
     </message>
   </context>
   <context>
@@ -7608,27 +7608,31 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/main.cpp" line="209"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Prawa autorskie © 2008-%1  Deweloperzy Mudlet
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="201"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (z symbolami debugowania, bez optymalizacji)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="207"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Biblioteki Qt %1 (kompilacja) %2 (czas wykonania)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="210"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
-      <translation type="unfinished"/>
+      <translation>Licencja GPLv2+: GNU GPL w wersji 2 lub nowszej - http://gnu.org/licenses/gpl.html
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="211"/>
