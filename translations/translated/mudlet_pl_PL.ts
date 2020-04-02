@@ -5249,13 +5249,13 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2509"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij, aby wyświetlić hasło do tego profilu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2365"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2371"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet nie jest skonfigurowany do bezpiecznych połączeń.</translation>
     </message>
   </context>
   <context>
@@ -5268,32 +5268,32 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="125"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet klient IRC - %1 - %2 na %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="139"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Uruchamianie klienta IRC Mudleta...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="140"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ Host: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="141"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Nick - Pseudonim: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="142"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Auto-dołączenie kanałów: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="143"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ Ten klient obsługuje automatyczne uzupełnianie przy użyciu klawisza Tab.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
@@ -5757,17 +5757,17 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2671"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 zaznaczone - naciśnij, aby zmienić</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2674"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Naciśnij by wybrać miejsce docelowe</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2911"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nie można zaktualizować motywów: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2914"/>
@@ -5777,42 +5777,42 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3031"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted trigger item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3034"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted alias item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3037"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted script item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3040"/>
       <source>{missing, possibly recently deleted timer item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted timer item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3043"/>
       <source>{missing, possibly recently deleted key item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted key item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3046"/>
       <source>{missing, possibly recently deleted button item}</source>
-      <translation type="unfinished"/>
+      <translation>{missing, possibly recently deleted button item}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3844"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw zewnętrzny kolor znaku pokoju gracza.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3845"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw wewnętrzny kolor znaku pokoju gracza.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
@@ -5822,12 +5822,12 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="131"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz katalog, w którym będą zapisywane dzienniki.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="132"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Resetuj katalog tak, aby logi były zapisywane w katalogu profilu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="133"/>
