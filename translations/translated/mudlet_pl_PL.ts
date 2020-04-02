@@ -10846,7 +10846,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2620"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Wymuś wyłączenie interpretacji sygnału telnet GA</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2627"/>
@@ -10863,32 +10863,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2638"/>
       <source>Force MXP negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Wymuś wynegocjowanie MXP wyłączony</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2672"/>
       <source>Discord privacy</source>
-      <translation type="unfinished"/>
+      <translation>Ochrona prywatności Discorda</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2705"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nie ukrywaj małej ikonki lub etykietki narzędzia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2710"/>
       <source>Hide small icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj małą ikonę podpowiedzi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2715"/>
       <source>Hide small icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj małą ikonę i podpowiedź</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2737"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj zegar</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2760"/>
@@ -10896,67 +10896,67 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2789"/>
       <location filename="../src/ui/profile_preferences.ui" line="2805"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet będzie wyświetlał informacje o obecności tylko podczas używania tej nazwy użytkownika Discord (przydatnej, jeśli masz wiele kont Discord). Pozostaw puste, aby wyświetlić go dla każdego konta Discord, na które się zalogujesz.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2766"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>Ogranicz do:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2679"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nie ukrywa dużej ikony lub podpowiedzi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
       <source>Hide large icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj dużą ikonę podpowiedzi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2689"/>
       <source>Hide large icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj dużą ikonę i podpowiedź</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2744"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zezwól Lua na ustawienie statusu Discorda&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2747"/>
       <source>Enable Lua API</source>
-      <translation type="unfinished"/>
+      <translation>Włącz interfejs API Lua</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2779"/>
       <source>specific Discord username</source>
-      <translation type="unfinished"/>
+      <translation>nazwa użytkownika Discorda</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
       <source>Hide state</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj stan</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2730"/>
       <source>Hide party details</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj szczegóły grupy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2697"/>
       <source>Hide detail</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj szczegóły</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2830"/>
       <source>IRC client options</source>
-      <translation type="unfinished"/>
+      <translation>Opcje klienta IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2846"/>
       <source>irc.example.net</source>
-      <translation type="unfinished"/>
+      <translation>irc.example.net</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2853"/>
@@ -10966,12 +10966,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2891"/>
       <source>#channel1 #channel2 #etc...</source>
-      <translation type="unfinished"/>
+      <translation>#channel1 #channel2 #etc...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2877"/>
       <source>MudletUser123</source>
-      <translation type="unfinished"/>
+      <translation>MudletUser123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
@@ -11444,7 +11444,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Waga wyjściowa (0=Bez nadpisania)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -11454,7 +11454,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Wyjścia specjalne:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
