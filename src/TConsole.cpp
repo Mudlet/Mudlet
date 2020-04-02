@@ -101,6 +101,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mCurrentSearchResult(0)
 , mSearchQuery()
 , mpButtonMainLayer(nullptr)
+, mFontFactor(1.0)
 , mType(type)
 , mSpellDic()
 , mpHunspell_system(nullptr)
@@ -1895,8 +1896,9 @@ bool TConsole::setMiniConsoleFontSize(int size)
     return true;
 }
 
-void TConsole::refreshMiniConsole() const
+void TConsole::refreshMiniConsole()
 {
+    mFontFactor = 1.0;
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mUpperPane->setFont(mUpperPane->mDisplayFont);
     mUpperPane->updateScreenView();

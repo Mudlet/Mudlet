@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2018, 2020 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -58,8 +59,8 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
-    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
+    int drawLine(QPainter&, int lineNumber, int rowOfScreen) const;
+    QPair<int, int> drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
@@ -106,6 +107,13 @@ public:
     bool mShowTimeStamps;
     int mWrapAt;
     int mWrapIndentCount {};
+#if ! defined(QT_NO_DEBUG)
+    // In debug builds can be set via debugger to put a (dotted) rectangle
+    // around the space that a glyph is to be painted in and a (dashed)
+    // rectangle around the space that the QPainter thinks it needs for that
+    // glyph:
+    bool mGlyphOutlines{false};
+#endif
 
 public slots:
     void slot_toggleTimeStamps(const bool);
@@ -136,6 +144,10 @@ private:
 
     int mFontHeight;
     int mFontWidth;
+    // Derived from mFontWidth it is the space that we are to use for a "normal"
+    // width character, which gets tweaked to allow for the characters that are
+    // wider than QFontMetrics::averageCharWidth():
+    int mStandardCharWidth;
     bool mForceUpdate;
 
     // Each TConsole instance uses two instances of this class, one above the

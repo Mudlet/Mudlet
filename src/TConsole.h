@@ -161,7 +161,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);    
+    bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
@@ -307,6 +307,12 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     QWidget* mpButtonMainLayer;
+    // How much we must increase TTextEdit::mFontWidth in order to accomodate
+    // glyphs that are wider than mFontWidth * numberOfSpaces
+    // (from widechar_width.h) - it is a multiplier and should quickly max out
+    // once we hit the largest character in EITHER top or bottom pane - but
+    // needs to be applied to BOTH of them:
+    double mFontFactor;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
@@ -332,7 +338,7 @@ protected:
     void dropEvent(QDropEvent* e);
 
 private:
-    void refreshMiniConsole() const;
+    void refreshMiniConsole();
 
 
     ConsoleType mType;

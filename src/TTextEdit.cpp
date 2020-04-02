@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -54,6 +54,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
+#if ! defined(QT_NO_DEBUG)
+, mGlyphOutlines(false)
+#endif
 , mForceUpdate(false)
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
@@ -69,29 +72,24 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
+        mpHost->setDisplayFontFixedPitch(true);
         const auto hostFont = mpHost->getDisplayFont();
+        setFont(hostFont);
         mFontHeight = QFontMetrics(hostFont).height();
         mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-        mScreenWidth = 100;
-        if ((width() / mFontWidth) < mScreenWidth) {
-            mScreenWidth = 100; //width()/mFontWidth;
-        }
-
-        mpHost->setDisplayFontFixedPitch(true);
-        setFont(hostFont);
+        mStandardCharWidth = qRound(mFontWidth * pC->mFontFactor);
     } else {
         // This is part of the Central Debug Console
+        mDisplayFont.setFixedPitch(true);
+        setFont(mDisplayFont);
         mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        mScreenWidth = 100;
-        mDisplayFont.setFixedPitch(true);
-        setFont(mDisplayFont);
+        mStandardCharWidth = qRound(mFontWidth * pC->mFontFactor);
         // initialize after mFontHeight and mFontWidth have been set, because the function uses them!
         initDefaultSettings();
     }
     mScreenHeight = height() / mFontHeight;
-
     mScreenWidth = 100;
 
     setMouseTracking(true);
@@ -141,7 +139,7 @@ void TTextEdit::needUpdate(int y1, int y2)
     } else {
         top = y1 % mScreenHeight;
     }
-    QRect r(0, top * mFontHeight, mScreenWidth * mFontWidth, bottom * mFontHeight);
+    QRect r(0, top * mFontHeight, mScreenWidth * mStandardCharWidth, bottom * mFontHeight);
     mForceUpdate = true;
     update(r);
 }
@@ -190,13 +188,13 @@ void TTextEdit::updateScreenView()
 {
     if (isHidden()) {
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
+        mStandardCharWidth = qRound(mFontWidth * mpConsole->mFontFactor);
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
         return; //NOTE: das ist wichtig, damit ich keine floating point exception bekomme, wenn mScreenHeight==0, was hier der Fall wäre
     }
-    // This was "if (pC->mType == TConsole::MainConsole) {"
-    // and mIsMiniConsole is true for user created Mini Consoles and User Windows
+
     if (mpConsole->getType() == TConsole::MainConsole) {
         mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
         mFontDescent = QFontMetrics(mpHost->getDisplayFont()).descent();
@@ -210,8 +208,9 @@ void TTextEdit::updateScreenView()
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
     }
+    mStandardCharWidth = qRound(mFontWidth * mpConsole->mFontFactor);
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
-    int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
+    int currentScreenWidth = visibleRegion().boundingRect().width() / mStandardCharWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -381,7 +380,9 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
     return first.unicode();
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
+// Returns the width in pixels of the widest character divided by the number of
+// spaces (1 or 2) it used (tab characters are ignored):
+int TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
     QPoint cursor(0, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
@@ -391,20 +392,26 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         for (const QChar c : timestamp) {
-            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
+            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle).first);
         }
     }
 
     int columnWithOutTimestamp = 0;
+    int spaceForWidestGlyph = 0;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
         int nextBoundary = boundaryFinder.toNextBoundary();
 
         TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
-        cursor.setX(cursor.x() + graphemeWidth);
+        QString grapheme{lineText.mid(indexOfChar, nextBoundary - indexOfChar)};
+        QPair<int, int> graphemeWidths = drawGrapheme(painter, cursor, grapheme, columnWithOutTimestamp, charStyle);
+        cursor.setX(cursor.x() + graphemeWidths.first);
         indexOfChar = nextBoundary;
-        columnWithOutTimestamp += graphemeWidth;
+        columnWithOutTimestamp += graphemeWidths.first;
+        if (grapheme != QChar::Tabulation) {
+            spaceForWidestGlyph = qMax(spaceForWidestGlyph, qRound(0.5 + graphemeWidths.second / static_cast<double>(graphemeWidths.first)));
+        }
     }
+    return spaceForWidestGlyph;
 }
 
 /**
@@ -414,9 +421,9 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  * @param grapheme
  * @param column Used to calculate the width of Tab
  * @param charStyle
- * @return Return the display width of the grapheme
+ * @return Return the display width of the grapheme and the width in pixels need to display it
  */
-int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
+QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -457,15 +464,49 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         bgColor = charStyle.background();
     }
 
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    auto textRect = QRect(mStandardCharWidth * cursor.x(), mFontHeight * cursor.y(), mStandardCharWidth * charWidth, mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
 
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
-    return charWidth;
+#if ! defined(QT_NO_DEBUG)
+    QColor outlineColor{QColor(std::rand()%256,std::rand()%256,std::rand()%256)};
+    if (mGlyphOutlines) {
+        painter.save();
+        QPen pen{painter.pen()};
+        painter.setBrush(Qt::NoBrush);
+        pen.setColor(outlineColor);
+        pen.setStyle(Qt::DotLine);
+        painter.setPen(pen);
+        painter.drawRect(textRect.adjusted(0, 0, -pen.width(), -pen.width()));
+        painter.restore();
+    }
+#endif
+
+    // We used to use:
+    // painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    // where the y-position is used as the baseline of the font (at X).
+    QRect boundingRect;
+    // With this method though the y-coordinate of textRect is used as the top
+    // of the font - so we assume that the equivalent of
+    // mFontAscent+mFontHeight is used to offset the base line of the text - or
+    // something like that:
+    painter.drawText(textRect, Qt::AlignCenter, grapheme, &boundingRect);
+#if ! defined(QT_NO_DEBUG)
+    if (mGlyphOutlines) {
+        painter.save();
+        QPen pen{painter.pen()};
+        painter.setBrush(Qt::NoBrush);
+        pen.setColor(outlineColor);
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        painter.drawRect(boundingRect.adjusted(0, 0, -pen.width(), -pen.width()));
+        painter.restore();
+    }
+#endif
+    return qMakePair(charWidth, boundingRect.width());
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -509,7 +550,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
+    QPixmap pixmap = QPixmap(mScreenWidth * mStandardCharWidth * dpr, mScreenHeight * mFontHeight * dpr);
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(palette().base().color());
 
@@ -530,13 +571,13 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     int x_bottomRight = P_bottomRight.x();
     int y_bottomRight = P_bottomRight.y();
 
-    if (x_bottomRight > mScreenWidth * mFontWidth) {
-        x_bottomRight = mScreenWidth * mFontWidth;
+    if (x_bottomRight > mScreenWidth * mStandardCharWidth) {
+        x_bottomRight = mScreenWidth * mStandardCharWidth;
     }
 
-    //    int x1 = x_topLeft / mFontWidth;
+    //    int x1 = x_topLeft / mStandardCharWidth;
     int y1 = y_topLeft / mFontHeight;
-    int x2 = x_bottomRight / mFontWidth;
+    int x2 = x_bottomRight / mStandardCharWidth;
     int y2 = y_bottomRight / mFontHeight;
 
     int lineOffset = imageTopLine();
@@ -572,16 +613,16 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         }
     }
     if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
-        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
+        if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mStandardCharWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mFontWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mStandardCharWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
             p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
     } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
-        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
+        if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mStandardCharWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mStandardCharWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);
@@ -589,11 +630,12 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
     drawBackground(p, deleteRect, mBgColor);
+    int spaceForWidestGlyph = 1;
     for (int i = from; i <= y2; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
-        drawLine(p, i + lineOffset, i);
+        spaceForWidestGlyph = qMax(spaceForWidestGlyph, drawLine(p, i + lineOffset, i));
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -603,14 +645,31 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     mScrollVector = 0;
     mLastRenderBottom = lineOffset;
-    mForceUpdate = false;
+    if (spaceForWidestGlyph > mStandardCharWidth) {
+        double newFactor = spaceForWidestGlyph / static_cast<double>(mStandardCharWidth);
+        if (newFactor > mpConsole->mFontFactor) {
+            qDebug().nospace().noquote() << "TTextEdit::drawForeground(...) INFO - in the " << (mIsLowerPane ? "lower" : "upper") << " pane of \"" << mpConsole->mConsoleName << "\" revising the TConsole::mFontFactor from: " << mpConsole->mFontFactor << " to: " << newFactor;
+            mpConsole->mFontFactor = newFactor;
+            if (mIsLowerPane) {
+                mpConsole->mUpperPane->mStandardCharWidth = qRound(mpConsole->mUpperPane->mFontWidth * mpConsole->mFontFactor);
+            } else {
+                mpConsole->mLowerPane->mStandardCharWidth = qRound(mpConsole->mLowerPane->mFontWidth * mpConsole->mFontFactor);
+            }
+            int oldStandardCharWidth = mStandardCharWidth;
+            mStandardCharWidth = qRound(mFontWidth * mpConsole->mFontFactor);
+            qDebug().nospace().noquote() << "    this changes the standard character width from: " << oldStandardCharWidth << " to: " << mStandardCharWidth;
+        }
+
+    } else {
+        mForceUpdate = false;
+    }
 }
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     const QRect& rect = e->rect();
 
-    if (mFontWidth <= 0 || mFontHeight <= 0) {
+    if (mStandardCharWidth <= 0 || mFontHeight <= 0) {
         return;
     }
 
@@ -644,32 +703,32 @@ void TTextEdit::highlightSelection()
 
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mPA.x() * mStandardCharWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mStandardCharWidth, mFontHeight);
         newRegion += rectFirstLine;
 
-        QRect rectMiddlePart(0, (mPA.y() + 1 - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, lineDelta * mFontHeight);
+        QRect rectMiddlePart(0, (mPA.y() + 1 - imageTopLine()) * mFontHeight, mScreenWidth * mStandardCharWidth, lineDelta * mFontHeight);
         newRegion += rectMiddlePart;
 
-        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
+        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mStandardCharWidth, mFontHeight);
         newRegion += rectLastLine;
     }
 
     if (lineDelta == 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mPA.x() * mStandardCharWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mStandardCharWidth, mFontHeight);
         newRegion += rectFirstLine;
 
-        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
+        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mStandardCharWidth, mFontHeight);
         newRegion += rectLastLine;
     }
 
     if (lineDelta < 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, std::max(mPB.x() - mPA.x(), 1) * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mPA.x() * mStandardCharWidth, (mPA.y() - imageTopLine()) * mFontHeight, std::max(mPB.x() - mPA.x(), 1) * mStandardCharWidth, mFontHeight);
         newRegion += rectFirstLine;
     }
 
     QRect _r = mSelectedRegion.boundingRect();
     if (lineDelta < 0) {
-        _r.setWidth(mScreenWidth * mFontWidth);
+        _r.setWidth(mScreenWidth * mStandardCharWidth);
     }
     update(_r);
 
@@ -741,7 +800,7 @@ void TTextEdit::normaliseSelection()
 
 void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 {
-    if (mFontWidth == 0 || mFontHeight == 0) {
+    if (mStandardCharWidth == 0 || mFontHeight == 0) {
         return;
     }
 
@@ -872,7 +931,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mShowTimeStamps && indexOfChar == 0)) {
-                if (mouseX < (mTimeStampWidth * mFontWidth)) {
+                if (mouseX < (mTimeStampWidth * mStandardCharWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -880,7 +939,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             }
 
             leftX = rightX;
-            rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mStandardCharWidth;
             // Format of display "[index of FIRST QChar in grapheme|leftX]grapheme[rightX|index of LAST QChar in grapheme (may be same as FIRST)]" ...
             // debugText << QStringLiteral("[%1|%2]%3[%4|%5]").arg(QString::number(indexOfChar), QString::number(leftX), grapheme, QString::number(rightX - 1), QString::number(nextBoundary - 1));
             if (leftX <= mouseX && mouseX < rightX) {
@@ -1331,7 +1390,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     // if selection was made backwards swap
     // right to left
-    if (mFontWidth <= 0 || mFontHeight <= 0) {
+    if (mStandardCharWidth <= 0 || mFontHeight <= 0) {
         return;
     }
 
@@ -1363,7 +1422,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
         const QString lineText{mpBuffer->lineBuffer.at(y)};
         // Will accumulate the width in pixels of the current line:
-        int lineWidth{(mShowTimeStamps ? mTimeStampWidth : 0) * mFontWidth};
+        int lineWidth{(mShowTimeStamps ? mTimeStampWidth : 0) * mStandardCharWidth};
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
@@ -1382,7 +1441,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             // The timestamp is (currently) 13 "normal width" characters
             // but that might not always be the case in some future I18n
             // situations:
-            lineWidth = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            lineWidth = (mShowTimeStamps ? mTimeStampWidth + column : column) * mStandardCharWidth;
             indexOfChar = nextBoundary;
         }
         largestLine = std::max(lineWidth, largestLine);
