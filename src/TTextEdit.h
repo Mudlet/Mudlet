@@ -107,7 +107,7 @@ public:
     bool mShowTimeStamps;
     int mWrapAt;
     int mWrapIndentCount {};
-#if ! defined(QT_NO_DEBUG)
+#if !defined(QT_NO_DEBUG)
     // In debug builds can be set via debugger to put a (dotted) rectangle
     // around the space that a glyph is to be painted in and a (dashed)
     // rectangle around the space that the QPainter thinks it needs for that

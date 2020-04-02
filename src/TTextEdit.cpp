@@ -54,7 +54,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
-#if ! defined(QT_NO_DEBUG)
+#if !defined(QT_NO_DEBUG)
 , mGlyphOutlines(false)
 #endif
 , mForceUpdate(false)
@@ -471,8 +471,8 @@ QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor,
         painter.setPen(fgColor);
     }
 
-#if ! defined(QT_NO_DEBUG)
-    QColor outlineColor{QColor(std::rand()%256,std::rand()%256,std::rand()%256)};
+#if !defined(QT_NO_DEBUG)
+    QColor outlineColor{QColor(std::rand()%256, std::rand()%256, std::rand()%256)};
     if (mGlyphOutlines) {
         painter.save();
         QPen pen{painter.pen()};
@@ -494,7 +494,7 @@ QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor,
     // mFontAscent+mFontHeight is used to offset the base line of the text - or
     // something like that:
     painter.drawText(textRect, Qt::AlignCenter, grapheme, &boundingRect);
-#if ! defined(QT_NO_DEBUG)
+#if !defined(QT_NO_DEBUG)
     if (mGlyphOutlines) {
         painter.save();
         QPen pen{painter.pen()};
