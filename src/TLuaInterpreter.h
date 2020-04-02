@@ -128,6 +128,8 @@ public:
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    QPair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
+    QPair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -155,6 +157,7 @@ public:
     static int reloadModule(lua_State* L);
     static int enableModuleSync(lua_State* L);
     static int disableModuleSync(lua_State* L);
+    static int getModuleSync(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);
     static int hasExitLock(lua_State*);
@@ -409,6 +412,11 @@ public:
     static int permRegexTrigger(lua_State*);
     static int permSubstringTrigger(lua_State*);
     static int permTimer(lua_State*);
+    static int permScript(lua_State*);
+    static int getScript(lua_State*);
+    static int setScript(lua_State*);
+    static int enableScript(lua_State*);
+    static int disableScript(lua_State*);
     static int permAlias(lua_State*);
     static int exists(lua_State*);
     static int isActive(lua_State*);
