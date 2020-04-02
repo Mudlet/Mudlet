@@ -251,6 +251,7 @@ public:
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
+    std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
