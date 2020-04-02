@@ -184,7 +184,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation>! %1 opuścił %2</translation>
+      <translation>! %1 opuścił(a) %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
@@ -11460,13 +11460,15 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście
+ID pokoju</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Brak
+Trasy</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
