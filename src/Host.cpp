@@ -596,6 +596,19 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
     return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
 }
 
+std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
+{
+    if (moduleName.isEmpty()) {
+        return {false, QStringLiteral("module name cannot be an empty string")};
+    }
+
+    if (mInstalledModules.contains(moduleName)) {
+        QStringList moduleStringList = mInstalledModules[moduleName];
+        return {true, moduleStringList[1]};
+    }
+    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+}
+
 void Host::resetProfile_phase1()
 {
     mAliasUnit.stopAllTriggers();

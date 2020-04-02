@@ -13409,6 +13409,30 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModuleSync
+int TLuaInterpreter::getModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.getModuleSync(module); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    } else if (message == QLatin1String("1")) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+}
+
 // Documentation: ? - public function missing documentation in wiki
 // Once a mapper has been created it will, by default, include the "Default
 // Area" associated with the reserved area Id -1 in the list of Areas shown in
@@ -16575,6 +16599,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "reloadModule", TLuaInterpreter::reloadModule);
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
+    lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
     lua_register(pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
