@@ -5832,7 +5832,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="133"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ta opcja ustawia format nazwy dzienników - logów.&lt;/p&gt;&lt;p&gt;Jeśli &lt;i&gt;Nazwany plik&lt;/i&gt; zostanie wybrany, możesz ustawić niestandardową nazwę. (Dzienniki są dołączane, jeśli plik dziennika o tej samej nazwie już istnieje).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="136"/>
@@ -6606,17 +6606,17 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="8105"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8124"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="479"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje swój profil. (Ctrl+Shift+S)&lt;p&gt;Zapisuje cały profil (wyzwalacze, aliasy, skrypty, czasomierze, przyciski i klucze, ale nie mapę lub ustawienia specyficzne dla skryptu) na dysku komputera, więc w przypadku awarii komputera lub programu wszystkie wprowadzone zmiany zostaną zachowane.&lt;/p&gt;&lt;p&gt;Tworzy również kopię zapasową profilu, można załadować starszą wersję podczas łączenia.&lt;/p&gt;&lt;p&gt;Jeżeli istnieją jakieś moduły, które są oznaczone jako &quot;&lt;i&gt;Synchronizowane&lt;/i&gt;&quot; spowoduje to również ich zapisanie i ponowne załadowanie do innych profili, jeśli również są aktywne.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="481"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje cały profil (wyzwalacze, aliasy, skrypty, timery, przyciski i klawisze, ale nie mapę ani ustawienia własne skryptu); również &quot;synchronizuje&quot; moduły, które są tak oznaczone.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
@@ -6631,7 +6631,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="489"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Generuje podsumowanie statystyk na konsoli profilu głównego.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="492"/>
@@ -6641,38 +6641,38 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="493"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuje/ukrywa konsolę błędów w prawym dolnym rogu edytora.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="496"/>
       <source>Debug</source>
-      <translation type="unfinished"/>
+      <translation>Debugowanie</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="497"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Aktywuje komunikaty debugowania -&gt; system będzie &lt;b&gt;&lt;i&gt;wolniejszy&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="498"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuje/ukrywa oddzielną Centralną Konsolę Debugowania - gdy jest wyświetlany system będzie wolniejszy.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="614"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="617"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opcje wyszukiwania</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Uwzględniana wielkość liter</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="624"/>
       <source>If checked then what is searched for must match the case precisely, otherwise the case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>Jeśli jest zaznaczone, to to, co jest wyszukiwane musi dokładnie pasować do przypadku, w przeciwnym razie jest ignorowane.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="663"/>
@@ -6690,23 +6690,23 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="665"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Gdzie</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="666"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Co</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="713"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>początek linii</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2690"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Próba aktywowania grupy wyzwalacza, filtru lub wyzwalacza lub części modułu &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; który je zawiera &lt;em&gt;Zakończyła się pomyślnie&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2692"/>
