@@ -291,6 +291,12 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(APP_VERSION);
     }
 
+    QCommandLineParser parser;
+    QCommandLineOption profileToOpen("profile", QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    parser.addOption(profileToOpen);
+    parser.process(app->arguments());
+    QString cliProfile = parser.value(profileToOpen);
+
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
@@ -495,7 +501,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin();
+    mudlet::self()->startAutoLogin(cliProfile);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
