@@ -525,7 +525,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     auto * document = new QTextDocument(buffer);
-    document->setMaximumBlockCount(mMessageBufferLimit); 
+    document->setMaximumBlockCount(mMessageBufferLimit);
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
     auto * userModel = new IrcUserModel(buffer);

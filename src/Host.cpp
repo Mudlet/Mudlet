@@ -1003,7 +1003,7 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
     int newWatchId = 1;
     while (mStopWatchMap.contains(newWatchId)) {
         ++newWatchId;
-    };
+    }
 
     // It is hard to imagine a situation in which this will fail - so we won't
     // bother coding for it:

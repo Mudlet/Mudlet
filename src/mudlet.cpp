@@ -2014,7 +2014,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         // The name is used in BOTH the QMaps of all user created TConsole
         // and TDockWidget instances - so we HAVE an existing user window,
         // Lets confirm this:
-        Q_ASSERT_X(console->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+        Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
         dockwidget->update();
         //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
         console->show();
@@ -2395,13 +2395,17 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     if (pL) {
         pL->move(x1, y1);
         return true;
-    } else if (pC && !pD) {
+    }
+
+    if (pC && !pD) {
         // NOT a floatable/dockable "user window"
         pC->move(x1, y1);
         pC->mOldX = x1;
         pC->mOldY = y1;
         return true;
-    } if (pC && pD) {
+    }
+
+    if (pC && pD) {
         if (!pD->isFloating()) {
             // Undock a docked window
             pD->setFloating(true);
