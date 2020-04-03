@@ -28,9 +28,9 @@
 #include <chrono>
 #include <QDesktopWidget>
 #include <QDir>
-#if defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
-#endif // defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
+#endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
 #include "post_guard.h"
@@ -133,7 +133,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 void copyFont(const QString& externalPathName, const QString& resourcePathName, const QString& fileName)
 {
     if (!QFile::exists(QStringLiteral("%1/%2").arg(externalPathName, fileName))) {
-        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName,fileName));
+        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName, fileName));
         fileToCopy.copy(QStringLiteral("%1/%2").arg(externalPathName, fileName));
     }
 }
@@ -448,7 +448,7 @@ int main(int argc, char* argv[])
     mudlet::debugMode = false;
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
-#ifdef Q_OS_WIN32
+#if defined(Q_OS_WIN32)
     /*
      * From Qt Documentation for:
      * bool QFile::link(const QString &linkName)

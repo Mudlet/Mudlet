@@ -1094,7 +1094,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 continue;
             }
 
-            if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >=0) {
+            if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
                 // We have gone to the end of the buffer OR the last character
                 // in the buffer is still within a CSI sequence - therefore we
                 // have got a split between data packets and are not in a
@@ -1540,8 +1540,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             _tl[i].replace("|", "");
                             if (_element.name == "A") {
                                 _tl[i] = "openUrl([[" + _tl[i] + "]])";
-                            }
-                            else if (!_send_to_command_line) {
+                            } else if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
                             } else {
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
@@ -1604,9 +1603,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mSkip.clear();
                         ch = '"';
                     }
-                }
-                // if the content is split across package borders
-                else if (mSkip == "&gt" && ch == ';') {
+                } else if (mSkip == "&gt" && ch == ';') { // if the content is split across package borders
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '>';
@@ -2951,7 +2948,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Uses mid(...) rather than at(...) because we want the return to
                 // be a (single character) QString and not a QChar so we can use
                 // QString::toUInt(...):
-                quint8 colorNumber = sequence.midRef(1,1).toUInt(&isOk, 16);
+                quint8 colorNumber = sequence.midRef(1, 1).toUInt(&isOk, 16);
                 quint8 rr = 0;
                 if (isOk) {
                     rr = sequence.midRef(2, 2).toUInt(&isOk, 16);
@@ -4144,8 +4141,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
-        currentFgColor = QColor(200,150,0);
-        currentBgColor = QColor(22,22,22);
+        currentFgColor = QColor(200, 150, 0);
+        currentBgColor = QColor(22, 22, 22);
         currentFlags = TChar::None;
         // We are no longer before the first span - so we need to flag that
         // there will be one to close:
