@@ -9488,14 +9488,14 @@ mniej prawdopodobnie użyteczne do normalnego użytkowania tej aplikacji:
       <location filename="../src/mudlet.cpp" line="422"/>
       <location filename="../src/mudlet.cpp" line="4923"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>O programie</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="423"/>
       <location filename="../src/mudlet.cpp" line="4906"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Poinformuj się o tej wersji Mudlet, o ludziach, którzy go stworzyli i o licencji, na której możesz się nim dzielić.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3965"/>
@@ -9558,17 +9558,18 @@ mniej prawdopodobnie użyteczne do normalnego użytkowania tej aplikacji:
       <location filename="../src/mudlet.cpp" line="1377"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można odczytać pliku %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1370"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1377"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importuj pakiet Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1714"/>
@@ -9594,12 +9595,12 @@ mniej prawdopodobnie użyteczne do normalnego użytkowania tej aplikacji:
     <message>
       <location filename="../src/mudlet.cpp" line="3647"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Wstępne ładowanie mapy(3) raport</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3657"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (3) w raporcie %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3729"/>
@@ -9625,7 +9626,7 @@ mniej prawdopodobnie użyteczne do normalnego użytkowania tej aplikacji:
       <location filename="../src/mudlet.cpp" line="4176"/>
       <location filename="../src/mudlet.cpp" line="4195"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Kompaktowa linia wprowadzania</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4180"/>
@@ -9701,12 +9702,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Zainstaluj</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Odinstaluj</translation>
     </message>
   </context>
   <context>
@@ -9722,7 +9723,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferencje profilu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
