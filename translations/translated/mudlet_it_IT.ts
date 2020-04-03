@@ -3597,7 +3597,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>Aggiornamento %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
@@ -7323,17 +7323,17 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Maiuscole/minuscole</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="636"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>Includi variabili</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="639"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>Cerca variabili (lento)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="731"/>
@@ -7917,7 +7917,7 @@ meno utili per un uso normale di questa applicazione:
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>La versione pubblica di test ti permette di avere velocemente le funzioni più recenti e ci aiuti a trovare eventuali problemi. Hai notato qualcosa di strano? Facci sapere al più presto!</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -9587,7 +9587,7 @@ meno utili per un uso normale di questa applicazione:
     <message>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>La versione pubblica di test ti permette di avere velocemente le funzioni più recenti e ci aiuti a trovare eventuali problemi. Hai notato qualcosa di strano? Facci sapere al più presto!</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1084"/>
