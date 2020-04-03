@@ -2448,32 +2448,44 @@ bool TConsole::raiseWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->raise();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->raise();
         return true;
-    } else {
-        return false;
     }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pM->raise();
+        return true;
+    }
+
+    return false;
 }
 
 bool TConsole::lowerWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->lower();
         mpMainDisplay->lower();
         return true;
-    } else {
-        return false;
     }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    return false;
 }
 
 bool TConsole::showWindow(const QString& name)

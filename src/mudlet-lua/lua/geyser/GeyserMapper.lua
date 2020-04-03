@@ -65,6 +65,15 @@ function Geyser.Mapper:show_impl()
   end
 end
 
+-- Overridden raise and lower functions
+function Geyser.Mapper:raise()
+	raiseWindow("mapper")
+end
+
+function Geyser.Mapper:lower()
+	lowerWindow("mapper")
+end
+
 function Geyser.Mapper:setDockPosition(pos)
   if not self.embedded then
     return openMapWidget(pos)
