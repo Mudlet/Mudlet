@@ -54,7 +54,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
-#if !defined(QT_NO_DEBUG)
+#if defined(QT_DEBUG)
 , mGlyphOutlines(false)
 #endif
 , mForceUpdate(false)
@@ -213,7 +213,7 @@ void TTextEdit::updateScreenView()
     int currentScreenWidth = visibleRegion().boundingRect().width() / mStandardCharWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
-        mScreenWidth = qMax(40, currentScreenWidth);
+        mScreenWidth = std::max(40, currentScreenWidth);
 
         // Note the values in the "parent" Host instance
         mpHost->mScreenWidth = mScreenWidth;
@@ -392,7 +392,7 @@ int TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) con
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         for (const QChar c : timestamp) {
-            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle).first);
+            cursor.setX(cursor.x() + std::get<0>(drawGrapheme(painter, cursor, c, 0, timeStampStyle)));
         }
     }
 
@@ -403,12 +403,12 @@ int TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) con
 
         TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
         QString grapheme{lineText.mid(indexOfChar, nextBoundary - indexOfChar)};
-        QPair<int, int> graphemeWidths = drawGrapheme(painter, cursor, grapheme, columnWithOutTimestamp, charStyle);
-        cursor.setX(cursor.x() + graphemeWidths.first);
+        auto [graphemeNormalSpaceWidth, graphemePixelWidth] = drawGrapheme(painter, cursor, grapheme, columnWithOutTimestamp, charStyle);
+        cursor.setX(cursor.x() + graphemeNormalSpaceWidth);
         indexOfChar = nextBoundary;
-        columnWithOutTimestamp += graphemeWidths.first;
+        columnWithOutTimestamp += graphemeNormalSpaceWidth;
         if (grapheme != QChar::Tabulation) {
-            spaceForWidestGlyph = qMax(spaceForWidestGlyph, qRound(0.5 + graphemeWidths.second / static_cast<double>(graphemeWidths.first)));
+            spaceForWidestGlyph = std::max(spaceForWidestGlyph, qRound(0.5 + graphemePixelWidth / static_cast<double>(graphemeNormalSpaceWidth)));
         }
     }
     return spaceForWidestGlyph;
@@ -423,7 +423,7 @@ int TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) con
  * @param charStyle
  * @return Return the display width of the grapheme and the width in pixels need to display it
  */
-QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
+std::tuple<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -471,7 +471,7 @@ QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor,
         painter.setPen(fgColor);
     }
 
-#if !defined(QT_NO_DEBUG)
+#if defined(QT_DEBUG)
     QColor outlineColor{QColor(std::rand()%256, std::rand()%256, std::rand()%256)};
     if (mGlyphOutlines) {
         painter.save();
@@ -494,7 +494,7 @@ QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor,
     // mFontAscent+mFontHeight is used to offset the base line of the text - or
     // something like that:
     painter.drawText(textRect, Qt::AlignCenter, grapheme, &boundingRect);
-#if !defined(QT_NO_DEBUG)
+#if defined(QT_DEBUG)
     if (mGlyphOutlines) {
         painter.save();
         QPen pen{painter.pen()};
@@ -506,7 +506,7 @@ QPair<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor,
         painter.restore();
     }
 #endif
-    return qMakePair(charWidth, boundingRect.width());
+    return {charWidth, boundingRect.width()};
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -635,7 +635,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
-        spaceForWidestGlyph = qMax(spaceForWidestGlyph, drawLine(p, i + lineOffset, i));
+        spaceForWidestGlyph = std::max(spaceForWidestGlyph, drawLine(p, i + lineOffset, i));
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -1908,7 +1908,7 @@ void TTextEdit::slot_analyseSelection()
     normaliseSelection();
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
-    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
+    int line = std::min(std::max(std::min(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
 
     int startColumn = -1;
     int endColumn = -1;
@@ -1961,8 +1961,8 @@ void TTextEdit::slot_analyseSelection()
     // We do not want more than around 16 code-points per row, but we also do
     // not want orphans (a few odd code-points) on the last row so deduce a
     // number of items to include in a row:
-    quint8 rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
-    quint8 rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
+    quint8 rowsCount = std::max(1, qRound((total + 8.5) / 16.0));
+    quint8 rowLimit = std::max(8, qRound(total * 1.0 / rowsCount));
     bool isFirstRow = true;
 
     for (int index = 0; index < lineLength; ++index) {
@@ -1974,7 +1974,7 @@ void TTextEdit::slot_analyseSelection()
         if (mpBuffer->lineBuffer.at(line).at(index).isHighSurrogate() && ((index + 1) < lineLength)) {
             strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 2).toUtf8().constData(), 4);
             size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(2), utf8Width);
+            quint8 columnsToUse = std::max(static_cast<size_t>(2), utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2 & %3</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1), QString::number(index + 2)));
@@ -2053,7 +2053,7 @@ void TTextEdit::slot_analyseSelection()
         } else {
             strncpy(utf8Bytes, mpBuffer->lineBuffer.at(line).mid(index, 1).toUtf8().constData(), 4);
             size_t utf8Width = strnlen(utf8Bytes, 4);
-            quint8 columnsToUse = qMax(static_cast<size_t>(1), utf8Width);
+            quint8 columnsToUse = std::max(static_cast<size_t>(1), utf8Width);
 
             if (includeThisCodePoint) {
                 utf16indexes.append(QStringLiteral("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));

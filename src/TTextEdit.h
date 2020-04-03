@@ -60,7 +60,7 @@ public:
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
     int drawLine(QPainter&, int lineNumber, int rowOfScreen) const;
-    QPair<int, int> drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
+    std::tuple<int, int> drawGrapheme(QPainter&, const QPoint &, const QString &, int, TChar&) const;
     void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
@@ -107,7 +107,7 @@ public:
     bool mShowTimeStamps;
     int mWrapAt;
     int mWrapIndentCount {};
-#if !defined(QT_NO_DEBUG)
+#if defined(QT_DEBUG)
     // In debug builds can be set via debugger to put a (dotted) rectangle
     // around the space that a glyph is to be painted in and a (dashed)
     // rectangle around the space that the QPainter thinks it needs for that
