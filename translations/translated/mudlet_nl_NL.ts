@@ -1639,7 +1639,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12941"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>%1 aan het spelen</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15417"/>
@@ -1818,73 +1818,73 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="995"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="996"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>zo</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>zw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>omhoog</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>omlaag</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>in</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>uit</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1045"/>
@@ -2329,7 +2329,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
@@ -2349,7 +2349,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1344"/>
@@ -2777,7 +2777,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1111"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieer</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1122"/>
@@ -3153,13 +3153,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1755"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1756"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1757"/>
@@ -3285,13 +3285,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1802"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1803"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1804"/>
@@ -4016,7 +4016,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2103"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieer</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2128"/>
@@ -4213,7 +4213,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Stijl:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
@@ -4956,7 +4956,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -6194,62 +6194,62 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>noordwest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1744"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>noord</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1745"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>noordoost</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>omhoog</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>west</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1748"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>oost</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1749"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>omlaag</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1750"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>zuidwest</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1751"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>zuid</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1752"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>zuidoost</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1753"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>in</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1754"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>uit</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
@@ -6443,7 +6443,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8671"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8677"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Plakken</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
@@ -7034,7 +7034,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8669"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8675"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Knippen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8673"/>
@@ -7399,7 +7399,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieer</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -7827,7 +7827,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="606"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Kamers</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
@@ -9136,12 +9136,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="261"/>
       <location filename="../src/mudlet.cpp" line="263"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Verbind</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Verbreek verbinding</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
@@ -9261,7 +9261,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="359"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Kladblok</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="360"/>
@@ -9289,7 +9289,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Opnieuw verbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="398"/>
@@ -9310,7 +9310,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="422"/>
       <location filename="../src/mudlet.cpp" line="4923"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Over</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="423"/>
@@ -10188,7 +10188,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1525"/>
       <location filename="../src/ui/profile_preferences.ui" line="2339"/>
       <source>Red:</source>
-      <translation type="unfinished"/>
+      <translation>Rood:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1532"/>
@@ -10210,7 +10210,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1565"/>
       <location filename="../src/ui/profile_preferences.ui" line="2373"/>
       <source>Green:</source>
-      <translation type="unfinished"/>
+      <translation>Groen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1572"/>
@@ -10232,7 +10232,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1605"/>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Yellow:</source>
-      <translation type="unfinished"/>
+      <translation>Geel:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1612"/>
@@ -10254,7 +10254,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1645"/>
       <location filename="../src/ui/profile_preferences.ui" line="2441"/>
       <source>Blue:</source>
-      <translation type="unfinished"/>
+      <translation>Blauw:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1652"/>
@@ -10298,7 +10298,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1725"/>
       <location filename="../src/ui/profile_preferences.ui" line="2509"/>
       <source>Cyan:</source>
-      <translation type="unfinished"/>
+      <translation>Cyaan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1732"/>
@@ -10809,7 +10809,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2853"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Poort:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2891"/>
@@ -10824,7 +10824,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Serveradres:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2884"/>
@@ -11816,12 +11816,12 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>nummer</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>boolean</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
