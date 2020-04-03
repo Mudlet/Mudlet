@@ -3901,14 +3901,14 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin()
+void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
-        if (val.toInt() == Qt::Checked) {
+        if (val.toInt() == Qt::Checked || host == cliProfile) {
             doAutoLogin(host);
             openedProfile = true;
         }
