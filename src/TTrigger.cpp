@@ -130,8 +130,7 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name)
 {
-    if( ! isTemporary() )
-    {
+    if (!isTemporary()) {
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
@@ -675,8 +674,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
-            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).background())||(pCT->mBgColor == (*it).background()))) {
+        if (((pCT->ansiFg == scmIgnored) || ((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground()) || (pCT->mFgColor == (*it).foreground()))
+            && ((pCT->ansiBg == scmIgnored) || ((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).background()) || (pCT->mBgColor == (*it).background()))) {
 
             if (matchBegin == -1) {
                 matchBegin = pos;

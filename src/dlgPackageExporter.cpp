@@ -397,7 +397,7 @@ void dlgPackageExporter::slot_export_package()
                 }
 
                 QFileInfo entryInfo(itDir.fileInfo());
-                if (! entryInfo.isReadable()) {
+                if (!entryInfo.isReadable()) {
                     qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
                                << itDir.fileName()
                                << "it is NOT readable!";

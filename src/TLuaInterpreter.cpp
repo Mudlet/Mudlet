@@ -1750,7 +1750,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
-            if (! pDataCodec->canEncode(dataQString)) {
+            if (!pDataCodec->canEncode(dataQString)) {
                 lua_pushnil(L);
                 lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
                 return 2;
@@ -7070,7 +7070,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     Host& host = getHostFromLua(L);
     std::string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -7079,7 +7079,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
             what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
@@ -7105,7 +7105,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     }
 
     // output is in Mud Server Encoding form here:
-    if (! host.mTelnet.socketOutRaw(output)) {
+    if (!host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
         lua_pushstring(L, "unable to send all of the ATCP message");
         return 2;
@@ -7145,7 +7145,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     Host& host = getHostFromLua(L);
     std::string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -7154,7 +7154,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
             what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
@@ -7180,7 +7180,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     }
 
     // output is in Mud Server Encoding form here:
-    if (! host.mTelnet.socketOutRaw(output)) {
+    if (!host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
         lua_pushstring(L, "unable to send all of the GMCP message");
         return 2;
@@ -7386,7 +7386,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "tempTimer: bad argument #2 type (script or function name as string expected, got %s!)", luaL_typename(L,2));
+        lua_pushfstring(L, "tempTimer: bad argument #2 type (script or function name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
@@ -8461,13 +8461,13 @@ int TLuaInterpreter::permScript(lua_State* L)
 int TLuaInterpreter::permTimer(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L,1));
+        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L,2));
+        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString parent = QString::fromUtf8(lua_tostring(L, 2));
@@ -9009,8 +9009,8 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         // with this ID, but without a TArea instance to accompany it (the latter was/is
         // instantiated as needed when a room is moved to the relevent area...) and we
         // need to continue to allow this - Slysven
-        //        else if( ! host.mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
-        //            lua_pushnil( L );
+        //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
+        //            lua_pushnil(L);
         //            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
         //                           id);
         //            return 2;
@@ -14948,22 +14948,22 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             // Then one pattern for \uXXXX\uXXXX where each XXXX is a 4-digit hexadecimal value
             //   These are 'surrogate pairs', (U+D800-U+DBFF) followed by (U+DC00-U+DFFF).
             //   D800-DF00  DC00-DFFF
-            int j=0;
-            while((j = initialText.indexOf(codeRegex,j)) != -1){
+            int j = 0;
+            while((j = initialText.indexOf(codeRegex, j)) != -1){
                 uint u;
                 switch(initialText.at(j+1).unicode()){
-                    case 'n' : initialText.replace(j,2,'\n'); break;
-                    case 't' : initialText.replace(j,2,'\t'); break;
-                    case '\"' : initialText.replace(j,2,'\"'); break;
-                    case '\\' : initialText.replace(j,2,'\\'); break;
+                    case 'n' : initialText.replace(j, 2, '\n'); break;
+                    case 't' : initialText.replace(j, 2, '\t'); break;
+                    case '\"' : initialText.replace(j, 2, '\"'); break;
+                    case '\\' : initialText.replace(j, 2, '\\'); break;
                     case 'u': // handle lone code or pair of codes together
-                        u = initialText.midRef(j+2,4).toUShort(0,16);
+                        u = initialText.midRef(j+2, 4).toUShort(0, 16);
                         if(u > 0xFFFD){
                             j += 5; // FFFE and FFFF are guaranteed to not be Unicode characters.  Skip it.
                         }
                         else if((u < 0xD800) || (0xDFFF < u)){
                             // Characters in ranges U+0000-U+D7FF and U+E000-U+FFFD are stored as a single unit.
-                            initialText.replace(j,6,QChar(u));
+                            initialText.replace(j, 6, QChar(u));
                         }
                         else if((0xD7FF < u) && (u < 0xDC00)){
                             // Non-BMP characters (range U+10000-U+10FFFF) are stored as "surrogate pairs".
@@ -14971,9 +14971,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                             // Surrogates are always written in pairs, a lone one is invalid.
                             // The regex above should ensure second code is DCxx-DFxx
                             QChar code[2];
-                            code[0]=QChar(u);
-                            code[1]=QChar(initialText.midRef(j+8,4).toUShort(0,16));
-                            initialText.replace(j,12,code,2);
+                            code[0] = QChar(u);
+                            code[1] = QChar(initialText.midRef(j+8, 4).toUShort(0, 16));
+                            initialText.replace(j, 12, code, 2);
                             j++; // in this case we are adding 2 code points for the character
                         }
                         // DC00-DFFF should be filtered out by the regex.
@@ -17241,7 +17241,7 @@ QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString&
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
-    QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     TTimer* pT;
     if (parent.isEmpty()) {
         pT = new TTimer(QStringLiteral("newPermTimerWithoutAnId"), time, mpHost);
@@ -18098,7 +18098,7 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     if (!(lua_toboolean(L,-1))) {
         // no it doesn't
-        lua_pop(L,1);
+        lua_pop(L, 1);
         // So make it
         lua_newtable(L);
     }
@@ -18205,7 +18205,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     if (!(lua_toboolean(L,-1))) {
         // no it doesn't
-        lua_pop(L,1);
+        lua_pop(L, 1);
         // So make it
         lua_newtable(L);
     }

@@ -52,10 +52,10 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 
     setFont(mpHost->getDisplayFont());
 
-    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
 
     setPalette(mRegularPalette);
 
@@ -1037,7 +1037,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost||!mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
         return;
     }
 

@@ -161,7 +161,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);    
+    bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
@@ -367,7 +367,7 @@ private:
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 
-#if ! defined(QT_NO_DEBUG)
+#if !defined(QT_NO_DEBUG)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
@@ -386,6 +386,6 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     debug.nospace() << text;
     return debug;
 }
-#endif // ! defined(QT_NO_DEBUG)
+#endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H

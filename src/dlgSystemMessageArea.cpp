@@ -26,19 +26,18 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
-    
+
     QPixmap holdPixmap;
-    
+
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
-    
+
     holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelError->setPixmap(holdPixmap);
-    
+
     holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
-    
 }

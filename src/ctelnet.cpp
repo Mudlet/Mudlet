@@ -486,7 +486,6 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(spacer);
 
 #if !defined(QT_NO_SSL)
-
         QList<QSslError> sslErrors = getSslErrors();
         QSslCertificate cert = socket.peerCertificate();
 
@@ -609,7 +608,7 @@ bool cTelnet::sendData(QString& data)
             "Note: this warning will only be issued once, even if this happens again, until\n"
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
-            if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
+            if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                 QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
@@ -620,7 +619,7 @@ bool cTelnet::sendData(QString& data)
         } else {
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
-                if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
+                if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                 QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);

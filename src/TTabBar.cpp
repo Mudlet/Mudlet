@@ -36,7 +36,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabName)||mItalicTabsSet.contains(tabName)||mUnderlineTabsSet.contains(tabName)) {
+        if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
             painter->save();
             font.setBold(mBoldTabsSet.contains(tabName));
             font.setItalic(mItalicTabsSet.contains(tabName));
@@ -118,7 +118,7 @@ bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
 
 QSize TTabBar::tabSizeHint(int index) const
 {
-    if (mStyle.tabBold(index)||mStyle.tabItalic(index)||mStyle.tabUnderline(index)) {
+    if (mStyle.tabBold(index) || mStyle.tabItalic(index) || mStyle.tabUnderline(index)) {
         const QSize s = QTabBar::tabSizeHint(index);
         const QFontMetrics fm(font());
         // Note that this method must use (because it is associated with sizing

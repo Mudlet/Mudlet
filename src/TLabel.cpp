@@ -228,7 +228,7 @@ bool TLabel::forwardEventToMapper(QEvent* event)
         QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
 
         if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
-#if (QT_VERSION >= QT_VERSION_CHECK(5,12, 0))
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
             // Have switched to the latest QWheelEvent as that handles both X
             // and Y wheels at the same time whereas previously we said the
             // event was a vertical one - even if it wasn't! Additionally we

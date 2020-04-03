@@ -150,7 +150,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
-    
+
     QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
     aboutMakers.append({true, QStringLiteral("Heiko Köhn"), QString(), QString(), QStringLiteral("KoehnHeiko@googlemail.com"),
                         tr("Original author, original project lead, Mudlet core coding, retired.",
@@ -171,7 +171,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                            "about:SlySven")});
     aboutMakers.append({true, QStringLiteral("Damian Monogue"), QStringLiteral("demonnic#4307"), QStringLiteral("demonnic"), QStringLiteral("demonnic@gmail.com"),
                         tr("Former maintainer of the early Windows and Apple OSX packages. "
-                           "He also administers our server and helps the project in many ways.", 
+                           "He also administers our server and helps the project in many ways.",
                            "about:demonnic")});
     aboutMakers.append({true, QStringLiteral("Florian Scheel"), QStringLiteral("keneanung#2803"), QStringLiteral("keneanung"), QStringLiteral("keneanung@googlemail.com"),
                         tr("Contributed many improvements to Mudlet's db: interface, event system, "
@@ -197,7 +197,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                         tr("Joined in December 2009 though he's been around much longer. "
                            "Contributed to the Lua API and is the former maintainer of the Lua API.",
                            "about:Ben Smith")});
-    aboutMakers.append({false, QStringLiteral("Blaine von Roeder"), QString(), QString(), QString(), 
+    aboutMakers.append({false, QStringLiteral("Blaine von Roeder"), QString(), QString(), QString(),
                         tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
                            "and has helped with release management of 1.0.5.",
                            "about:Blaine von Roeder")});
@@ -207,10 +207,10 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMakers.append({false, QStringLiteral("Carter Dewey"), QString(), QString(), QStringLiteral("eldarerathis@gmail.com"),
                         tr("Contributed to the Lua API.",
                            "about:Carter Dewey")});
-    aboutMakers.append({false, QStringLiteral("Erik Pettis"), QStringLiteral("Etomyutikos#9266"), QStringLiteral("Oneymus"), QString(), 
+    aboutMakers.append({false, QStringLiteral("Erik Pettis"), QStringLiteral("Etomyutikos#9266"), QStringLiteral("Oneymus"), QString(),
                         tr("Developed the Vyzor GUI Manager for Mudlet.",
                            "about:Oneymus")});
-    aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(), 
+    aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(),
                         tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                            "C++ core code contributions and we look forward to future reviews on and work in that area.",
@@ -225,7 +225,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     aboutMakers.append({false, QStringLiteral("John Dahlström"), QString(), QString(), QStringLiteral("email@johndahlstrom.se"),
                         tr("Helped develop and debug the Lua API.",
                            "about:John Dahlström")});
-    aboutMakers.append({false, QStringLiteral("Karsten Bock"), QString(), QStringLiteral("Beliaar"), QString(), 
+    aboutMakers.append({false, QStringLiteral("Karsten Bock"), QString(), QStringLiteral("Beliaar"), QString(),
                         tr("Contributed several improvements and new features for Geyser.",
                            "about:Beliaar")});
     aboutMakers.append({false, QStringLiteral("Leigh Stillard"), QString(), QString(), QStringLiteral("leigh.stillard@gmail.com"),
@@ -279,7 +279,7 @@ QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
     return QStringLiteral("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
         .arg(coloredText.arg(QStringLiteral("bc8942"), QStringLiteral("<b>%1</b>")
              .arg((maker.big) ? QStringLiteral("<big>%1</big>").arg(maker.name) : maker.name)),
-        (contactDetails.isEmpty()) ? QString() : 
+        (contactDetails.isEmpty()) ? QString() :
              QStringLiteral(" (%1)").arg(contactDetails.join(QChar::Space)),
         maker.description);
 }
@@ -1005,7 +1005,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // clang-format on
 }
 
-void dlgAboutDialog::setSupportersTab(const QString& htmlHead) 
+void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
     QStringList mightier_than_swords = {"Maiyannah Bishop", "Qwindor Rousseau"};

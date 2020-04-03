@@ -446,10 +446,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
-    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     __pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
     __pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+    __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
     mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(

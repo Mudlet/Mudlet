@@ -165,9 +165,9 @@ public:
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
     void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
     int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
+    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries = c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
+    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout = seconds; }
     bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
     void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
