@@ -7,12 +7,25 @@
 </h1>
 
 <h4 align="center">Play immersive, multiplayer, pure-text RPGs on Mudlet.</h4>
-
+<table style="margin-left: auto; margin-right: auto;">
+  <thead>
+    <tr>
+      <th>Linux & MacOs</th>
+      <th>Windows</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><a href="http://mudlet.org/download/">
+        <img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development"
+          alt="Travis (Linux & MacOs) CI Build status"></a></td>
+      <td align="center"><a href="http://mudlet.org/download/">
+        <img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true"
+          alt="AppVeyor (Windows) CI Build status"></a></td>
+    </tr>
+  <tbody>
+</table>
 <p align="center">
-  <a href="http://mudlet.org/download/">
-    <img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development"
-         alt="Build status">
-  </a>
   <a href="https://discord.gg/kuYvMQ9">
     <img src="https://discordapp.com/api/guilds/283581582550237184/embed.png?style=shield">
   </a>
@@ -20,7 +33,9 @@
     <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat">
   </a>
   <a href="https://github.com/Mudlet/Mudlet/stargazers">
-    <img src="https://img.shields.io/github/stars/Mudlet/Mudlet.svg"/>
+    <img src="https://img.shields.io/github/stars/Mudlet/Mudlet.svg"/></a>
+  <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
+    <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
   </a>
 </p>
 
