@@ -430,7 +430,8 @@ std::tuple<int, int> TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cu
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
     } else {
-        charWidth = getGraphemeWidth(unicode);
+        // charWidth = getGraphemeWidth(unicode);
+        charWidth = 1;
     }
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
