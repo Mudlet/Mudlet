@@ -65,7 +65,7 @@ function Geyser.Mapper:show_impl()
   end
 end
 
--- Overridden raise and lower functions - mapper does it differently right now
+-- Overridden raise and lower functions
 function Geyser.Mapper:raise()
 	raiseWindow("mapper")
 end

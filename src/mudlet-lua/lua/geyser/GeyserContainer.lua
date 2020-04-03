@@ -158,9 +158,9 @@ function Geyser.Container:show (auto)
   -- If my container is hidden I stay hidden and after it get visible again I'm visible too
   if self.container.hidden or self.container.auto_hidden then
     if auto == false then
-      self.hidden = false 
+      self.hidden = false
     end
-    return false 
+    return false
   end
   if auto then
     self.auto_hidden = false
@@ -194,10 +194,9 @@ function Geyser.Container:raiseAll(container, me)
   me = me or true
   container = container or self
   -- raise myself
-  if me then 
-    container:raise() 
+  if me then
+    container:raise()
   end
-  
   local v
   for i=1,#container.windows do
     v = container.windows[i]
@@ -206,22 +205,23 @@ function Geyser.Container:raiseAll(container, me)
   end
 end
 
-local function createReverseTable(container)
- local v
-  Geyser.Container.reverseTable = Geyser.Container.reverseTable or {}
-    for i=1,#container.windows do
+local function createWindowTable(container)
+  local v
+  Geyser.Container.windowTable = Geyser.Container.windowTable or {}
+  for i=1,#container.windows do
     v = container.windows[i]
-    table.insert(Geyser.Container.reverseTable, container.windowList[v])
-    createReverseTable(container.windowList[v])
+    Geyser.Container.windowTable[#Geyser.Container.windowTable+1] = container.windowList[v]
+    createWindowTable(container.windowList[v])
   end
 end
 
 function Geyser.Container:lowerAll()
-  createReverseTable(self)
-  for i=#Geyser.Container.reverseTable,1,-1 do
-    Geyser.Container.reverseTable[i]:lower()
+  createWindowTable(self)
+  -- iterate in reverse order through all elements to keep the same z-axis inside the container
+  for i=#Geyser.Container.windowTable,1,-1 do
+    Geyser.Container.windowTable[i]:lower()
   end
-  Geyser.Container.reverseTable = nil
+  Geyser.Container.windowTable = nil
   self:lower()
 end
 
