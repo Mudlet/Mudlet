@@ -44,16 +44,16 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
         adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move}
     end
     
-    --let the title get smaller and disappear if we make the window smaller
+    --let the title get smaller and disappears if we make the window smaller
     local function shrink_title(lbl)
         local  w  =  lbl:get_width()
         local titleText = lbl.titleText
         if #titleText <= 15 then titleText = titleText.."   " end
         if w < (#titleText-10)*6.6+20 then
-            titleText = string.sub(lbl.titleText,0,math.floor(w/6)).."..."
+            titleText = string.sub(lbl.titleText, 0, math.floor(w/6)).."..."
         end
-        if #titleText <= 15 then titleText="" end
-        lbl.adjLabel:echo(titleText,lbl.titleTxtColor,"l")
+        if #titleText <= 15 then titleText = "" end
+        lbl.adjLabel:echo(titleText, lbl.titleTxtColor, "l")
     end
     
     --plain Echo which allows text manipulation by stylesheets
@@ -63,7 +63,7 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
         end
     end
     
-    function Adjustable.Container:setTitle(text,color)
+    function Adjustable.Container:setTitle(text, color)
         text = text or self.name.." - Adjustable Container"
         self.titleTxtColor = color or "green"
         self.titleText = "&nbsp;&nbsp;"..text
@@ -116,11 +116,12 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
             
             local winw = getUserWindowSize(self.windowname)
             local mousepos = self:get_x() + event.x
+            local maxdiff = self.ParentMenuWidth + self.ChildMenuWidth
             local diff = winw - mousepos
             local flyDir = self.rCLabel.nestedLabels[1].flyDir
-            if diff <= 180 and flyDir == "R"then
+            if diff <= maxdiff and flyDir == "R"then
                 changeMenuLayout(self.rCLabel.nestedLabels, "L")
-            elseif diff > 180 and flyDir == "L" then
+            elseif diff > maxdiff and flyDir == "L" then
                 changeMenuLayout(self.rCLabel.nestedLabels, "R")
             end
             self.rCLabel:move(event.x, event.y)
@@ -368,7 +369,7 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
         if self.minimized == false and self.locked == false then
             self.origh = self.height
             self.Inside:hide()
-            self:resize(nil,25)
+            self:resize(nil, self.buttonsize + 10)
             self.minimized = true
             self:adjustBorder()
         end
@@ -403,7 +404,7 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
         for i = self[menu.."Nr"], #self[menu] do
             local name = self[menu][i][1]
             self[menu.."l"][i] = self[menu.."Label"]:addChild({
-                120-(i*20),width = "80", height = "20", flyOut=true, layoutDir="RV", name = self.name..menu..name
+                width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
             })
             self[menu.."l"][i].txt = [[<center>]]..name
             self[menu.."l"][i]:setClickCallback(onClick, self, i, name)
@@ -434,14 +435,14 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
     
     function Adjustable.Container:createLabels()
         self.exitLabel = Geyser.Label:new({
-            x=-25,y=4,width = "15", height = "15",fontSize=8
+            x = -(self.buttonsize * 1.4), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize
             
         },self)
         self.exitLabel:echo("<center>x</center>")
         
         
         self.minimizeLabel = Geyser.Label:new({
-            x=-45,y=4,width = "15", height = "15",fontSize=8
+            x = -(self.buttonsize * 2.6), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize
             
         },self)
         self.minimizeLabel:echo("<center>-</center>")
@@ -452,43 +453,43 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
             message="<center>Clicky clicky</center>"}, self)
             
             self.lockLabel = self.rCLabel:addChild({
-                width = "100", height = "20", name = self.name.."lockLabel",
+                width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."lockLabel",
                 layoutDir="RV", flyOut=true
             })
             
             self.minLabel = self.rCLabel:addChild({
-                width = "100", height = "20", name = self.name.."minLabel",
+                width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."minLabel",
                 layoutDir="RV", flyOut=true
                 
             })
             
             self.saveLabel = self.rCLabel:addChild({
-                width = "100", height = "20", name = self.name.."saveLabel",
+                width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."saveLabel",
                 layoutDir="RV", flyOut=true
             })
             
             self.loadLabel = self.rCLabel:addChild({
-                width = "100", height = "20", name = self.name.."loadLabel",
+                width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."loadLabel",
                 layoutDir="RV", flyOut=true
             })
             
             self.attLabel = self.rCLabel:addChild({
-                width = "100", height = "20", nestable = true, flyOut=true, layoutDir="RV", name = self.name.."attLabel"
+                width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."attLabel"
             })
             
             for i=1,4 do
                 self.att[i] = self.attLabel:addChild({
-                    width = "80", height = "20", layoutDir="RV", name = self.name.."att"..i
+                    width = self.ChildMenuWidth, height = self.MenuHeight, layoutDir="RV", name = self.name.."att"..i
                 })
             end
-            
+        
             self.lockStylesLabel = self.rCLabel:addChild({
-                width = "100", height = "20",  nestable = true, flyOut=true, layoutDir="RV", name = self.name.."lockStylesLabel"
+                width = self.ParentMenuWidth, height = self.MenuHeight,  nestable = true, flyOut=true, layoutDir="RV", name = self.name.."lockStylesLabel"
             })
             createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
             
             self.customItemsLabel = self.rCLabel:addChild({
-                width = "100", height = "20", nestable = true, flyOut=true, layoutDir="RV", name = self.name.."customItemsLabel"
+                width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."customItemsLabel"
             })
             
         end
@@ -547,7 +548,7 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
                 
                 if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
                 
-                if self.minimized == true then self.Inside:hide() self:resize(nil,25) else self.Inside:show() end
+                if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
                 self.origh = mytable.origh
             end
             
@@ -664,14 +665,20 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
             local me = self.parent:new(cons,container)
             setmetatable(me, self)
             self.__index = self
+            me.ParentMenuWidth = me.ParentMenuWidth or "102"
+            me.ChildMenuWidth = me.ChildMenuWidth or "82"
+            me.MenuHeight = me.MenuHeight or "22"
+            me.MenuFontSize = me.MenuFontSize or "8"
             me:globalLockStyles()
             me.type = "adjustablecontainer"
-            me.menustyle = me.menustyle or [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} QLabel{ font-size:8pt;}]]
-            me.labelstyle= me.labelstyle or [[
+            me.menustyle = me.menustyle or [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} QLabel{ font-size:]]..me.MenuFontSize..[[pt;}]]
+            me.buttonstyle= me.buttonstyle or [[
             QLabel{ border-radius: 7px; background-color: rgba(255,30,30,100%);}
             QLabel::hover{ background-color: rgba(255,0,0,50%);}
             ]]
-            me.padding = me.padding or 10    
+            me.buttonsize = me.buttonsize or "15"
+            me.buttonFontSize = me.buttonFontSize or "8"
+            me.padding = me.padding or 10
             me:createContainers()
             me.att = me.att or {}
             me:createLabels()
@@ -683,19 +690,14 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
             if me.locked then
                 me:lockContainer()
             end
-            me.formatL = [==[<style>
-            span { font-size: 16px;}
-            span a { font-size: 10px;}
-            </style>
-            <span> %s<a> %s</a></span>
-            ]==]
-            me.lockLabel.txt = me.lockLabel.txt or string.format(me.formatL,"🔒","Lock/Unlock")
-            me.minLabel.txt = me.minLabel.txt or string.format(me.formatL,"🗕","Min/Restore")
-            me.saveLabel.txt = me.saveLabel.txt or string.format(me.formatL,"💾","Save")
-            me.loadLabel.txt = me.loadLabel.txt or string.format(me.formatL,"📁","Load")
-            me.attLabel.txt  = me.attLabel.txt or string.format(me.formatL,"⚓","Attach to:")
-            me.lockStylesLabel.txt = me.lockStylesLabel.txt or string.format(me.formatL,"🖌","Lockstyle:")
-            me.customItemsLabel.txt = me.customItemsLabel.txt or string.format(me.formatL,"🖇","Custom:")
+
+            me.lockLabel.txt = me.lockLabel.txt or [[<font size="5">🔒</font> Lock/Unlock]]
+            me.minLabel.txt = me.minLabel.txt or [[<font size="5">🗕</font> Min/Restore]]
+            me.saveLabel.txt = me.saveLabel.txt or [[<font size="5">💾</font> Save]]
+            me.loadLabel.txt = me.loadLabel.txt or [[<font size="5">📁</font> Load]]
+            me.attLabel.txt  = me.attLabel.txt or [[<font size="5">⚓</font> Attach to:]]
+            me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5">🖌</font> Lockstyle:]]
+            me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5">🖇</font> Custom:]]
             
             me.adjLabelstyle = me.adjLabelstyle or [[
             background-color: rgba(0,0,0,100%);
@@ -707,8 +709,8 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({
             me.adjLabel:setMoveCallback("Adjustable.Container.onMove",me, me.adjLabel)
             
             me.adjLabel:setStyleSheet(me.adjLabelstyle)
-            me.exitLabel:setStyleSheet(me.labelstyle)
-            me.minimizeLabel:setStyleSheet(me.labelstyle)
+            me.exitLabel:setStyleSheet(me.buttonstyle)
+            me.minimizeLabel:setStyleSheet(me.buttonstyle)
             
             me.rCLabel:setStyleSheet([[background-color: rgba(255,255,255,0%);]])
             me:styleLabels()
