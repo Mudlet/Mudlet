@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2018. 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -188,10 +189,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
-    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
+    connect(checkBox_autoLoad, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoload);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
+    connect(checkBox_autoLogin, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
@@ -245,7 +247,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        slot_connectToServer();
+        connectToServer();
         QDialog::accept();
     }
 }
@@ -351,6 +353,22 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
         return;
     }
     QString profile = pItem->text();
+    // It would have been nice to use "autologin" but that string was already
+    // used for the "automatically load this profile on starting Mudlet" option:
+    writeProfileData(profile, QStringLiteral("autosendlogin"), QString::number(state));
+}
+
+void dlgConnectionProfiles::slot_update_autoload(int state)
+{
+    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
+    if (!pItem) {
+        return;
+    }
+    QString profile = pItem->text();
+    // This option is mis-leadingly named as it is all about loading the profile
+    // and not about logging into the server - it would be nice to change this
+    // to "autoload" but we can't without breaking profiles saved from Mudlet
+    // versions before such a change:
     writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
 }
 
@@ -1045,11 +1063,20 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
 
+    val = readProfileData(profile, QStringLiteral("autosendlogin"));
+    if (val.toInt() == Qt::Checked) {
+        checkBox_autoLogin->setChecked(true);
+    } else {
+        checkBox_autoLogin->setChecked(false);
+    }
+
+    // This option was mis-named in the past - it is about loading the profile
+    // automatically when Mudlet starts
     val = readProfileData(profile, QStringLiteral("autologin"));
     if (val.toInt() == Qt::Checked) {
-        autologin_checkBox->setChecked(true);
+        checkBox_autoLoad->setChecked(true);
     } else {
-        autologin_checkBox->setChecked(false);
+        checkBox_autoLoad->setChecked(false);
     }
 
     val = readProfileData(profile, QStringLiteral("autoreconnect"));
@@ -2168,14 +2195,16 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
 
 void dlgConnectionProfiles::slot_load()
 {
-    loadProfile(false);
+    loadProfile(false, login_entry->text(), character_password_entry->text());
     QDialog::accept();
 }
-void dlgConnectionProfiles::slot_connectToServer()
+
+void dlgConnectionProfiles::connectToServer()
 {
-    loadProfile(true);
+    loadProfile(true, login_entry->text(), character_password_entry->text());
 }
-void dlgConnectionProfiles::loadProfile(bool alsoConnect)
+
+void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerName, const QString& playerPassword)
 {
     QString profile_name = profile_name_entry->text().trimmed();
 
@@ -2194,10 +2223,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
     // load an old profile if there is any
     // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), playerName, playerPassword)) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return ;
+            return;
         }
     } else {
         return;
@@ -2243,17 +2272,17 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         pHost->mSslTsl = port_ssl_tsl->isChecked();
 
-        if (character_password_entry->text().trimmed().size() > 0) {
-            pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_update_pass(pHost->getPass());
-        }
+//        if (character_password_entry->text().trimmed().size() > 0) {
+//            pHost->setPass(character_password_entry->text().trimmed());
+//        } else {
+//            slot_update_pass(pHost->getPass());
+//        }
 
-        if (login_entry->text().trimmed().size() > 0) {
-            pHost->setLogin(login_entry->text().trimmed());
-        } else {
-            slot_update_login(pHost->getLogin());
-        }
+//        if (login_entry->text().trimmed().size() > 0) {
+//            pHost->setLogin(login_entry->text().trimmed());
+//        } else {
+//            slot_update_login(pHost->getLogin());
+//        }
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
@@ -2261,6 +2290,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
+        pHost->setAutoPlayerLogin(checkBox_autoLogin->isChecked());
 
         // This also writes the value out to the profile's base directory:
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);

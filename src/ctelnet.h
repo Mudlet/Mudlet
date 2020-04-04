@@ -175,7 +175,14 @@ public:
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
     std::pair<QString, int> getConnectionInfo() const;
+    const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
 
+    // A one-shot timer used to prevent the Lua sendPlayerPassword() command
+    // from functioning for more than a short time after a successful connection
+    // this is intended as a security measure to limit the chance a rogue script
+    // might have to send the password to the Game Server and then to that
+    // rogue, or anyone else, who might be listening out for it.
+    QTimer* mpLuaSendPasswordTimer;
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -203,12 +210,15 @@ public slots:
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
+    void slot_enableLuaSendPassword();
+    void slot_disableLuaSendPassword();
 
 signals:
     // Intended to signal status changes for other parts of application
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
+    void signal_error(Host*);
 
 
 private:
@@ -309,6 +319,9 @@ private:
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
 
+    // Set when mpLuaSendPasswordTimer is started (on successful connection) and
+    // reset on timeout of that timer (or disconnection)
+    bool mLuaSendPasswordEnable{false};
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);

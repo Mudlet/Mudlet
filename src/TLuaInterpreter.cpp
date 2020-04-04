@@ -18207,11 +18207,17 @@ int TLuaInterpreter::sendPlayerPassword(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, "no password set so nothing to send");
         return 2;
-    } else {
-        host.mTelnet.slot_send_pass();
-        lua_pushboolean(L, true);
-        return 1;
     }
+
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "password sending disabled, outside of period that follows making a successful connection to game-server");
+        return 2;
+    }
+
+    host.mTelnet.slot_send_pass();
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Internal function - helper for updateColorTable().

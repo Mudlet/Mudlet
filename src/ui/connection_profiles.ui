@@ -2358,17 +2358,7 @@
            <property name="title">
             <string>Optional</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_password">
-              <property name="text">
-               <string>Password:</string>
-              </property>
-              <property name="buddy">
-               <cstring>character_password_entry</cstring>
-              </property>
-             </widget>
-            </item>
+           <layout class="QGridLayout" name="gridLayout_groupBox_optionalArea">
             <item row="0" column="0">
              <widget class="QLabel" name="label_characterName">
               <property name="text">
@@ -2389,32 +2379,13 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0" colspan="2">
-             <widget class="QCheckBox" name="autologin_checkBox">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_password">
               <property name="text">
-               <string>Open profile on Mudlet start</string>
+               <string>Password:</string>
               </property>
-             </widget>
-            </item>
-            <item row="4" column="0" colspan="2">
-             <widget class="QCheckBox" name="auto_reconnect">
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="text">
-               <string>Reconnect automatically</string>
+              <property name="buddy">
+               <cstring>character_password_entry</cstring>
               </property>
              </widget>
             </item>
@@ -2428,7 +2399,20 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
+            <item row="2" column="0" colspan="2">
+             <widget class="QCheckBox" name="checkBox_autoLogin">
+              <property name="toolTip">
+               <string>&lt;p&gt;Previous version of Mudlet aways sent the player name and password (if they are set above) shortly after a successful connection to a Game server. However it can now also be done via the Lua script commands &lt;tt&gt;sendPlayerName()&lt;/tt&gt; and &lt;tt&gt;sendPlayerPassword()&lt;/tt&gt;; if that is being done it is likely that this option should be unchecked so as to leave it to those commands in a script.&lt;/p</string>
+              </property>
+              <property name="text">
+               <string extracomment="This enable the sending of the player login details upon connection older versions of Mudlet did this outside of player control but as it can now be done also via Lua API commands it now must be a user controlled option.">Send the above automatically when connected</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0" colspan="2">
              <widget class="QCheckBox" name="discord_optin_checkBox">
               <property name="enabled">
                <bool>false</bool>
@@ -2451,6 +2435,35 @@
                 <width>65</width>
                 <height>22</height>
                </size>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0" colspan="2">
+             <widget class="QCheckBox" name="checkBox_autoLoad">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string extracomment="This option causes this profile to be automatically LOADED when the Mudlet application is started. This was previously called autoLogin_checkBox but that was functional incorrect and needed to be changed as we now have a separate checkBox_autoLogin that does enable the sending of the player login details upon connection.">Open profile on Mudlet start</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0" colspan="2">
+             <widget class="QCheckBox" name="auto_reconnect">
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Reconnect automatically</string>
               </property>
              </widget>
             </item>
@@ -2490,8 +2503,8 @@
             <property name="horizontalSpacing">
              <number>0</number>
             </property>
-            <item row="0" column="0" rowspan="2">
-             <widget class="QLabel" name="label_7">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_website">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -2500,6 +2513,9 @@
               </property>
               <property name="text">
                <string>Website:</string>
+              </property>
+              <property name="buddy">
+               <cstring>mud_description_textedit</cstring>
               </property>
              </widget>
             </item>
@@ -2627,8 +2643,9 @@
   <tabstop>profile_history</tabstop>
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
+  <tabstop>checkBox_autoLogin</tabstop>
   <tabstop>discord_optin_checkBox</tabstop>
-  <tabstop>autologin_checkBox</tabstop>
+  <tabstop>checkBox_autoLoad</tabstop>
   <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>

@@ -8178,9 +8178,9 @@ void dlgTriggerEditor::slot_import()
     file2.open(QFile::ReadOnly | QFile::Text);
 
     mpHost->mInstalledPackages.append(packageName);
-    QString profileName = mpHost->getName();
-    QString login = mpHost->getLogin();
-    QString pass = mpHost->getPass();
+//    QString profileName = mpHost->getName();
+//    QString login = mpHost->getLogin();
+//    QString pass = mpHost->getPass();
 
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
@@ -8192,9 +8192,9 @@ void dlgTriggerEditor::slot_import()
     XMLimport reader(mpHost);
     reader.importPackage(&file2, packageName); // TODO: Missing false return value handler
 
-    mpHost->setName(profileName);
-    mpHost->setLogin(login);
-    mpHost->setPass(pass);
+//    mpHost->setName(profileName);
+//    mpHost->setLogin(login);
+//    mpHost->setPass(pass);
 
     slot_profileSaveAction();
 

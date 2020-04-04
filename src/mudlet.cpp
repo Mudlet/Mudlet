@@ -160,6 +160,7 @@ mudlet::mudlet()
 , mpPackageManagerDlg(nullptr)
 , mShowIconsOnDialogs(true)
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
+, moduleTable(nullptr)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
@@ -174,7 +175,6 @@ mudlet::mudlet()
 , mpLabelReplayTime(nullptr)
 , mpTimerReplay(nullptr)
 , mpToolBarReplay(nullptr)
-, moduleTable(nullptr)
 , mshowMapAuditErrors(false)
 , mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
@@ -3978,15 +3978,17 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin(const QString& cliProfile)
+void mudlet::startAutoLoading(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto& host : hostList) {
+        // This option is mis-leadingly named as it is all about loading the
+        // profile and not about logging into the server:
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked || host == cliProfile) {
-            doAutoLogin(host);
+            doAutoLoading(host);
             openedProfile = true;
         }
     }
@@ -4055,9 +4057,9 @@ void mudlet::attachDebugArea(const QString& hostname)
     mpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name)
+void mudlet::doAutoLoading(const QString& profile_name)
 {
-    if (profile_name.size() < 1) {
+    if (profile_name.isEmpty()) {
         return;
     }
 
@@ -4069,11 +4071,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // load an old profile if there is any
     // PLACEMARKER: Host creation (2) - autoload case
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+    if (mHostManager.addHost(profile_name, readProfileData(profile_name, QStringLiteral("login")), readProfileData(profile_name, QStringLiteral("login")), readProfileData(profile_name, QStringLiteral("password")))) {
         pHost = mHostManager.getHost(profile_name);
         if (!pHost) {
             return;
         }
+
     } else {
         return;
     }
@@ -4094,8 +4097,9 @@ void mudlet::doAutoLogin(const QString& profile_name)
         pHost->refreshPackageFonts();
     }
 
-    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
-    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+//    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
+//    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
+    pHost->setAutoPlayerLogin(readProfileData(profile_name, QStringLiteral("autosendlogin")) != Qt::Unchecked);
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
@@ -4105,30 +4109,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->mTelnet.sendData(login);
-}
-
-void mudlet::slot_send_pass()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->mTelnet.sendData(pass);
-}
-//////////////////////////////////////////////////////////////////////////////
-
 
 void mudlet::processEventLoopHack()
 {
@@ -4224,10 +4204,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
 
-    tempHostQueue.enqueue(pHost);
-    tempHostQueue.enqueue(pHost);
     if (connect) {
-        pHost->connectToServer();
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
     } else {
         QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);

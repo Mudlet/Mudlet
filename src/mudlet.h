@@ -235,7 +235,7 @@ public:
     bool resetFormat(Host*, QString& name);
     bool moduleTableVisible();
     bool mWindowMinimized;
-    void doAutoLogin(const QString&);
+    void doAutoLoading(const QString&);
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
@@ -443,10 +443,11 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void layoutModules();
-    void startAutoLogin(const QString&);
-    QPointer<QTableWidget> moduleTable;
+    void startAutoLoading(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+
+    QPointer<QTableWidget> moduleTable;
 
 
 #if defined(INCLUDE_UPDATER)
@@ -499,8 +500,6 @@ public slots:
     void slot_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
-    void slot_send_login();
-    void slot_send_pass();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
@@ -599,10 +598,8 @@ private:
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QQueue<QString> tempLoginQueue;
-    QQueue<QString> tempPassQueue;
-    QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
+
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
     bool mIsGoingDown;

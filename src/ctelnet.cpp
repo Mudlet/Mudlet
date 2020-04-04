@@ -64,7 +64,8 @@ QFile replayFile;
 
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
-: mResponseProcessed(true)
+: mpLuaSendPasswordTimer(new QTimer(this))
+, mResponseProcessed(true)
 , networkLatency()
 , mAlertOnNewData(true)
 , mGA_Driver(false)
@@ -98,6 +99,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncodingWarningIssued(false)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
+, mLuaSendPasswordEnable(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
@@ -141,6 +143,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 #else
         connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
 #endif
+        connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
     });
@@ -152,6 +155,10 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mpPostingTimer->setInterval(300); //FIXME
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
+    // Note that this pair of timers - although wired up to send the name and
+    // password here and now - are only started upon a sucessful connection and
+    // now, also they also require a (default enabled) checkbox option on the
+    // profile's connection preferences:
     mTimerLogin = new QTimer(this);
     mTimerLogin->setSingleShot(true);
     connect(mTimerLogin, &QTimer::timeout, this, &cTelnet::slot_send_login);
@@ -159,6 +166,28 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mTimerPass = new QTimer(this);
     mTimerPass->setSingleShot(true);
     connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
+
+    mpLuaSendPasswordTimer->setInterval(Host::mLuaSendPasswordTimeout);
+    mpLuaSendPasswordTimer->setSingleShot(true);
+    connect(this, &cTelnet::signal_connected, this, &cTelnet::slot_enableLuaSendPassword);
+    // Because there are two slots, one with, one without a timeout (int)
+    // argument for QTimer::start(...) we have to identify which one we are using:
+    connect(this, &cTelnet::signal_connected, mpLuaSendPasswordTimer, qOverload<>(&QTimer::start));
+    connect(this, &cTelnet::signal_disconnected, mpLuaSendPasswordTimer, &QTimer::stop);
+    connect(this, &cTelnet::signal_disconnected, this, &cTelnet::slot_disableLuaSendPassword);
+    connect(mpLuaSendPasswordTimer, &QTimer::timeout, this, &cTelnet::slot_disableLuaSendPassword);
+#if defined (QT_DEBUG)
+    // Extra lines to debug the sending password timeout
+    connect(this, &cTelnet::signal_connected, this, [=]() {
+        qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ENABLED (connected)...";
+    });
+    connect(this, &cTelnet::signal_disconnected, this, [=]() {
+        qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ... DISABLED (disconnected)!";
+    });
+        connect(mpLuaSendPasswordTimer, &QTimer::timeout, this, [=]() {
+        qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ... DISABLED (timeout after connection)!";
+    });
+#endif
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
@@ -187,6 +216,12 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
+    if (mpLuaSendPasswordTimer) {
+        mpLuaSendPasswordTimer->stop();
+        mpLuaSendPasswordTimer->deleteLater();
+        mpLuaSendPasswordTimer = nullptr;
+    }
+
     if (loadingReplay) {
         // If we are doing a replay we had better abort it so that if we are
         // NOT the "last profile standing" the replay system gets reset for
@@ -440,13 +475,26 @@ void cTelnet::abortConnection()
 
 void cTelnet::handle_socket_signal_error()
 {
-    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
-    postMessage(err);
+    // Normal behaviour when user quits from Game and Server disconnects, and we
+    // already handle this:
+    if (socket.error() == QAbstractSocket::RemoteHostClosedError ) {
+        return;
+    }
+
+    // We already detect and handle HostNotFoundError so do not put up the error
+    // message in THAT case:
+    if (socket.error() != QAbstractSocket::HostNotFoundError) {
+        postMessage(tr("[ ERROR ] - TCP/IP socket ERROR:\n%1").arg(socket.errorString()));
+    }
+
+    // In anycase we are now in an error state so tell the main TConsole:
+    emit signal_error(mpHost);
 }
 
 void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
+        qDebug().noquote() << "cTelnet::slot_send_pass() INFO - sending login name.";
         sendData(mpHost->getLogin());
     }
 }
@@ -454,6 +502,7 @@ void cTelnet::slot_send_login()
 void cTelnet::slot_send_pass()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+        qDebug().noquote() << "cTelnet::slot_send_pass() INFO - sending password.";
         sendData(mpHost->getPass());
     }
 }
@@ -465,8 +514,7 @@ void cTelnet::handle_socket_signal_connected()
     reset();
     setKeepAlive(socket.socketDescriptor());
 
-    if (mpHost->mSslTsl)
-    {
+    if (mpHost->mSslTsl) {
         msg = tr("[ INFO ]  - A secure connection has been established successfully.");
     } else {
         msg = tr("[ INFO ]  - A connection has been established successfully.");
@@ -477,10 +525,10 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if (mpHost->getLogin().size() > 0) {
-        mTimerLogin->start(2000);
-        if (mpHost->getPass().size() > 0) {
-            mTimerPass->start(3000);
+    if (mpHost->getAutoPlayerLogin() && !mpHost->getLogin().isEmpty()) {
+        mTimerLogin->start(2000); // Wait 2 seconds before sending player name
+        if (!mpHost->getPass().isEmpty()) {
+            mTimerPass->start(3000); // Wait 3 seconds before sending player password - i.e. 1 second after player name
         }
     }
 
@@ -716,7 +764,6 @@ bool cTelnet::socketOutRaw(std::string& data)
         // terminate the writing of the bytes following it in the single
         // argument method call:
         qint64 chunkWritten = socket.write(data.substr(written).data(), (dataLength - written));
-
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
@@ -2566,6 +2613,8 @@ void cTelnet::handle_socket_signal_readyRead()
 
     char in_buffer[100010];
 
+    // amount can be -1 in the event of an error, or 0 if there is no data for
+    // reading:
     int amount = socket.read(in_buffer, 100000);
     processSocketData(in_buffer, amount);
 }
@@ -2574,9 +2623,9 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
 {
     mpHost->mInsertedMissingLF = false;
 
-    char out_buffer[100010];
-
+    // Ensure the buffer is null terminated - even in the event of an error:
     in_buffer[amount + 1] = '\0';
+
     if (amount == -1) {
         return;
     }
@@ -2584,6 +2633,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         return;
     }
 
+    char out_buffer[100010];
     std::string cleandata = "";
     int datalen;
     do {
@@ -2873,4 +2923,20 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
         // a garenteed terminating null byte.
         return mudlet::replaceString(data, "\xff", "\xff\xff");
     }
+}
+
+void cTelnet::slot_enableLuaSendPassword()
+{
+#if defined(QT_DEBUG)
+    qDebug().nospace().noquote() << "cTelnet::slot_enableLuaSendPassword() INFO - Lua sendPlayerPassword() function enabled.";
+#endif
+    mLuaSendPasswordEnable = true;
+}
+
+void cTelnet::slot_disableLuaSendPassword()
+{
+#if defined(QT_DEBUG)
+    qDebug().nospace().noquote() << "cTelnet::slot_disableLuaSendPassword() INFO - Lua sendPlayerPassword() function disabled.";
+#endif
+    mLuaSendPasswordEnable = false;
 }

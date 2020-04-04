@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +40,7 @@ public:
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
+    void connectToServer();
 
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
@@ -61,10 +62,10 @@ public slots:
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autologin(int state);
-    void slot_update_autoreconnect(int state);
-    void slot_update_discord_optin(int state);
-    void slot_connectToServer();
+    void slot_update_autologin(const int);
+    void slot_update_autoload(const int);
+    void slot_update_autoreconnect(const int);
+    void slot_update_discord_optin(const int);
     void slot_load();
     void slot_cancel();
     void slot_copy_profile();
@@ -76,7 +77,7 @@ private:
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
-    void loadProfile(bool alsoConnect);
+    void loadProfile(const bool alsoConnect, const QString& playerName, const QString& playerPassword);
     void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
