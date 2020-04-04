@@ -127,18 +127,18 @@ int main(int argc, char* argv[])
 #endif
 
 #if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
-        // Workaround for horrible mac rendering issues once the mapper widget
-        // is open - see https://bugreports.qt.io/browse/QTBUG-41257
-        QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+    // Workaround for horrible mac rendering issues once the mapper widget
+    // is open - see https://bugreports.qt.io/browse/QTBUG-41257
+    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 #elif defined(Q_OS_FREEBSD)
-        // Cure for diagnostic:
-        // "Qt WebEngine seems to be initialized from a plugin. Please set
-        // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
-        // before constructing QGuiApplication."
-        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    // Cure for diagnostic:
+    // "Qt WebEngine seems to be initialized from a plugin. Please set
+    // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
+    // before constructing QGuiApplication."
+    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
-    auto * app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     }
 
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen("profile", QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    QCommandLineOption profileToOpen(QStringLiteral("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
     parser.addOption(profileToOpen);
 
     QCommandLineOption showHelp(QStringList() << "h" <<"help", QCoreApplication::translate("main", "Display help and exit"));
@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
-        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
+        texts << QCoreApplication::translate("main", "Copyright © 2008-2020  Mudlet developers\n");
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.\n");
