@@ -106,7 +106,8 @@ public:
 
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
-    bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
+    bool callEventHandler(const QString& function, const TEvent& pE);
+    bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
     void updateAnsi16ColorsInTable();

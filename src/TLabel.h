@@ -43,13 +43,13 @@ class TLabel : public QLabel
 public:
     Q_DISABLE_COPY(TLabel)
     TLabel(Host* pH, QWidget* pW = nullptr);
-    void setClick(const QString& func, const TEvent& args);
-    void setDoubleClick(const QString& func, const TEvent& args);
-    void setRelease(const QString& func, const TEvent& args);
-    void setMove(const QString& func, const TEvent& args);
-    void setWheel(const QString& func, const TEvent& args);
-    void setEnter(const QString& func, const TEvent& args);
-    void setLeave(const QString& func, const TEvent& args);
+    void setClick(const int func);
+    void setDoubleClick(const int func);
+    void setRelease(const int func);
+    void setMove(const int func);
+    void setWheel(const int func);
+    void setEnter(const int func);
+    void setLeave(const int func);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -62,23 +62,16 @@ public:
     bool forwardEventToMapper(QEvent*);
 
     QPointer<Host> mpHost;
-    QString mClick;
-    QString mDoubleClick;
-    QString mRelease;
-    QString mMove;
-    QString mWheel;
-    QString mEnter;
-    QString mLeave;
-    TEvent mClickParams;
-    TEvent mDoubleClickParams;
-    TEvent mReleaseParams;
-    TEvent mMoveParams;
-    TEvent mWheelParams;
-    TEvent mLeaveParams;
-    TEvent mEnterParams;
+    int mClickFunction = 0;
+    int mDoubleClickFunction = 0;
+    int mReleaseFunction = 0;
+    int mMoveFunction = 0;
+    int mWheelFunction = 0;
+    int mEnterFunction = 0;
+    int mLeaveFunction = 0;
 
 private:
-    void releaseParams(TEvent& params);
+    void releaseFunc(const int existingFunction, const int newFunction);
 };
 
 #endif // MUDLET_TLABEL_H

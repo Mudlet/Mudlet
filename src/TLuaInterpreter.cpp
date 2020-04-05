@@ -4778,71 +4778,28 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_remove(L, 1);
     }
 
-    QString eventName;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    int func;
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        eventName = QString::fromUtf8(lua_tostring(L, 1));
-        lua_remove(L, 1);
     }
-
-    TEvent event {};
-    int n = lua_gettop(L);
-    // Iterate from the top down thru the stack because luaL_ref requires
-    // the object (table or function in our case) to be on top
-    for (int i = n; i >= 1; --i) {
-        if (lua_isnumber(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
-            lua_pop(L, 1);
-        } else if (lua_isstring(L, -1)) {
-            event.mArgumentList.prepend(QString::fromUtf8(lua_tostring(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
-            lua_pop(L, 1);
-        } else if (lua_isboolean(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
-            lua_pop(L, 1);
-        } else if (lua_isnil(L, -1)) {
-            event.mArgumentList.prepend(QString());
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
-            lua_pop(L, 1);
-        } else if (lua_istable(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
-            // luaL_ref pops the object, so we don't have to
-        } else if (lua_isfunction(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
-            // luaL_ref pops the object, so we don't have to
-        } else {
-            lua_pushfstring(L,
-                            "%s: bad argument #%d type (boolean, number, string, table, function,\n"
-                            "or nil expected, got a %s!)",
-                            funcName.toUtf8().constData(),
-                            i,
-                            luaL_typename(L, -1));
-            return lua_error(L);
-        }
-
-    }
+    func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
-        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
-        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelReleaseCallback"))
-        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelMoveCallback"))
-        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelWheelCallback"))
-        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnEnter"))
-        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
-        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, func);
     else {
         lua_pushnil(L);
         lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
@@ -15591,58 +15548,17 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE)
+bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
-    if (function.isEmpty()) {
-        return false;
-    }
-
     lua_State* L = pGlobalLua;
-
-    int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
-    if (error) {
-        std::string err;
-        if (lua_isstring(L, 1)) {
-            err = "Lua error:";
-            err += lua_tostring(L, 1);
-        }
-        QString name = "event handler function";
-        logError(err, name, function);
-        return false;
-    }
-
-    for (int i = 0; i < pE.mArgumentList.size(); i++) {
-        switch (pE.mArgumentTypeList.at(i)) {
-        case ARGUMENT_TYPE_NUMBER:
-            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
-            break;
-        case ARGUMENT_TYPE_STRING:
-            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
-            break;
-        case ARGUMENT_TYPE_BOOLEAN:
-            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
-            break;
-        case ARGUMENT_TYPE_NIL:
-            lua_pushnil(L);
-            break;
-        case ARGUMENT_TYPE_TABLE:
-            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
-            break;
-        case ARGUMENT_TYPE_FUNCTION:
-            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
-            break;
-        default:
-            qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
-            lua_pushnil(L);
-        }
-    }
-
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func);
+    int error;
     if (qE) {
         // Create Lua table with QEvent data if needed
         switch (qE->type()) {
         // This means the default argument value was used, so ignore
         case (QEvent::None):
-            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
             break;
         // These are all QMouseEvents
         case (QEvent::MouseButtonPress):
@@ -15690,7 +15606,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         // These are QEvents
@@ -15714,13 +15630,13 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         case (QEvent::Leave): {
             // Seems there isn't a QLeaveEvent, so no
             // extra information to be gotten
-            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
             break;
         }
         // This is a QWheelEvent
@@ -15765,13 +15681,80 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->angleDelta().y());
             lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         }
     } else {
-        error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+        error = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
+
+    if (error) {
+        std::string err = "";
+        if (lua_isstring(L, -1)) {
+            err += lua_tostring(L, -1);
+        }
+
+        QString function = "setLabelCallback";
+        QString name = "label callback event";
+        logError(err, name, function);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
+        }
+    }
+
+    lua_pop(L, lua_gettop(L));
+    return !error;
+}
+
+// No documentation available in wiki - internal function
+bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
+{
+    if (function.isEmpty()) {
+        return false;
+    }
+
+    lua_State* L = pGlobalLua;
+
+    int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
+    if (error) {
+        std::string err;
+        if (lua_isstring(L, 1)) {
+            err = "Lua error: ";
+            err += lua_tostring(L, 1);
+        }
+        QString name = "event handler function";
+        logError(err, name, function);
+        return false;
+    }
+
+    for (int i = 0; i < pE.mArgumentList.size(); i++) {
+        switch (pE.mArgumentTypeList.at(i)) {
+        case ARGUMENT_TYPE_NUMBER:
+            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
+            break;
+        case ARGUMENT_TYPE_STRING:
+            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
+            break;
+        case ARGUMENT_TYPE_BOOLEAN:
+            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_NIL:
+            lua_pushnil(L);
+            break;
+        case ARGUMENT_TYPE_TABLE:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_FUNCTION:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        default:
+            qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
+            lua_pushnil(L);
+        }
+    }
+
+    error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
 
     if (error) {
         std::string err = "";
