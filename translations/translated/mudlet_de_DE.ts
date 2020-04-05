@@ -33,13 +33,13 @@
       <location filename="../src/Host.cpp" line="797"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="798"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1518"/>
@@ -3592,7 +3592,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% aktualisieren</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
@@ -7324,17 +7324,17 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Groß - / Kleinschreibung genau</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="636"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>Variablen einschließen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="639"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>Variablen suchen (langsamer)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="731"/>
@@ -7916,7 +7916,7 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>Die öffentliche Testversion bringt Dir schneller neue Funktionen, und Du hilfst uns, Probleme darin schneller zu finden. Hast Du etwas Merkwürdiges entdeckt? Lass es uns so schnell wie möglich wissen!</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -9581,7 +9581,7 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
     <message>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>Die öffentliche Testversion bringt Dir schneller neue Funktionen, und Du hilfst uns, Probleme darin schneller zu finden. Hast Du etwas Merkwürdiges entdeckt? Lass es uns so schnell wie möglich wissen!</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1084"/>
