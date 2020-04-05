@@ -62,16 +62,16 @@ public:
     bool forwardEventToMapper(QEvent*);
 
     QPointer<Host> mpHost;
-    int mClick = 0;
-    int mDoubleClick = 0;
-    int mRelease = 0;
-    int mMove = 0;
-    int mWheel = 0;
-    int mEnter = 0;
-    int mLeave = 0;
+    int mClickFunction = 0;
+    int mDoubleClickFunction = 0;
+    int mReleaseFunction = 0;
+    int mMoveFunction = 0;
+    int mWheelFunction = 0;
+    int mEnterFunction = 0;
+    int mLeaveFunction = 0;
 
 private:
-    void releaseFunc(const int, const int);
+    void releaseFunc(const int existingFunction, const int newFunction);
 };
 
 #endif // MUDLET_TLABEL_H

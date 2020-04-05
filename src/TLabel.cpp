@@ -40,44 +40,44 @@ TLabel::TLabel(Host* pH, QWidget* pW)
 
 void TLabel::setClick(const int func)
 {
-    releaseFunc(mClick, func);
-    mClick = func;
+    releaseFunc(mClickFunction, func);
+    mClickFunction = func;
 }
 
 void TLabel::setDoubleClick(const int func)
 {
-    releaseFunc(mDoubleClick, func);
-    mDoubleClick = func;
+    releaseFunc(mDoubleClickFunction, func);
+    mDoubleClickFunction = func;
 }
 
 void TLabel::setRelease(const int func)
 {
-    releaseFunc(mRelease, func);
-    mRelease = func;
+    releaseFunc(mReleaseFunction, func);
+    mReleaseFunction = func;
 }
 
 void TLabel::setMove(const int func)
 {
-    releaseFunc(mMove, func);
-    mMove = func;
+    releaseFunc(mMoveFunction, func);
+    mMoveFunction = func;
 }
 
 void TLabel::setWheel(const int func)
 {
-    releaseFunc(mWheel, func);
-    mWheel = func;
+    releaseFunc(mWheelFunction, func);
+    mWheelFunction = func;
 }
 
 void TLabel::setEnter(const int func)
 {
-    releaseFunc(mEnter, func);
-    mEnter = func;
+    releaseFunc(mEnterFunction, func);
+    mEnterFunction = func;
 }
 
 void TLabel::setLeave(const int func)
 {
-    releaseFunc(mLeave, func);
-    mLeave = func;
+    releaseFunc(mLeaveFunction, func);
+    mLeaveFunction = func;
 }
 
 void TLabel::mousePressEvent(QMouseEvent* event)
@@ -86,8 +86,8 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && mClick) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mClick, event);
+    if (mpHost && mClickFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
         event->accept();
     } else {
         QWidget::mousePressEvent(event);
@@ -100,8 +100,8 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && mDoubleClick) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mDoubleClick, event);
+    if (mpHost && mDoubleClickFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mDoubleClickFunction, event);
         event->accept();
     } else {
         QWidget::mouseDoubleClickEvent(event);
@@ -114,8 +114,8 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
 
-    if (mpHost && mRelease) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mRelease, event);
+    if (mpHost && mReleaseFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
     } else {
         QWidget::mouseReleaseEvent(event);
@@ -127,8 +127,8 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
     if (forwardEventToMapper(event)) {
         return;
     }
-    if (mpHost && mMove) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mMove, event);
+    if (mpHost && mMoveFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
     } else {
         QWidget::mouseMoveEvent(event);
@@ -141,8 +141,8 @@ void TLabel::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    if (mpHost && mWheel) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mWheel, event);
+    if (mpHost && mWheelFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mWheelFunction, event);
         event->accept();
     } else {
         QWidget::wheelEvent(event);
@@ -155,8 +155,8 @@ void TLabel::leaveEvent(QEvent* event)
         return;
     }
 
-    if (mpHost && mLeave) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mLeave, event);
+    if (mpHost && mLeaveFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
     } else {
         QWidget::leaveEvent(event);
@@ -169,8 +169,8 @@ void TLabel::enterEvent(QEvent* event)
         return;
     }
 
-    if (mpHost && mEnter) {
-        mpHost->getLuaInterpreter()->setLabelCallbackEvent(mEnter, event);
+    if (mpHost && mEnterFunction) {
+        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mEnterFunction, event);
         event->accept();
     } else {
         QWidget::enterEvent(event);
@@ -266,10 +266,10 @@ bool TLabel::forwardEventToMapper(QEvent* event)
 
 // This function deferences previous functions in the Lua registry.
 // This allows the functions to be safely overwritten.
-void TLabel::releaseFunc(const int mfunc, const int func)
+void TLabel::releaseFunc(const int existingFunction, const int newFunction)
 {
-    if (func != mfunc) {
-        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mfunc);
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
     }
 }
 

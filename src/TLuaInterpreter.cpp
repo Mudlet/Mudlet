@@ -15524,7 +15524,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::setLabelCallbackEvent(const int func, const QEvent* qE)
+bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);

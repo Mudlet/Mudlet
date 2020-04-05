@@ -1964,12 +1964,13 @@ end
 
 --These functions ensure backward compatibility for the setLabelCallback functions
 --unpack function which also returns the nil values
-local function unpack_w_nil (t, i)
-  local i = i or 1
-    if i >= t.n then
-      return t[i]
-    end
-      return t[i], unpack_w_nil(t, i + 1)
+-- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
+local function unpack_w_nil (arg_table, counter)
+  counter = counter or 1
+  if counter >= arg_table.n then
+    return arg_table[counter]
+  end
+  return arg_table[counter], unpack_w_nil(arg_table, counter + 1)
 end
 
 local function setLabelCallback(callbackFunc, labelname, func, ...)
@@ -1978,6 +1979,7 @@ local function setLabelCallback(callbackFunc, labelname, func, ...)
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
   end
+  assert(type(func) == 'function', '<setLabelCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
   if nr > 1 then
     return callbackFunc(labelname, 
     function(event) 
@@ -2004,7 +2006,7 @@ end
 local setLRC = setLRC or setLabelReleaseCallback
 function setLabelReleaseCallback(...)
   setLabelCallback(setLRC, ...)
- end
+end
 
 local setLMC = setLMC or setLabelMoveCallback
 function setLabelMoveCallback(...)
@@ -2018,7 +2020,7 @@ end
 
 local setOnE = setOnE or setLabelOnEnter
 function setLabelOnEnter(...)
-    setLabelCallback(setOnE, ...)
+  setLabelCallback(setOnE, ...)
 end
 
 local setOnL = setOnL or setLabelOnLeave
