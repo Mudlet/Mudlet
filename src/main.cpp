@@ -26,6 +26,9 @@
 
 #include "pre_guard.h"
 #include <chrono>
+#if !defined(INCLUDE_UPDATER)
+#include <QCommandLineParser>
+#endif
 #include <QDesktopWidget>
 #include <QDir>
 #if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
