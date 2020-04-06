@@ -119,6 +119,9 @@ jobs:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
+    - WITH_UPDATER=no
+    - WITH_3DMAPPER=no
+    - WITH_FONTS=no
     - QT_VERSION=511 # actually Qt 5.11, used to check minimum supported Qt works
     addons:
       apt:
