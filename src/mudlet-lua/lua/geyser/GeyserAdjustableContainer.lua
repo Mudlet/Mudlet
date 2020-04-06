@@ -84,6 +84,9 @@ function Adjustable.Container:onClick(label, event)
         label:setCursor("ClosedHand")
     end
     if event.button == "LeftButton" and not(self.locked) then
+        if self.raiseOnClick then
+            self:raiseAll()
+        end
         adjustInfo.name = label.name  
         adjustInfo.move = not (adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
         if self.minimized then adjustInfo.move = true end
@@ -249,6 +252,7 @@ function Adjustable.Container:attachToBorder(border)
     self.attached = border
     self:adjustBorder()
     self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
+    closeAllLevels(self.rCLabel)  
 end
 
 function Adjustable.Container:detach()  
@@ -284,15 +288,22 @@ end
 
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
+    
+    if type(lockNr) == "string" then
+      lockStyle = lockNr
+    elseif type(lockNr) == "number" then
+      lockStyle = self.lockStyles[lockNr][1]
+    end
+    
+    if not self.lockStyles[lockStyle] then
+      lockStyle = "standard"
+    end
+    
     lockStyle = lockStyle or self.lockStyle
     self.lockStyle = lockStyle
-    for i=1, #self.lockStyles do
-        if self.lockStyles[i][1] == lockStyle then
-            lockNr = i
-        end
-    end 
+    
     if self.minimized == false then
-        self.lockStyles[lockNr][2](self)
+        self.lockStyles[lockStyle][2](self)
         self.exitLabel:hide()
         self.minimizeLabel:hide()
         self.locked = true
@@ -337,7 +348,7 @@ function Adjustable.Container:onClickL()
 end
 
 
-function Adjustable.Container:hideObj(event)
+function Adjustable.Container:hideObj()
     self:hide()
     self:adjustBorder()
 end
@@ -422,14 +433,9 @@ function Adjustable.Container:onEnterAtt()
         end
         self.att[i].flyDir = self.attLabel.flyDir
         pEcho(self.att[i], "<center>"..attm[i])
-        self.att[i]:setClickCallback("Adjustable.Container.chBorder", self, attm[i])
+        self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
-end
-
-function Adjustable.Container:chBorder(side)
-    self:attachToBorder(side)
-    closeAllLevels(self.rCLabel)   
 end
 
 function Adjustable.Container:createLabels()
@@ -587,7 +593,7 @@ function Adjustable.Container:showAll()
     end
 end
 
-function Adjustable.Container.doAll(myfunc)
+function Adjustable.Container:doAll(myfunc)
     for  k,v in ipairs(Adjustable.Container.all) do
         myfunc(v)
     end
@@ -620,38 +626,41 @@ Adjustable.Container.all = Adjustable.Container.all or {}
 
 function Adjustable.Container:globalLockStyles()
     self.lockStyles = self.lockStyles or {}
-    table.insert(self.lockStyles, {"standard", function (s) 
+    self:newLockStyle("standard", function (s) 
         s.Inside:resize("100%",-1)
         s.Inside:move(0, s.padding)
         s.adjLabel:setStyleSheet(string.gsub(s.adjLabelstyle, "(border.-)%d(.-;)","%10%2"))
         s.adjLabel:echo("")
-    end})
+    end)
     
-    table.insert(self.lockStyles, {"border",  function (s) 
+    self:newLockStyle("border",  function (s) 
         s.Inside:resize("-"..s.padding,"-"..s.padding)
         s.Inside:move(s.padding, s.padding)
         s.adjLabel:setStyleSheet(s.adjLabelstyle)
         s.adjLabel:echo("")
-    end})
+    end)
     
-    table.insert(self.lockStyles, {"full", function (s) 
+    self:newLockStyle("full", function (s) 
         s.Inside:resize("100%","100%")
         s.Inside:move(0,0)
         s.adjLabel:setStyleSheet(string.gsub(s.adjLabelstyle, "(border.-)%d(.-;)","%10%2"))
         s.adjLabel:echo("")
-    end})
+    end)
     
-    table.insert(self.lockStyles, {"light", function (s)
+    self:newLockStyle("light", function (s)
         shrink_title(s)
         s.Inside:resize("-"..s.padding,"-"..s.padding)
         s.Inside:move(s.padding, s.padding*2)
         s.adjLabel:setStyleSheet(s.adjLabelstyle)
-    end})
+    end)
 end
 
 function Adjustable.Container:newLockStyle(name, func)
-    table.insert(self.lockStyles, {name, func})
-    createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
+    self.lockStyles[#self.lockStyles+1] = {name, func}
+    self.lockStyles[name] = self.lockStyles[#self.lockStyles]
+    if self.lockStylesLabel then
+        createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
+    end
 end
 
 function Adjustable.Container:newCustomItem(name, func)
@@ -732,6 +741,7 @@ function Adjustable.Container:new(cons,container)
     shrink_title(me)
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
+    me.raiseOnClick = me.raiseOnClick or true
     -- save a list of all containers in this table
     Adjustable.Container.all[#Adjustable.Container.all+1] = me
     return me
