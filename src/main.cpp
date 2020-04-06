@@ -33,6 +33,7 @@
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
+#include <QCommandLineParser>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
