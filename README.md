@@ -21,9 +21,10 @@
   <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
     <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
   </a>
-  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://camo.githubusercontent.com/8bb49aa4609cb6399cd004fb55920ff0ead7d15d/68747470733a2f2f63692e6170707665796f722e636f6d2f6170692f70726f6a656374732f7374617475732f333166717138343462723667366934302f6272616e63682f646576656c6f706d656e743f7376673d74727565" alt="AppVeyor (Windows) CI Build status" data-canonical-src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" style="max-width:100%;">
+  <br>
+  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" alt="AppVeyor (Windows) CI Build status" style="max-width:100%;">
   </a>
-  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://camo.githubusercontent.com/05e8ca41df1f7780a8450b64a02cb87710235346/68747470733a2f2f7472617669732d63692e6f72672f4d75646c65742f4d75646c65742e7376673f6272616e63683d646576656c6f706d656e74" alt="Travis (Linux &amp; MacOs) CI Build status" data-canonical-src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" style="max-width:100%;">
+  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" alt="Travis (Linux &amp; MacOs) CI Build status" style="max-width:100%;">
   </a>
 </p>
 
