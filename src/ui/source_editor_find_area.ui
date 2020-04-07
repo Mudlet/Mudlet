@@ -16,24 +16,8 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>300</width>
-    <height>30</height>
-   </size>
-  </property>
   <property name="focusPolicy">
    <enum>Qt::StrongFocus</enum>
-  </property>
-  <property name="windowTitle">
-   <string>Form</string>
-  </property>
-  <property name="autoFillBackground">
-   <bool>false</bool>
-  </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: solid gray;
-border-color: rgb(0, 0, 0);</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout" stretch="6,1,1,0">
    <property name="sizeConstraint">
@@ -53,21 +37,6 @@ border-color: rgb(0, 0, 0);</string>
    </property>
    <item>
     <widget class="QLineEdit" name="lineEdit_findText">
-     <property name="minimumSize">
-      <size>
-       <width>160</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="inputMask">
-      <string notr="true"/>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="placeholderText">
-      <string/>
-     </property>
      <property name="clearButtonEnabled">
       <bool>true</bool>
      </property>
@@ -75,33 +44,35 @@ border-color: rgb(0, 0, 0);</string>
    </item>
    <item>
     <widget class="QPushButton" name="pushButton_findPrevious">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+     <property name="maximumSize">
+      <size>
+       <width>16</width>
+       <height>16</height>
+      </size>
      </property>
-     <property name="text">
-      <string>Prev</string>
+     <property name="icon">
+      <iconset resource="../mudlet.qrc">
+       <normaloff>:/icons/export.png</normaloff>:/icons/export.png</iconset>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="pushButton_findNext">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
+     <property name="maximumSize">
       <size>
-       <width>20</width>
-       <height>0</height>
+       <width>16</width>
+       <height>16</height>
       </size>
      </property>
-     <property name="text">
-      <string>Next</string>
+     <property name="icon">
+      <iconset resource="../mudlet.qrc">
+       <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -124,12 +95,6 @@ border-color: rgb(0, 0, 0);</string>
        <width>16</width>
        <height>16</height>
       </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true"/>
-     </property>
-     <property name="text">
-      <string/>
      </property>
      <property name="icon">
       <iconset resource="../mudlet.qrc">

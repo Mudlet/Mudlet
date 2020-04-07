@@ -8238,7 +8238,8 @@ bool dlgTriggerEditor::event(QEvent* event)
     return QMainWindow::event(event);
 }
 
-void dlgTriggerEditor::resizeEvent(QResizeEvent* event){
+void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
+{
     if (mpSourceEditorArea->isVisible())
         slot_move_source_find();
 }
