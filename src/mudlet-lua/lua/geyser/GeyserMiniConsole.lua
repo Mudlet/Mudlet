@@ -129,6 +129,8 @@ function Geyser.MiniConsole:appendBuffer()
   appendBuffer(self.name)
 end
 
+--- Clears the miniconsole
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearWindow
 function Geyser.MiniConsole:clear()
   clearWindow(self.name)
 end
