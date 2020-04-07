@@ -4,3 +4,4 @@ lua
 yajl
 hunspell
 boost-graph
+pugixml
