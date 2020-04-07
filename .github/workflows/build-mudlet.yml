@@ -67,10 +67,4 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '--debug-find -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
-        
-    - run: cat /Users/runner/runners/2.165.2/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/install-x64-osx-rel-out.log && cat /Users/runner/runners/2.165.2/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/src/v1.7.0-658f8373e7/src/tools/hunspell.cxx
-      if: always()
-
-    - run: cat /Users/runner/runners/2.165.2/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/hunspell/src/v1.7.0-658f8373e7/src/tools/hunspell.cxx
-      if: always()
+        cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
