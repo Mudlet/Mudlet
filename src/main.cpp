@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
     QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Display help and exit"));
     parser.addOption(beQuiet);
 
-    parser.process(app->arguments());
+    parser.parse(app->arguments());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
