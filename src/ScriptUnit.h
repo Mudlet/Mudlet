@@ -49,12 +49,6 @@ public:
         return mScriptRootNodeList;
     }
 
-    QMap<int, TScript*> getScriptList()
-    {
-        QMutexLocker locker(&mScriptUnitLock);
-        return mScriptMap;
-    }
-
     TScript* getScript(int id);
     void compileAll();
     bool registerScript(TScript* pT);
@@ -66,7 +60,6 @@ public:
     int getNewID();
     QMutex mScriptUnitLock;
     QList<TScript*> uninstallList;
-    QVector<int> findScriptId(const QString& name) const;
 
 private:
     ScriptUnit() = default;

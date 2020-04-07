@@ -158,7 +158,6 @@ void ScriptUnit::unregisterScript(TScript* pT)
         removeScript(pT);
         return;
     } else {
-        removeScript(pT);
         removeScriptRootNode(pT);
         return;
     }
@@ -206,15 +205,4 @@ void ScriptUnit::compileAll()
             script->compileAll();
         }
     }
-}
-
-QVector<int> ScriptUnit::findScriptId(const QString& name) const
-{
-    QVector<int> Ids;
-    for (auto script : mScriptMap) {
-        if (script->getName() == name) {
-            Ids.append(script->getID());
-        }
-    }
-    return Ids;
 }

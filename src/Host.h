@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -34,7 +34,6 @@
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
-#include "dlgTriggerEditor.h"
 
 #include "pre_guard.h"
 #include <QColor>
@@ -49,6 +48,7 @@ class QDockWidget;
 class QPushButton;
 class QListWidget;
 
+class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
@@ -251,7 +251,6 @@ public:
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
-    std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -326,7 +325,6 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
-    void setSearchOptions(const dlgTriggerEditor::SearchOptions);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -548,7 +546,6 @@ public:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
-    dlgTriggerEditor::SearchOptions mSearchOptions;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
