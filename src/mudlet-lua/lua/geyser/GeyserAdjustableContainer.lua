@@ -295,11 +295,11 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
       lockStyle = self.lockStyles[lockNr][1]
     end
     
+    lockStyle = lockStyle or self.lockStyle
     if not self.lockStyles[lockStyle] then
       lockStyle = "standard"
     end
     
-    lockStyle = lockStyle or self.lockStyle
     self.lockStyle = lockStyle
     
     if self.minimized == false then
