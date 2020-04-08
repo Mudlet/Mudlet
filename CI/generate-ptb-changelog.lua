@@ -10,7 +10,7 @@ loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
 loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
-parser:option("-r --releasefeed", "Downloaded DBLSQD release feed file")
+parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
 local args = parser:parse()
 
 local MAX_COMMITS_PER_CHANGELOG = 100
@@ -112,7 +112,7 @@ function convert_to_html(text)
 end
 
 local historical_commits = extract_historical_sha1s()
-local released_commits = extract_released_sha1s(get_releases(args.releasefeed))
+local released_commits = extract_released_sha1s(get_releases(args.releasefile))
 local unpublished_commits = scan_commits(historical_commits, released_commits)
 
 if table.is_empty(unpublished_commits) then os.exit(1) end
