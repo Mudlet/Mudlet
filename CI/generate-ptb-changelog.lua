@@ -5,19 +5,9 @@ package.path = package.path .. ";"..mingw_base_dir.."/share/lua/5.1/?.lua"
 local argparse = require "argparse"
 local lunajson = require "lunajson"
 
-function get_script_path()
-   -- remember to strip off the starting @
-   return debug.getinfo(2, "S").source:sub(2)
-end
-
-local script_path = get_script_path()
-
-print("script path: "..script_path)
-print(script_path .. "/../src/mudlet-lua/lua/StringUtils.lua")
-
 -- don't load all of LuaGlobal, as that requires yajl installed
-loadfile(script_path .. "/../src/mudlet-lua/lua/StringUtils.lua")()
-loadfile(script_path .. "/../src/mudlet-lua/lua/TableUtils.lua")()
+loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
+loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 parser:option("-r --releasefeed", "Downloaded DBLSQD release feed file")

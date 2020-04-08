@@ -146,7 +146,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" | Out-File $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
+    $Script:Changelog = pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\" && lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed && popd
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
