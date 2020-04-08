@@ -37,7 +37,7 @@ class dlgSourceEditorFindArea : public QWidget, public Ui::source_editor_find_ar
 
 public:
     Q_DISABLE_COPY(dlgSourceEditorFindArea)
-    dlgSourceEditorFindArea(QWidget*);
+    explicit dlgSourceEditorFindArea(QWidget*);
 
     bool eventFilter(QObject*, QEvent* event) override;
 
