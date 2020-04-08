@@ -7,8 +7,6 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   } else {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
-  # Temporary variable for testString
-  $Env:MUDLET_VERSION_BUILD = "-ptb"
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
       $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
