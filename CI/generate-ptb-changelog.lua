@@ -3,9 +3,7 @@ mingw_base_dir = os.getenv("MINGW_BASE_DIR")
 package.path = package.path .. ";"..mingw_base_dir.."/share/lua/5.1/?.lua"
 
 local argparse = require "argparse"
-local http_request = require "http.request"
 local lunajson = require "lunajson"
-local pretty = require"pl.pretty"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
 loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
