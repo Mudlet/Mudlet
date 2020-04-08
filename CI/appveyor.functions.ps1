@@ -394,6 +394,16 @@ function InstallLuaUtf8() {
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
 }
 
+function InstallLuaLunajson() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lunajson")
+}
+
+function InstallLuaArgparse() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
+}
+
 function InstallLuaYajl() {
   Set-Location \LuaRocks
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
@@ -418,6 +428,8 @@ function InstallLuaModules(){
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
   CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
+  CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
+  CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
 }
 
 function CheckAndInstall7z(){
