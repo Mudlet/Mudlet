@@ -145,7 +145,6 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Write-Output "=== Downloading release feed ==="
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
-    Get-Content -Path $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
     pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\"
     $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
