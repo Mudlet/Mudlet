@@ -397,7 +397,6 @@ function InstallLuaUtf8() {
 function InstallLuaArgparse() {
   Set-Location \LuaRocks
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
-  TREE /F $Env:MINGW_BASE_DIR
 }
 
 function InstallLuaYajl() {
