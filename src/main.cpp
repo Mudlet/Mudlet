@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
-#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
+#if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
     // is open - see https://bugreports.qt.io/browse/QTBUG-41257
     QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
