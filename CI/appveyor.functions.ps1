@@ -17,7 +17,7 @@ if($64Bit){
 (New-Object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/build-images/master/scripts/Windows/install_qt_module.ps1') | Invoke-Expression
 
 if(!(Test-Path Env:QT_VERSION)){
-    $Env:QT_VERSION = "5.14.1"
+    $Env:QT_VERSION = "5.13.2"
 }
 if(!(Test-Path Env:QT_PLATFORM)){
     $Env:QT_PLATFORM = "win32_mingw73"
