@@ -960,7 +960,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
             } else if (!languageCode.compare(QLatin1String("it_IT"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Italiano");
             } else if (!languageCode.compare(QLatin1String("pl_PL"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Polszczyzna");
+                currentTranslation.mNativeName = QStringLiteral("Polski");
             } else if (!languageCode.compare(QLatin1String("ru_RU"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Pусский");
             } else if (!languageCode.compare(QLatin1String("es_ES"), Qt::CaseInsensitive)) {
