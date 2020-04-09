@@ -26,7 +26,7 @@ if(!(Test-Path Env:QT_PLATFORM)){
 function SetQtBaseDir([string] $logFile) {
   if(!(Test-Path Env:QT_BASE_DIR)){
     $log = & { ConfigureQtVersion 'C:\Qt' "$Env:QT_VERSION" } 6>&1
-    $logLineWithEnvFile = $log | ForEach-Object { $_.ToString() } | Where-Object { $_.EndsWith("qtenv2.bat") }
+    $logLineWithEnvFile = $log | ForEach-Object { $_.ToString() } | Where-Object { $_. - contains "mingw" } | Where-Object { $_.EndsWith("qtenv2.bat") }
     $envFile = $logLineWithEnvFile.Split(" ")[-1]
     $pathParts = $envFile.Split("\\")
     # Base dir is everything but the last two items in the path
