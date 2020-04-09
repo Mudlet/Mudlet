@@ -19,7 +19,7 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_VERSION: "5.14.1"
+  - QT_VERSION: "5.13.2"
     QT_PLATFORM: "win32_mingw73"
 install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
