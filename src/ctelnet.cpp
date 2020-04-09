@@ -249,7 +249,11 @@ void cTelnet::encodingChanged(const QString& encoding)
 
         if (!mEncoding.isEmpty() && mEncoding != QLatin1String("ASCII")) {
             mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding.toLatin1().constData());
-            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+            if (mpOutOfBandDataIncomingCodec) {
+                qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+            } else {
+                qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate a codec for OOB protocols that can handle: " << mEncoding;
+            }
 
         } else if (mpOutOfBandDataIncomingCodec) {
             // Will get here if the encoding is ASCII (or empty which is treated
