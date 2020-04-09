@@ -49,6 +49,21 @@ function Geyser.UserWindow:show()
   self:resize(w,h)
 end
 
+function Geyser.UserWindow:setDockPosition(pos)
+  self.dockPosition = pos
+  return openUserWindow(self.name, false, self.autoDock, pos)
+end
+
+function Geyser.UserWindow:enableAutoDock()
+  self.autoDock = true
+  return openUserWindow(self.name, self.restoreLayout, true)
+end
+
+function Geyser.UserWindow:disableAutoDock()
+  self.autoDock = false
+  return openUserWindow(self.name, self.restoreLayout, false)
+end
+
 Geyser.UserWindow.Parent = Geyser.Window
 
 function Geyser.UserWindow:new(cons)
@@ -68,16 +83,20 @@ function Geyser.UserWindow:new(cons)
   
   me.restoreLayout = me.restoreLayout or false
   me.docked = me.docked or false
-
-  openUserWindow(me.name,me.restoreLayout)
+  me.autoDock = me.autoDock or true
+  me.dockPosition = me.dockPosition or "r"
+  
+  if me.restoreLayout then
+    openUserWindow(me.name, me.restoreLayout, me.autoDock)
+  else
+    openUserWindow(me.name, me.restoreLayout, me.autoDock, me.dockPosition)
+  end
+  
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-
+  
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
-  elseif container then
-    me:setFontSize(container.fontSize)
-    cons.fontSize = container.fontSize
   else
     me:setFontSize(8)
     cons.fontSize = 8
@@ -95,14 +114,15 @@ function Geyser.UserWindow:new(cons)
   elseif cons.wrapAt then
     me:setWrap(cons.wrapAt)
   end
-
+  
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then
-      me:move(cons.x,cons.y)
-      me:resize(cons.width,cons.height)
+    me.dockPosition = "floating"
+    me:move(cons.x, cons.y)
+    me:resize(cons.width, cons.height)
   end
-
+  
   me:resetWindow()
   return me
 end
