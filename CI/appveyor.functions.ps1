@@ -42,6 +42,7 @@ function SetMingwBaseDir([string] $logFile) {
     $tmp[-1] = $tmp[-1] -replace "_32", "*"
     $tmp = $tmp -join "\" | Resolve-Path
     if($tmp -is [array]){
+      Write-Output "Got an array back: $tmp" | Tee-Object -File "$logFile" -Append
       $tmp = $tmp[-1]
     }
     $Env:MINGW_BASE_DIR = $tmp
