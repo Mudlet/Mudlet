@@ -2032,6 +2032,28 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     return false;
 }
 
+std::pair<bool, QString> mudlet::setUserWindowTitle(Host* pHost, const QString& name, const QString& text)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("an userwindow cannot have an empty string as its name")};
+    }
+
+    auto hostName(pHost->getName());
+    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
+    if (pW) {
+        if (text.isEmpty()) {
+            pW->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+            return {true, QString()};
+        }
+        pW->setWindowTitle(text);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
+}
+
 std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {

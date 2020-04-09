@@ -49,6 +49,16 @@ function Geyser.UserWindow:show()
   self:resize(w,h)
 end
 
+function Geyser.UserWindow:setTitle(text)
+  self.titleText = text
+  return setUserWindowTitle(self.name, text)
+end
+
+function Geyser.UserWindow:resetTitle()
+  self.titleText = ""
+  return resetUserWindowTitle(self.name)
+end
+
 Geyser.UserWindow.Parent = Geyser.Window
 
 function Geyser.UserWindow:new(cons)
@@ -65,7 +75,7 @@ function Geyser.UserWindow:new(cons)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-  
+
   me.restoreLayout = me.restoreLayout or false
   me.docked = me.docked or false
 
@@ -101,6 +111,10 @@ function Geyser.UserWindow:new(cons)
   if me.docked == false and me.restoreLayout == false then
       me:move(cons.x,cons.y)
       me:resize(cons.width,cons.height)
+  end
+
+  if me.titleText then
+    me:setTitle(me.titleText)
   end
 
   me:resetWindow()
