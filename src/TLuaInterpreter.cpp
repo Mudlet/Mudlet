@@ -3593,17 +3593,16 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowTitle
 int TLuaInterpreter::setUserWindowTitle(lua_State* L)
 {
-    QString name = QString();
-    QString text = QString();
+    QString name, text;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setUserWindowTitle:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "setUserWindowTitle: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         name = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setUserWindowTitle:  bad argument #2 type (title text as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "setUserWindowTitle: bad argument #2 type (title text as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else {
         text = QString::fromUtf8(lua_tostring(L, 2));
