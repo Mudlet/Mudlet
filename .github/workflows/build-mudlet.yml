@@ -60,11 +60,6 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-    - name: Show Lua build output
-      if: always()
-      run: |
-         cat /Users/runner/runners/2.168.0/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/lua/install-x64-osx-rel-out.log
-
     - name: Build Mudlet
       uses: lukka/run-cmake@v1
       with:
