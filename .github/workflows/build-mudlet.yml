@@ -54,7 +54,7 @@ jobs:
         key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
     - name: Install dependencies with vcpkg
-      uses: lukka/run-vcpkg@v0
+      uses: lukka/run-vcpkg@v1
       with:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
