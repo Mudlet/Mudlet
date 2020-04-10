@@ -8347,7 +8347,9 @@ bool dlgTriggerEditor::event(QEvent* event)
 void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 {
     if (mpSourceEditorArea->isVisible())
+    {
         slot_move_source_find();
+    }
 }
 
 void dlgTriggerEditor::slot_key_grab()
