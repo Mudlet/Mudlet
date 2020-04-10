@@ -7743,23 +7743,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>Profile to open automatically</source>
-      <translation type="unfinished"/>
+      <translation>Профиль, который будет автоматически открыт</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished"/>
+      <translation>профиль</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
       <location filename="../src/main.cpp" line="174"/>
       <source>Display help and exit</source>
-      <translation type="unfinished"/>
+      <translation>Показать справку и выйти</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="171"/>
       <source>Display version and exit</source>
-      <translation type="unfinished"/>
+      <translation>Показать версию и выйти</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="184"/>
@@ -7794,7 +7794,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="249"/>
       <source>Copyright © 2008-2020  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Авторское право © 2008-2020 разработчики Mudlet
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
