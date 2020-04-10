@@ -472,6 +472,7 @@ SOURCES += \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
+    dlgSourceEditorFindArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
@@ -544,6 +545,7 @@ HEADERS += \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
+    dlgSourceEditorFindArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
     dlgTriggerEditor.h \
@@ -624,6 +626,7 @@ FORMS += \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
+    ui/source_editor_find_area.ui \
     ui/system_message_area.ui \
     ui/timers_main_area.ui \
     ui/triggers_main_area.ui \
