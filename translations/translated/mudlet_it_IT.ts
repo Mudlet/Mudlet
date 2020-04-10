@@ -7715,7 +7715,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>Profile to open automatically</source>
-      <translation type="unfinished"/>
+      <translation>Profilo da aprire automaticamente</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="165"/>
@@ -7726,7 +7726,7 @@ dalla GUI)</translation>
       <location filename="../src/main.cpp" line="168"/>
       <location filename="../src/main.cpp" line="174"/>
       <source>Display help and exit</source>
-      <translation type="unfinished"/>
+      <translation>Mostra aiuto e esci</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="171"/>
@@ -7774,7 +7774,8 @@ meno utili per un uso normale di questa applicazione:
       <location filename="../src/main.cpp" line="249"/>
       <source>Copyright © 2008-2020  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2020  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
