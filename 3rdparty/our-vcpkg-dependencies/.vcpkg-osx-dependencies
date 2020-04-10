@@ -1,8 +1,8 @@
 --triplet
 x64-osx
-lua
+--debug lua
 yajl
 hunspell
 boost-graph
 pugixml
---overlay-ports=.
+--overlay-ports=./lua
