@@ -5,3 +5,4 @@ yajl
 hunspell
 boost-graph
 pugixml
+--overlay-ports=.

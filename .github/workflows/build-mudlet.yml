@@ -57,12 +57,8 @@ jobs:
       uses: lukka/run-vcpkg@v1
       with:
        # Response file stored in source control, it provides the list of ports and triplet(s).
-        # vcpkgArguments: '@${{env.vcpkgResponseFile}}'
-        setupOnly: true
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-
-    - run: |
-        $VCPKG_ROOT/vcpkg install @$vcpkgResponseFile --overlay-ports .
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v1
