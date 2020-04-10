@@ -1,6 +1,6 @@
 --triplet
 x64-osx
---debug lua
+lua
 yajl
 hunspell
 boost-graph
