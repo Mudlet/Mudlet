@@ -759,7 +759,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Kleur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
@@ -2925,7 +2925,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1717"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1718"/>
