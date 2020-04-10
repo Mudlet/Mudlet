@@ -5,4 +5,4 @@ hunspell
 boost-graph
 pugixml
 --overlay-ports=../our-vcpkg-dependencies/lua
-lua
+lua[core]

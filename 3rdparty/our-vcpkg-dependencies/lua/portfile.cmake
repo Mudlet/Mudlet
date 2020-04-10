@@ -8,7 +8,8 @@ vcpkg_download_distfile(ARCHIVE
 vcpkg_extract_source_archive_ex(
     OUT_SOURCE_PATH SOURCE_PATH
     ARCHIVE ${ARCHIVE}
-    PATCHES vs2015-impl-c99.patch
+# patch disabled as it doesn't apply cleanly and doesn't seem related to the macos build
+#    PATCHES vs2015-impl-c99.patch
 )
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt DESTINATION ${SOURCE_PATH})
