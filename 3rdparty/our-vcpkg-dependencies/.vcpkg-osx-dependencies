@@ -4,5 +4,5 @@ yajl
 hunspell
 boost-graph
 pugixml
---overlay-ports=../lua
+--overlay-ports=../our-vcpkg-dependencies/lua
 lua
