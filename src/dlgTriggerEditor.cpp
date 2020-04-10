@@ -262,7 +262,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
     connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_close_source_find);
 
-    QAction* openSourceFindAction = new QAction(this);
+    auto openSourceFindAction = new QAction(this);
     openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
     mpSourceEditorArea->addAction(openSourceFindAction);
