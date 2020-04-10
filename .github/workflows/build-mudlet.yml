@@ -53,12 +53,17 @@ jobs:
         # The key will be different each time a different version of vcpkg is used, or different ports are installed.
         key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
+    - name: Install pkg-config
+      run: |
+        brew install pkg-config
+
     - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v1
       with:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v1
