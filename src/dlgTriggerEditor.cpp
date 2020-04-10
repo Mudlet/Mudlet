@@ -7133,9 +7133,13 @@ void dlgTriggerEditor::slot_move_source_find()
     int x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
     int y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
     if (mpSourceEditorEdbee->verticalScrollBar()->isVisible())
+    {
         x = x - mpSourceEditorEdbee->verticalScrollBar()->width();
+    }
     if (mpSourceEditorEdbee->horizontalScrollBar()->isVisible())
+    {
         y = y - mpSourceEditorEdbee->horizontalScrollBar()->height();
+    }
     mpSourceEditorFindArea->move(x, y);
     mpSourceEditorFindArea->update();
 }
