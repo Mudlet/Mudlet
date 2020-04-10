@@ -39,6 +39,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "dlgSourceEditorArea.h"
+#include "dlgSourceEditorFindArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
@@ -64,6 +65,7 @@
 #include "edbee/texteditorcontroller.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/components/texteditorcomponent.h"
+#include "edbee/views/textselection.h"
 
 #include "edbee/models/textsearcher.h" // These three are required for search highlighting
 #include "edbee/views/texttheme.h"
@@ -72,6 +74,7 @@
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
 class dlgSourceEditorArea;
+class dlgSourceEditorFindArea;
 class dlgTriggersMainArea;
 class dlgActionMainArea;
 class dlgSearchArea;
@@ -174,6 +177,7 @@ public:
     void enterEvent(QEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
+    void resizeEvent(QResizeEvent *event) override;
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&);
@@ -253,6 +257,12 @@ public slots:
     void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
     void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
+    void slot_open_source_find();
+    void slot_close_source_find();
+    void slot_move_source_find();
+    void slot_source_find_previous();
+    void slot_source_find_next();
+    void slot_source_find_text_changed();
     void slot_save_edit();
     void slot_copy_xml();
     void slot_paste_xml();
@@ -439,6 +449,7 @@ private:
     dlgTimersMainArea* mpTimersMainArea;
     dlgSystemMessageArea* mpSystemMessageArea;
     dlgSourceEditorArea* mpSourceEditorArea;
+    dlgSourceEditorFindArea* mpSourceEditorFindArea;
     dlgAliasMainArea* mpAliasMainArea;
     dlgActionMainArea* mpActionsMainArea;
     dlgScriptsMainArea* mpScriptsMainArea;
