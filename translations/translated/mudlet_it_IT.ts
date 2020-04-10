@@ -7720,7 +7720,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished"/>
+      <translation>profilo</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
@@ -7731,7 +7731,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="171"/>
       <source>Display version and exit</source>
-      <translation type="unfinished"/>
+      <translation>Mostra versione e esci</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="184"/>
@@ -7744,7 +7744,15 @@ dalla GUI)</translation>
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Sintassi: %1 [OPTION...]
+       -h, --help visualizza questo messaggio.
+       -v, --version visualizza le informazioni sulla versione.
+       -q, --quiet nessun splash screen all'avvio.
+       --profile=&lt;profile&gt;  profilo addizionale da aprire
+
+Ci sono altre opzioni che derivano dalle librerie Qt che sono
+meno utili per un uso normale di questa applicazione:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="241"/>
