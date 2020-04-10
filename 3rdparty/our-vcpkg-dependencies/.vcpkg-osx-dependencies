@@ -2,7 +2,7 @@
 x64-osx
 yajl
 hunspell
-boost-graph
 pugixml
 --overlay-ports=../our-vcpkg-dependencies/lua
 lua[core]
+boost-graph
