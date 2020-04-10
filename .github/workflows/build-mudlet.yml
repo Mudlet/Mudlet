@@ -61,7 +61,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v0
+      uses: lukka/run-cmake@v1
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
