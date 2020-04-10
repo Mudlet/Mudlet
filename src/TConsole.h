@@ -27,6 +27,9 @@
 
 #include "TBuffer.h"
 
+
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QDataStream>
 #include <QFile>

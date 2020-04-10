@@ -123,7 +123,7 @@ public slots:
     void slot_save_and_exit();
 
     void hideActionLabel();
-    void slot_setEncoding(const QString&);
+    void slot_setEncoding(const int);
 
     void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);

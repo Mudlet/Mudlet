@@ -14349,24 +14349,22 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString newEncoding;
+    QByteArray newEncoding;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        newEncoding = QString::fromUtf8(lua_tostring(L, 1));
     }
-
+    newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
     if (results.first) {
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, results.second.toLatin1().constData());
-        return 2;
     }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, results.second.toLatin1().constData());
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncoding
@@ -14374,11 +14372,11 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString encoding = host.mTelnet.getEncoding();
+    QByteArray encoding = host.mTelnet.getEncoding();
     if (encoding.isEmpty()) {
-        encoding = QLatin1String("ASCII");
+        encoding = "ASCII";
     }
-    lua_pushstring(L, encoding.toLatin1().constData());
+    lua_pushstring(L, encoding.constData());
     return 1;
 }
 
@@ -14393,7 +14391,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     lua_settable(L, -3);
     for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i + 2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).constData());
         lua_settable(L, -3);
     }
     return 1;
