@@ -53,9 +53,10 @@ jobs:
         # The key will be different each time a different version of vcpkg is used, or different ports are installed.
         key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
-    - name: Install pkg-config
+    - name: Install homebrew dependencies
       run: |
-        brew install pkg-config
+        # these aren't available or don't work well in vcpkg
+        brew install pkg-config libzip libzzip
 
     - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v1
