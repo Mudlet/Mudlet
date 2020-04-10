@@ -59,6 +59,12 @@ jobs:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        
+    - name: Show Lua build output
+      if: always()
+      run: |
+         cat /Users/runner/runners/2.168.0/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/lua/config-x64-osx-dbg-out.log
+         cat /Users/runner/runners/2.168.0/work/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/lua/config-x64-osx-dbg-err.log
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v1
