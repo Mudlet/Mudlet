@@ -7714,23 +7714,23 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>Profile to open automatically</source>
-      <translation type="unfinished"/>
+      <translation>Profil, das automatisch geöffnet werden soll</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
       <location filename="../src/main.cpp" line="174"/>
       <source>Display help and exit</source>
-      <translation type="unfinished"/>
+      <translation>Hilfe anzeigen und beenden</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="171"/>
       <source>Display version and exit</source>
-      <translation type="unfinished"/>
+      <translation>Version anzeigen und beenden</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="184"/>
@@ -7743,7 +7743,15 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Verwendung: %1 [OPTION...]
+       -h, --help           zeigt diese Meldung.
+       -v, --version        zeigt Versionsinformationen an.
+       -q, --quiet          kein Splashscreen beim Start.
+       --profile=&lt;Profil>  Profil, das zusätzlich geöffnet werden soll.
+
+Es gibt andere Optionen, die aus den Qt-Bibliotheken übernommen wurden, die 
+wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung sind:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="241"/>
@@ -7765,7 +7773,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="249"/>
       <source>Copyright © 2008-2020  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2020 Mudlet-Entwickler
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
