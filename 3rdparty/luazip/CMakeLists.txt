@@ -47,7 +47,7 @@ add_library(luazip INTERFACE)
 target_link_libraries(luazip INTERFACE ${LUA_LIBRARIES})
 
 if(PC_ZZIPLIB_FOUND)
-target_link_libraries(luazip INTERFACE ${ZZIPLIB_LIBRARY})
+  target_link_libraries(luazip INTERFACE ${PC_ZZIPLIB_LIBRARIES})
 else()
   target_link_libraries(luazip INTERFACE ${ZZIPLIB_LIBRARIES})
 endif()
