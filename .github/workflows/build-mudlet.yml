@@ -72,14 +72,14 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
 
-    - name: Build Mudlet
-      uses: lukka/run-cmake@v1
-      with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
-        buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '--debug-output --verbose -DCMAKE_VERBOSE_MAKEFILE=ON -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+    # - name: Build Mudlet
+    #   uses: lukka/run-cmake@v1
+    #   with:
+    #     cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+    #     cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+    #     useVcpkgToolchainFile: true
+    #     buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
+    #     cmakeAppendedArgs: '--debug-output --verbose -DCMAKE_VERBOSE_MAKEFILE=ON -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
 
     - name: debug ninja files
       if: always()
