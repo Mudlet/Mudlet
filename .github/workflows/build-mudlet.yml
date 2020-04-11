@@ -61,7 +61,6 @@ jobs:
     - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v1
       with:
-       # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
@@ -77,4 +76,8 @@ jobs:
 
     - name: debug ninja files
       if: always()
-      run: find .
+      run: |
+        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/build.ninja
+        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/rules.ninja
+        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/CMakeCache.txt
+        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/.ninja_log
