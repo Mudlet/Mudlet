@@ -34,18 +34,21 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.3)
 if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS
+                                           # X supports 10.11 and up, but some
+                                           # tools are not provided as bottles
+                                           # for that anymore.
 endif()
 
 project(mudlet)
 
 if(CMAKE_CONFIGURATION_TYPES)
-  add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
-                    --force-new-ctest-process --output-on-failure
-                    --build-config "$<CONFIGURATION>")
+  add_custom_target(
+    check COMMAND ${CMAKE_CTEST_COMMAND} --force-new-ctest-process
+                  --output-on-failure --build-config "$<CONFIGURATION>")
 else()
   add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
-                    --force-new-ctest-process --output-on-failure)
+                                  --force-new-ctest-process --output-on-failure)
 endif()
 
 enable_testing()
@@ -66,21 +69,21 @@ else()
   set(APP_TARGET mudlet)
 endif()
 
-# APP_BUILD should only be empty/null in official "release" builds,
-# developers may like to set the MUDLET_VERSION_BUILD environment variable to
-# their user and branch names to make it easier to tell different builds apart!
+# APP_BUILD should only be empty/null in official "release" builds, developers
+# may like to set the MUDLET_VERSION_BUILD environment variable to their user
+# and branch names to make it easier to tell different builds apart!
 #
 # Changing this pair of values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It will not necessarily cause
-# those files to be automatically rebuilt so you may need to 'touch' those files if
-# the variables are changed and you are not doing a full, clean, rebuild!
-# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
-# IMPORTANT:
-# To insure consistency please ensure the SAME of the first two values are also
-# assigned to the "VERSION" and "BUILD" variables in the native qmake project
-# file, which is NOW called: ./src/mudlet.pro
+# those files to be automatically rebuilt so you may need to 'touch' those files
+# if the variables are changed and you are not doing a full, clean, rebuild! Use
+# APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+# IMPORTANT: To insure consistency please ensure the SAME of the first two
+# values are also assigned to the "VERSION" and "BUILD" variables in the native
+# qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.6.2)
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
+                                         STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   set(APP_BUILD "-dev")
@@ -91,69 +94,55 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 include(IncludeOptionalModule)
 
 include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_UPDATER
-  OPTION_VARIABLE USE_UPDATER
-  READABLE_NAME "updater"
+  ENVIRONMENT_VARIABLE
+  WITH_UPDATER
+  OPTION_VARIABLE
+  USE_UPDATER
+  READABLE_NAME
+  "updater"
   SUPPORTED_SYSTEMS
-    "Linux"
-    "Windows"
-    "Darwin"
-)
+  "Linux"
+  "Windows"
+  "Darwin")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
+                        USE_FONTS READABLE_NAME "fonts")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
+                        USE_3DMAPPER READABLE_NAME "3D mapper")
 include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_FONTS
-  OPTION_VARIABLE USE_FONTS
-  READABLE_NAME "fonts"
-)
-include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_3DMAPPER
-  OPTION_VARIABLE USE_3DMAPPER
-  READABLE_NAME "3D mapper"
-)
-include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
-  OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
-  READABLE_NAME "build-type splash screen"
-)
+  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN OPTION_VARIABLE
+  USE_VARIABLE_SPLASH_SCREEN READABLE_NAME "build-type splash screen")
 
 include(InitGitSubmodule)
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
-  SUBMODULE_PATH "3rdparty/edbee-lib"
-  READABLE_NAME "edbee-lib editor widget"
-)
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
-  SUBMODULE_PATH "3rdparty/qtkeychain"
-  READABLE_NAME "QtKeychain"
-)
+  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/qtkeychain" READABLE_NAME "QtKeychain")
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec"
-  SUBMODULE_PATH "3rdparty/lcf"
-  READABLE_NAME "lua code formatter source code"
-)
+  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
+  READABLE_NAME "lua code formatter source code")
 
 if(USE_UPDATER)
-  git_submodule_init(
-    CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt"
-    SUBMODULE_PATH "3rdparty/dblsqd"
-    READABLE_NAME "DBLSQD updater"
- )
+  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
+                     "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
 endif()
 
 if(APPLE)
   if(USE_UPDATER)
     git_submodule_init(
-      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt"
-      SUBMODULE_PATH "3rdparty/sparkle-glue"
-      READABLE_NAME "Sparkle glue for updater"
-    )
+      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
+      "3rdparty/sparkle-glue" READABLE_NAME "Sparkle glue for updater")
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
-      execute_process(TIMEOUT 30
+      message(
+        STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it..."
+      )
+      execute_process(
+        TIMEOUT 30
         WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
         COMMAND pod install)
     endif()
