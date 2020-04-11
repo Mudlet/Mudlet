@@ -55,7 +55,7 @@ jobs:
 
     - name: Install homebrew dependencies
       run: |
-        # these aren't available or don't work well in vcpkg
+        # these aren't available or don't seem to work in vcpkg
         brew install pkg-config libzip libzzip
 
     - name: Install dependencies with vcpkg
