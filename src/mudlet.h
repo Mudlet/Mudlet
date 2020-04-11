@@ -715,7 +715,7 @@ private:
 
     bool mStorePasswordsSecurely {true};
     // Stores the translated names for the Encodings for the static and thus
-    // const TBuffer::csm
+    // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
 };
 

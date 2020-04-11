@@ -18,7 +18,7 @@
  ***************************************************************************/
 
 /***************************************************************************
- *   This class is entirely concerned with providing codecs on             *
+ *   This class is entirely concerned with providing some codecs on        *
  *   platforms that do not come with a Qt provided QTextCodec for the      *
  *   encodings - which seems to be the Windows AppVeyor CI at this time.   *
  ***************************************************************************/
@@ -358,7 +358,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
         }
     }
 
-    for( ; i < length; ++i) {
+    for ( ; i < length; ++i) {
         if (Q_UNLIKELY(in[i].isHighSurrogate())) {
             // No character in the CP437 encoding is beyond the BMP so this is
             // always going to be an invalid character
@@ -462,7 +462,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
         }
     }
 
-    for( ; i < length; ++i) {
+    for ( ; i < length; ++i) {
         if (Q_UNLIKELY(in[i].isHighSurrogate())) {
             // No character in the CP437 encoding is beyond the BMP so this is
             // always going to be an invalid character
@@ -566,7 +566,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
         }
     }
 
-    for( ; i < length; ++i) {
+    for ( ; i < length; ++i) {
         if (Q_UNLIKELY(in[i].isHighSurrogate())) {
             // No character in the CP437 encoding is beyond the BMP so this is
             // always going to be an invalid character
@@ -670,7 +670,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
         }
     }
 
-    for( ; i < length; ++i) {
+    for ( ; i < length; ++i) {
         if (Q_UNLIKELY(in[i].isHighSurrogate())) {
             // No character in the CP437 encoding is beyond the BMP so this is
             // always going to be an invalid character
