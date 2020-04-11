@@ -73,4 +73,4 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+        cmakeAppendedArgs: '--debug-output -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
