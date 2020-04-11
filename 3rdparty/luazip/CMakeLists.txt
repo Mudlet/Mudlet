@@ -47,10 +47,11 @@ add_library(luazip INTERFACE)
 target_link_libraries(luazip INTERFACE ${LUA_LIBRARIES})
 
 if(PC_ZZIPLIB_FOUND)
-  target_link_libraries(luazip INTERFACE ${PC_ZZIPLIB_LIBRARIES})
+target_link_libraries(luazip INTERFACE ${ZZIPLIB_LIBRARY})
 else()
   target_link_libraries(luazip INTERFACE ${ZZIPLIB_LIBRARIES})
 endif()
+link_directories(${PC_ZZIPLIB_LIBDIR})
 
 target_include_directories(luazip INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${LUA_INCLUDE_DIR})
 
