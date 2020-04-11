@@ -74,3 +74,7 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
         cmakeAppendedArgs: '--debug-output --verbose -DCMAKE_VERBOSE_MAKEFILE=ON -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+
+    - name: debug ninja files
+      if: always()
+      run: find .
