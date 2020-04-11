@@ -53,13 +53,20 @@ jobs:
         # The key will be different each time a different version of vcpkg is used, or different ports are installed.
         key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
+    - name: Restore overlay vcpkg port cache
+      uses: actions/cache@v1
+      with:
+        path: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/
+        # Keep same cache key as vcpkg above
+        key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
+
     - name: Install homebrew dependencies
       run: |
-        # these aren't available or don't seem to work in vcpkg
+        # these aren't available or don't work well in vcpkg
         brew install pkg-config libzip libzzip
 
     - name: Install dependencies with vcpkg
-      uses: lukka/run-vcpkg@auto_cache
+      uses: lukka/run-vcpkg@v1
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
