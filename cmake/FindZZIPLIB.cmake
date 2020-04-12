@@ -1,72 +1,126 @@
+# Locate ZZIPLIB library
+# This module exports the following targets
 #
-#  cmake/FindZZIPLIB.cmake
+# ZZIPLIB::ZZIPLIB
 #
-#  Copyright 2016 Dale Whinham
-#
-#  This file is part of MilkyTracker.
-#
-#  MilkyTracker is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  MilkyTracker is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with MilkyTracker.  If not, see <http://www.gnu.org/licenses/>.
-#
+# This module defines
+#  ZZIPLIB_FOUND, if false, do not try to link to ZZIPLIB
+#  ZZIPLIB_LIBRARY
+#  ZZIPLIB_INCLUDE_DIR, where to find *.h
 
-# - Try to find zziplib
-# Once done this will define
-#  ZZIPLIB_FOUND - System has zziplib
-#  ZZIPLIB_INCLUDE_DIRS - The zziplib include directories
-#  ZZIPLIB_LIBRARIES - The libraries needed to use zziplib
-#  ZZIPLIB_DEFINITIONS - Compiler switches required for using zziplib
-#  ZZIPLIB_VERSION_STRING - The version of zziplib
-
-find_package(PkgConfig QUIET)
-pkg_check_modules(PC_ZZIPLIB QUIET zziplib)
-set(ZZIPLIB_DEFINITIONS ${PC_ZZIPLIB_CFLAGS_OTHER})
-
-find_path(
-    ZZIPLIB_INCLUDE_DIR zzip/zzip.h
-    HINTS ${PC_ZZIPLIB_INCLUDEDIR} ${PC_ZZIPLIB_INCLUDE_DIRS}
-)
-
-find_library(
-    ZZIPLIB_LIBRARY NAMES zzip
-    HINTS ${PC_ZZIPLIB_LIBDIR} ${PC_ZZIPLIB_LIBRARY_DIRS}
-)
-
-# Get version from pkg-config if possible, else scrape it from the header
-if(PC_ZZIPLIB_VERSION)
-    set(ZZIPLIB_VERSION_STRING ${PC_ZZIPLIB_VERSION})
-elseif(ZZIPLIB_INCLUDE_DIR AND EXISTS "${ZZIPLIB_INCLUDE_DIR}/_config.h")
-    file(
-        STRINGS "${ZZIPLIB_INCLUDE_DIR}/_config.h" ZZIPLIB_VERSION_LINE
-        REGEX "^#define ZZIP_VERSION.*$"
-    )
-    string(
-        REGEX REPLACE "^.*ZZIP_VERSION.*\"([0-9.]+)\".*$" "\\1"
-        ZZIPLIB_VERSION_STRING ${ZZIPLIB_VERSION_LINE}
-    )
-    unset(ZZIPLIB_VERSION_LINE)
+# Break each step into a separate command so any status message is output straight away
+# The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
+# we need the path to an interal header zipconf.g that it calls for using '<''>'s
+# i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
+# and using pkg-config is the recommended way to get the details.
+# Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
+find_package(PkgConfig)
+if(NOT(PKG_CONFIG_FOUND))
+  message(WARNING "Unable to use pkg_config - will possibly fail to find/use Zip library...")
 endif()
 
-include(FindPackageHandleStandardArgs)
+if(PKG_CONFIG_FOUND)
+  # Examining Homebrew (for MacOs) for libzzip:
+  # https://bintray.com/homebrew/bottles/libzzip found that they use pkg-config
+  # So use that to try and find what we want
+  PKG_SEARCH_MODULE(PC_ZZIPLIB zziplib libzzip zzip)
+endif()
 
-find_package_handle_standard_args(
-    ZZIPLIB
-    REQUIRED_VARS ZZIPLIB_LIBRARY ZZIPLIB_INCLUDE_DIR
-    VERSION_VAR ZZIPLIB_VERSION_STRING
+FIND_PATH(ZZIPLIB_INCLUDE_DIR zziplib.h
+  HINTS
+    ${ZZIPLIB_INCLUDE_DIR}
+    $ENV{ZZIPLIB_INCLUDE_DIR}
+    ${PC_ZZIPLIB_INCLUDE_DIRS}
+  PATH_SUFFIXES
+    include
+  PATHS
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw # Fink
+    /opt/local # DarwinPorts
+    /opt/csw # Blastwave
+    /opt
 )
 
-mark_as_advanced(ZZIPLIB_INCLUDE_DIR ZZIPLIB_LIBRARY)
+FIND_LIBRARY(ZZIPLIB_LIBRARY
+  NAMES
+    zziplib
+    libzzip
+    zzip
+  HINTS
+    ${ZZIPLIB_DIR}
+    $ENV{ZZIPLIB_DIR}
+    ${PC_ZZIPLIB_LIBRARY_DIRS}
+    ${PC_ZZIPLIB_LIBRARY_DIR}
+  PATH_SUFFIXES
+    lib64
+    lib
+  PATHS
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
+)
 
-if(ZZIPLIB_FOUND)
-    set(ZZIPLIB_LIBRARIES ${ZZIPLIB_LIBRARY})
-    set(ZZIPLIB_INCLUDE_DIRS ${ZZIPLIB_INCLUDE_DIR})
+if(PC_ZZIPLIB_FOUND)
+  if(PC_ZZIPLIB_zziplib_FOUND)
+    SET(ZZIPLIB_VERSION ${PC_ZZIPLIB_zziplib_VERSION})
+  elseif(PC_ZZIPLIB_libzzip_FOUND)
+    SET(ZZIPLIB_VERSION ${PC_ZZIPLIB_libzzip_VERSION})
+  elseif(PC_ZZIPLIB_zzip_FOUND)
+    SET(ZZIPLIB_VERSION ${PC_ZZIPLIB_zzip_VERSION})
+  else()
+    SET(ZZIPLIB_VERSION ${PC_ZZIPLIB_VERSION})
+  endif()
 endif()
+
+
+find_package(ZLIB REQUIRED)
+
+INCLUDE(FindPackageHandleStandardArgs)
+# handle the QUIETLY and REQUIRED arguments and set HUNSPELL_FOUND to TRUE if
+# all listed variables are TRUE
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZZIPLIB
+  REQUIRED_VARS
+    ZZIPLIB_LIBRARY
+    ZZIPLIB_INCLUDE_DIR
+  VERSION_VAR
+    ZZIPLIB_VERSION
+)
+
+MARK_AS_ADVANCED(ZZIPLIB_INCLUDE_DIR ZZIPLIB_LIBRARY)
+
+GET_FILENAME_COMPONENT(ZZIPLIB_FILENAME ${ZZIPLIB_LIBRARY} NAME_WE)
+STRING(FIND ${ZZIPLIB_FILENAME} .a ZZIPLIB_STATIC)
+
+IF(ZZIPLIB_FOUND AND NOT TARGET ZZIPLIB::ZZIPLIB)
+  IF(ZZIPLIB_STATIC EQUAL -1)
+    ADD_LIBRARY(ZZIPLIB::ZZIPLIB SHARED IMPORTED)
+    SET_TARGET_PROPERTIES(ZZIPLIB::ZZIPLIB PROPERTIES
+      IMPORTED_LOCATION
+        "${ZZIPLIB_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${ZZIPLIB_INCLUDE_DIR}"
+      INTERFACE_LINK_LIBRARIES
+        ZLIB::ZLIB
+    )
+  ELSE()
+    ADD_LIBRARY(ZZIPLIB::ZZIPLIB STATIC IMPORTED)
+    SET_TARGET_PROPERTIES(ZZIPLIB::ZZIPLIB PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS
+        ZZIPLIB_STATIC
+      IMPORTED_LOCATION
+        "${ZZIPLIB_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${ZZIPLIB_INCLUDE_DIR}"
+      INTERFACE_LINK_LIBRARIES
+        ZLIB::ZLIB
+    )
+  ENDIF()
+ENDIF()
