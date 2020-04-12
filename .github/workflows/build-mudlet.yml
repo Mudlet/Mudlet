@@ -63,7 +63,7 @@ jobs:
     - name: Install homebrew dependencies
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzip
+        brew install pkg-config
 
     - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v1

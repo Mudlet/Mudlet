@@ -7,3 +7,4 @@ pugixml
 lua[core]
 boost-graph
 zziplib
+libzip
