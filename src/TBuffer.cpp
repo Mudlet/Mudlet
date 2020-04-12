@@ -432,9 +432,6 @@ const QMap<QByteArray, QVector<QChar>> TBuffer::csmEncodingTable = {
         QChar(0x03BE), QChar(0x03BF), QChar(0x03C0), QChar(0x03C1), QChar(0x03C3), QChar(0x03C2), QChar(0x03C4), QChar(0x0384),  // E8-EF
         QChar(0x00AD), QChar(0x00B1), QChar(0x03C5), QChar(0x03C6), QChar(0x03C7), QChar(0x00A7), QChar(0x03C8), QChar(0x0385),  // F0=F7
         QChar(0x00B0), QChar(0x00A8), QChar(0x03C9), QChar(0x03CB), QChar(0x03B0), QChar(0x03CE), QChar(0x25A0), QChar(0x00A0)}},// F8-FF
-     // There was a mis-titled CP874 table here but it was faulty as the DB to DE character are each encoded as TWO QChars
-     // of U+0E49 to U+0E4C respectively followed by U+FE00 - and this QVector based system cannot handle them
-     // however CP1161 a.k.a. Windows-874 is the same as the ISO 8859-11 with the Euro at 80 and 8 other changes at 85 and 91 to 97
     {"CP1161",
         //      x0/x8          x1/x9          x2/xA          x3/xB          x4/xC          x5/xD          x6/xE          x7/xF
        {QChar(0x20AC), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0xFFFD), QChar(0x2026), QChar(0xFFFD), QChar(0xFFFD),  // 80-87
@@ -1081,9 +1078,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // "BIG5" or "BIG5-HKSCS" (which are not in the table) encodingLookupTable
     // will be empty otherwise the 128 values in the returned table will be used
     // for all the text data that gets through the following ANSI code and other
-    // out-of-band data processing - doing this mean that a (fast) lookup in the
-    // QVector can be done as opposed to a a repeated switch(...) and branch to
-    // one of a series of decoding methods each with another up to 128 value
+    // out-of-band data processing - doing this means that a (fast) lookup in
+    // the QVector can be done as opposed to a repeated switch(...) and branch
+    // to one of a series of decoding methods each with another up to 128 value
     // switch()
 
     size_t localBufferLength = localBuffer.length();

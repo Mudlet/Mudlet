@@ -229,13 +229,21 @@ cTelnet::~cTelnet()
 // the (void) TBuffer::encodingChanged(...) method and used in
 // the (bool) TBuffer::processXXXSequence(...) methods {where XXX is "UTF8",
 // "Big5" or "GB").
-void cTelnet::encodingChanged(const QByteArray& encoding)
+// We have a few substute TTextCodecs that are derived from the QTextCodec
+// class and they all have a name the same as the ones we hoped that Qt would
+// provide except they have a "M_" prefix. We, however hide that detail from the
+// user so the value supplied as an argument MAY need to be matched against
+// the prefixed name or not:
+void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 {
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
+    // If there is a match in mAcceptableEncodings with an "M_" prefix then we
+    // need to add on that prefix:
+    QByteArray encoding = mAcceptableEncodings.contains("M_" + requestedEncoding) ? "M_" + requestedEncoding : requestedEncoding;
     if (mEncoding != encoding) {
         mEncoding = encoding;
         mEncodingWarningIssued = false;
@@ -302,7 +310,9 @@ QString cTelnet::errorString()
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-// saveValue: if true, record this setting, otherwise it is ephemereal for this session
+// saveValue: if false do not bother to save the setting as a profile setting
+// to the filesystem (because we have just read it from there!) otherwise, and
+// by default, do save it:
 QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const bool saveValue)
 {
     QByteArray reportedEncoding = newEncoding;
@@ -318,13 +328,32 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
-    } else if (!mAcceptableEncodings.contains(newEncoding)) {
-        // Not in list - so reject it
+    } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
+        // Not in list (even with a "M_" prefix that indicates the relevant
+        // QTextCodec is actually one of our own TTextCodecs) - so reject it
+        // Since we want to hide the implimentation detail that some of the
+        // encoding names could have a "M_"  prefix we will need to preprocess
+        // the list of encodings.
+        // Since the mAcceptableEncodings list is unchanging once it has been
+        // populated we only need to do this once and can save the results for
+        // reuse - in hindsight this is undoing part of:
+        // TBuffer::getEncodingNames() !
+        static QByteArrayList fixedUpEncodings;
+        if (fixedUpEncodings.isEmpty()) {
+            fixedUpEncodings = mAcceptableEncodings;
+            QMutableByteArrayListIterator itEncoding(fixedUpEncodings);
+            while (itEncoding.hasNext()) {
+                auto checkEncoding{itEncoding.next()};
+                if (checkEncoding.left(2) == "M_") {
+                    itEncoding.setValue(checkEncoding.mid(2));
+                }
+            }
+        }
         return qMakePair(false,
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                                 % QLatin1String(mAcceptableEncodings.join(R"(", ")"))
+                                 % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
-    } else if (mEncoding != newEncoding) {
+    } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
         if (saveValue) {
             mpHost->writeProfileData(QStringLiteral("encoding"), QLatin1String(mEncoding));

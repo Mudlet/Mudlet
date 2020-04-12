@@ -135,9 +135,7 @@ class TBuffer
 {
     // private - a map of computer-friendly encoding names as keys,
     // value is the encoding data.
-    // Formerly a friendly name was stored here but that was subjected to
-    // translation so has migrated to the non-const table:
-    // mEncodingNameTable in the mudlet singleton:
+    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
     static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
