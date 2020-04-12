@@ -98,6 +98,142 @@ describe("Tests TableUtils.lua functions", function()
     end)
   end)
 
+  describe("table.collect(tbl, func)", function()
+    it("should collect all key-value pairs from tbl for which func(key,value) returns true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(key, value)
+        if string.match(value, "%a") then return true end
+      end
+      local expected = {
+        this = "that",
+        the = "other"
+      }
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should return an empty table if no items in tbl cause func(key,value) to return true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(key, value)
+        if string.match(value, "%d") then return true end
+      end
+      local expected = {}
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should have another test because the existing ones seem insufficient", function()
+      local tbl = {
+        hp = 99,
+        mana = 30,
+        endurance = 73,
+        willpower = 13
+      }
+      local func = function(key,value)
+        if value < 50 then return true end
+      end
+      local expected = {
+        mana = 30,
+        willpower = 13
+      }
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should throw an error if you give a non-table as the first argument", function()
+      local tbl = "not a table"
+      local func = function() end
+      local errfn = function()
+        table.collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.collect: bad argument #1 type (table to collect items from as table expected, got string)") 
+    end)
+
+    it("should throw an error if you give a non-function as the second argument", function()
+      local tbl = {}
+      local func = "function() end"
+      local errfn = function()
+        table.collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+    end)
+  end)
+
+  describe("table.n_collect(tbl, func)", function()
+    it("should return a table of unique values for which func(value) returns true", function()
+      local tbl = {
+        this = "that",
+        the = "other",
+        three = 3,
+      }
+      local func = function(value)
+        if type(value) == "number" then return true end
+      end
+      local expected = { 3 }
+      local actual = table.n_collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+    
+    it("should return an empty table if no values return true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(value)
+        if type(value) == "number" then return true end
+      end
+      local expected = {}
+      local actual = table.n_collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should work on lists as well as maps", function()
+      local tbl = {
+        10,
+        20,
+        25,
+        53,
+        1829,
+        1800
+      }
+      local func = function(value)
+        if value % 10 == 0 then return true end
+      end
+      local expected = {
+        10,
+        20,
+        1800
+      }
+      local actual = table.n_collect(tbl, func)
+      table.sort(actual)
+      assert.are.same(expected,actual)
+    end)
+
+    it("should throw an error if you give a non-table as the first argument", function()
+      local tbl = "not a table"
+      local func = function() end
+      local errfn = function()
+        table.n_collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.n_collect: bad argument #1 type (table to collect items from as table expected, got string)") 
+    end)
+
+    it("should throw an error if you give a non-function as the second argument", function()
+      local tbl = {}
+      local func = "function() end"
+      local errfn = function()
+        table.n_collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+    end)
+  end)
+
   describe("table.matches(tbl, pattern_1,[pattern_2+], [check_keys])", function()
     it("should return an empty table of no values math", function()
       local tbl = { 
@@ -175,11 +311,11 @@ describe("Tests TableUtils.lua functions", function()
       local errfn = function()
         table.matches(tbl, not_string)
       end
-      assert.has_error(errfn, "table.matches: bad argument #2 type (pattern to check items in table against as string expected, got number)")
+      assert.has_error(errfn, "table.matches: bad argument #2 type (pattern to check as string expected, got number)")
       errfn = function()
         table.matches(tbl, "a string", not_string)
       end
-      assert.has_error(errfn, "table.matches: bad argument #3 type (pattern to check items in table against as string expected, got number)")
+      assert.has_error(errfn, "table.matches: bad argument #3 type (pattern to check as string expected, got number)")
     end)
   end)
 
@@ -232,11 +368,11 @@ describe("Tests TableUtils.lua functions", function()
       local errfn = function()
         table.n_matches(tbl, not_string)
       end
-      assert.has_error(errfn, "table.n_matches: bad argument #2 type (pattern to check items in table against as string expected, got number)")
+      assert.has_error(errfn, "table.n_matches: bad argument #2 type (pattern to check as string expected, got number)")
       errfn = function()
         table.n_matches(tbl, "a string", not_string)
       end
-      assert.has_error(errfn, "table.n_matches: bad argument #3 type (pattern to check items in table against as string expected, got number)")
+      assert.has_error(errfn, "table.n_matches: bad argument #3 type (pattern to check as string expected, got number)")
     end)
   end)
 
