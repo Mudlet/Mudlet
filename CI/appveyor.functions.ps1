@@ -40,7 +40,7 @@ function SetMingwBaseDir([string] $logFile) {
     $tmp = $Env:QT_BASE_DIR.Split("\\")
     $tmp[-2] = "Tools"
     $tmp[-1] = $tmp[-1] -replace "_32", "*"
-    $tmp = $tmp -join "\" | Resolve-Path
+    $tmp = $tmp -join "\" | Resolve-Path | ForEach-Object { $_.ToString() } | Where-Object { $_.EndsWith("_32") }
     if($tmp -is [array]){
       Write-Output "Got an array back: $tmp" | Tee-Object -File "$logFile" -Append
       $tmp = $tmp[-1]
