@@ -65,9 +65,6 @@ jobs:
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzip libzzip
 
-    - name: debug zziplib location
-      run: find /usr/local/Cellar/libzzip/0.13.69
-
     - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v1
       with:
@@ -82,11 +79,3 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
         cmakeAppendedArgs: '--verbose -DCMAKE_VERBOSE_MAKEFILE=ON -G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
-
-    - name: debug ninja files
-      if: always()
-      run: |
-        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/build.ninja
-        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/rules.ninja
-        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/CMakeCache.txt
-        cat -n ./3rdparty/vcpkg/toolsrc/build.rel/.ninja_log
