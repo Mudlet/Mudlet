@@ -526,7 +526,7 @@ void cTelnet::handle_socket_signal_disconnected()
 
 #if !defined(QT_NO_SSL)
     if (sslerr) {
-        mudlet::self()->show_options_dialog(QStringLiteral("Security"));
+        mudlet::self()->show_options_dialog(QStringLiteral("tab_connection"));
     }
 #endif
 
