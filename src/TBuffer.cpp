@@ -5196,13 +5196,6 @@ const QList<QByteArray> TBuffer::getEncodingNames()
         // First call, list is empty - so work them out, just this once:
         results = QByteArrayList{csmEncodingTable.keys()};
 
-        // Also to get our own created TTextCodex_XXXX into the system we
-        // must instantiate them once:
-        auto* pTTextCodec_437 = new TTextCodec_437();
-        Q_UNUSED(pTTextCodec_437);
-        // Now that it has been instantiated, the system knows about it - indeed
-        // it takes possession of it and we must not delete it ourselves!
-
         QMutableByteArrayListIterator itEncoding(results);
         while (itEncoding.hasNext()) {
             QByteArray encoding{itEncoding.next()};
@@ -5211,8 +5204,12 @@ const QList<QByteArray> TBuffer::getEncodingNames()
                 // We do not have that encoder available after all
                 itEncoding.remove();
                 if (encoding == "CP437") {
-                    // Okay insert our replacement
+                    // Okay to insert our replacement TTextCodex_XXXX into the
+                    // system we must instantiate them once:
                     auto* pTTextCodec_437 = new TTextCodec_437();
+                    // Now that it has been instantiated, the system knows about
+                    // it - indeed it takes possession of it and we must NOT
+                    // delete it ourselves!
                     if (pTTextCodec_437) {
                         itEncoding.insert(pTTextCodec_437->name());
                     }
