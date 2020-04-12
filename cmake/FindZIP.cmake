@@ -4,126 +4,93 @@
 #  ZIP_LIBRARIES
 #  ZIP_INCLUDE_DIR, where to find zip*.h
 
-FIND_PACKAGE(PkgConfig)
+find_package(PkgConfig)
 
-PKG_SEARCH_MODULE(PC_ZIP zip libzip)
+pkg_search_module(PC_ZIP zip libzip)
 
-FIND_PATH(ZIP_INCLUDE_DIR zip.h
-  HINTS
-    ${ZIP_DIR}
-    $ENV{ZIP_DIR}
-    ${PC_ZIP_INCLUDE_DIRS}
-  PATH_SUFFIXES
-    include
-  PATHS
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local
-    /usr
-    /sw # Fink
-    /opt/local # DarwinPorts
-    /opt/csw # Blastwave
-    /opt
-)
+find_path(
+  ZIP_INCLUDE_DIR zip.h
+  HINTS ${ZIP_DIR} $ENV{ZIP_DIR} ${PC_ZIP_INCLUDE_DIRS}
+  PATH_SUFFIXES include
+  PATHS ~/Library/Frameworks
+        /Library/Frameworks
+        /usr/local
+        /usr
+        /sw # Fink
+        /opt/local # DarwinPorts
+        /opt/csw # Blastwave
+        /opt)
 
-FIND_LIBRARY(ZIP_LIBRARY_RELEASE
-  NAMES
-    zip
-    zip_s
-  HINTS
-    ${ZIP_DIR}
-    $ENV{ZIP_DIR}
-    ${PC_ZIP_LIBRARY_DIRS}
-    ${PC_ZIP_LIBRARY_DIR}
-  PATH_SUFFIXES
-    lib64
-    lib
-  PATHS
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local
-    /usr
-    /sw
-    /opt/local
-    /opt/csw
-    /opt
-)
+find_library(
+  ZIP_LIBRARY_RELEASE
+  NAMES zip zip_s
+  HINTS ${ZIP_DIR} $ENV{ZIP_DIR} ${PC_ZIP_LIBRARY_DIRS} ${PC_ZIP_LIBRARY_DIR}
+  PATH_SUFFIXES lib64 lib
+  PATHS ~/Library/Frameworks
+        /Library/Frameworks
+        /usr/local
+        /usr
+        /sw
+        /opt/local
+        /opt/csw
+        /opt)
 
-FIND_LIBRARY(ZIP_LIBRARY_DEBUG
-  NAMES
-    zipd
-    zip_sd
-  HINTS
-    ${ZIP_DIR}
-    $ENV{ZIP_DIR}
-    ${PC_ZIP_LIBRARY_DIRS}
-    ${PC_ZIP_LIBRARY_DIR}
-  PATH_SUFFIXES
-    lib64
-    lib
-  PATHS
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local
-    /usr
-    /sw
-    /opt/local
-    /opt/csw
-    /opt
-)
+find_library(
+  ZIP_LIBRARY_DEBUG
+  NAMES zipd zip_sd
+  HINTS ${ZIP_DIR} $ENV{ZIP_DIR} ${PC_ZIP_LIBRARY_DIRS} ${PC_ZIP_LIBRARY_DIR}
+  PATH_SUFFIXES lib64 lib
+  PATHS ~/Library/Frameworks
+        /Library/Frameworks
+        /usr/local
+        /usr
+        /sw
+        /opt/local
+        /opt/csw
+        /opt)
 
-IF(ZIP_LIBRARY_DEBUG AND ZIP_LIBRARY_RELEASE)
-  SET(ZIP_LIBRARY optimized ${ZIP_LIBRARY_RELEASE} debug ${ZIP_LIBRARY_DEBUG} )
-  GET_FILENAME_COMPONENT(ZIP_FILENAME ${ZIP_LIBRARY_RELEASE} NAME_WE)
-ELSEIF(ZIP_LIBRARY_RELEASE)
-  SET(ZIP_LIBRARY ${ZIP_LIBRARY_RELEASE} )
-  GET_FILENAME_COMPONENT(ZIP_FILENAME ${ZIP_LIBRARY_RELEASE} NAME_WE)
-ELSEIF(ZIP_LIBRARY_DEBUG)
-  SET(ZIP_LIBRARY ${ZIP_LIBRARY_DEBUG} )
-  GET_FILENAME_COMPONENT(ZIP_FILENAME ${ZIP_LIBRARY_DEBUG} NAME_WE)
-ENDIF()
+if(ZIP_LIBRARY_DEBUG AND ZIP_LIBRARY_RELEASE)
+  set(ZIP_LIBRARY optimized ${ZIP_LIBRARY_RELEASE} debug ${ZIP_LIBRARY_DEBUG})
+  get_filename_component(ZIP_FILENAME ${ZIP_LIBRARY_RELEASE} NAME_WE)
+elseif(ZIP_LIBRARY_RELEASE)
+  set(ZIP_LIBRARY ${ZIP_LIBRARY_RELEASE})
+  get_filename_component(ZIP_FILENAME ${ZIP_LIBRARY_RELEASE} NAME_WE)
+elseif(ZIP_LIBRARY_DEBUG)
+  set(ZIP_LIBRARY ${ZIP_LIBRARY_DEBUG})
+  get_filename_component(ZIP_FILENAME ${ZIP_LIBRARY_DEBUG} NAME_WE)
+endif()
 
-IF(PC_ZIP_zip_FOUND)
-  SET(ZIP_VERSION ${PC_ZIP_zip_VERSION})
-ELSEIF(PC_ZIP_libzip_FOUND)
-  SET(ZIP_VERSION ${PC_ZIP_libzip_VERSION})
-ELSE()
-  SET(ZIP_VERSION ${PC_ZIP_VERSION})
-ENDIF()
+if(PC_ZIP_zip_FOUND)
+  set(ZIP_VERSION ${PC_ZIP_zip_VERSION})
+elseif(PC_ZIP_libzip_FOUND)
+  set(ZIP_VERSION ${PC_ZIP_libzip_VERSION})
+else()
+  set(ZIP_VERSION ${PC_ZIP_VERSION})
+endif()
 
-INCLUDE(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set ZIP_FOUND to TRUE if
-# all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(ZIP
-  REQUIRED_VARS
-    ZIP_LIBRARY
-    ZIP_INCLUDE_DIR
-  VERSION_VAR
-    ZIP_VERSION
-)
+include(FindPackageHandleStandardArgs)
+# handle the QUIETLY and REQUIRED arguments and set ZIP_FOUND to TRUE if all
+# listed variables are TRUE
+find_package_handle_standard_args(ZIP REQUIRED_VARS ZIP_LIBRARY ZIP_INCLUDE_DIR
+                                  VERSION_VAR ZIP_VERSION)
 
-STRING(FIND ${ZIP_FILENAME} zip_s ZIP_STATIC)
+string(FIND ${ZIP_FILENAME} zip_s ZIP_STATIC)
 
-MARK_AS_ADVANCED(ZIP_INCLUDE_DIR ZIP_LIBRARY ZIP_LIBRARY_RELEASE ZIP_LIBRARY_DEBUG)
+mark_as_advanced(ZIP_INCLUDE_DIR ZIP_LIBRARY ZIP_LIBRARY_RELEASE
+                 ZIP_LIBRARY_DEBUG)
 
-IF(ZIP_FOUND AND NOT TARGET ZIP::ZIP)
-  IF(ZIP_STATIC EQUAL -1)
-    ADD_LIBRARY(ZIP::ZIP SHARED IMPORTED)
-    SET_TARGET_PROPERTIES(ZIP::ZIP PROPERTIES
-      INTERFACE_COMPILE_DEFINITIONS
-        ZIP_EXTERN=
-      IMPORTED_LOCATION
-        "${ZIP_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES
-        "${ZIP_INCLUDE_DIR}"
-    )
-  ELSE()
-    ADD_LIBRARY(ZIP::ZIP STATIC IMPORTED)
-    SET_TARGET_PROPERTIES(ZIP::ZIP PROPERTIES
-      IMPORTED_LOCATION
-        "${ZIP_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES
-        "${ZIP_INCLUDE_DIR}"
-    )
-  ENDIF()
-ENDIF()
+if(ZIP_FOUND AND NOT TARGET ZIP::ZIP)
+  if(ZIP_STATIC EQUAL -1)
+    add_library(ZIP::ZIP SHARED IMPORTED)
+    set_target_properties(
+      ZIP::ZIP
+      PROPERTIES INTERFACE_COMPILE_DEFINITIONS ZIP_EXTERN= IMPORTED_LOCATION
+                                                           "${ZIP_LIBRARY}"
+                 INTERFACE_INCLUDE_DIRECTORIES "${ZIP_INCLUDE_DIR}")
+  else()
+    add_library(ZIP::ZIP STATIC IMPORTED)
+    set_target_properties(
+      ZIP::ZIP PROPERTIES IMPORTED_LOCATION "${ZIP_LIBRARY}"
+                          INTERFACE_INCLUDE_DIRECTORIES "${ZIP_INCLUDE_DIR}")
+  endif()
+endif()
