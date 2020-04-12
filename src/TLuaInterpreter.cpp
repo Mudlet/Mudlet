@@ -14385,13 +14385,21 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
+    auto sanitizeEncoding = [] (auto encodingName) {
+        if (encodingName.startsWith("M_")) {
+            encodingName.remove(0, 2);
+        }
+        return encodingName;
+    };
+
     lua_newtable(L);
     lua_pushnumber(L, 1);
     lua_pushstring(L, "ASCII");
     lua_settable(L, -3);
     for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i + 2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).constData());
+        lua_pushstring(L, sanitizeEncoding(host.mTelnet.getEncodingsList().at(i)).constData());
         lua_settable(L, -3);
     }
     return 1;
