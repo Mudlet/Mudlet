@@ -38,7 +38,7 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: "Set vcpkg's response file path used as part of vcpkg cache's key."
+    - name: "Set vcpkg's response file path used as part of vcpkg cache's key"
       env:
 #         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{ matrix.triplet }}.txt
           vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
