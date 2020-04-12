@@ -400,7 +400,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
             int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
-            Q_ASSERT_X(pos < 127, "TTextCodex_IBM437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
+            Q_ASSERT_X(pos < 128, "TTextCodec_437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
             if (pos < 0) {
                 // -1 is the sentinel value for not there, greater than 127 is
                 // unreachable - or should be.
@@ -504,7 +504,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
             int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
-            Q_ASSERT_X(pos < 127, "TTextCodex_IBM437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
+            Q_ASSERT_X(pos < 128, "TTextCodec_667", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
             if (pos < 0) {
                 // -1 is the sentinel value for not there, greater than 127 is
                 // unreachable - or should be.
@@ -608,7 +608,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
             int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
-            Q_ASSERT_X(pos < 127, "TTextCodex_IBM437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
+            Q_ASSERT_X(pos < 128, "TTextCodec_737", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
             if (pos < 0) {
                 // -1 is the sentinel value for not there, greater than 127 is
                 // unreachable - or should be.
@@ -712,7 +712,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
             int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
-            Q_ASSERT_X(pos < 127, "TTextCodex_IBM437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
+            Q_ASSERT_X(pos < 128, "TTextCodec_869", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
             if (pos < 0) {
                 // -1 is the sentinel value for not there, greater than 127 is
                 // unreachable - or should be.
