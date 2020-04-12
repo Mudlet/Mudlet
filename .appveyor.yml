@@ -27,7 +27,8 @@ install:
 
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- powershell ".\appveyor.build.ps1"
+- exit 1
+#- powershell ".\appveyor.build.ps1"
 
 on_failure:
 - cd C:\src
