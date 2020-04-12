@@ -1966,10 +1966,20 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
-bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
+std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
+    }
+
+    if (name.isEmpty()) {
+        return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
+    }
+
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    if (pL) {
+        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
     }
 
     auto hostName(pHost->getName());
@@ -1994,42 +2004,70 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         console->mConsoleName = name;
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
-        console->show();
         console->layerCommandLine->hide();
         console->mpScrollBar->hide();
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
         dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
-        // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-
         setWindowFontSize(pHost, name, 10);
-
-        if (loadLayout && !dockwidget->hasLayoutAlready) {
-            loadWindowLayout();
-            dockwidget->hasLayoutAlready = true;
-        }
-
-        return true;
-    } else if (console && dockwidget) {
-        // The name is used in BOTH the QMaps of all user created TConsole
-        // and TDockWidget instances - so we HAVE an existing user window,
-        // Lets confirm this:
-        Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-        dockwidget->update();
-        //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-        console->show();
-        dockwidget->show();
-        console->showWindow(name);
-
-        if (loadLayout && !dockwidget->hasLayoutAlready) {
-            loadWindowLayout();
-            dockwidget->hasLayoutAlready = true;
-        }
-
-        return true;
     }
 
-    return false;
+    if (!console || !dockwidget) {
+        return {false, QStringLiteral("cannot create userwindow \"%1\"").arg(name)};
+    }
+
+    // The name is used in BOTH the QMaps of all user created TConsole
+    // and TDockWidget instances - so we HAVE an existing user window,
+    // Lets confirm this:
+    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+    dockwidget->update();
+
+    if (loadLayout && !dockwidget->hasLayoutAlready) {
+        loadWindowLayout();
+        dockwidget->hasLayoutAlready = true;
+    }
+
+    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
+    console->show();
+    dockwidget->show();
+    console->showWindow(name);
+
+    if (!autoDock) {
+        dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
+    } else {
+        dockwidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+    }
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!dockwidget->isFloating()) {
+            dockwidget->setFloating(true);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
 }
 
 std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
