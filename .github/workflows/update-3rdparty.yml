@@ -174,7 +174,7 @@ jobs:
           commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-qtkeychain-fork:
+  update-qtkeychain:
     runs-on: ubuntu-latest
     if: github.repository == 'Mudlet/Mudlet'
     steps:
