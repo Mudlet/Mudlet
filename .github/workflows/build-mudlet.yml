@@ -74,9 +74,6 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-    - name: Try magic
-      run: echo "::set-env name=DYLD_LIBRARY_PATH::/usr/local/Cellar/libzip/1.6.1/lib/${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}"
-
     - name: Build Mudlet
       uses: lukka/run-cmake@v1
       with:
