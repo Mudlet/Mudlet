@@ -118,9 +118,14 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/qtkeychain" READABLE_NAME "QtKeychain")
+find_package(Qt5Keychain QUIET)
+
+if(NOT Qt5Keychain_FOUND)
+  message("System qtkeychain not found, using submodule")
+  git_submodule_init(
+    CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt" SUBMODULE_PATH
+    "3rdparty/qtkeychain" READABLE_NAME "QtKeychain")
+endif()
 
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
@@ -156,7 +161,9 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
-add_subdirectory(3rdparty/qtkeychain)
+if(NOT Qt5Keychain_FOUND)
+  add_subdirectory(3rdparty/qtkeychain)
+endif()
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
