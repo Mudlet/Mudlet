@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QTextCodec>
+#include <QVector>
 #include "post_guard.h"
 
 
@@ -65,7 +66,7 @@ private:
 class TTextCodec_737 : private QTextCodec
 {
 public:
-    TTextCodec_737() = default;
+    TTextCodec_737();
     ~TTextCodec_737() = default;
 
     QByteArray name() const override;
