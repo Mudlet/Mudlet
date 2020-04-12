@@ -13,8 +13,13 @@ if [ -z "${TRAVIS_TAG}" ]; then
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
   else
-    COMMIT=$(git rev-parse --short HEAD)
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+    if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
+      DATE=$(date +'%Y.%-m.%-d')
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
+    else
+      COMMIT=$(git rev-parse --short HEAD)
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+    fi
   fi
 fi
 
