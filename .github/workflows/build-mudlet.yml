@@ -67,12 +67,3 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{ runner.workspace }}/b/ninja'
         cmakeAppendedArgs: '-G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
-
-    # - name: Build Mudlet
-    #   uses: lukka/run-cmake@v1
-    #   with:
-    #     cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-    #     cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-    #     useVcpkgToolchainFile: true
-    #     buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-    #     cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
