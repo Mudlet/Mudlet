@@ -141,6 +141,12 @@ function Geyser.Gauge:setAlignment(alignment)
   self.formatTable = self.text.formatTable
 end
 
+--- Sets the color of the text on the gauge
+-- @param color the color you want the text to be
+function Geyser.Gauge:setFgColor(color)
+  self.text:setFgColor(color)
+end
+
 --- Sets the text on the gauge, overwrites inherited echo function.
 -- @param text The text to set.
 function Geyser.Gauge:echo(message, color, format)
