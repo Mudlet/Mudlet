@@ -39,6 +39,7 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
