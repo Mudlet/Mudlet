@@ -57,7 +57,7 @@ jobs:
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFile(env.vcpkgResponseFile)}}
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v2
