@@ -149,6 +149,99 @@ function table.contains(tbl, ...)
   return false
 end
 
+--- Checks each item in a table against a provided function and returns a table of items
+--- for which the function returns true
+--- @param tbl table to collect items from
+--- @param func function which is called as func(key,value) for each item in tbl
+--- @return table of key-value pairs for which func returns true.
+function table.collect(tbl, func)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.collect: bad argument #1 type (table to collect items from as table expected, got %s)", tbl_type))
+  local func_type = type(func)
+  assert(func_type == "function", string.format("table.collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
+  local matches = {}
+  for key,value in pairs(tbl) do
+    if func(key,value) == true then
+      matches[key] = value
+    end
+  end
+  return matches
+end
+
+--- Checks each item in a table against a provided function and returns a table of items
+--- for which the function returns true. Unlike table.collect it ignores keys and returns 
+--- a table which is guaranteed to be traversable using ipairs()
+--- @param tbl table to collect items from
+--- @param func function which is called as func(value) for each item in tbl
+--- @return table of values for which func(value) returns true. Ignores keys, traversable using ipairs
+function table.n_collect(tbl, func)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.n_collect: bad argument #1 type (table to collect items from as table expected, got %s)", tbl_type))
+  local func_type = type(func)
+  assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
+  local matches = {}
+  for key,value in pairs(tbl) do
+    if func(value) == true and not table.contains(matches, value) then
+      table.insert(matches, value)
+    end
+  end
+  return matches
+end
+
+-- not LDoc: table.matches and table.n_matches below do not use table.collect
+-- or n_collect above in order to reduce the potential number of times tables 
+-- need to be looped.
+
+--- Checks each item in a table against each other argument using string.match
+--- @param tbl table to check
+--- @param pattern1 pattern to check using string.match
+--- @param pattern2+ optional additional patterns to check
+--- @param check_keys set as true if you want to also check the keys against the patterns
+--- @return returns a table which contains every key value pair from tbl for which the value string.matches
+---         if check_keys is passed as true, then the key value pair will be added if either the key or the value string.matches
+function table.matches(tbl, ...)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
+  local patterns = {...}
+  local matches = {}
+  local check_keys
+  if type(patterns[#patterns]) == "boolean" then check_keys = table.remove(patterns) end
+  for index,pattern in ipairs(patterns) do
+    local ptype = type(pattern)
+    assert(ptype == "string", string.format("table.matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
+    for key,value in pairs(tbl) do
+      if string.match(value, pattern) or (check_keys and string.match(key, pattern)) then
+        matches[key] = value
+      end
+    end
+  end
+  return matches
+end
+
+--- Checks each item in a table against each other argument using string.match. Returns a list
+--- @param tbl table to check
+--- @param pattern1 pattern to check using string.match
+--- @param pattern2+ optional additional patterns to check
+--- @param check_keys set as true if you want to also check the keys against the patterns
+--- @return returns a which contains every unique value from tbl for which the value string.matches
+---         does not preserve the order or keys of the original table, but does return a table traverable using ipairs
+function table.n_matches(tbl, ...)
+  local tbl_type = type(tbl)
+  assert(tbl_type == "table", string.format("table.n_matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
+  local patterns = {...}
+  local matches = {}
+  for index,pattern in ipairs(patterns) do
+    local ptype = type(pattern)
+    assert(ptype == "string", string.format("table.n_matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
+    for key,value in pairs(tbl) do
+      if string.match(value, pattern) and not table.contains(matches, value) then
+        table.insert(matches, value)
+      end
+    end
+  end
+  return matches
+end
+
 
 --- Table Union.
 ---
