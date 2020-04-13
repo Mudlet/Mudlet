@@ -49,9 +49,24 @@ function Geyser.UserWindow:show()
   self:resize(w,h)
 end
 
+function Geyser.UserWindow:setDockPosition(pos)
+  self.dockPosition = pos
+  return openUserWindow(self.name, false, self.autoDock, pos)
+end
+
+function Geyser.UserWindow:enableAutoDock()
+  self.autoDock = true
+  return openUserWindow(self.name, self.restoreLayout, true)
+end
+
 function Geyser.UserWindow:setTitle(text)
   self.titleText = text
   return setUserWindowTitle(self.name, text)
+end
+
+function Geyser.UserWindow:disableAutoDock()
+  self.autoDock = false
+  return openUserWindow(self.name, self.restoreLayout, false)
 end
 
 function Geyser.UserWindow:resetTitle()
@@ -70,7 +85,7 @@ function Geyser.UserWindow:new(cons)
   cons.height = cons.height or 375
   cons.x = cons.x or 10
   cons.y = cons.y or 140
-  --Root Container for UserWindows 
+  --Root Container for UserWindows
   local me = self.Parent:new(cons)
   -- Set the metatable.
   setmetatable(me, self)
@@ -78,16 +93,20 @@ function Geyser.UserWindow:new(cons)
 
   me.restoreLayout = me.restoreLayout or false
   me.docked = me.docked or false
+  me.autoDock = me.autoDock or true
+  me.dockPosition = me.dockPosition or "r"
 
-  openUserWindow(me.name,me.restoreLayout)
+  if me.restoreLayout then
+    openUserWindow(me.name, me.restoreLayout, me.autoDock)
+  else
+    openUserWindow(me.name, me.restoreLayout, me.autoDock, me.dockPosition)
+  end
+
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
-  elseif container then
-    me:setFontSize(container.fontSize)
-    cons.fontSize = container.fontSize
   else
     me:setFontSize(8)
     cons.fontSize = 8
@@ -109,8 +128,9 @@ function Geyser.UserWindow:new(cons)
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then
-    me:move(cons.x,cons.y)
-    me:resize(cons.width,cons.height)
+    me.dockPosition = "floating"
+    me:move(cons.x, cons.y)
+    me:resize(cons.width, cons.height)
   end
 
   if me.titleText then
