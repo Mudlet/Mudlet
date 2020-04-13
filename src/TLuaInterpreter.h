@@ -270,6 +270,7 @@ public:
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
+    static int setUserWindowTitle(lua_State* L);
     static int echoUserWindow(lua_State* L);
     static int clearUserWindow(lua_State* L);
     static int enableTimer(lua_State* L);
