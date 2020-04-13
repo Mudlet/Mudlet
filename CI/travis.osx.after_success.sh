@@ -50,15 +50,16 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
-      echo "== Creating a public test build =="
+      echo "=== Creating a public test build ==="
     else
-      echo "== Creating a release build =="
+      echo "=== Creating a release build ==="
     fi
 
     # add ssh-key to ssh-agent for deployment
     # shellcheck disable=2154
     # the two "undefined" variables are defined by travis
     if [ -z "$encrypted_70dbe4c5e427_key" ]; then
+      echo "=== Registering Mudlet SSH keys for release upload ==="
       openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
       eval "$(ssh-agent -s)"
       chmod 600 /tmp/mudlet-deploy-key
