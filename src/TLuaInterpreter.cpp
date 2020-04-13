@@ -3562,31 +3562,52 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUserWindow
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
-    std::string luaSendText = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "openUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+    int n = lua_gettop(L);
+    QString name = QString();
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        name = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool loadLayout = true;
-    if (!lua_isnoneornil(L, 2) && lua_isboolean(L, 2)) {
-        loadLayout = lua_toboolean(L, 2);
+    bool loadLayout = true, autoDock = true;
+    if (n > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #2 type (loadLayout as boolean expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            loadLayout = lua_toboolean(L, 2);
+        }
+    }
+    if (n > 2) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #3 type (autoDock as boolean expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            autoDock = lua_toboolean(L, 3);
+        }
+    }
+
+    QString area = QString();
+    if (n > 3) {
+        if (lua_type(L, 4) != LUA_TSTRING) {
+            lua_pushfstring(L, "openUserWindow: bad argument #4 type (area as string expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            area = QString::fromUtf8(lua_tostring(L, 4));
+        }
     }
 
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
-    auto pL = host.mpConsole->mLabelMap.value(text);
-    if (pL) {
-        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!", text.toUtf8().constData());
-        lua_error(L);
-        return 1;
-    }
 
-    lua_pushboolean(L, mudlet::self()->openWindow(&host, text, loadLayout));
+    if (auto [success, message] = mudlet::self()->openWindow(&host, name, loadLayout, autoDock, area.toLower()); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 

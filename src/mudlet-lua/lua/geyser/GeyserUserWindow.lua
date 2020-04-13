@@ -69,6 +69,7 @@ function Geyser.UserWindow:disableAutoDock()
   return openUserWindow(self.name, self.restoreLayout, false)
 end
 
+
 function Geyser.UserWindow:resetTitle()
   self.titleText = ""
   return resetUserWindowTitle(self.name)
@@ -104,7 +105,7 @@ function Geyser.UserWindow:new(cons)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-
+  
   if cons.fontSize then
     me:setFontSize(cons.fontSize)
   else
@@ -124,7 +125,7 @@ function Geyser.UserWindow:new(cons)
   elseif cons.wrapAt then
     me:setWrap(cons.wrapAt)
   end
-
+  
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then
@@ -138,7 +139,7 @@ function Geyser.UserWindow:new(cons)
   else
     me:resetTitle()
   end
-
+  
   me:resetWindow()
   return me
 end

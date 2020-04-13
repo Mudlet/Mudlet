@@ -56,6 +56,7 @@ private:
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     QSettings* settings;
+    std::unique_ptr<QTimer> mDailyCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();

@@ -1,7 +1,7 @@
 #!/bin/bash
 compile_line=()
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  if [ "${DEPLOY}" != "deploy" ] || [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+  if [ "${DEPLOY}" != "deploy" ]; then
     echo Job not executed under cron run
     exit 0
   fi
