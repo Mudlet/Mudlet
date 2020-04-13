@@ -35,5 +35,8 @@ fi
 MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
 VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
 
+TRAVIS_EVENT_TYPE="cron"
+
 export VERSION
 export MUDLET_VERSION_BUILD
+export TRAVIS_EVENT_TYPE
