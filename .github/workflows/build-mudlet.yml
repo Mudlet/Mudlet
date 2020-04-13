@@ -5,8 +5,8 @@ on:
 
 jobs:
   compile-mudlet:
-    name: ${{ matrix.os }}-compile
-    runs-on: ${{ matrix.os }}
+    name: ${{matrix.os}}-compile
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
         os: [macos-latest]
@@ -30,7 +30,7 @@ jobs:
         version: ${{env.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{ steps.cache-qt.outputs.cache-hit }}
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
 
     - name: Checkout Mudlet source code
       uses: actions/checkout@v2
@@ -40,7 +40,7 @@ jobs:
 
     - name: "Set location of vcpkg dependencies"
       env:
-#         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{ matrix.triplet }}.txt
+#         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{matrix.triplet}}.txt
           vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
@@ -63,7 +63,7 @@ jobs:
       uses: lukka/run-cmake@v2
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
-        buildDirectory: '${{ runner.workspace }}/b/ninja'
+        buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: '-G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
