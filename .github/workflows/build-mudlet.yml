@@ -38,7 +38,7 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: "Set vcpkg's response file path used as part of vcpkg cache's key"
+    - name: "Set location of vcpkg dependencies"
       env:
 #         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{ matrix.triplet }}.txt
           vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
@@ -46,36 +46,33 @@ jobs:
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
 
-    - name: Restore vcpkg cache
-      uses: actions/cache@v1
-      with:
-        path: ${{github.workspace}}/3rdparty/vcpkg/
-        # The key will be different each time a different version of vcpkg is used, or different ports are installed.
-        key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
-
-    - name: Restore overlay vcpkg port cache
-      uses: actions/cache@v1
-      with:
-        path: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/
-        # Keep same cache key as vcpkg above
-        key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
-
     - name: Install homebrew dependencies
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip
 
-    - name: Install dependencies with vcpkg
-      uses: lukka/run-vcpkg@v1
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v2
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFile(env.vcpkgResponseFile)}}
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v1
+      uses: lukka/run-cmake@v2
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        cmakeListsTxtPath: '${{ github.workspace }}/cmakesettings.json/CMakeLists.txt'
         useVcpkgToolchainFile: true
-        buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+        buildDirectory: '${{ runner.workspace }}/b/ninja'
+        cmakeAppendedArgs: '-GNinja Multi-Config -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+
+    # - name: Build Mudlet
+    #   uses: lukka/run-cmake@v1
+    #   with:
+    #     cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+    #     cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+    #     useVcpkgToolchainFile: true
+    #     buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
+    #     cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
