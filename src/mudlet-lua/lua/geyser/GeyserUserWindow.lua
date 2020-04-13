@@ -59,9 +59,20 @@ function Geyser.UserWindow:enableAutoDock()
   return openUserWindow(self.name, self.restoreLayout, true)
 end
 
+function Geyser.UserWindow:setTitle(text)
+  self.titleText = text
+  return setUserWindowTitle(self.name, text)
+end
+
 function Geyser.UserWindow:disableAutoDock()
   self.autoDock = false
   return openUserWindow(self.name, self.restoreLayout, false)
+end
+
+
+function Geyser.UserWindow:resetTitle()
+  self.titleText = ""
+  return resetUserWindowTitle(self.name)
 end
 
 Geyser.UserWindow.Parent = Geyser.Window
@@ -75,23 +86,23 @@ function Geyser.UserWindow:new(cons)
   cons.height = cons.height or 375
   cons.x = cons.x or 10
   cons.y = cons.y or 140
-  --Root Container for UserWindows 
+  --Root Container for UserWindows
   local me = self.Parent:new(cons)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-  
+
   me.restoreLayout = me.restoreLayout or false
   me.docked = me.docked or false
   me.autoDock = me.autoDock or true
   me.dockPosition = me.dockPosition or "r"
-  
+
   if me.restoreLayout then
     openUserWindow(me.name, me.restoreLayout, me.autoDock)
   else
     openUserWindow(me.name, me.restoreLayout, me.autoDock, me.dockPosition)
   end
-  
+
   -- Set any defined colors
   Geyser.Color.applyColors(me)
   
@@ -121,6 +132,12 @@ function Geyser.UserWindow:new(cons)
     me.dockPosition = "floating"
     me:move(cons.x, cons.y)
     me:resize(cons.width, cons.height)
+  end
+
+  if me.titleText then
+    me:setTitle(me.titleText)
+  else
+    me:resetTitle()
   end
   
   me:resetWindow()

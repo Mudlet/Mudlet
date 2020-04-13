@@ -3000,3 +3000,39 @@ void TConsole::dropEvent(QDropEvent* e)
         }
     }
 }
+
+std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const QString& text)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a user window cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        return {false, QStringLiteral("user window name \"%1\" not found").arg(name)};
+    }
+
+    // If it does not have an mType of UserWindow then it does not in a
+    // floatable/dockable widget - so it can't have a titlebar...!
+    if (pC->getType() != UserWindow) {
+        return {false, QStringLiteral("\"%1\" is not a user window").arg(name)};
+    }
+
+    auto pD = mDockWidgetMap.value(name);
+    if (Q_LIKELY(pD)) {
+        if (text.isEmpty()) {
+            // Reset to default text:
+            pD->setWindowTitle(tr("User window - %1 - %2").arg(mpHost->getName(), name));
+            return {true, QString()};
+        }
+
+        pD->setWindowTitle(text);
+        return {true, QString()};
+    }
+
+    // This should be:
+    Q_UNREACHABLE();
+    // as it means that the TConsole is flagged as being a user window yet
+    // it does not have a TDockWidget to hold it...
+    return {false, QStringLiteral("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+}

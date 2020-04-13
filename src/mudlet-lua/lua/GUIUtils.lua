@@ -2027,3 +2027,7 @@ local setOnL = setOnL or setLabelOnLeave
 function setLabelOnLeave(...)
   setLabelCallback(setOnL,...)
 end
+
+function resetUserWindowTitle(windowname)
+  return setUserWindowTitle(windowname, "")
+end
