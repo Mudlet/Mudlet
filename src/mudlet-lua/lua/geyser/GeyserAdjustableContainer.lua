@@ -10,7 +10,7 @@ Adjustable = Adjustable or {}
 --- Adjustable Container
 -- @class table
 -- @name Adjustable.Container
-Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "AdjustableContainerClass",})
+Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "AdjustableContainerClass"})
 
 local adjustInfo = {}
 
@@ -38,13 +38,13 @@ local function adjust_Info(self, label, event)
     if top and bottom then top = false end
     
     if event.button ~= "LeftButton" and not self.minimized then
-        if (top and not left and not right) or (bottom and not left and not right) then
+        if (top or bottom) and not (left or right) then
             label:setCursor("SizeVer")
-        elseif (right and not top and not bottom) or (left and not top and not bottom) then
+        elseif (left or right) and not (top or bottom) then
             label:setCursor("SizeHor")
-        elseif (top and left and not right) or (bottom and not left and right) then
+        elseif (top and left) or (bottom and right) then
             label:setCursor("SizeFDiag")
-        elseif (top and not left and right) or (bottom and left and not right) then
+        elseif (top and right) or (bottom and left) then
             label:setCursor("SizeBDiag")
         else
             label:setCursor("OpenHand")
@@ -233,14 +233,14 @@ function Adjustable.Container:onMove (label, event)
 end
 
 --- internal function to check which valid attach position the container is at
-function Adjustable.Container:fPos()
+function Adjustable.Container:validAttachPositions()
     local winw, winh = getMainWindowSize()
-    local fpos = {}
-    if  (winh*0.8)-self.get_height()<= self.get_y()  then  table.insert(fpos,"bottom") end
-    if  (winw*0.8)-self.get_width() <= self.get_x() then  table.insert(fpos,"right") end
-    if self.get_y() <= winh*0.2 then table.insert(fpos,"top") end
-    if self.get_x() <= winw*0.2 then table.insert(fpos,"left") end
-    return fpos
+    local found_positions = {}
+    if  (winh*0.8)-self.get_height()<= self.get_y()  then  found_positions[#found_positions+1] = "bottom" end
+    if  (winw*0.8)-self.get_width() <= self.get_x() then  found_positions[#found_positions+1] = "right" end
+    if self.get_y() <= winh*0.2 then found_positions[#found_positions+1] = "top" end
+    if self.get_x() <= winw*0.2 then found_positions[#found_positions+1] = "left" end
+    return found_positions
 end
 
 --- internal function to adjust the main console borders if needed
@@ -249,7 +249,7 @@ function Adjustable.Container:adjustBorder()
     local where = false
     if type(self.attached) == "string" then 
         where = self.attached:lower()
-        if table.contains(self:fPos(), where) == false or self.minimized or self.hidden then self:detach()
+        if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then self:detach()
         else
             if        where == "right"   then setBorderRight(winw-self.get_x()) 
             elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x())  
@@ -476,7 +476,7 @@ end
 --- internal function: Handler for the onEnter event of the attach menu
 -- the attach menu will be created with the valid positions onEnter of the mouse
 function Adjustable.Container:onEnterAtt()
-    local attm = self:fPos()
+    local attm = self:validAttachPositions()
     self.attLabel.nestedLabels = {}
     for i=1,#attm do
         if self.att[i].container ~= Geyser then
@@ -588,16 +588,16 @@ function Adjustable.Container:save()
     mytable.padding = self.padding
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
-    if not(io.exists(getMudletHomeDir().."/AdjContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjContainer/") end
-    table.save(getMudletHomeDir().."/AdjContainer/"..self.name..".lua", mytable)
+    if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
+    table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
 end
 
 -- loads your container settings
 function Adjustable.Container:load()
     local mytable = {}
     
-    if io.exists(getMudletHomeDir().."/AdjContainer/"..self.name..".lua") then
-        table.load(getMudletHomeDir().."/AdjContainer/"..self.name..".lua", mytable)
+    if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
+        table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
     end
     
     self.lockStyle = mytable.lockStyle or self.lockStyle
@@ -748,7 +748,7 @@ end
 -- @param func function of the new custom menu item
 function Adjustable.Container:newCustomItem(name, func)
     self.customItems = self.customItems or {}
-    table.insert(self.customItems, {name, func})
+    self.customItems[#self.customItems+1] = {name, func}
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
 
