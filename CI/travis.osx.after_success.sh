@@ -66,7 +66,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
       ssh-add /tmp/mudlet-deploy-key
     fi
 
-    bash make-installer.sh -r "${VERSION}" source/build/Mudlet.app
+    if [ "${public_test_build}" == "true" ]; then
+      bash make-installer.sh -r "${VERSION}${MUDLET_VERSION_BUILD}" source/build/Mudlet.app
+    else
+      bash make-installer.sh -r "${VERSION}" source/build/Mudlet.app
+    fi
 
     if [ ! -z "$CERT_PW" ]; then
       codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
