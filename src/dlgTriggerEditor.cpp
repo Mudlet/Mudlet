@@ -174,7 +174,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
-    setWindowTitle(mpHost->getName());
+    const QString hostName{mpHost->getName()};
+    setWindowTitle(hostName);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);
@@ -565,6 +566,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(saveAction);
+    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
+                               // Intentional comment to separate arguments
+                               "This is the toolbar that is initally placed at the top of the editor.")
+                            .arg(hostName));
 
     toolBar->addSeparator();
 
@@ -597,7 +602,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(showDebugAreaAction);
 
     toolBar2->setMovable(true);
-
+    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
+                                // Intentional comment to separate arguments
+                                "This is the toolbar that is initally placed at the left side of the editor.")
+                             .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
