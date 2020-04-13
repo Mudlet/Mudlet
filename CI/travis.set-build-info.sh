@@ -9,6 +9,8 @@ if [ -z "${TRAVIS_TAG}" ]; then
   else
     MUDLET_VERSION_BUILD="-testing"
   fi
+  # temporary test for ptb's
+  MUDLET_VERSION_BUILD="-ptb"
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
