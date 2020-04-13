@@ -214,6 +214,7 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
 
 
     QPointer<Host> mpHost;
