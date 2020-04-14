@@ -754,6 +754,16 @@ end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
+    -- Prevents duplicates to be created
+    -- It's still important that the name of the container is unique!
+    if cons.name then
+        if Geyser.windowList[cons.name] then
+            return Geyser.windowList[cons.name]
+        end
+        if container and container.windowList[cons.name] then
+            return container.windowList[cons.name]
+        end
+    end
     local me = self.parent:new(cons,container)
     setmetatable(me, self)
     self.__index = self
