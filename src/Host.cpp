@@ -2531,3 +2531,18 @@ void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
         mpEditorDialog->setSearchOptions(optionsState);
     }
 }
+
+std::pair<bool, QString> Host::setMapperTitle(const QString& title)
+{
+    if (!mpDockableMapWidget) {
+        return {false, "no floating/dockable type map window found"};
+    }
+
+    if (title.isEmpty()) {
+        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+    } else {
+        mpDockableMapWidget->setWindowTitle(title);
+    }
+
+    return {true, QString()};
+}

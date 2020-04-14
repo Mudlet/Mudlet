@@ -3640,6 +3640,29 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapWindowTitle
+int TLuaInterpreter::setMapWindowTitle(lua_State* L)
+{
+    QString title;
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setMapWindowTitle: bad argument #1 type (title as string is optional, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        title = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMapperTitle(title); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
@@ -16772,6 +16795,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
+    lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     const auto separator = QDir::separator();

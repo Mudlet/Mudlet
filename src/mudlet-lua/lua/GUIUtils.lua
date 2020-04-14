@@ -2031,3 +2031,7 @@ end
 function resetUserWindowTitle(windowname)
   return setUserWindowTitle(windowname, "")
 end
+
+function resetMapWindowTitle()
+  return setMapWindowTitle("")
+end

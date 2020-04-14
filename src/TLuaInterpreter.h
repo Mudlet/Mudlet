@@ -544,6 +544,7 @@ public:
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
     static int unzipAsync(lua_State* L);
+    static int setMapWindowTitle(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

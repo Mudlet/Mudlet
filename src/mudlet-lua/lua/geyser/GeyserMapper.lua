@@ -80,6 +80,16 @@ function Geyser.Mapper:setDockPosition(pos)
   end
 end
 
+function Geyser.Mapper:setTitle(text)
+  self.titleText = text
+  return setMapWindowTitle(text)
+end
+
+function Geyser.Mapper:resetTitle()
+  self.titleText = ""
+  return resetMapWindowTitle()
+end
+
 -- Overridden constructor
 function Geyser.Mapper:new (cons, container)
   cons = cons or {}
@@ -114,6 +124,12 @@ function Geyser.Mapper:new (cons, container)
       me:get_width(), me:get_height())
     else
       openMapWidget()
+    end
+
+    if me.titleText then
+      me:setTitle(me.titleText)
+    else
+      me:resetTitle()
     end
   end
 
