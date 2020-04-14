@@ -87,11 +87,11 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using Gamepad module")
+    !build_pass : message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
-    message("Using TextToSpeech module")
+    !build_pass : message("Using TextToSpeech module")
 }
 
 TEMPLATE = app
@@ -338,7 +338,7 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
 ####################### Git Submodules check and install #######################
 # The "exists" tests and "include" directives uses qmakes internal path handling
-# (always uses '/' dirextroy separators); the git operations need to be done
+# (always uses '/' directory separators); the git operations need to be done
 # somewhere within the main git repository (which may not be the case for
 # "shadow builds" so we now explicitly change directory using native shell
 # command before carrying them out - however Windows cmd.exe uses a different
@@ -1310,10 +1310,10 @@ win32 {
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-    ${LUA.files} \
-    ${LUA_GEYSER.files} \
-    ${LUA_TESTS.files} \
-    ${DISTFILES} \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
