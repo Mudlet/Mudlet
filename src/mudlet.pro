@@ -1310,10 +1310,10 @@ win32 {
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-    ${LUA.files} \
-    ${LUA_GEYSER.files} \
-    ${LUA_TESTS.files} \
-    ${DISTFILES} \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
