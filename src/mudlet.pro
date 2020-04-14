@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
+#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.6.1
+VERSION = 4.6.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -109,9 +109,18 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
-# "-public-test-build" for the public test build
+# "-ptb" for the public test build
 # "" for the release build
    BUILD = "-dev"
+}
+
+# As the above also modifies the splash screen image (so developers get reminded
+# what they are working with!) Packagers (e.g. for Linux distributions) will
+# want to set the environmental variable WITH_VARIABLE_SPLASH_SCREEN to NO so
+# that their build does not appear to be a "DEV"elopment build!
+WITH_VS_SCREEN_TEST = $$upper($$(WITH_VARIABLE_SPLASH_SCREEN))
+isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
+    DEFINES += INCLUDE_VARIABLE_SPLASH_SCREEN
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -251,11 +260,12 @@ unix:!macx {
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
-    isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
+    MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
+        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -263,15 +273,13 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
-        -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -lWs2_32
     INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_67_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
-# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
-# hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+         "C:\\Libraries\\boost_1_71_0" \
+         "$${MINGW_BASE_DIR_TEST}\\include" \
+         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+    # Leave this unset - we do not need it on Windows:
+    # LUA_DEFAULT_DIR =
 }
 
 unix:!macx {
@@ -464,6 +472,7 @@ SOURCES += \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
+    dlgSourceEditorFindArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
@@ -536,6 +545,7 @@ HEADERS += \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
+    dlgSourceEditorFindArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
     dlgTriggerEditor.h \
@@ -616,6 +626,7 @@ FORMS += \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
+    ui/source_editor_find_area.ui \
     ui/system_message_area.ui \
     ui/timers_main_area.ui \
     ui/triggers_main_area.ui \
@@ -623,11 +634,19 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = mudlet.qrc \
-            ../translations/translated/qm.qrc
+RESOURCES += \
+    mudlet.qrc \
+    ../translations/translated/qm.qrc
 
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    RESOURCES += \
+        mudlet_fonts_common.qrc
+
+    linux {
+        RESOURCES += \
+            mudlet_fonts_linux.qrc
+    }
+
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
@@ -710,6 +729,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # Main lua files:
 LUA.files = \
+    $${PWD}/mudlet-lua/lua/CursorShapes.lua \
     $${PWD}/mudlet-lua/lua/DB.lua \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
@@ -726,6 +746,7 @@ LUA.depends = mudlet
 # Geyser lua files:
 LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
@@ -1278,6 +1299,13 @@ win32 {
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+
+    # Product name determines the Windows Start Menu shortcut name
+    contains(BUILD, "-ptb.+") {
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
+    } else {
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+    }
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list

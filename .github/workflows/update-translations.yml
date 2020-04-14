@@ -10,8 +10,9 @@ on:
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v2
       with:
         ref: development
         submodules: true

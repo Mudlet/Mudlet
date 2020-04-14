@@ -82,12 +82,14 @@ Discord::Discord(QObject* parent)
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
     if (!mpLibrary->isLoaded() || !Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
-        qDebug() << "Could not find Discord library - searched in:";
-        for (auto& libraryPath : qApp->libraryPaths()) {
+        const auto msg = mpLibrary->errorString();
+        auto notFound = msg.contains(QStringLiteral("not found")) || msg.contains(QStringLiteral("No such file or directory"));
+        qDebug().nospace() << "Could not " << (notFound ? "find" : "load") << " Discord library - searched in:";
+        for (const auto& libraryPath : qApp->libraryPaths()) {
             qDebug() << "    " << libraryPath;
         }
-        if (auto msg = mpLibrary->errorString(); !msg.isEmpty()) {
-            qDebug().noquote().nospace() << "  additionally there is an error message: \"" << msg << "\".";
+        if (!msg.isEmpty() && !notFound) {
+            qDebug().noquote().nospace() << "  error: \"" << msg << "\".";
         }
         return;
     }

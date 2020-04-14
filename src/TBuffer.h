@@ -83,8 +83,8 @@ public:
 
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
-        mFgColor=newForeGroundColor;
-        mBgColor=newBackGroundColor;
+        mFgColor = newForeGroundColor;
+        mBgColor = newBackGroundColor;
     }
     // Only considers the following flags: Bold, Italic, Overline, Reverse,
     // Strikeout, Underline, does not consider Echo:
@@ -141,6 +141,11 @@ class TBuffer
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
+    inline static const int TCHAR_IN_BYTES = sizeof(TChar);
+
+    // arbitrary limit on how many characters a single echo can accept. On an average screen,
+    // a line is usually set to wrap at 200 max
+    inline static const int MAX_CHARACTERS_PER_ECHO = 10000;
 
 public:
     TBuffer(Host* pH);
@@ -171,7 +176,7 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, bool isFromServer=false);
+    void translateToPlainText(std::string& s, bool isFromServer = false);
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
@@ -182,7 +187,8 @@ public:
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
-    void setBufferSize(int s, int batch);
+    void setBufferSize(int requestedLinesLimit, int batch);
+    int getMaxBufferSize();
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
@@ -198,7 +204,6 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    QList<bool> dirty;
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
     int mLinkID;

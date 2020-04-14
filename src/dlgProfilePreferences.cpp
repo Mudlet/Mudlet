@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -1623,7 +1623,12 @@ void dlgProfilePreferences::setDisplayFont()
         label_variableWidthFontWarning->show();
     }
 
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+#endif
+
     auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
     if (!mainConsole) {
         return;
@@ -3180,18 +3185,18 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         // can render the codepoints:
         QVector<quint32> pCodePoints = symbol.toUcs4();
         // These can be used to flag symbols that cannot be reproduced
-        bool isSingleFontUsable=true;
-        bool isAllFontUsable=true;
+        bool isSingleFontUsable = true;
+        bool isAllFontUsable = true;
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
             codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isAllFontUsable=false;
+                isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the
                 // glyph then the specified one cannot either
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             }
         }
 

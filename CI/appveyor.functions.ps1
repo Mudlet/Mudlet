@@ -204,14 +204,14 @@ function InstallMsys() {
 }
 
 function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
-  Move-Item "boost_1_67_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
@@ -394,6 +394,16 @@ function InstallLuaUtf8() {
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
 }
 
+function InstallLuaLunajson() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lunajson")
+}
+
+function InstallLuaArgparse() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
+}
+
 function InstallLuaYajl() {
   Set-Location \LuaRocks
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
@@ -418,6 +428,8 @@ function InstallLuaModules(){
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
   CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
+  CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
+  CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
 }
 
 function CheckAndInstall7z(){
@@ -437,7 +449,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_67_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){

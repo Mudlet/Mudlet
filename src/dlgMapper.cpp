@@ -45,6 +45,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
+    glWidget = nullptr;
     QSurfaceFormat fmt;
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
@@ -123,10 +124,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
     if (mpHost) {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
 }
 
@@ -191,7 +192,7 @@ void dlgMapper::show2dView()
     if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
         mpHost->mpMap->mpM->update();
     }
-    if (!mpHost->mpMap->mpM) {
+    if (!glWidget) {
         glWidget = new GLWidget(widget);
         glWidget->setObjectName(QString::fromUtf8("glWidget"));
 
@@ -226,16 +227,16 @@ void dlgMapper::show2dView()
         connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
     }
 
-    if (mpHost->mpMap->mpM) {
-        mp2dMap->setVisible(!mp2dMap->isVisible());
-        glWidget->setVisible(!glWidget->isVisible());
-        if (glWidget->isVisible()) {
-            d3buttons->setVisible(true);
-        } else {
-            // workaround for buttons reloading oddly
-            QTimer::singleShot(100, [this]() {d3buttons->setVisible(false);});
-        }
+
+    mp2dMap->setVisible(!mp2dMap->isVisible());
+    glWidget->setVisible(!glWidget->isVisible());
+    if (glWidget->isVisible()) {
+        d3buttons->setVisible(true);
+    } else {
+        // workaround for buttons reloading oddly
+        QTimer::singleShot(100, [this]() { d3buttons->setVisible(false); });
     }
+
 #else
     mp2dMap->setVisible(true);
     d3buttons->setVisible(false);
@@ -276,31 +277,23 @@ void dlgMapper::goRoom()
     //    searchList->clear();
     //    int id = txt.toInt();
 
-    //    if( id != 0 && mpMap->rooms.contains( id ) )
-    //    {
+    //    if (id != 0 && mpMap->rooms.contains(id)) {
     //        mpMap->mTargetID = id;
-    //        if( mpMap->findPath(0,0) )
-    //        {
-    //            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
+    //        if (mpMap->findPath(0,0)) {
+    //            qDebug() << "glwidget: starting speedwalk path length=" << mpMap->mPathList.size();
     //            mpMap->mpHost->startSpeedWalk();
-    //        }
-    //        else
-    //        {
+    //        } else {
     //            QString msg = "Cannot find a path to this room.\n";
     //            mpHost->mpConsole->printSystemMessage(msg);
     //        }
-    //    }
-    //    else
-    //    {
-    //        QMapIterator<int, TRoom *> it( mpMap->rooms );
-    //        while( it.hasNext() )
-    //        {
+    //    } else {
+    //        QMapIterator<int, TRoom *> it(mpMap->rooms);
+    //        while (it.hasNext()) {
     //            it.next();
     //            int i = it.key();
-    //            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
-    //            {
-    //                qDebug()<<"inserting match:"<<i;
-    //                searchList->addItem( mpMap->rooms[i]->name );
+    //            if (mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive)) {
+    //                qDebug() << "inserting match:" << i;
+    //                searchList->addItem(mpMap->rooms[i]->name);
     //            }
     //        }
     //    }

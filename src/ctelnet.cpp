@@ -486,7 +486,6 @@ void cTelnet::handle_socket_signal_disconnected()
         postMessage(spacer);
 
 #if !defined(QT_NO_SSL)
-
         QList<QSslError> sslErrors = getSslErrors();
         QSslCertificate cert = socket.peerCertificate();
 
@@ -508,9 +507,8 @@ void cTelnet::handle_socket_signal_disconnected()
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
-        } else
+        } else {
 #endif
-        {
             if (mDontReconnect) {
                 reason = QStringLiteral("User Disconnected");
             } else {
@@ -523,11 +521,11 @@ void cTelnet::handle_socket_signal_disconnected()
             postMessage(err);
         }
         postMessage(msg);
+#if !defined(QT_NO_SSL)
     }
 
-#if !defined(QT_NO_SSL)
     if (sslerr) {
-        mudlet::self()->show_options_dialog(QStringLiteral("Security"));
+        mudlet::self()->show_options_dialog(QStringLiteral("tab_connection"));
     }
 #endif
 
@@ -565,25 +563,28 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
-    } else
-#endif
-    if (!hostInfo.addresses().isEmpty()) {
-        mHostAddress = hostInfo.addresses().constFirst();
-        postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
-        if (!mConnectViaProxy) {
-            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
-        } else {
-            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
-        }
-        socket.connectToHost(mHostAddress, hostPort);
     } else {
-        socket.connectToHost(hostInfo.hostName(), hostPort);
-        postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
-                       "Connection cannot be established.\n"
-                       "The server name is not correct, not working properly,\n"
-                       "or your nameservers are not working properly."));
-        return;
+#endif
+        if (!hostInfo.addresses().isEmpty()) {
+            mHostAddress = hostInfo.addresses().constFirst();
+            postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+            if (!mConnectViaProxy) {
+                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+            } else {
+                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+            }
+            socket.connectToHost(mHostAddress, hostPort);
+        } else {
+            socket.connectToHost(hostInfo.hostName(), hostPort);
+            postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
+                           "Connection cannot be established.\n"
+                           "The server name is not correct, not working properly,\n"
+                           "or your nameservers are not working properly."));
+            return;
+        }
+#if !defined(QT_NO_SSL)
     }
+#endif
 }
 
 // This uses UTF-16BE encoded data but needs to be converted to the selected
@@ -609,7 +610,7 @@ bool cTelnet::sendData(QString& data)
             "Note: this warning will only be issued once, even if this happens again, until\n"
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
-            if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
+            if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                 QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
@@ -620,7 +621,7 @@ bool cTelnet::sendData(QString& data)
         } else {
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
-                if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
+                if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                 QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
