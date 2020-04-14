@@ -34,6 +34,7 @@
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
+#include "dlgTriggerEditor.h"
 
 #include "pre_guard.h"
 #include <QColor>
@@ -48,7 +49,6 @@ class QDockWidget;
 class QPushButton;
 class QListWidget;
 
-class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
@@ -165,9 +165,9 @@ public:
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
     void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
     int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries=c; }
+    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries = c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout=seconds; }
+    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout = seconds; }
     bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
     void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
@@ -250,6 +250,8 @@ public:
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
+    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
+    std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -324,6 +326,9 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    void setSearchOptions(const dlgTriggerEditor::SearchOptions);
+    std::pair<bool, QString> setMapperTitle(const QString&);
+
 
     // Apply a style-sheet set from this profile's Lua interpreter to THIS
     // profile's widgets and some global application ones:
@@ -571,6 +576,7 @@ public:
     // similar entries, any command line provided style-sheet file and (in the
     // future) any that Mudlet itself might provide:
     QString mProfileStyleSheet;
+    dlgTriggerEditor::SearchOptions mSearchOptions;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -595,6 +601,7 @@ private:
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
+    void thankForUsingPTB();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

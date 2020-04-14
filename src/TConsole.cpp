@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
@@ -473,10 +474,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
-    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     __pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
     __pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+    __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
     mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
@@ -605,6 +606,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
         refreshMiniConsole();
+    }
+
+    if (mType & (MainConsole | UserWindow)) {
+        setAcceptDrops(true);
     }
 }
 
@@ -971,6 +976,12 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             mLogFile.open(QIODevice::Append);
         }
         mLogStream.setDevice(&mLogFile);
+        // We have to set a codec here to convert the QString based QTextStream
+        // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
+        // be used, which is problematic on Windows for non-ASCII (or Latin1?)
+        // characters:
+        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
+        mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
             printSystemMessage(message);
@@ -994,28 +1005,13 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             QString log;
             QTextStream logStream(&log);
-            /*
-             * From the Qt Documentation:
-             * 'On Windows, the codec will be based on a system locale. On Unix
-             * systems, the codec will might fall back to using the iconv
-             * library if no builtin codec for the locale can be found."
-             *
-             * Note that in these cases the codec's name will be "System".'
-             *
-             * So if we are going to use UTF-8 as we declare in the HTML
-             * header we had better set that codec to be used:
-             */
-            QTextCodec* logCodec = QTextCodec::codecForName("UTF-8");
-            logStream.setCodec(logCodec);
+            // No setting a QTextCodec here, they don't work on QString based QTextStreams
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
                                                     // font in use, as different TConsole
                                                     // instances within the same profile
-                                                    // might have different fonts in future,
-                                                    // and although the font is settable for
-                                                    // the main profile window, it is not yet
-                                                    // for user miniConsoles, or the Debug one
+                                                    // might have different fonts
             fontsList << QStringLiteral("Courier New");
             fontsList << QStringLiteral("Monospace");
             fontsList << QStringLiteral("Courier");
@@ -1173,24 +1169,7 @@ void TConsole::changeColors()
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
     } else if (mType & (ErrorConsole|SubConsole|UserWindow|Buffer)) {
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::NoAntialias | QFont::PreferQuality));
-        QPixmap pixmap = QPixmap(2000, 600);
-        QPainter p(&pixmap);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        p.setFont(mDisplayFont);
-        const QRectF r = QRectF(0, 0, 2000, 600);
-        QRectF r2;
-        const QString t = "123";
-        p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
-        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
-        mUpperPane->mLetterSpacing = letterSpacing;
-        mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->setDisplayFontSpacing(letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
-#endif
         mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
@@ -1219,24 +1198,6 @@ void TConsole::changeColors()
         }
         mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-        QPixmap pixmap = QPixmap(2000, 600);
-        QPainter p(&pixmap);
-        QFont _font = mpHost->getDisplayFont();
-        _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
-        p.setFont(_font);
-        const QRectF r = QRectF(0, 0, 2000, 600);
-        QRectF r2;
-        const QString t = "123";
-        p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mpHost->getDisplayFont() ).height();
-        int mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
-        auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
-        mUpperPane->mLetterSpacing = letterSpacing;
-        mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->setDisplayFontSpacing(letterSpacing);
-        mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
-#endif
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;
@@ -2348,7 +2309,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.value(name);
@@ -2363,12 +2324,56 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
+std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        if (shape > -1 && shape < 22) {
+            pL->setCursor(static_cast<Qt::CursorShape>(shape));
+        } else if (shape == -1) {
+            pL->unsetCursor();
+        } else {
+            return {false, QStringLiteral("cursor shape \"%1\" not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
+        }
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    if (pixMapLocation.isEmpty()) {
+        return {false, QStringLiteral("custom cursor location cannot be an empty string")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        QPixmap cursor_pixmap = QPixmap(pixMapLocation);
+        if (cursor_pixmap.isNull()) {
+            return {false, QStringLiteral("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
+        }
+        QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->setCursor(custom_cursor);
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
 std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
     auto pM = mpHost->mpDockableMapWidget;
     if (pM) {
-        return {false, "cannot create mapper. Do you already use a map window?"};
+        return {false, QStringLiteral("cannot create mapper. Do you already use a map window?")};
     }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
@@ -2469,32 +2474,44 @@ bool TConsole::raiseWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->raise();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->raise();
         return true;
-    } else {
-        return false;
     }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pM->raise();
+        return true;
+    }
+
+    return false;
 }
 
 bool TConsole::lowerWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
+    auto pM = mpMapper;
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
         return true;
-    } else if (pL) {
+    }
+    if (pL) {
         pL->lower();
         mpMainDisplay->lower();
         return true;
-    } else {
-        return false;
     }
+    if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    return false;
 }
 
 bool TConsole::showWindow(const QString& name)
@@ -2974,4 +2991,74 @@ void TConsole::setProfileName(const QString& newName)
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
     }
+}
+
+
+void TConsole::dragEnterEvent(QDragEnterEvent* e)
+{
+    if (e->mimeData()->hasUrls()) {
+        e->acceptProposedAction();
+    }
+}
+
+//https://amin-ahmadi.com/2016/01/04/qt-drag-drop-files-images/
+void TConsole::dropEvent(QDropEvent* e)
+{
+    for (const auto& url : e->mimeData()->urls()) {
+        QString fname = url.toLocalFile();
+        QFileInfo info(fname);
+        if (info.exists()) {
+            QPoint pos = e->pos();
+            TEvent mudletEvent{};
+            mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
+            mudletEvent.mArgumentList.append(fname);
+            mudletEvent.mArgumentList.append(info.suffix().trimmed());
+            mudletEvent.mArgumentList.append(QString::number(pos.x()));
+            mudletEvent.mArgumentList.append(QString::number(pos.y()));
+            mudletEvent.mArgumentList.append(mConsoleName);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mudletEvent);
+        }
+    }
+}
+
+std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const QString& text)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a user window cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        return {false, QStringLiteral("user window name \"%1\" not found").arg(name)};
+    }
+
+    // If it does not have an mType of UserWindow then it does not in a
+    // floatable/dockable widget - so it can't have a titlebar...!
+    if (pC->getType() != UserWindow) {
+        return {false, QStringLiteral("\"%1\" is not a user window").arg(name)};
+    }
+
+    auto pD = mDockWidgetMap.value(name);
+    if (Q_LIKELY(pD)) {
+        if (text.isEmpty()) {
+            // Reset to default text:
+            pD->setWindowTitle(tr("User window - %1 - %2").arg(mpHost->getName(), name));
+            return {true, QString()};
+        }
+
+        pD->setWindowTitle(text);
+        return {true, QString()};
+    }
+
+    // This should be:
+    Q_UNREACHABLE();
+    // as it means that the TConsole is flagged as being a user window yet
+    // it does not have a TDockWidget to hold it...
+    return {false, QStringLiteral("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
 }

@@ -327,6 +327,20 @@ function showGauge(gaugeName)
   showWindow(gaugeName .. "_text")
 end
 
+--- @see createGauge
+function setGaugeWindow(windowName, gaugeName, x, y, show)
+  windowName = windowName or "main"
+  x = x or 0
+  y = y or 0
+  show = show or true
+  assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
+  setWindow(windowName, gaugeName .. "_back", x, y, show)
+  setWindow(windowName, gaugeName .. "_front", x, y, show)
+  setWindow(windowName, gaugeName .. "_text", x, y, show)
+  -- save new values in table
+  gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
+  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+end
 
 --- Set the text on a custom gauge.
 ---
@@ -1829,4 +1843,195 @@ end
 
 function resetLabelToolTip(label)
   return setLabelToolTip(label, "")
+end
+
+-- functions to move and resize Map Widget
+-- be aware that moving or resizing Map Widget puts the Map Widget in floating state
+function moveMapWidget(x, y)
+  assert(type(x) == 'number', 'moveMapWidget: bad argument #1 type (x-coordinate as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'moveMapWidget: bad argument #2 type (y-coordinate as number expected, got '..type(y)..'!)')
+  openMapWidget(x, y)
+end
+
+function resizeMapWidget(width, height)
+  assert(type(width) == 'number', 'resizeMapWidget: bad argument #1 type (width as number expected, got '..type(width)..'!)')
+  assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
+  openMapWidget(-1, -1, width, height)
+end
+
+--wrapper for createButton 
+-- createButton is deprecated better use createLabel instead
+createButton = createLabel
+
+-- Internal function used by copy2html and copy2decho
+local function copy2color(name,win,str,inst)
+  local line = getCurrentLine(win or "main")
+  if (not str and line == "ERROR: mini console does not exist") or type(str) == "number" then
+    win, str, inst = "main", win, str
+    line = getCurrentLine(win)
+  end
+  win = win or "main"
+  str = str or line
+  inst = inst or 1
+  local start, len = selectString(win, str, inst), #str
+  if not start then
+    error(name..": string not found",3)
+  end
+  local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
+  if name == "copy2html" then
+    style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
+    endspan = "</span>"
+  elseif name == "copy2decho" then
+    style = "%s<%d,%d,%d:%d,%d,%d>%s"
+    endspan = "<r>"
+  end
+  for index = start + 1, start + len do
+    if win ~= "main" then
+      selectSection(win, index - 1, 1)
+      r,g,b = getFgColor(win)
+      rb,gb,bb = getBgColor(win)
+    else
+      selectSection(index - 1, 1)
+      r,g,b = getFgColor()
+      rb,gb,bb = getBgColor()
+    end
+    
+    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
+      cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
+      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
+    else
+      result = result .. line:sub(index, index)
+    end
+  end
+  result = result .. endspan
+  if name == "copy2html" then
+    local conversions = {["¦"] = "&brvbar;", ["×"] = "&times;", ["«"] = "&#171;", ["»"] = "&raquo;"}
+    for from, to in pairs(conversions) do
+      result = string.gsub(result, from, to)
+    end
+  end
+  return result
+end
+
+--- copies text with color information in decho format
+--- @param win optional, the window to copy from. Defaults to the main window
+--- @param str optional, the string to copy. Defaults to copying the entire line
+--- @param inst optional, the instance of the string to copy. Defaults to the first instance.
+--- @usage to copy matches[2] with color information and echo it to miniconsole "test"
+---   <pre>
+---   decho("test", copy2decho(matches[2]))
+---   </pre>
+---
+--- @usage to copy the entire line with color information, then echo it to miniconsole "test"
+---   <pre>
+---   decho("test", copy2decho())
+---   </pre>
+function copy2decho(win, str, inst)
+  return copy2color("copy2decho", win, str, inst)
+end
+
+--- copies text with color information in html format, for echoing to a label for instance
+--- @param win optional, the window to copy from. Defaults to the main window
+--- @param str optional, the string to copy. Defaults to copying the entire line
+--- @param inst optional, the instance of the string to copy. Defaults to the first instance.
+--- @usage to copy matches[2] with color information and echo it to label "test"
+---   <pre>
+---   echo("test", copy2html(matches[2]))
+---   </pre>
+---
+--- @usage to copy the entire line with color information, then echo it to label "test"
+---   <pre>
+---   echo("test", copy2html())
+---   </pre>
+function copy2html(win, str, inst)
+  return copy2color("copy2html", win, str, inst)
+end
+
+function resetLabelCursor(name)
+  assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
+  return setLabelCursor(name, -1)
+end
+
+local setLabelCursorLayer = setLabelCursor
+function setLabelCursor(labelname, cursorShape)
+  if type(cursorShape) == "string" then
+    cursorShape = mudlet.cursor[cursorShape]
+  end
+  return setLabelCursorLayer(labelname, cursorShape)
+end
+
+
+--These functions ensure backward compatibility for the setLabelCallback functions
+--unpack function which also returns the nil values
+-- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
+local function unpack_w_nil (arg_table, counter)
+  counter = counter or 1
+  if counter >= arg_table.n then
+    return arg_table[counter]
+  end
+  return arg_table[counter], unpack_w_nil(arg_table, counter + 1)
+end
+
+local function setLabelCallback(callbackFunc, labelname, func, ...)
+  local nr = arg.n + 1
+  arg.n = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+  end
+  assert(type(func) == 'function', '<setLabelCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  if nr > 1 then
+    return callbackFunc(labelname, 
+    function(event) 
+      if not event then 
+        arg.n = nr - 1 
+      end 
+      arg[nr] = event 
+      func(unpack_w_nil(arg)) 
+    end )
+  end 
+  callbackFunc(labelname, func) 
+end
+
+local setLC = setLC or setLabelClickCallback
+function setLabelClickCallback (...)
+  setLabelCallback(setLC, ...)
+end
+
+local setLDC = setLDC or setLabelDoubleClickCallback
+function setLabelDoubleClickCallback (...)
+  setLabelCallback(setLDC, ...)
+end
+
+local setLRC = setLRC or setLabelReleaseCallback
+function setLabelReleaseCallback(...)
+  setLabelCallback(setLRC, ...)
+end
+
+local setLMC = setLMC or setLabelMoveCallback
+function setLabelMoveCallback(...)
+  setLabelCallback(setLMC, ...)
+end
+
+local setLWC = setLWC or setLabelWheelCallback
+function setLabelWheelCallback(...)
+  setLabelCallback(setLWC, ...)
+end
+
+local setOnE = setOnE or setLabelOnEnter
+function setLabelOnEnter(...)
+  setLabelCallback(setOnE, ...)
+end
+
+local setOnL = setOnL or setLabelOnLeave
+function setLabelOnLeave(...)
+  setLabelCallback(setOnL,...)
+end
+
+function resetUserWindowTitle(windowname)
+  return setUserWindowTitle(windowname, "")
+end
+
+function resetMapWindowTitle()
+  return setMapWindowTitle("")
 end

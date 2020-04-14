@@ -54,6 +54,8 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QTableWidget>
+#include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -100,7 +102,7 @@ int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
-TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
+TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
 
@@ -1748,7 +1750,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
-            if (! pDataCodec->canEncode(dataQString)) {
+            if (!pDataCodec->canEncode(dataQString)) {
                 lua_pushnil(L);
                 lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
                 return 2;
@@ -3190,6 +3192,62 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScript
+int TLuaInterpreter::enableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "enableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(true);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScript
+int TLuaInterpreter::disableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(false);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTimer
 int TLuaInterpreter::killTimer(lua_State* L)
 {
@@ -3320,10 +3378,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setFont: bad argument #%d type for the optional window name - expected string, got %s!",
-                            s,
-                            luaL_typename(L, s));
+            lua_pushfstring(L, "setFont: bad argument #%d type for the optional window name - expected string, got %s!", s, luaL_typename(L, s));
             return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
@@ -3338,8 +3393,11 @@ int TLuaInterpreter::setFont(lua_State* L)
         font = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    // ensure that emojis are displayed in colour even if this font doesn't support it
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
     QFont::insertSubstitution(font, QStringLiteral("Noto Color Emoji"));
+#endif
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
@@ -3504,31 +3562,104 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUserWindow
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
-    std::string luaSendText = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "openUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+    int n = lua_gettop(L);
+    QString name = QString();
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        name = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool loadLayout = true;
-    if (!lua_isnoneornil(L, 2) && lua_isboolean(L, 2)) {
-        loadLayout = lua_toboolean(L, 2);
+    bool loadLayout = true, autoDock = true;
+    if (n > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #2 type (loadLayout as boolean expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            loadLayout = lua_toboolean(L, 2);
+        }
+    }
+    if (n > 2) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #3 type (autoDock as boolean expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            autoDock = lua_toboolean(L, 3);
+        }
+    }
+
+    QString area = QString();
+    if (n > 3) {
+        if (lua_type(L, 4) != LUA_TSTRING) {
+            lua_pushfstring(L, "openUserWindow: bad argument #4 type (area as string expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            area = QString::fromUtf8(lua_tostring(L, 4));
+        }
     }
 
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-//Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
-    auto pL = host.mpConsole->mLabelMap.value(text);
-    if (pL) {
-        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!",text.toUtf8().constData());
-        lua_error(L);
-        return 1;
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+
+    if (auto [success, message] = mudlet::self()->openWindow(&host, name, loadLayout, autoDock, area.toLower()); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowTitle
+int TLuaInterpreter::setUserWindowTitle(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setUserWindowTitle: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    QString title;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "setUserWindowTitle: bad argument #2 type (title as string is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        title = QString::fromUtf8(lua_tostring(L, 2));
     }
 
-    lua_pushboolean(L, mudlet::self()->openWindow(&host, text, loadLayout));
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->setUserWindowTitle(name, title); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapWindowTitle
+int TLuaInterpreter::setMapWindowTitle(lua_State* L)
+{
+    QString title;
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setMapWindowTitle: bad argument #1 type (title as string is optional, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        title = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMapperTitle(title); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -3553,7 +3684,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
             luaSendWindow.clear();
         }
     }
-    if (!lua_isnumber(L, 2)) {      
+    if (!lua_isnumber(L, 2)) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "createMiniConsole: bad argument #2 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 2));
             lua_error(L);
@@ -3823,6 +3954,71 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setLabelCursor(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelCursor: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setLabelCursor: bad argument #2 type (cursortype as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    QString labelName{QString::fromUtf8(lua_tostring(L, 1))};
+    int labelCursor = lua_tonumber(L, 2);
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setLabelCursor(labelName, labelCursor); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
+{
+    int n = lua_gettop(L);
+    int hotX = -1, hotY = -1;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelCustomCursor: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelCustomCursor: bad argument #2 type (custom cursor location as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setLabelCustomCursor: bad argument #3 type (hot spot x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setLabelCustomCursor: bad argument #4 type (hot spot y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        }
+        hotX = lua_tonumber(L, 3);
+        hotY = lua_tonumber(L, 4);
+    }
+
+    QString labelName{QString::fromUtf8(lua_tostring(L, 1))};
+    QString pixmapLocation{QString::fromUtf8(lua_tostring(L, 2))};
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
@@ -3877,109 +4073,6 @@ int TLuaInterpreter::createMapper(lua_State* L)
     QString windowname(luaSendWindow.c_str());
     if (auto [success, message] = host.mpConsole->createMapper(windowname, x, y, width, height); !success) {
         lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
-    }
-
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createButton
-int TLuaInterpreter::createButton(lua_State* L)
-{
-    std::string luaSendText = "";
-    std::string luaSendWindow = "";
-    int x, y, width, height, counter;
-    counter = 3;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "createButton: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        luaSendWindow = lua_tostring(L, 1);
-        if (luaSendWindow == "main") {
-            // QString::compare is zero for a match on the "default"
-            // case so clear the variable - to flag this as the main
-            // window case - as is the case for an empty string
-            luaSendWindow.clear();
-        }
-    }
-
-    if (!lua_isnumber(L, 2)) {
-        if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "createButton: bad argument #2 type (label name as string expected, got %s!)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
-        }
-        luaSendText = lua_tostring(L, 2);
-    } else {
-        luaSendText = luaSendWindow;
-        luaSendWindow.clear();
-        counter = 2;
-    }
-
-    bool fillBackground, clickthrough = false;
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createButton: bad argument #%d type (label x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
-    } else {
-        x = lua_tonumber(L, counter);
-        counter++;
-    }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createButton: bad argument #%d type (label y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
-    } else {
-        y = lua_tonumber(L, counter);
-        counter++;
-    }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createButton: bad argument #%d type (label width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
-    } else {
-        width = lua_tonumber(L, counter);
-        counter++;
-    }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createButton: bad argument #%d type (label height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
-    } else {
-        height = lua_tonumber(L, counter);
-        counter++;
-    }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createButton: bad argument #%d type (label fillBackground as boolean/number (0/1) expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
-    } else {
-        fillBackground = lua_toboolean(L, counter);
-        counter++;
-    }
-    if (lua_gettop(L) > counter) {
-        counter++;
-        if (!lua_isboolean(L, counter)) {
-            lua_pushfstring(L, "createButton: bad argument #%d type (label clickthrough as boolean/number (0/1) expected, got %s!)", counter, luaL_typename(L, counter));
-            lua_error(L);
-            return 1;
-        } else {
-            clickthrough = lua_toboolean(L, counter);
-        }
-    }
-    Host& host = getHostFromLua(L);
-    QString name(luaSendText.c_str());
-    QString windowname(luaSendWindow.c_str());
-    if (auto [success, message] = mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough); !success) {
-        lua_pushboolean(L, false);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
     }
@@ -4332,6 +4425,125 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindow
+int TLuaInterpreter::setWindow(lua_State* L)
+{
+    QString windowname;
+    QString name;
+    int n = lua_gettop(L);
+    int x = 0, y = 0;
+    bool show = true;
+
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #1 type (parent windowname as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        windowname = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (lua_type(L, 2) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 2));
+    }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+
+        } else {
+            x = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            y = lua_tonumber(L, 4);
+        }
+        if (!lua_isboolean(L, 5)) {
+            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean expected, got %s!)", luaL_typename(L, 5));
+            return lua_error(L);
+        } else {
+            show = lua_toboolean(L, 5);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->setWindow(&host, windowname, name, x, y, show); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::openMapWidget(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString area = QString();
+    int x = -1, y = -1, width = -1, height = -1;
+    if (n == 1) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "openMapWidget: bad argument #1 type (area as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            area = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (n > 1) {
+        area = QStringLiteral("f");
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #1 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            x = lua_tonumber(L, 1);
+        }
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #2 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            y = lua_tonumber(L, 2);
+        }
+    }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #3 type (width as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            width = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #4 type (height as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            height = lua_tonumber(L, 4);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->openMapWidget(&host, area.toLower(), x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::closeMapWidget(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->closeMapWidget(&host); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMainWindowSize
 int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
@@ -4639,71 +4851,28 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_remove(L, 1);
     }
 
-    QString eventName;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #2 type (function name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
+    int func;
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        eventName = QString::fromUtf8(lua_tostring(L, 1));
-        lua_remove(L, 1);
     }
-
-    TEvent event {};
-    int n = lua_gettop(L);
-    // Iterate from the top down thru the stack because luaL_ref requires
-    // the object (table or function in our case) to be on top
-    for (int i = n; i >= 1; --i) {
-        if (lua_isnumber(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
-            lua_pop(L, 1);
-        } else if (lua_isstring(L, -1)) {
-            event.mArgumentList.prepend(QString::fromUtf8(lua_tostring(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
-            lua_pop(L, 1);
-        } else if (lua_isboolean(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
-            lua_pop(L, 1);
-        } else if (lua_isnil(L, -1)) {
-            event.mArgumentList.prepend(QString());
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
-            lua_pop(L, 1);
-        } else if (lua_istable(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
-            // luaL_ref pops the object, so we don't have to
-        } else if (lua_isfunction(L, -1)) {
-            event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
-            // luaL_ref pops the object, so we don't have to
-        } else {
-            lua_pushfstring(L,
-                            "%s: bad argument #%d type (boolean, number, string, table, function,\n"
-                            "or nil expected, got a %s!)",
-                            funcName.toUtf8().constData(),
-                            i,
-                            luaL_typename(L, -1));
-            return lua_error(L);
-        }
-
-    }
+    func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
-        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
-        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelReleaseCallback"))
-        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelMoveCallback"))
-        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelWheelCallback"))
-        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnEnter"))
-        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, func);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
-        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, eventName, event);
+        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, func);
     else {
         lua_pushnil(L);
         lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
@@ -6429,27 +6598,21 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletLuaDefaultPaths
 int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
-    int index = 1;
+    int index = 0;
+    auto& host = getHostFromLua(L);
+    auto* pLua = host.getLuaInterpreter();
+    Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
+
+    QStringListIterator itPath(pLua->mPossiblePaths);
     lua_newtable(L);
-#if defined(Q_OS_MACOS)
-    lua_createtable(L, 3, 0);
-#else
-    lua_createtable(L, 2, 0);
-#endif
-    // add filepath relative to the binary itself (one usecase is AppImage on Linux)
-    QString nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#if defined(Q_OS_MACOS)
-    // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
-    nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#endif
-    // add the default search path as specified by build file
-    nativePath = QDir::toNativeSeparators(LUA_DEFAULT_PATH "/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
+    while (itPath.hasNext()) {
+        // We are hoping that the directory separators are not going to be a
+        // problem in reporting the details:
+        QString nativePath = QDir::toNativeSeparators(itPath.next());
+        lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
+        lua_pushstring(L, nativePath.toUtf8().constData());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -6965,7 +7128,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     Host& host = getHostFromLua(L);
     std::string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -6974,7 +7137,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
             what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
@@ -7000,7 +7163,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     }
 
     // output is in Mud Server Encoding form here:
-    if (! host.mTelnet.socketOutRaw(output)) {
+    if (!host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
         lua_pushstring(L, "unable to send all of the ATCP message");
         return 2;
@@ -7040,7 +7203,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     Host& host = getHostFromLua(L);
     std::string msg;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
@@ -7049,7 +7212,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
+            lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
             what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
@@ -7075,7 +7238,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     }
 
     // output is in Mud Server Encoding form here:
-    if (! host.mTelnet.socketOutRaw(output)) {
+    if (!host.mTelnet.socketOutRaw(output)) {
         lua_pushnil(L);
         lua_pushstring(L, "unable to send all of the GMCP message");
         return 2;
@@ -7281,7 +7444,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "tempTimer: bad argument #2 type (script or function name as string expected, got %s!)", luaL_typename(L,2));
+        lua_pushfstring(L, "tempTimer: bad argument #2 type (script or function name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
@@ -7795,9 +7958,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 14);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
             lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return 2;
+            return lua_error(L);
         }
     }
 
@@ -8131,10 +8293,7 @@ int TLuaInterpreter::exists(lua_State* L)
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
     } else if (type == "script") {
-        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
-        for (auto script : scripts) {
-          cnt += (script->getName() == name);
-        }
+        cnt += host.getScriptUnit()->findScriptId(name).size();
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -8194,7 +8353,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             it1++;
         }
     } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
-        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
         for (auto script : scripts) {
             if (script->getName() == name && script->isActive()) {
                 ++cnt;
@@ -8246,17 +8405,129 @@ int TLuaInterpreter::permAlias(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
-int TLuaInterpreter::permTimer(lua_State* L)
+int TLuaInterpreter::getScript(lua_State* L)
 {
+    int n = lua_gettop(L);
+    int pos = 1;
+
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L,1));
+        lua_pushfstring(L, "getScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (n > 1) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "getScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 2);
+    }
+    Host& host = getHostFromLua(L);
+    pos--;
+
+    auto ids = host.getScriptUnit()->findScriptId(name);
+    auto pS = host.getScriptUnit()->getScript(ids.value(pos, -1));
+    if (!pS) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
+        return 2;
+    }
+
+    int id = pS->getID();
+    lua_pushstring(L, pS->getScript().toUtf8().constData());
+    lua_pushnumber(L, id);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setScript
+int TLuaInterpreter::setScript(lua_State* L)
+{
+    int n = lua_gettop(L);
+    int pos = 1;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L,2));
+        lua_pushfstring(L, "setScript: bad argument #2 type (script lua code as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setScript: bad argument #3 type (script position as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 3);
+    }
+    pos--;
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
+    lua_pushnumber(L, id);
+    if (id == -1) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permScript
+int TLuaInterpreter::permScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "permScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "permScript: bad argument #2 type (script parent name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (!lua_isstring(L, 3)) {
+        lua_pushfstring(L, "permScript: bad argument #3 type (script as string expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 3));
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
+    lua_pushnumber(L, id);
+    if (id == -1) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
+int TLuaInterpreter::permTimer(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString parent = QString::fromUtf8(lua_tostring(L, 2));
@@ -8798,8 +9069,8 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         // with this ID, but without a TArea instance to accompany it (the latter was/is
         // instantiated as needed when a room is moved to the relevent area...) and we
         // need to continue to allow this - Slysven
-        //        else if( ! host.mpMap->mpRoomDB->getAreaIDList().contains( id ) ) {
-        //            lua_pushnil( L );
+        //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
+        //            lua_pushnil(L);
         //            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
         //                           id);
         //            return 2;
@@ -13143,6 +13414,85 @@ int TLuaInterpreter::reloadModule(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableModuleSync
+int TLuaInterpreter::enableModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "enableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.changeModuleSync(module, QLatin1String("1")); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    auto moduleTable = mudlet::self()->moduleTable;
+    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleTable->item(row, 2);
+        checkItem->setCheckState(Qt::Checked);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableModuleSync
+int TLuaInterpreter::disableModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.changeModuleSync(module, QLatin1String("0")); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    auto moduleTable = mudlet::self()->moduleTable;
+    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleTable->item(row, 2);
+        checkItem->setCheckState(Qt::Unchecked);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModuleSync
+int TLuaInterpreter::getModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.getModuleSync(module); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    } else if (message == QLatin1String("1")) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+}
+
 // Documentation: ? - public function missing documentation in wiki
 // Once a mapper has been created it will, by default, include the "Default
 // Area" associated with the reserved area Id -1 in the list of Areas shown in
@@ -14658,22 +15008,22 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             // Then one pattern for \uXXXX\uXXXX where each XXXX is a 4-digit hexadecimal value
             //   These are 'surrogate pairs', (U+D800-U+DBFF) followed by (U+DC00-U+DFFF).
             //   D800-DF00  DC00-DFFF
-            int j=0;
-            while((j = initialText.indexOf(codeRegex,j)) != -1){
+            int j = 0;
+            while((j = initialText.indexOf(codeRegex, j)) != -1){
                 uint u;
                 switch(initialText.at(j+1).unicode()){
-                    case 'n' : initialText.replace(j,2,'\n'); break;
-                    case 't' : initialText.replace(j,2,'\t'); break;
-                    case '\"' : initialText.replace(j,2,'\"'); break;
-                    case '\\' : initialText.replace(j,2,'\\'); break;
+                    case 'n' : initialText.replace(j, 2, '\n'); break;
+                    case 't' : initialText.replace(j, 2, '\t'); break;
+                    case '\"' : initialText.replace(j, 2, '\"'); break;
+                    case '\\' : initialText.replace(j, 2, '\\'); break;
                     case 'u': // handle lone code or pair of codes together
-                        u = initialText.midRef(j+2,4).toUShort(0,16);
+                        u = initialText.midRef(j+2, 4).toUShort(0, 16);
                         if(u > 0xFFFD){
                             j += 5; // FFFE and FFFF are guaranteed to not be Unicode characters.  Skip it.
                         }
                         else if((u < 0xD800) || (0xDFFF < u)){
                             // Characters in ranges U+0000-U+D7FF and U+E000-U+FFFD are stored as a single unit.
-                            initialText.replace(j,6,QChar(u));
+                            initialText.replace(j, 6, QChar(u));
                         }
                         else if((0xD7FF < u) && (u < 0xDC00)){
                             // Non-BMP characters (range U+10000-U+10FFFF) are stored as "surrogate pairs".
@@ -14681,9 +15031,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                             // Surrogates are always written in pairs, a lone one is invalid.
                             // The regex above should ensure second code is DCxx-DFxx
                             QChar code[2];
-                            code[0]=QChar(u);
-                            code[1]=QChar(initialText.midRef(j+8,4).toUShort(0,16));
-                            initialText.replace(j,12,code,2);
+                            code[0] = QChar(u);
+                            code[1] = QChar(initialText.midRef(j+8, 4).toUShort(0, 16));
+                            initialText.replace(j, 12, code, 2);
                             j++; // in this case we are adding 2 code points for the character
                         }
                         // DC00-DFFF should be filtered out by the regex.
@@ -15301,58 +15651,17 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE)
+bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
-    if (function.isEmpty()) {
-        return false;
-    }
-
     lua_State* L = pGlobalLua;
-
-    int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
-    if (error) {
-        std::string err;
-        if (lua_isstring(L, 1)) {
-            err = "Lua error:";
-            err += lua_tostring(L, 1);
-        }
-        QString name = "event handler function";
-        logError(err, name, function);
-        return false;
-    }
-
-    for (int i = 0; i < pE.mArgumentList.size(); i++) {
-        switch (pE.mArgumentTypeList.at(i)) {
-        case ARGUMENT_TYPE_NUMBER:
-            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
-            break;
-        case ARGUMENT_TYPE_STRING:
-            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
-            break;
-        case ARGUMENT_TYPE_BOOLEAN:
-            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
-            break;
-        case ARGUMENT_TYPE_NIL:
-            lua_pushnil(L);
-            break;
-        case ARGUMENT_TYPE_TABLE:
-            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
-            break;
-        case ARGUMENT_TYPE_FUNCTION:
-            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
-            break;
-        default:
-            qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
-            lua_pushnil(L);
-        }
-    }
-
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func);
+    int error;
     if (qE) {
         // Create Lua table with QEvent data if needed
         switch (qE->type()) {
         // This means the default argument value was used, so ignore
         case (QEvent::None):
-            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
             break;
         // These are all QMouseEvents
         case (QEvent::MouseButtonPress):
@@ -15400,7 +15709,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         // These are QEvents
@@ -15424,13 +15733,13 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         case (QEvent::Leave): {
             // Seems there isn't a QLeaveEvent, so no
             // extra information to be gotten
-            error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+            error = lua_pcall(L, 0, LUA_MULTRET, 0);
             break;
         }
         // This is a QWheelEvent
@@ -15475,13 +15784,80 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             lua_pushnumber(L, qME->angleDelta().y());
             lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
 
-            error = lua_pcall(L, pE.mArgumentList.size() + 1, LUA_MULTRET, 0);
+            error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
         }
     } else {
-        error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+        error = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
+
+    if (error) {
+        std::string err = "";
+        if (lua_isstring(L, -1)) {
+            err += lua_tostring(L, -1);
+        }
+
+        QString function = "setLabelCallback";
+        QString name = "label callback event";
+        logError(err, name, function);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
+        }
+    }
+
+    lua_pop(L, lua_gettop(L));
+    return !error;
+}
+
+// No documentation available in wiki - internal function
+bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
+{
+    if (function.isEmpty()) {
+        return false;
+    }
+
+    lua_State* L = pGlobalLua;
+
+    int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
+    if (error) {
+        std::string err;
+        if (lua_isstring(L, 1)) {
+            err = "Lua error: ";
+            err += lua_tostring(L, 1);
+        }
+        QString name = "event handler function";
+        logError(err, name, function);
+        return false;
+    }
+
+    for (int i = 0; i < pE.mArgumentList.size(); i++) {
+        switch (pE.mArgumentTypeList.at(i)) {
+        case ARGUMENT_TYPE_NUMBER:
+            lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
+            break;
+        case ARGUMENT_TYPE_STRING:
+            lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
+            break;
+        case ARGUMENT_TYPE_BOOLEAN:
+            lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_NIL:
+            lua_pushnil(L);
+            break;
+        case ARGUMENT_TYPE_TABLE:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        case ARGUMENT_TYPE_FUNCTION:
+            lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
+            break;
+        default:
+            qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
+            lua_pushnil(L);
+        }
+    }
+
+    error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
 
     if (error) {
         std::string err = "";
@@ -15994,6 +16370,36 @@ static lua_State* newstate()
 // No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
 
+// No documentation available in wiki - internal helper funtion
+void TLuaInterpreter::loadLuaModule(const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
+{
+    int error = luaL_dostring(pGlobalLua, QStringLiteral("%1require \"%2\"")
+                              .arg(luaModuleId.isEmpty() ? QString() : QStringLiteral("%1 =").arg(luaModuleId),
+                                   requirement).toUtf8().constData());
+    if (error) {
+        QString luaErrorMsg = tr("No error message available from Lua");
+        if (lua_isstring(pGlobalLua, -1)) {
+            luaErrorMsg = tr("Lua error: %1").arg(QString::fromUtf8(lua_tostring(pGlobalLua, -1)));
+        }
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
+                         // Intentional comment to separate arguments
+                         "%1 is the name of the module;"
+                         "%2 will be a line-feed inserted to put the next argument on a new line;"
+                         "%3 is the error message from the lua sub-system;"
+                         "%4 can be an additional message about the expected effect (but may be blank).")
+                .arg((description.isEmpty() ? requirement : description),
+                     QLatin1String("\n"),
+                     luaErrorMsg,
+                     (failureConsequence.isEmpty() ? QString() : QStringLiteral("\n%1").arg(failureConsequence)));
+        mpHost->postMessage(msg);
+    } else {
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                .arg(description.isEmpty() ? requirement : description);
+        mpHost->postMessage(msg);
+    }
+}
+
 // No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
@@ -16035,6 +16441,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
     lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
+    lua_register(pGlobalLua, "setUserWindowTitle", TLuaInterpreter::setUserWindowTitle);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);
     lua_register(pGlobalLua, "disableTimer", TLuaInterpreter::disableTimer);
@@ -16052,6 +16459,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "insertText", TLuaInterpreter::insertText);
     lua_register(pGlobalLua, "enableTrigger", TLuaInterpreter::enableTrigger);
     lua_register(pGlobalLua, "disableTrigger", TLuaInterpreter::disableTrigger);
+    lua_register(pGlobalLua, "enableScript", TLuaInterpreter::enableScript);
+    lua_register(pGlobalLua, "disableScript", TLuaInterpreter::disableScript);
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
@@ -16075,6 +16484,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
+    lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
+    lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
     lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow);
@@ -16096,7 +16507,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
-    lua_register(pGlobalLua, "createButton", TLuaInterpreter::createButton);
     lua_register(pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback);
     lua_register(pGlobalLua, "setLabelDoubleClickCallback", TLuaInterpreter::setLabelDoubleClickCallback);
     lua_register(pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback);
@@ -16106,6 +16516,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
+    lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
+    lua_register(pGlobalLua, "openMapWidget", TLuaInterpreter::openMapWidget);
+    lua_register(pGlobalLua, "closeMapWidget", TLuaInterpreter::closeMapWidget);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
@@ -16163,6 +16576,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permBeginOfLineStringTrigger", TLuaInterpreter::permBeginOfLineStringTrigger);
     lua_register(pGlobalLua, "tempComplexRegexTrigger", TLuaInterpreter::tempComplexRegexTrigger);
     lua_register(pGlobalLua, "permTimer", TLuaInterpreter::permTimer);
+    lua_register(pGlobalLua, "permScript", TLuaInterpreter::permScript);
+    lua_register(pGlobalLua, "getScript", TLuaInterpreter::getScript);
+    lua_register(pGlobalLua, "setScript", TLuaInterpreter::setScript);
     lua_register(pGlobalLua, "permAlias", TLuaInterpreter::permAlias);
     lua_register(pGlobalLua, "permKey", TLuaInterpreter::permKey);
     lua_register(pGlobalLua, "tempKey", TLuaInterpreter::tempKey);
@@ -16299,6 +16715,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "installModule", TLuaInterpreter::installModule);
     lua_register(pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule);
     lua_register(pGlobalLua, "reloadModule", TLuaInterpreter::reloadModule);
+    lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
+    lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
+    lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
     lua_register(pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
@@ -16407,27 +16826,20 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
+    lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    // prepend profile path to package.path and package.cpath
-    // with a singleShot Timer to avoid crash on startup.
-    // crash caused by calling Host::getName() too early.
-    QTimer::singleShot(0, this, [this]() {
-        QChar separator = QDir::separator();
+    const auto separator = QDir::separator();
+    const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
 
-        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());
-        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?.lua;]] .. package.path").arg(separator).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
-        luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = getMudletHomeDir() .. [[%1?;]] .. package.cpath").arg(separator).toUtf8().constData());
-    });
-
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
 #ifdef Q_OS_MAC
     luaopen_zip(pGlobalLua);
     lua_setglobal(pGlobalLua, "zip");
 #endif
-    QString n;
-    int error;
 
 #if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
@@ -16440,133 +16852,15 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_WIN32)
-     luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
 #endif
 
-    error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QStringLiteral("rex_pcre"),
-                 QStringLiteral("\n%1\n"))
-            .arg(tr("Some functions may not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QStringLiteral("rex_pcre"));
-        mpHost->postMessage(msg);
-    }
-
-    error = luaL_dostring(pGlobalLua, "require \"zip\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("zip"),
-                 QString());
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("zip"));
-        mpHost->postMessage(msg);
-    }
-
-    error = luaL_dostring(pGlobalLua, "require \"lfs\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("lfs (Lua File System)"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Probably will not be able to access Mudlet Lua code."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("lfs"));
-        mpHost->postMessage(msg);
-    }
-
-    error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("luasql.sqlite3"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Database support will not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("sqlite3"));
-        mpHost->postMessage(msg);
-    }
-
-    error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("utf8"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("utf8.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("utf8"));
-        mpHost->postMessage(msg);
-    }
-
-    error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("yajl"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("yajl.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("yajl"));
-        mpHost->postMessage(msg);
-    }
+    loadLuaModule(QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    loadLuaModule(QLatin1String("zip"));
+    loadLuaModule(QLatin1String("rex_pcre"), tr("Some functions may not be available."));
+    loadLuaModule(QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    loadLuaModule(QLatin1String("lua-utf8"), tr("utf8.* Lua functions won't be available."), QLatin1String("utf8"), QLatin1String("utf8"));
+    loadLuaModule(QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
 
     QString tn = "atcp";
     QStringList args;
@@ -16738,7 +17032,9 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_pop(pIndenterState.get(), lua_gettop(pIndenterState.get()));
 }
 
-// No documentation available in wiki - internal function
+// No documentation available in wiki - internal function called AFTER
+// initLuaGlobals() {it depends on that to load up some Lua libraries, including
+// the LFS "Lua File System" one first}:
 void TLuaInterpreter::loadGlobal()
 {
 #if defined(Q_OS_WIN32)
@@ -16747,29 +17043,90 @@ void TLuaInterpreter::loadGlobal()
 
     setupLanguageData();
 
-    QStringList pathsToTry = {
+    const QString executablePath{QCoreApplication::applicationDirPath()};
+    // Initialise the list of path and file names so that
+    // getMudletLuaDefaultPaths() can report them later if asked:
+    mPossiblePaths = QStringList{
 #if defined(Q_OS_MACOS)
-        QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua",
+        // Load relatively to MacOS inside Resources when we're in a .app
+        // bundle, as mudlet-lua always gets copied in by the build script into
+        // the bundle for the Mac installer build:
+        QStringLiteral("%1/../Resources/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath),
 #endif
-        QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua",
-        "../src/mudlet-lua/lua/LuaGlobal.lua",
-        "mudlet-lua/lua/LuaGlobal.lua",
-        LUA_DEFAULT_PATH "/LuaGlobal.lua"
+
+        // For the installer we put the lua files under the executable's
+        // location. This is the case for the Windows install:
+        QDir::toNativeSeparators(QStringLiteral("%1/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // Although a no-op for an in source build an additional "../src/"
+        // allows location of lua code when object code is in a directory
+        // alongside the src directory as occurs using Qt Creator "Shadow
+        // Builds":
+        QDir::toNativeSeparators(QStringLiteral("%1/../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // Windows builds (or others where the qmake project file has CONFIG
+        // containing debug_and_release AND debug_and_release_target options)
+        // may be an additional sub-directory down:
+        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
+
+    // Although it is relatively easy to detect whether something is #define d
+    // it is not so easy to detect what it contains at the preprocessor stage,
+    // so leave checking for it's contents to run-time - this one is the one
+    // for Linux/FreeBSD where the read-only shared Lua files go into the
+    // /usr/share part of the file-system:
+#if defined(LUA_DEFAULT_PATH)
+    if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
+        mPossiblePaths <<  QDir::toNativeSeparators(QStringLiteral(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
+    };
+#endif
     QStringList failedMessages{};
 
+    // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
+    // luaL_dostring(pGlobalLua, QStringLiteral("debugLoading = true").toUtf8().constData());
+
+#if defined(Q_OS_WIN32)
+    // Needed to enable permissions checks on NTFS file systems - normally
+    // turned off for performance reasons:
+    extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+#endif
 
     int error;
-    for (const auto& path : qAsConst(pathsToTry)) {
-        if (!QFileInfo::exists(path)) {
-            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
+    for (const auto& pathFileName : qAsConst(mPossiblePaths)) {
+        if (!(QFileInfo::exists(pathFileName))) {
+            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(pathFileName);
             continue;
         }
 
+        if (!(QFileInfo(pathFileName).isFile())) {
+            failedMessages << tr("%1 (isn't a file or symlink to a file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            continue;
+        }
+
+#if defined(Q_OS_WIN32)
+        // Turn on permission checking on NTFS file systems
+        qt_ntfs_permission_lookup++;
+#endif
+        if (!(QFileInfo(pathFileName).isReadable())) {
+            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            continue;
+        }
+#if defined(Q_OS_WIN32)
+        // Turn off permission checking
+        qt_ntfs_permission_lookup--;
+#endif
+
+        // Leave a global variable set to the path so we can use it to find the
+        // other files around it - the script will convert the directory
+        // separators as necessary:
+        Q_ASSERT_X(!pathFileName.isEmpty(), "TLuaInterpreter::loadGlobal()", "trying to call QFileInfo(path).absolutePath() when path is empty");
+        luaL_dostring(pGlobalLua, QStringLiteral("luaGlobalPath = \"%1\"").arg(QFileInfo(pathFileName).absolutePath()).toUtf8().constData());
+
         // load via Qt so UTF8 paths work on Windows - Lua can't handle it
-        auto luaGlobal = readScriptFile(path);
+        auto luaGlobal = readScriptFile(pathFileName);
+
         if (luaGlobal.isEmpty()) {
-            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(path);
+            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(pathFileName);
             continue;
         }
 
@@ -16778,12 +17135,12 @@ void TLuaInterpreter::loadGlobal()
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         } else {
-            qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
-            failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
+            qWarning() << "TLuaInterpreter::loadGlobal() loading " << pathFileName << " failed: " << lua_tostring(pGlobalLua, -1);
+            failedMessages << QStringLiteral("%1 (%2)").arg(pathFileName, lua_tostring(pGlobalLua, -1));
         }
     }
 
-    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't find, load and successfully run LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
 }
 
 // No documentation available in wiki - internal function
@@ -16824,9 +17181,66 @@ void TLuaInterpreter::loadUtf8Filenames()
 #endif
 
 // No documentation available in wiki - internal function
+QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const QString& parent, const QString& luaCode)
+{
+    TScript* pS;
+    if (parent.isEmpty()) {
+        pS = new TScript(QStringLiteral("newPermScriptWithoutAnId"), mpHost);
+    } else {
+        // FIXME: There can be more than one script with the same name - we will
+        // use only the FIRST one for now, but we really ought to enhance the
+        // API to handle more than one potential parent with the same name:
+        auto ids = mpHost->getScriptUnit()->findScriptId(parent);
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
+        if (!pParentScript) {
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+        }
+        pS = new TScript(pParentScript, mpHost);
+    }
+    pS->setIsFolder((luaCode.isEmpty()));
+    pS->setName(name);
+    // This will lead to the generation of the id number:
+    mpHost->getScriptUnit()->registerScript(pS);
+    if (!pS->setScript(luaCode)) {
+        QString errMsg = pS->getError();
+        delete pS;
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
+    }
+
+    int id = pS->getID();
+    pS->setIsActive(false);
+    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    return qMakePair(id, QString());
+}
+
+// No documentation available in wiki - internal function
+QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
+{
+    if (name.isEmpty()) {
+        return qMakePair(-1, QStringLiteral("cannot have an empty string as name"));
+    }
+
+    auto ids = mpHost->getScriptUnit()->findScriptId(name);
+    TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
+    if (!pS) {
+        return qMakePair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
+    }
+    auto oldCode = pS->getScript();
+    if (!pS->setScript(luaCode)) {
+        QString errMsg = pS->getError();
+        pS->setScript(oldCode);
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
+    }
+    pS->setScript(luaCode);
+    int id = pS->getID();
+    mpHost->mpEditorDialog->writeScript(id);
+    return qMakePair(id, QString());
+}
+
+// No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
-    QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     TTimer* pT;
     if (parent.isEmpty()) {
         pT = new TTimer(QStringLiteral("newPermTimerWithoutAnId"), time, mpHost);
@@ -17683,7 +18097,7 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     if (!(lua_toboolean(L,-1))) {
         // no it doesn't
-        lua_pop(L,1);
+        lua_pop(L, 1);
         // So make it
         lua_newtable(L);
     }
@@ -17790,7 +18204,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     if (!(lua_toboolean(L,-1))) {
         // no it doesn't
-        lua_pop(L,1);
+        lua_pop(L, 1);
         // So make it
         lua_newtable(L);
     }

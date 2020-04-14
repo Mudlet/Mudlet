@@ -80,7 +80,7 @@ void TToolBar::moveEvent(QMoveEvent* e)
     if (!mpTAction) {
         return;
     }
-    
+
     if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
     }

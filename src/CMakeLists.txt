@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -22,13 +23,15 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
+  list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  endif()
 endif()
 
 if(WIN32)
   list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
 endif()
-
 
 set(mudlet_SRCS
     ActionUnit.cpp
@@ -50,6 +53,7 @@ set(mudlet_SRCS
     dlgRoomExits.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
+    dlgSourceEditorFindArea.cpp
     dlgSystemMessageArea.cpp
     dlgTimersMainArea.cpp
     dlgTriggerEditor.cpp
@@ -100,33 +104,33 @@ set(mudlet_SRCS
     TVar.cpp
     VarUnit.cpp
     XMLexport.cpp
-    XMLimport.cpp
-)
+    XMLimport.cpp)
 
-# This is for compiled UI files, not those used at runtime though the resource file.
+# This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
-  ui/about_dialog.ui
-  ui/actions_main_area.ui
-  ui/aliases_main_area.ui
-  ui/color_trigger.ui
-  ui/composer.ui
-  ui/connection_profiles.ui
-  ui/dlgPackageExporter.ui
-  ui/irc.ui
-  ui/keybindings_main_area.ui
-  ui/main_window.ui
-  ui/mapper.ui
-  ui/notes_editor.ui
-  ui/profile_preferences.ui
-  ui/room_exits.ui
-  ui/scripts_main_area.ui
-  ui/source_editor_area.ui
-  ui/system_message_area.ui
-  ui/timers_main_area.ui
-  ui/triggers_main_area.ui
-  ui/trigger_editor.ui
-  ui/trigger_pattern_edit.ui
-  ui/vars_main_area.ui)
+    ui/about_dialog.ui
+    ui/actions_main_area.ui
+    ui/aliases_main_area.ui
+    ui/color_trigger.ui
+    ui/composer.ui
+    ui/connection_profiles.ui
+    ui/dlgPackageExporter.ui
+    ui/irc.ui
+    ui/keybindings_main_area.ui
+    ui/main_window.ui
+    ui/mapper.ui
+    ui/notes_editor.ui
+    ui/profile_preferences.ui
+    ui/room_exits.ui
+    ui/scripts_main_area.ui
+    ui/source_editor_area.ui
+    ui/source_editor_find_area.ui
+    ui/system_message_area.ui
+    ui/timers_main_area.ui
+    ui/triggers_main_area.ui
+    ui/trigger_editor.ui
+    ui/trigger_pattern_edit.ui
+    ui/vars_main_area.ui)
 
 set(mudlet_HDRS
     ActionUnit.h
@@ -148,6 +152,7 @@ set(mudlet_HDRS
     dlgRoomExits.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
+    dlgSourceEditorFindArea.h
     dlgSystemMessageArea.h
     dlgTimersMainArea.h
     dlgTriggerEditor.h
@@ -205,8 +210,7 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h
-)
+    XMLimport.h)
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
@@ -222,12 +226,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(
+  Qt5 5.11 REQUIRED
+  COMPONENTS Core
+             Multimedia
+             Network
+             OpenGL
+             UiTools
+             Widgets
+             Concurrent)
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.11)
-  message(FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+if(Qt5Core_VERSION VERSION_LESS 5.11)
+  message(
+    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -253,67 +266,52 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
+                      ${mudlet_UIS})
 
-add_executable(mudlet
-  ${mudlet_SRCS}
-  ${mudlet_RCCS}
-  ${mudlet_HDRS}
-  ${mudlet_UIS}
-)
-
-set_target_properties(mudlet
-  PROPERTIES
-    AUTOMOC ON
-    AUTOUIC ON
-    AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
-    AUTORCC ON
-    POSITION_INDEPENDENT_CODE ON
-)
+set_target_properties(
+  mudlet
+  PROPERTIES AUTOMOC ON AUTOUIC ON AUTOUIC_SEARCH_PATHS
+                                   "${CMAKE_CURRENT_SOURCE_DIR}/ui" AUTORCC ON
+             POSITION_INDEPENDENT_CODE ON)
 
 if(USE_FONTS)
-  target_compile_definitions(mudlet
-    PRIVATE
-      INCLUDE_FONTS
-  )
+  target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
 endif()
 
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
 
-# Define a preprocessor symbol with the default fallback location from which
-# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
-# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
-# will be used.
-target_compile_definitions(mudlet
-  PRIVATE
-    APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
-    APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    QTKEYCHAIN_NO_EXPORT
-)
+# Define a preprocessor symbol with the default fallback location from which to
+# load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
+# value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
+target_compile_definitions(
+  mudlet
+  PRIVATE APP_VERSION="${APP_VERSION}" APP_BUILD="${APP_BUILD}"
+          APP_TARGET="${APP_TARGET}" LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+          QTKEYCHAIN_NO_EXPORT)
 
-target_link_libraries(mudlet
-    communi
-    edbee-lib
-    qt5keychain
-    Boost::boost
-    HUNSPELL::HUNSPELL
-    LUA51::LUA51
-    PCRE::PCRE
-    PUGIXML::PUGIXML
-    Qt5::Concurrent
-    Qt5::Core
-    Qt5::Network
-    Qt5::Multimedia
-    Qt5::OpenGL
-    Qt5::UiTools
-    Qt5::Widgets
-    YAJL::YAJL
-    ZIP::ZIP
-    ZLIB::ZLIB
-)
+target_link_libraries(
+  mudlet
+  communi
+  edbee-lib
+  qt5keychain
+  Boost::boost
+  HUNSPELL::HUNSPELL
+  LUA51::LUA51
+  PCRE::PCRE
+  PUGIXML::PUGIXML
+  Qt5::Concurrent
+  Qt5::Core
+  Qt5::Network
+  Qt5::Multimedia
+  Qt5::OpenGL
+  Qt5::UiTools
+  Qt5::Widgets
+  YAJL::YAJL
+  ZIP::ZIP
+  ZLIB::ZLIB)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
@@ -321,77 +319,72 @@ if(Qt5TextToSpeech_FOUND)
 endif(Qt5TextToSpeech_FOUND)
 
 if(Qt5Gamepad_FOUND)
-target_link_libraries(mudlet Qt5::Gamepad)
+  target_link_libraries(mudlet Qt5::Gamepad)
   message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
-  target_compile_definitions(mudlet
-    PRIVATE
-      INCLUDE_UPDATER
-  )
+  target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
-  target_compile_definitions(mudlet
-    PRIVATE
-      INCLUDE_3DMAPPER
-  )
+  target_compile_definitions(mudlet PRIVATE INCLUDE_3DMAPPER)
+endif()
+
+if(USE_VARIABLE_SPLASH_SCREEN)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)
 endif()
 
 if(WIN32)
-    target_link_libraries(mudlet ws2_32)
-    set_target_properties(mudlet
-      PROPERTIES
-        WIN32_EXECUTABLE ON
-    )
+  target_link_libraries(mudlet ws2_32)
+  set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
 endif()
 
 if(APPLE)
   target_link_libraries(mudlet luazip)
 
   if(USE_UPDATER)
-    target_link_libraries(mudlet
-      cocoa-qt-glue
-      "-framework Sparkle"
-      "-framework AppKit"
-      "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
+  set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
+                                          MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
 endif()
 
-target_compile_options(mudlet
-  PRIVATE
-    -Wno-deprecated
-  )
+target_compile_options(mudlet PRIVATE -Wno-deprecated)
 
 # *nix "make install" provision:
-if(UNIX)
+if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
-    FILES_MATCHING PATTERN "*.lua"
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-  )
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "mudlet-lua/tests"
     DESTINATION "share/mudlet"
-    FILES_MATCHING PATTERN "*.lua"
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-  )
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE
-    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-  )
-  install(TARGETS mudlet
+    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+                                       WORLD_READ)
+  install(
+    TARGETS mudlet
     RUNTIME
-    DESTINATION "bin"
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    CONFIGURATIONS Debug Release
-    COMPONENT All)
+      DESTINATION "bin"
+      PERMISSIONS
+        OWNER_READ
+        OWNER_WRITE
+        OWNER_EXECUTE
+        GROUP_READ
+        GROUP_EXECUTE
+        WORLD_READ
+        WORLD_EXECUTE
+      CONFIGURATIONS Debug Release
+      COMPONENT All)
 endif()
