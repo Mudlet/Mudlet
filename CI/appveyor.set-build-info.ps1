@@ -12,7 +12,7 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
   } else {
     if ($Env:MUDLET_VERSION_BUILD -eq "-ptb") {
-      $Script:Date = Get-Date -Format "yyyy.M.d"
+      $Script:Date = Get-Date -Format "yyyy-MM-dd"
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-$Date"
     } else {
       $Script:Commit = git rev-parse --short HEAD
