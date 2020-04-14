@@ -14792,15 +14792,12 @@ TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString
         }
     }
 
+    lua_newtable(L);
+    lua_setfield(L, -2, type.toUtf8().toLower().constData());
     lua_getfield(L, -1, type.toUtf8().toLower().constData());
     if (!lua_istable(L, -1)) {
-        lua_getglobal(L, "mxp");
-        lua_newtable(L);
-        lua_setfield(L, -2, type.toUtf8().toLower().constData());
-        if (!lua_istable(L, -1)) {
-            qDebug() << "ERROR: 'mxp." << type << "' table not defined";
-            return;
-        }
+        qDebug() << "ERROR: 'mxp." << type << "' table could not be defined";
+        return;
     }
 
     QMapIterator<QString, QString> itr(attrs);
