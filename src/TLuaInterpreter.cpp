@@ -14815,7 +14815,7 @@ TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString
     lua_getfield(L, -1, "actions");
     for (int i = 0; i < actions.size(); i++) {
         lua_pushstring(L, actions[i].toUtf8().constData());
-        lua_rawseti(L, -2, i);
+        lua_rawseti(L, -2, i + 1);
     }
 
     lua_pop(L, lua_gettop(L));
