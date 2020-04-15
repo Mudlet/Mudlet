@@ -239,8 +239,7 @@ find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
 if(Qt5Core_VERSION VERSION_LESS 5.11)
-  message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+  message(FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -266,14 +265,21 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
-                      ${mudlet_UIS})
+add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
 
-set_target_properties(
-  mudlet
-  PROPERTIES AUTOMOC ON AUTOUIC ON AUTOUIC_SEARCH_PATHS
-                                   "${CMAKE_CURRENT_SOURCE_DIR}/ui" AUTORCC ON
-             POSITION_INDEPENDENT_CODE ON)
+set_target_properties(mudlet
+  PROPERTIES
+    AUTOMOC ON
+    AUTOUIC ON
+    AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+    AUTORCC ON
+    POSITION_INDEPENDENT_CODE ON)
+
+if(USE_SYSTEM_QT5KEYCHAIN)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
+elseif(USE_SYSTEM_QTKEYCHAIN)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT_KEYCHAIN)
+endif()
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
@@ -286,17 +292,16 @@ endif(UNIX)
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
-target_compile_definitions(
-  mudlet
-  PRIVATE APP_VERSION="${APP_VERSION}" APP_BUILD="${APP_BUILD}"
-          APP_TARGET="${APP_TARGET}" LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-          QTKEYCHAIN_NO_EXPORT)
+target_compile_definitions(mudlet
+  PRIVATE
+    APP_VERSION="${APP_VERSION}"
+    APP_BUILD="${APP_BUILD}"
+    APP_TARGET="${APP_TARGET}"
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
-target_link_libraries(
-  mudlet
+target_link_libraries(mudlet
   communi
   edbee-lib
-  qt5keychain
   Boost::boost
   HUNSPELL::HUNSPELL
   LUA51::LUA51
@@ -323,6 +328,16 @@ if(Qt5Gamepad_FOUND)
   message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
+if(USE_SYSTEM_QT5KEYCHAIN)
+  target_link_libraries(mudlet qt5keychain)
+  message(STATUS "Using system Qt5KeyChain (QtKeyChain) library")
+elseif(USE_SYSTEM_QTKEYCHAIN)
+  target_link_libraries(mudlet qtkeychain)
+  message(STATUS "Using system QtKeyChain library")
+else()
+  target_link_libraries(mudlet qtkeychain)
+endif()
+
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
@@ -348,8 +363,10 @@ if(APPLE)
   if(USE_UPDATER)
     target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
-  set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
-                                          MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
+  set_target_properties(mudlet
+    PROPERTIES
+      MACOSX_BUNDLE ON
+      MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
@@ -362,17 +379,31 @@ if(UNIX AND NOT APPLE)
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
-    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.lua"
+    PERMISSIONS
+      OWNER_READ
+      OWNER_WRITE
+      GROUP_READ
+      WORLD_READ)
   install(
     DIRECTORY "mudlet-lua/tests"
     DESTINATION "share/mudlet"
     FILES_MATCHING
-    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.lua"
+    PERMISSIONS
+      OWNER_READ
+      OWNER_WRITE
+      GROUP_READ
+      WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-                                       WORLD_READ)
+    PATTERN ".git" EXCLUDE
+    PERMISSIONS
+      OWNER_READ
+      OWNER_WRITE
+      GROUP_READ
+      WORLD_READ)
   install(
     TARGETS mudlet
     RUNTIME
