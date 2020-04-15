@@ -49,10 +49,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # ptb/release build
+    app="source/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
-      echo "=== Creating a public test build ==="
+      echo "== Creating a public test build =="
+      mv "$app" "source/build/Mudlet PTB.app"
+      app="source/build/Mudlet PTB.app"
     else
-      echo "=== Creating a release build ==="
+      echo "== Creating a release build =="
     fi
 
     # add ssh-key to ssh-agent for deployment
@@ -67,9 +70,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      bash make-installer.sh -r "${VERSION}${MUDLET_VERSION_BUILD}" source/build/Mudlet.app
+      bash make-installer.sh -r "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
     else
-      bash make-installer.sh -r "${VERSION}" source/build/Mudlet.app
+      bash make-installer.sh -r "${VERSION}" "$app"
     fi
 
     if [ ! -z "$CERT_PW" ]; then
