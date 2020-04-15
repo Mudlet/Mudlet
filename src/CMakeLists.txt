@@ -279,6 +279,9 @@ if(USE_SYSTEM_QT5KEYCHAIN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
 elseif(USE_SYSTEM_QTKEYCHAIN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT_KEYCHAIN)
+else
+  # An odd definition needed if we are using our own QtKeyChain
+  target_compile_definitions(mudlet PRIVATE QTKEYCHAIN_NO_EXPORT)
 endif()
 
 if(USE_FONTS)
