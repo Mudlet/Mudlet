@@ -38,6 +38,8 @@
 #include <QTime>
 #include <QVector>
 #include "post_guard.h"
+#include "TEncodingTable.h"
+#include "TLinkStore.h"
 
 #include <deque>
 #include <string>
@@ -132,12 +134,7 @@ enum TMXPMode
 
 class TBuffer
 {
-    // need to use tr() on encoding names in csmEncodingTable
-    Q_DECLARE_TR_FUNCTIONS(TBuffer)
-
-    // private - a map of computer-friendly encoding names as keys,
-    // values are a pair of human-friendly name + encoding data
-    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
+    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::defaultInstance;
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
@@ -189,9 +186,9 @@ public:
     void paste(QPoint&, TBuffer);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
-    static const QList<QString> getFriendlyEncodingNames();
-    static const QString& getComputerEncoding(const QString& encoding);
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.getEncodingNames(); }
+    static const QList<QString> getFriendlyEncodingNames() { return csmEncodingTable.getFriendlyNames(); }
+    static const QString& getComputerEncoding(const QString& encoding) { return csmEncodingTable.getEncodingByFriendlyName(encoding); }
     void logRemainingOutput();
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -204,9 +201,7 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    QMap<int, QStringList> mLinkStore;
-    QMap<int, QStringList> mHintStore;
-    int mLinkID;
+    TLinkStore mLinkStore;
     int mLinesLimit;
     int mBatchDeleteSize;
     int mWrapAt;
@@ -279,7 +274,6 @@ private:
     void decodeOSC(const QString&);
     void resetColors();
 
-    static const int scmMaxLinks = 2000;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:

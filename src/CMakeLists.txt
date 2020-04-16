@@ -81,11 +81,13 @@ set(mudlet_SRCS
     TDebug.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
+    TEncodingTable.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
     TMedia.cpp
@@ -182,6 +184,7 @@ set(mudlet_HDRS
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h
+    TEncodingTable.h
     testdbg.h
     TEvent.h
     TForkedProcess.h
@@ -189,6 +192,7 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TLinkStore.h
     TLuaInterpreter.h
     TMap.h
     TMatchState.h

@@ -500,11 +500,13 @@ SOURCES += \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
+    TEncodingTable.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
@@ -574,6 +576,7 @@ HEADERS += \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
+    TEncodingTable.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \
@@ -581,6 +584,7 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TLinkStore.h \
     TLuaInterpreter.h \
     TMap.h \
     TMedia.h \
