@@ -501,6 +501,7 @@ SOURCES += \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
     TEncodingTable.cpp \
+    TEntityHandler.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
@@ -577,6 +578,7 @@ HEADERS += \
     TDockWidget.h \
     TEasyButtonBar.h \
     TEncodingTable.h \
+    TEntityHandler.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \

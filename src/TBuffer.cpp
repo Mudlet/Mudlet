@@ -138,7 +138,6 @@ TBuffer::TBuffer(Host* pH)
 , openT(0)
 , closeT(0)
 , mMXP_LINK_MODE(false)
-, mIgnoreTag(false)
 , mParsingVar(false)
 , mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
@@ -1002,53 +1001,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 }
             }
 
-            if (ch == '&' || mIgnoreTag) {
-                if ((localBufferPosition + 4 < localBufferLength) && (mSkip.empty())) {
-                    if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
-                        localBufferPosition += 3;
-                        ch = '>';
-                        mIgnoreTag = false;
-                    } else if (localBuffer.substr(localBufferPosition, 4) == "&lt;") {
-                        localBufferPosition += 3;
-                        ch = '<';
-                        mIgnoreTag = false;
-                    } else if (localBuffer.substr(localBufferPosition, 5) == "&amp;") {
-                        mIgnoreTag = false;
-                        localBufferPosition += 4;
-                        ch = '&';
-                    } else if (localBuffer.substr(localBufferPosition, 6) == "&quot;") {
-                        localBufferPosition += 5;
-                        mIgnoreTag = false;
-                        mSkip.clear();
-                        ch = '"';
-                    }
-                } else if (mSkip == "&gt" && ch == ';') { // if the content is split across package borders
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '>';
-                } else if (mSkip == "&lt" && ch == ';') {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '<';
-                } else if (mSkip == "&amp" && ch == ';') {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '&';
-                } else if (mSkip == "&quot" && ch == ';' ) {
-                    mIgnoreTag = false;
-                    mSkip.clear();
-                    ch = '"';
-                } else {
-                    mIgnoreTag = true;
-                    mSkip += ch;
-                    // sanity check
-                    if (mSkip.size() > 7) {
-                        mIgnoreTag = false;
-                        mSkip.clear();
-                    }
-                    ++localBufferPosition;
-                    continue;
-                }
+            if (mEntityHandler.handle(ch, localBuffer, localBufferPosition, localBufferLength)) {
+                continue;
             }
         }
 

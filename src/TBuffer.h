@@ -40,6 +40,7 @@
 #include "post_guard.h"
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
+#include "TEntityHandler.h"
 
 #include <deque>
 #include <string>
@@ -250,9 +251,8 @@ public:
 
     QMap<QString, TMxpElement> mMXP_Elements;
 
+    TEntityHandler mEntityHandler;
     bool mMXP_LINK_MODE;
-    bool mIgnoreTag;
-    std::string mSkip;
     bool mParsingVar;
     char mOpenMainQuote;
     bool mMXP_SEND_NO_REF_MODE;
