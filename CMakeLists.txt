@@ -109,11 +109,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 
 # The logic for this variable is not compatible with the current include_optional_module(...)
 # so we will need to process it manually
-if(DEFINED $ENV{WITH_SYSTEM_QTKEYCHAIN})
-  set(WITH_SYSTEM_QTKEYCHAIN $ENV{WITH_SYSTEM_QTKEYCHAIN} CACHE STRING "Use NO unless you wish to use a system provided QT5 (a.k.a. YES) {files in a qt5keychain system sub-directory} or QT {files in a qtkeychain system sub-directory} Qt Keychain library" FORCE)
-  # We do have a value to check - so upper case it to simplify the value testing
-  string(TOUPPER ${WITH_SYSTEM_QTKEYCHAIN} WITH_SYSTEM_QTKEYCHAIN)
-  if((WITH_SYSTEM_QTKEYCHAIN STREQUAL "YES") OR (WITH_SYSTEM_QTKEYCHAIN STREQUAL "QT5"))
+if(DEFINED ENV{WITH_SYSTEM_QTKEYCHAIN})
+  message(STATUS "Detected WITH_SYSTEM_QTKEYCHAIN variable in environment, it is set to $ENV{WITH_SYSTEM_QTKEYCHAIN}...")
+  string(TOUPPER ENV{WITH_SYSTEM_QTKEYCHAIN} ENV{WITH_SYSTEM_QTKEYCHAIN})
+  if(($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "YES") OR ($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "QT5"))
     # The specific tested for values were seen so set the appropriate values
     option(USE_SYSTEM_QT5KEYCHAIN
            "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
@@ -121,13 +120,15 @@ if(DEFINED $ENV{WITH_SYSTEM_QTKEYCHAIN})
     option(USE_SYSTEM_QTKEYCHAIN
            "Use system QtKeyChain library."
            OFF)
-  elseif(WITH_SYSTEM_QTKEYCHAIN STREQUAL "QT")
+    message(STATUS "   ... should use system Qt5KeyChain library.")
+  elseif($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "QT")
     option(USE_SYSTEM_QT5KEYCHAIN
            "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
            OFF)
     option(USE_SYSTEM_QTKEYCHAIN
            "Use system QtKeyChain library."
            ON)
+    message(STATUS "  ... should use system QtKeyChain library.")
   else()
     option(USE_SYSTEM_QT5KEYCHAIN
            "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
@@ -135,6 +136,7 @@ if(DEFINED $ENV{WITH_SYSTEM_QTKEYCHAIN})
     option(USE_SYSTEM_QTKEYCHAIN
            "Use system QtKeyChain library."
            OFF)
+    message(STATUS "   ... should use Mudlet's own QtKeyChain library (explicitly).")
   endif()
 else()
   option(USE_SYSTEM_QT5KEYCHAIN
@@ -143,6 +145,8 @@ else()
   option(USE_SYSTEM_QTKEYCHAIN
          "Use system QtKeyChain library."
          OFF)
+  message(STATUS "Did not detected WITH_SYSTEM_QTKEYCHAIN variable in environment...")
+  message(STATUS "   ... should use Mudlet's own QtKeyChain library (implicitly).")
 endif()
 
 include(InitGitSubmodule)
@@ -157,10 +161,7 @@ if(NOT(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN))
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
-  # The EXCLUDE_FROM_ALL is a sneaky little requirement here
-  # if it is not present then the add_subdirectory is processed even though it
-  # is in a branch NOT taken - or so it seems
-  add_subdirectory(3rdparty/qtkeychain EXCLUDE_FROM_ALL)
+  add_subdirectory(3rdparty/qtkeychain)
 endif()
 
 git_submodule_init(
