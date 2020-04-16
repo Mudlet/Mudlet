@@ -338,7 +338,7 @@ elseif(USE_SYSTEM_QTKEYCHAIN)
   target_link_libraries(mudlet qtkeychain)
   message(STATUS "Using system QtKeyChain library")
 else()
-  target_link_libraries(mudlet qtkeychain)
+  target_link_libraries(mudlet qt5keychain)
 endif()
 
 if(USE_UPDATER)
