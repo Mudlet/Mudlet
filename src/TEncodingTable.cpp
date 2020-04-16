@@ -34,7 +34,7 @@ QList<QString> TEncodingTable::getFriendlyNames() const
 {
     QList<QString> encodings;
 
-    for (const auto& pair: encodingMapping) {
+    for (const auto& pair : encodingMapping) {
         encodings << pair.first;
     }
 

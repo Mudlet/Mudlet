@@ -21,12 +21,9 @@
  ***************************************************************************/
 
 
-
-
 #include <QMap>
 #include <QPoint>
 #include <QStringList>
-#include <deque>
 
 // Keep together lists of links and hints associated
 class TLinkStore {
