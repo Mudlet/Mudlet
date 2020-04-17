@@ -92,6 +92,7 @@ set(mudlet_SRCS
     TLuaInterpreter.cpp
     TMap.cpp
     TMedia.cpp
+    TMxpProcessor.cpp
     TMxpTagDetector.cpp
     TMxpTagProcessor.cpp
     TriggerUnit.cpp
@@ -201,6 +202,7 @@ set(mudlet_HDRS
     TMap.h
     TMatchState.h
     TMedia.h
+    TMxpProcessor.h
     TMxpTagDetector.h
     TMxpTagProcessor.h
     Tree.h

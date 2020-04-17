@@ -1080,7 +1080,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
                 mpHost->mServerMXPenabled = true;
-                mpHost->mpConsole->buffer.mMXP = true;
+                mpHost->mpConsole->buffer.enableMXP();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }

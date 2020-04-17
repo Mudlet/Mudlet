@@ -511,6 +511,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
+    TMxpProcessor.cpp \
     TMxpTagDetector.cpp \
     TMxpTagProcessor.cpp \
     TriggerUnit.cpp \
@@ -593,6 +594,7 @@ HEADERS += \
     TMap.h \
     TMatchState.h \
     TMedia.h \
+    TMxpProcessor.h \
     TMxpTagDetector.h \
     TMxpTagProcessor.h \
     Tree.h \
