@@ -74,23 +74,25 @@ else
   ZIPLIBVERSION=$(pkg-config --modversion zziplib)
   if [ "${ZIPLIBVERSION}" == "0.13.71" ]; then
     echo "pkg-config says that zziplib is installed and is version 0.13.71."
-    echo "library symbolic links:"
-    echo "Compile flags are: $(pkg-config --cflags zziplib) "
-    echo "Header directory is: $(pkg-config --variable=includedir zziplib) "
-    echo "Link flags are: $(pkg-config --libs zziplib) "
-    echo "Library directory is: ${ZIPLIBDIR} "
-    echo "and that directory before modification contained:"
-    ls -l ${ZIPLIBDIR}
-    sudo ln -s ${ZIPLIBDIR}/libzzip-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzip.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipfseeko-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipfseeko.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipmmapped-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipmmapped.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipwrap-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipwrap.dylib
+    echo "Fixing up by adding some un-0 suffixed symbolic links to library files..."
+#    echo "Compile flags are: $(pkg-config --cflags zziplib) "
+#    echo "Header directory is: $(pkg-config --variable=includedir zziplib) "
+#    echo "Link flags are: $(pkg-config --libs zziplib) "
+#    echo "Library directory is: ${ZIPLIBDIR} "
+#    echo "and that directory before modification contained:"
+#    ls -l ${ZIPLIBDIR}
+    sudo ln -s ${ZIPLIBDIR}/libzzip-0.13.0.71.dylib ${ZIPLIBDIR}/libzzip.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipfseeko-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipfseeko.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipmmapped-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipmmapped.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipwrap-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipwrap.dylib
+#    echo "The library directory for zziplib now contains:"
+#    ls -l ${ZIPLIBDIR}
   else
     echo "pkg-config says that zziplib is installed and is version ${ZIPLIBVERSION}, so NOT "
     echo "bodging some library symbolic links for version 0.13.71 .  Indeed it may be "
     echo "time to delete a section from the ./CI/travis.osx.install.sh file!"
+    echo "The library directory for zziplib now contains:"
+    ls -l ${ZIPLIBDIR}
   fi
-  echo "The library directory for zziplib now contains:"
-  ls -l ${ZIPLIBDIR}
 fi
 echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
