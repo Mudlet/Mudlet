@@ -944,3 +944,16 @@ function translateTable(data, language)
 
   return t
 end
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param fileName name and location of the file
+-- @param suffix suffix of the file
+function packageDrop(event, fileName, suffix)
+  local acceptable_suffix = {"xml", "mpackage", "zip"}
+  if not table.contains(acceptable_suffix, suffix) then
+    return
+  end
+  installPackage(fileName)
+end
+registerAnonymousEventHandler("sysDropEvent", "packageDrop")
