@@ -1394,6 +1394,7 @@ DISTFILES += \
     .clang-format \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPkgMacros.cmake \
     ../cmake/FindPCRE.cmake \
     ../cmake/FindPUGIXML.cmake \
     ../cmake/FindYAJL.cmake \
