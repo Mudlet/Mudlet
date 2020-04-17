@@ -80,5 +80,7 @@ else
   pkg-config --libs zziplib
   echo "library directory is:"
   pkg-config --variable=libdir zziplib
+  echo "That directory currently contains:"
+  ls -l $(pkg-config --variable=libdir zziplib)
 fi
 echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
