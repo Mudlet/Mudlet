@@ -69,7 +69,7 @@ echo "Some temporary debug information about libzzip / zzip / zziplib ..."
 pkg-config --exists zziplib
 status=$?
 if [ $status -ne 0 ]; then
-  echo "pkg-config does not think that zziplib is installed...!
+  echo "pkg-config does not think that zziplib is installed...!"
 else
   echo "pkg-config says that zziplib is installed:"
   echo "compile flags are:"
