@@ -322,6 +322,11 @@ unix {
     exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
 }
 
+# There does not seem to be an obvious pkg-config option for these two
+macx:LIBS += \
+    -lz \
+    -lzzip
+
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
 # Define a preprocessor symbol with the default fallback location from which
