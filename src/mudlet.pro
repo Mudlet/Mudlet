@@ -309,7 +309,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml zziplib
     INCLUDEPATH += /usr/local/include
 }
 
@@ -321,11 +321,6 @@ unix {
     # common macos location
     exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
 }
-
-# There does not seem to be an obvious pkg-config option for these two
-macx:LIBS += \
-    -lz \
-    -lzzip
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 

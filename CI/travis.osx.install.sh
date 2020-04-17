@@ -69,24 +69,28 @@ pkg-config --exists zziplib
 status=$?
 if [ $status -ne 0 ]; then
   echo "pkg-config does not think that zziplib is installed...!"
-elif [ "$(pkg-config --modversion zziplib)" == "0.13.71" ]; then
-  echo "pkg-config says that zziplib is installed and is version 0.13.71, so bodging "
-  echo "library symbolic links:"
-#  echo "compile flags are:"
-#  pkg-config --cflags zziplib
-#  echo "header directory is:"
-#  pkg-config --variable=includedir zziplib
-#  echo "link flags are:"
-#  pkg-config --libs zziplib
-#  echo "library directory is:"
-#  pkg-config --variable=libdir zziplib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzip-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzip.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipfseeko-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipfseeko.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipmmapped-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipmmapped.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipwrap-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipwrap.dylib
 else
-  echo "pkg-config says that zziplib is installed and is version $(pkg-config --modversion zziplib), so NOT "
-  echo "bodging some library symbolic links for version 0.13.71 .  Indeed it may be "
-  echo "time to delete a section from the ./CI/travis.osx.install.sh file!"
+  ZIPLIBDIR=$(pkg-config --variable=libdir zziplib)
+  ZIPLIBVERSION=$(pkg-config --modversion zziplib)
+  if [ "${ZIPLIBVERSION}" == "0.13.71" ]; then
+    echo "pkg-config says that zziplib is installed and is version 0.13.71."
+    echo "library symbolic links:"
+    echo "Compile flags are: $(pkg-config --cflags zziplib) "
+    echo "Header directory is: $(pkg-config --variable=includedir zziplib) "
+    echo "Link flags are: $(pkg-config --libs zziplib) "
+    echo "Library directory is: ${ZIPLIBDIR} "
+    echo "and that directory before modification contained:"
+    ls -l ${ZIPLIBDIR}
+    sudo ln -s ${ZIPLIBDIR}/libzzip-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzip.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipfseeko-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipfseeko.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipmmapped-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipmmapped.dylib
+    sudo ln -s ${ZIPLIBDIR}/libzzipwrap-${ZIPLIBVERSION}.dylib ${ZIPLIBDIR}/libzzipwrap.dylib
+  else
+    echo "pkg-config says that zziplib is installed and is version ${ZIPLIBVERSION}, so NOT "
+    echo "bodging some library symbolic links for version 0.13.71 .  Indeed it may be "
+    echo "time to delete a section from the ./CI/travis.osx.install.sh file!"
+  fl
+  echo "The library directory for zziplib now contains:"
+  ls -l ${ZIPLIBDIR}
 fi
 echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
