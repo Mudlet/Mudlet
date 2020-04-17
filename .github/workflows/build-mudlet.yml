@@ -1,4 +1,4 @@
-name: Build Mudlet in Github Actions CI
+name: Build Mudlet
 on:
   - pull_request
   - push
