@@ -93,6 +93,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMedia.cpp
     TMxpTagDetector.cpp
+    TMxpTagProcessor.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -201,6 +202,7 @@ set(mudlet_HDRS
     TMatchState.h
     TMedia.h
     TMxpTagDetector.h
+    TMxpTagProcessor.h
     Tree.h
     TriggerUnit.h
     TRoom.h

@@ -42,6 +42,7 @@
 #include "TLinkStore.h"
 #include "TEntityHandler.h"
 #include "TMxpTagDetector.h"
+#include "TMxpTagProcessor.h"
 
 #include <deque>
 #include <string>
@@ -119,12 +120,6 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
-struct TMxpElement
-{
-    QString name;
-    QString href;
-    QString hint;
-};
 
 enum TMXPMode
 {
@@ -137,8 +132,6 @@ enum TMXPMode
 class TBuffer
 {
     inline static const TEncodingTable &csmEncodingTable = TEncodingTable::defaultInstance;
-
-    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -246,13 +239,10 @@ public:
     TMXPMode mMXP_DEFAULT;
 
     TMxpTagDetector mMxpTagDetector;
-
-    QMap<QString, TMxpElement> mMXP_Elements;
+    TMxpTagProcessor mMxpTagProcessor;
 
     TEntityHandler mEntityHandler;
-    bool mMXP_LINK_MODE;
-    bool mMXP_SEND_NO_REF_MODE;
-    std::string mAssembleRef;
+
     bool mEchoingText;
 
 
@@ -263,7 +253,6 @@ private:
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
-    QString processSupportsRequest(const QString &attributes);
     void decodeSGR(const QString&);
     void decodeSGR38(const QStringList&, bool isColonSeparated = true);
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
