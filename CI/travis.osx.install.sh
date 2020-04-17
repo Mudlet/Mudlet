@@ -89,7 +89,7 @@ else
     echo "pkg-config says that zziplib is installed and is version ${ZIPLIBVERSION}, so NOT "
     echo "bodging some library symbolic links for version 0.13.71 .  Indeed it may be "
     echo "time to delete a section from the ./CI/travis.osx.install.sh file!"
-  fl
+  fi
   echo "The library directory for zziplib now contains:"
   ls -l ${ZIPLIBDIR}
 fi
