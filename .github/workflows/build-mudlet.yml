@@ -5,7 +5,7 @@ on:
 
 jobs:
   compile-mudlet:
-    name: ${{matrix.os}}-compile
+    name: ${{matrix.os}}
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
