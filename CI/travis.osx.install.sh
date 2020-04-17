@@ -62,3 +62,23 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
+
+
+echo "=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
+echo "Some temporary debug information about libzzip / zzip / zziplib ..."
+pkg-config --exists zziplib
+status=$?
+if [ $status -ne 0 ]; then
+  echo "pkg-config does not think that zziplib is installed...!
+else
+  echo "pkg-config says that zziplib is installed:"
+  echo "compile flags are:"
+  pkg-config --cflags zziplib
+  echo "header directory is:"
+  pkg-config --variable=includedir zziplib
+  echo "link flags are:"
+  pkg-config --libs zziplib
+  echo "library directory is:"
+  pkg-config --variable=libdir zziplib
+fi
+echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
