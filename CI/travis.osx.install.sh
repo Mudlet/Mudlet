@@ -82,5 +82,12 @@ else
   pkg-config --variable=libdir zziplib
   echo "That directory currently contains:"
   ls -l $(pkg-config --variable=libdir zziplib)
+  echo "Bodging links from the unsuffixed named libzzip libraies to the actual files:
+  ln -s $(pkg-config --variable=libdir zziplib)/libzzip-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzip.dylib
+  ln -s $(pkg-config --variable=libdir zziplib)/libzzipfseeko-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipfseeko.dylib
+  ln -s $(pkg-config --variable=libdir zziplib)/libzzipmmapped-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipmmapped.dylib
+  ln -s $(pkg-config --variable=libdir zziplib)/libzzipwrap-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipwrap.dylib
+  echo "It now contains:"
+  ls -l $(pkg-config --variable=libdir zziplib)
 fi
 echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
