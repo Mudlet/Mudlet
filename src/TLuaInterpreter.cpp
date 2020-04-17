@@ -14372,15 +14372,6 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    bool rawnames = false;
-    if (lua_gettop(L)) {
-        if (!lua_isboolean(L, 1)) {
-            lua_pushfstring(L, "getServerEncoding: bad argument #1 (get raw names as boolean is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        rawnames = lua_toboolean(L, 1);
-    }
-
     // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
     auto sanitizeEncoding = [] (auto encodingName) {
         if (encodingName.startsWith("M_")) {
@@ -14393,9 +14384,7 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
     if (encoding.isEmpty()) {
         encoding = "ASCII";
     }
-    lua_pushstring(L, rawnames
-                   ? encoding.constData()
-                   : sanitizeEncoding(encoding).constData());
+    lua_pushstring(L, sanitizeEncoding(encoding).constData());
     return 1;
 }
 
@@ -14403,15 +14392,6 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
 int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    bool rawnames = false;
-    if (lua_gettop(L)) {
-        if (!lua_isboolean(L, 1)) {
-            lua_pushfstring(L, "getServerEncodingsList: bad argument #1 (get raw names as boolean is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        rawnames = lua_toboolean(L, 1);
-    }
 
     // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
     auto sanitizeEncoding = [] (auto encodingName) {
@@ -14427,9 +14407,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     lua_settable(L, -3);
     for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i + 2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, rawnames
-                       ? host.mTelnet.getEncodingsList().at(i).constData()
-                       : sanitizeEncoding(host.mTelnet.getEncodingsList().at(i)).constData());
+        lua_pushstring(L, sanitizeEncoding(host.mTelnet.getEncodingsList().at(i)).constData());
         lua_settable(L, -3);
     }
     return 1;
