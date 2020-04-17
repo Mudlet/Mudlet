@@ -41,6 +41,7 @@
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
 #include "TEntityHandler.h"
+#include "TMxpTagDetector.h"
 
 #include <deque>
 #include <string>
@@ -244,17 +245,12 @@ public:
     TMXPMode mMXP_MODE;
     TMXPMode mMXP_DEFAULT;
 
-    bool mAssemblingToken;
-    std::string currentToken;
-    int openT;
-    int closeT;
+    TMxpTagDetector mMxpTagDetector;
 
     QMap<QString, TMxpElement> mMXP_Elements;
 
     TEntityHandler mEntityHandler;
     bool mMXP_LINK_MODE;
-    bool mParsingVar;
-    char mOpenMainQuote;
     bool mMXP_SEND_NO_REF_MODE;
     std::string mAssembleRef;
     bool mEchoingText;

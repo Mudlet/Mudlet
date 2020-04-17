@@ -511,6 +511,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
+    TMxpTagDetector.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -589,8 +590,9 @@ HEADERS += \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMap.h \
-    TMedia.h \
     TMatchState.h \
+    TMedia.h \
+    TMxpTagDetector.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \
