@@ -263,6 +263,11 @@ if(USE_3DMAPPER)
   find_package(OpenGL REQUIRED)
 endif()
 
+if(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN)
+  # Only use this when we are using a system package and NOT our own local build
+  find_package(Qt5Keychain REQUIRED)
+endif()
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
@@ -274,8 +279,6 @@ set_target_properties(mudlet
     AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
     AUTORCC ON
     POSITION_INDEPENDENT_CODE ON)
-
-find_package(Qt5Keychain REQUIRED)
 
 if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
@@ -324,8 +327,8 @@ if(Qt5Gamepad_FOUND)
   message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
-if(Qt5Keychain_FOUND)
-  if(USE_SYSTEM_QT5KEYCHAIN)
+if(USE_SYSTEM_QT5KEYCHAIN)
+  if(Qt5Keychain_FOUND)
     target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
     target_link_libraries(mudlet qt5keychain)
     if(${QTKEYCHAIN_LIBRARIES} STREQUAL "qt5keychain")
@@ -333,7 +336,12 @@ if(Qt5Keychain_FOUND)
     else()
       message(WARNING "Expected to find library with the major Qt version number 5, i.e. \"qt5keychain\" but instead found \"${QTKEYCHAIN_LIBRARIES}\".")
     endif()
-  elseif(USE_SYSTEM_QTKEYCHAIN)
+  else()
+    message(FATAL_ERROR "No QtKeyChain library found, build aborted.")
+  endif()
+
+elseif(USE_SYSTEM_QTKEYCHAIN)
+  if(Qt5Keychain_FOUND)
     target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT_KEYCHAIN)
     target_link_libraries(mudlet qtkeychain)
     if(${QTKEYCHAIN_LIBRARIES} STREQUAL "qt5keychain")
@@ -342,13 +350,14 @@ if(Qt5Keychain_FOUND)
       message(STATUS "Using system QtKeyChain library (found version: \"${Qt5Keychain_VERSION}\").")
     endif()
   else()
-    # An odd extra definition is needed if we are using our own QtKeyChain
-    target_compile_definitions(mudlet PRIVATE QTKEYCHAIN_NO_EXPORT)
-    target_link_libraries(mudlet qt5keychain)
-    message(STATUS "Using own Qt5KeyChain (QtKeyChain) library (we have version: \"${Qt5Keychain_VERSION}\").")
+    message(FATAL_ERROR "No QtKeyChain library found, build aborted.")
   endif()
+
 else()
-  message(FATAL_ERROR "No QtKeyChain library found, build aborted.")
+  # An odd extra definition is needed if we are using our own QtKeyChain
+  target_compile_definitions(mudlet PRIVATE QTKEYCHAIN_NO_EXPORT)
+  target_link_libraries(mudlet qt5keychain)
+  message(STATUS "Using own Qt5KeyChain (QtKeyChain) library (we have version: \"${Qt5Keychain_VERSION}\").")
 endif()
 
 if(USE_UPDATER)
