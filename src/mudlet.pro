@@ -1395,9 +1395,10 @@ DISTFILES += \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \
+    ../cmake/FindPUGIXML.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    ../cmake/FindPUGIXML.cmake \
+    ../cmake/FindZZip.cmake \
     ../.travis.yml \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
