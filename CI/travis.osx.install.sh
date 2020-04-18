@@ -4,7 +4,7 @@ set +e
 shopt -s expand_aliases
 #Removed boost as first item as a temporary workaroud to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
-BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+BREWS="cmake hunspell libzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 OUTDATED_BREWS=$(brew outdated)
 
 for i in $BREWS; do
@@ -62,37 +62,6 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
-
-echo "=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
-echo "Some temporary debug information about libzzip / zzip / zziplib ..."
-pkg-config --exists zziplib
-status=$?
-if [ $status -ne 0 ]; then
-  echo "pkg-config does not think that zziplib is installed...!"
-else
-  ZIPLIBDIR=$(pkg-config --variable=libdir zziplib)
-  ZIPLIBVERSION=$(pkg-config --modversion zziplib)
-  if [ "${ZIPLIBVERSION}" == "0.13.71" ]; then
-    echo "pkg-config says that zziplib is installed and is version 0.13.71."
-    echo "Fixing up by adding some un-0 suffixed symbolic links to library files..."
-#    echo "Compile flags are: $(pkg-config --cflags zziplib) "
-#    echo "Header directory is: $(pkg-config --variable=includedir zziplib) "
-#    echo "Link flags are: $(pkg-config --libs zziplib) "
-#    echo "Library directory is: ${ZIPLIBDIR} "
-#    echo "and that directory before modification contained:"
-#    ls -l ${ZIPLIBDIR}
-    sudo ln -s ${ZIPLIBDIR}/libzzip-0.13.0.71.dylib ${ZIPLIBDIR}/libzzip.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipfseeko-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipfseeko.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipmmapped-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipmmapped.dylib
-    sudo ln -s ${ZIPLIBDIR}/libzzipwrap-0.13.0.71.dylib ${ZIPLIBDIR}/libzzipwrap.dylib
-#    echo "The library directory for zziplib now contains:"
-#    ls -l ${ZIPLIBDIR}
-  else
-    echo "pkg-config says that zziplib is installed and is version ${ZIPLIBVERSION}, so NOT "
-    echo "bodging some library symbolic links for version 0.13.71 .  Indeed it may be "
-    echo "time to delete a section from the ./CI/travis.osx.install.sh file!"
-    echo "The library directory for zziplib now contains:"
-    ls -l ${ZIPLIBDIR}
-  fi
-fi
-echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
+# Though these both come from the same source we use lua-yajl before
+# compilation, we may only need lua-zip at run-time:
+# luarocks-5.1 --local install lua-zip

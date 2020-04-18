@@ -41,12 +41,6 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
-# Include luazip module (run time lua module - but not needed on Linux/Windows as
-# is available prebuilt for THOSE platforms!
-macx {
-    include(../3rdparty/luazip/luazip.pri)
-}
-
 !build_pass{
     include(../translations/translated/updateqm.pri)
 }
@@ -309,7 +303,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml zziplib
+    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 

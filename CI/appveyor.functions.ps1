@@ -333,6 +333,7 @@ function InstallLibzip() {
   $Env:Path = $ShPath
 }
 
+# Shouldn't be needed now:
 function InstallZziplib() {
   DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
   ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
@@ -412,7 +413,13 @@ function InstallLuaYajl() {
 
 function InstallLuaZip () {
   Set-Location "$workingBaseDir"
-  DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
+  # DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
+  # The above redirects to:
+  DownloadFile "https://codeload.github.com/mpeterv/luazip/zip/master.zip" "luazip.zip"
+  # To avoid a dependency on zziplib we should switch to:
+  # DownloadFile "https://codeload.github.com/brimworks/lua-zip/zip/v0.2.0" "luazip.zip"
+  # TODO: it is not clear whether any extra tweaking, besides removing "-lzzip"
+  # is needed for the above alternative:
   ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
