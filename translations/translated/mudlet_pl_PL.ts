@@ -1877,13 +1877,13 @@ próbowałem te miejsca:
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation>w górę</translation>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation>w dół</translation>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
@@ -4669,7 +4669,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16915"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>w górę</translation>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16917"/>
@@ -4681,7 +4681,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16919"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>w dół</translation>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16921"/>
@@ -6357,7 +6357,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
       <source>up</source>
-      <translation>w górę</translation>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
