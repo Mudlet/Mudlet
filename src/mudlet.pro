@@ -1394,12 +1394,10 @@ DISTFILES += \
     .clang-format \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
-    ../cmake/FindPkgMacros.cmake \
     ../cmake/FindPCRE.cmake \
-    ../cmake/FindPUGIXML.cmake \
     ../cmake/FindYAJL.cmake \
     ../cmake/FindZIP.cmake \
-    ../cmake/FindZZip.cmake \
+    ../cmake/FindPUGIXML.cmake \
     ../.travis.yml \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
