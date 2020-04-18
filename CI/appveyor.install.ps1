@@ -40,7 +40,7 @@ CheckAndInstallLibzip
 # Shouldn't be needed as it is only used for the luazip module from:
 # https://github.com/mpeterv/luazip and we can use lua-zip from:
 # https://github.com/brimworks/lua-zip :
-# CheckAndInstallZziplib
+CheckAndInstallZziplib
 CheckAndInstallLuarocks
 CheckAndInstallPugixml
 InstallLuaModules

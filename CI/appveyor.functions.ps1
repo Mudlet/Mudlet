@@ -415,9 +415,9 @@ function InstallLuaZip () {
   Set-Location "$workingBaseDir"
   # DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
   # The above redirects to:
-  DownloadFile "https://codeload.github.com/mpeterv/luazip/zip/master.zip" "luazip.zip"
+  # "https://codeload.github.com/mpeterv/luazip/zip/master.zip"
   # To avoid a dependency on zziplib we should switch to:
-  # DownloadFile "https://codeload.github.com/brimworks/lua-zip/zip/v0.2.0" "luazip.zip"
+  # "https://codeload.github.com/brimworks/lua-zip/zip/v0.2.0"
   # TODO: it is not clear whether any extra tweaking, besides removing "-lzzip"
   # is needed for the above alternative:
   ExtractZip "luazip.zip" "luazip"
