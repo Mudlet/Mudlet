@@ -16815,7 +16815,11 @@ void TLuaInterpreter::initLuaGlobals()
 #endif
 
     loadLuaModule(QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
-    loadLuaModule(QLatin1String("zip"));
+#if defined(Q_OS_MAC)
+    loadLuaModule(QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
+#else
+    loadLuaModule(QLatin1String("zip"), QString(), QStringLiteral("luazip"));
+#endif
     loadLuaModule(QLatin1String("rex_pcre"), tr("Some functions may not be available."));
     loadLuaModule(QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
     loadLuaModule(QLatin1String("lua-utf8"), tr("utf8.* Lua functions won't be available."), QLatin1String("utf8"), QLatin1String("utf8"));
