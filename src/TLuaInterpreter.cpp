@@ -16795,6 +16795,11 @@ void TLuaInterpreter::initLuaGlobals()
 
     luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
+#ifdef Q_OS_MAC
+    luaopen_zip(pGlobalLua);
+    lua_setglobal(pGlobalLua, "zip");
+#endif
+
 #if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
