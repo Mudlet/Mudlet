@@ -413,7 +413,7 @@ function InstallLuaYajl() {
 
 function InstallLuaZip () {
   Set-Location "$workingBaseDir"
-  # DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
+  DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
   # The above redirects to:
   # "https://codeload.github.com/mpeterv/luazip/zip/master.zip"
   # To avoid a dependency on zziplib we should switch to:
