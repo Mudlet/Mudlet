@@ -160,6 +160,7 @@ add_subdirectory(3rdparty/qtkeychain)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
+add_subdirectory(test)
 
 if(APPLE)
   add_subdirectory(3rdparty/luazip)

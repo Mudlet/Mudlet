@@ -502,6 +502,7 @@ SOURCES += \
     TEasyButtonBar.cpp \
     TEncodingTable.cpp \
     TEntityHandler.cpp \
+    TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
@@ -582,6 +583,7 @@ HEADERS += \
     TEasyButtonBar.h \
     TEncodingTable.h \
     TEntityHandler.h \
+    TEntityResolver.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \

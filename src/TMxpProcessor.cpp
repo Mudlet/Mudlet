@@ -106,8 +106,10 @@ TMxpProcessingResult TMxpProcessor::processInput(char& ch,
         }
     }
 
-    if (mEntityHandler.handle(ch, localBuffer, localBufferPosition, localBufferLength)) {
+    if (mEntityHandler.handle(localBuffer, localBufferPosition, localBufferLength)) {
         return HANDLER_NEXT_CHAR;
+    } else {
+        ch = localBuffer[localBufferPosition];
     }
 
     mMxpTagProcessor.processTextContent(ch);

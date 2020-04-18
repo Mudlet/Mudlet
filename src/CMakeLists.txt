@@ -83,6 +83,7 @@ set(mudlet_SRCS
     TEasyButtonBar.cpp
     TEncodingTable.cpp
     TEntityHandler.cpp
+    TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     TimerUnit.cpp
@@ -190,6 +191,7 @@ set(mudlet_HDRS
     TEasyButtonBar.h
     TEncodingTable.h
     TEntityHandler.h
+    TEntityResolver.h
     testdbg.h
     TEvent.h
     TForkedProcess.h

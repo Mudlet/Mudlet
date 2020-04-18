@@ -1,9 +1,7 @@
-#ifndef MUDLET_SRC_TENTITYHANDLER_H
-#define MUDLET_SRC_TENTITYHANDLER_H
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "modernize-use-nodiscard"
+
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -22,15 +20,36 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TEntityResolver.h"
+#ifndef MUDLET_MXPENTITYRESOLVER_H
+#define MUDLET_MXPENTITYRESOLVER_H
 
-// Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
-class TEntityHandler {
-private:
-    TEntityResolver entityResolver;
-    QString currentEntity;
+#include <QString>
+#include <QHash>
+#include <utility>
+
+class TEntityResolver {
+    QHash<QString, QString> entities;
+
 public:
-    bool handle(std::string& localBuffer, size_t& localBufferPosition, size_t localBufferLength);
+    static const QHash<QString, QString> standardEntities;
+
+    inline bool registerEntity(const QString& entity, const QChar ch)
+    {
+        return registerEntity(entity, QString(ch));
+    }
+
+    inline bool registerEntity(const QString& entity, const char ch)
+    {
+        return registerEntity(entity, QChar(ch));
+    }
+
+    bool registerEntity(const QString& entity, const QString& str);
+
+    QString getResolution(const QString& entityValue) const;
+
+    static QString resolveCode(ushort val);
+    static QString resolveCode(const QString& entityValue);
+    static QString resolveCode(const QString& entityValue, int base);
 };
 
-#endif //MUDLET_SRC_TENTITYHANDLER_H
+#endif //MUDLET_MXPENTITYRESOLVER_H

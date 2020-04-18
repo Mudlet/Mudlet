@@ -22,56 +22,34 @@
 
 #include "TEntityHandler.h"
 
-bool TEntityHandler::handle(char& ch, std::string& localBuffer, size_t& localBufferPosition, size_t localBufferLength)
+bool TEntityHandler::handle(std::string& localBuffer, size_t& localBufferPosition, size_t localBufferLength)
 {
-    if (ch == '&' || mIgnoreTag) {
-        if ((localBufferPosition + 4 < localBufferLength) && (mSkip.empty())) {
-            if (localBuffer.substr(localBufferPosition, 4) == "&gt;") {
-                localBufferPosition += 3;
-                ch = '>';
-                mIgnoreTag = false;
-            } else if (localBuffer.substr(localBufferPosition, 4) == "&lt;") {
-                localBufferPosition += 3;
-                ch = '<';
-                mIgnoreTag = false;
-            } else if (localBuffer.substr(localBufferPosition, 5) == "&amp;") {
-                mIgnoreTag = false;
-                localBufferPosition += 4;
-                ch = '&';
-            } else if (localBuffer.substr(localBufferPosition, 6) == "&quot;") {
-                localBufferPosition += 5;
-                mIgnoreTag = false;
-                mSkip.clear();
-                ch = '"';
-            }
-        } else if (mSkip == "&gt" && ch == ';') { // if the content is split across package borders
-            mIgnoreTag = false;
-            mSkip.clear();
-            ch = '>';
-        } else if (mSkip == "&lt" && ch == ';') {
-            mIgnoreTag = false;
-            mSkip.clear();
-            ch = '<';
-        } else if (mSkip == "&amp" && ch == ';') {
-            mIgnoreTag = false;
-            mSkip.clear();
-            ch = '&';
-        } else if (mSkip == "&quot" && ch == ';') {
-            mIgnoreTag = false;
-            mSkip.clear();
-            ch = '"';
-        } else {
-            mIgnoreTag = true;
-            mSkip += ch;
-            // sanity check
-            if (mSkip.size() > 7) {
-                mIgnoreTag = false;
-                mSkip.clear();
-            }
-            ++localBufferPosition;
-            return true;
+    char ch = localBuffer[localBufferPosition];
+
+    if (ch != '&' && currentEntity.isEmpty()) // currentEntity is not empty while reading an entity
+        return false; // do not handle
+
+    do {
+        currentEntity.append(ch);
+
+        if (ch == ';') {
+            QString resolved = entityResolver.getResolution(currentEntity);
+            // only get the last character, current implementation of TBuffer loop doesn't support more chars
+            localBuffer[localBufferPosition] = resolved.back().toLatin1();
+
+            currentEntity.clear();
+            return false;
         }
-    }
+
+        if (currentEntity.length() > 7) { // sequence too long, ignore it
+            localBufferPosition++; // discard char
+
+            currentEntity.clear();
+            return true; // return to loop start
+        }
+
+        ch = localBuffer[++localBufferPosition];
+    } while (localBufferPosition < localBufferLength);
 
     return false;
 }

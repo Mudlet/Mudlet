@@ -84,9 +84,11 @@ class TMxpProcessor {
     TEntityHandler mEntityHandler;
 
 public:
-    TMxpProcessor(Host* pH, TLinkStore* store)
-            : mpHost(pH), mLinkStore(store), mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
-    {}
+    TMxpProcessor(Host* pH, TLinkStore* store) :
+            mpHost(pH), mLinkStore(store),
+            mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
+    {
+    }
 
     bool negotiate(const QString& code);
     bool negotiate(int modeCode);
