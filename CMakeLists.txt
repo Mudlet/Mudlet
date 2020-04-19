@@ -161,10 +161,6 @@ add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 
-if(APPLE)
-  add_subdirectory(3rdparty/luazip)
-endif()
-
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
 
