@@ -39,13 +39,13 @@ local function adjust_Info(self, label, event)
     
     if event.button ~= "LeftButton" and not self.minimized then
         if (top or bottom) and not (left or right) then
-            label:setCursor("SizeVer")
+            label:setCursor("ResizeVertical")
         elseif (left or right) and not (top or bottom) then
-            label:setCursor("SizeHor")
+            label:setCursor("ResizeHorizontal")
         elseif (top and left) or (bottom and right) then
-            label:setCursor("SizeFDiag")
+            label:setCursor("ResizeTopLeft")
         elseif (top and right) or (bottom and left) then
-            label:setCursor("SizeBDiag")
+            label:setCursor("ResizeTopRight")
         else
             label:setCursor("OpenHand")
         end
