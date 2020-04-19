@@ -145,8 +145,7 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    TLabel*
-    createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
@@ -329,8 +328,8 @@ public slots:
     void slot_reloadMap(QList<QString>);
 
 protected:
-    void dragEnterEvent(QDragEnterEvent* e);
-    void dropEvent(QDropEvent* e);
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dropEvent(QDropEvent*) override;
 
 private:
     void refreshMiniConsole() const;

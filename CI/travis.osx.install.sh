@@ -4,7 +4,7 @@ set +e
 shopt -s expand_aliases
 #Removed boost as first item as a temporary workaroud to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
-BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+BREWS="cmake hunspell libzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 OUTDATED_BREWS=$(brew outdated)
 
 for i in ${BREWS}; do
@@ -62,32 +62,6 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
-
-
-echo "=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
-echo "Some temporary debug information about libzzip / zzip / zziplib ..."
-pkg-config --exists zziplib
-status=$?
-if [ $status -ne 0 ]; then
-  echo "pkg-config does not think that zziplib is installed...!"
-else
-  echo "pkg-config says that zziplib is installed:"
-  echo "compile flags are:"
-  pkg-config --cflags zziplib
-  echo "header directory is:"
-  pkg-config --variable=includedir zziplib
-  echo "link flags are:"
-  pkg-config --libs zziplib
-  echo "library directory is:"
-  pkg-config --variable=libdir zziplib
-  echo "That directory currently contains:"
-  ls -l $(pkg-config --variable=libdir zziplib)
-  echo "Bodging links from the unsuffixed named libzzip libraies to the actual files:"
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzip-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzip.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipfseeko-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipfseeko.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipmmapped-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipmmapped.dylib
-  sudo ln -s $(pkg-config --variable=libdir zziplib)/libzzipwrap-0.13.0.71.dylib $(pkg-config --variable=libdir zziplib)/libzzipwrap.dylib
-  echo "It now contains:"
-  ls -l $(pkg-config --variable=libdir zziplib)
-fi
-echo "*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*="
+# Though these both come from the same source we use lua-yajl before
+# compilation, we may only need lua-zip at run-time:
+# luarocks-5.1 --local install lua-zip
