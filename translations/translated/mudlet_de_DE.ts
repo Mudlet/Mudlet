@@ -76,6 +76,11 @@ Bitte warten...</translation>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 bei %2:%3</translation>
     </message>
+    <message>
+      <location filename="../src/Host.cpp" line="2542"/>
+      <source>Map - %1</source>
+      <translation type="unfinished"/>
+    </message>
   </context>
   <context>
     <name>QObject</name>
@@ -573,10 +578,8 @@ einem neuen Symbol für diesen Raum:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
-      <source>Mapper: Cannot find a path from %1 to %2 using known exits.
-</source>
-      <translation>Mapper: Kein Weg von %1 nach %2 konnte mit bekannten Ausgängen gefunden werden.
-</translation>
+      <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1545,14 +1548,6 @@ Ganzzahl eingeben:</translation>
       <translation>Systemnachricht: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2715"/>
-      <location filename="../src/TConsole.cpp" line="2754"/>
-      <source>No search results, sorry!
-</source>
-      <translation>Leider keine Suchergebnisse
-</translation>
-    </message>
-    <message>
       <location filename="../src/TConsole.cpp" line="368"/>
       <source>Show Time Stamps.</source>
       <translation>Zeiten anzeigen.</translation>
@@ -1682,6 +1677,12 @@ Ganzzahl eingeben:</translation>
       <translation>Bericht der geladenen Karte(2) bei %1</translation>
     </message>
     <message>
+      <location filename="../src/TConsole.cpp" line="2715"/>
+      <location filename="../src/TConsole.cpp" line="2754"/>
+      <source>No search results, sorry!</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TConsole.cpp" line="2790"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
       <translation>[ INFO ]  - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
@@ -1696,6 +1697,11 @@ Ganzzahl eingeben:</translation>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
       <translation>[ WARNUNG ] - ... System-Anforderung, die Karte neu zu laden, fehlgeschlagen.</translation>
     </message>
+    <message>
+      <location filename="../src/TConsole.cpp" line="3025"/>
+      <source>User window - %1 - %2</source>
+      <translation type="unfinished"/>
+    </message>
   </context>
   <context>
     <name>TEasyButtonBar</name>
@@ -1708,100 +1714,88 @@ Ganzzahl eingeben:</translation>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12898"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12971"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15374"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15447"/>
       <source>ERROR</source>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15375"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15386"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15448"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15459"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Objekt</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15375"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15386"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15448"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15459"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>Funktion</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16726"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16747"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16767"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16788"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16809"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16830"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="17006"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16991"/>
       <source>no error message available from Lua</source>
       <translation>keine Fehlermeldung von Lua verfügbar</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16728"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16749"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16769"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16790"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16811"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16832"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="17008"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16993"/>
       <source>Lua error:</source>
       <translation>Lua Fehler:</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16731"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16752"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16772"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16793"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16814"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16835"/>
-      <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
-      <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation>[FEHLER] - Konnte Lua-Modul %1 nicht finden.%2</translation>
-    </message>
-    <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16735"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16829"/>
       <source>Some functions may not be available.</source>
       <translation>Einige Funktionen sind möglicherweise nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16739"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16759"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16780"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16801"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16822"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16843"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16366"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
       <translation>[  OK  ]  - Lua-Modul %1 geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16776"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
+      <source>No error message available from Lua</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
+      <source>Lua error: %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
+      <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
+      <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TLuaInterpreter.cpp" line="16827"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Wahrscheinlich wird es nicht möglich sein, auf Mudlet Lua-Code zuzugreifen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16797"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16830"/>
       <source>Database support will not be available.</source>
       <translation>Datenbankunterstützung wird nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16818"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16831"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>utf8.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16839"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16832"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>yajl.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17011"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16996"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.
@@ -1809,36 +1803,36 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17081"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17066"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (nicht vorhanden)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17086"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17071"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
       <translation>%1 (ist keine Datei oder ein Symlink auf eine Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17095"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17080"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
       <translation>%1 (ist keine lesbare Datei oder ein Symlink auf eine lesbare Datei)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17113"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17098"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (konnte Datei nicht lesen)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17119"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17104"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[  OK  ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17127"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17112"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -3670,14 +3664,14 @@ Möchtest Du jetzt aktualisieren?</translation>
   <context>
     <name>Updater</name>
     <message>
-      <location filename="../src/updater.cpp" line="43"/>
-      <location filename="../src/updater.cpp" line="167"/>
-      <location filename="../src/updater.cpp" line="233"/>
+      <location filename="../src/updater.cpp" line="46"/>
+      <location filename="../src/updater.cpp" line="188"/>
+      <location filename="../src/updater.cpp" line="254"/>
       <source>Update</source>
       <translation>Aktualisieren</translation>
     </message>
     <message>
-      <location filename="../src/updater.cpp" line="324"/>
+      <location filename="../src/updater.cpp" line="345"/>
       <source>Restart to apply update</source>
       <translation>Neu starten zum Aktualisieren</translation>
     </message>
@@ -3908,14 +3902,14 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
   <context>
     <name>cTelnet</name>
     <message>
-      <location filename="../src/ctelnet.cpp" line="571"/>
+      <location filename="../src/ctelnet.cpp" line="570"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
       <translation>[ INFO ]  - Die IP-Adresse von %1 wurde gefunden. Es ist: %2
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="580"/>
+      <location filename="../src/ctelnet.cpp" line="579"/>
       <source>[ ERROR ] - Host name lookup Failure!
 Connection cannot be established.
 The server name is not correct, not working properly,
@@ -3945,47 +3939,47 @@ or your nameservers are not working properly.</source>
     </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="519"/>
+      <location filename="../src/ctelnet.cpp" line="518"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
       <translation>Sichere Verbindungen werden von diesem Spiel auf diesem Port nicht unterstützt - Versuche, die Option zu deaktivieren.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="564"/>
+      <location filename="../src/ctelnet.cpp" line="563"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
       <translation>[ INFO ]  - Versuche, eine sichere Verbindung aufzubauen zu %1: %2 ...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1441"/>
-      <location filename="../src/ctelnet.cpp" line="1808"/>
+      <location filename="../src/ctelnet.cpp" line="1443"/>
+      <location filename="../src/ctelnet.cpp" line="1810"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
       <translation>[ INFO ]  - Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. 
 Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1452"/>
-      <location filename="../src/ctelnet.cpp" line="1819"/>
+      <location filename="../src/ctelnet.cpp" line="1454"/>
+      <location filename="../src/ctelnet.cpp" line="1821"/>
       <source>[  OK  ]  - Package is already installed.</source>
       <translation>[  OK  ]  - Paket  ist bereits installiert.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1461"/>
-      <location filename="../src/ctelnet.cpp" line="1828"/>
+      <location filename="../src/ctelnet.cpp" line="1463"/>
+      <location filename="../src/ctelnet.cpp" line="1830"/>
       <source>downloading game GUI from server</source>
       <translation>Spiel-GUI wird vom Server geladen</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1461"/>
-      <location filename="../src/ctelnet.cpp" line="1828"/>
+      <location filename="../src/ctelnet.cpp" line="1463"/>
+      <location filename="../src/ctelnet.cpp" line="1830"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
       <translation>Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1450"/>
-      <location filename="../src/ctelnet.cpp" line="1817"/>
+      <location filename="../src/ctelnet.cpp" line="1452"/>
+      <location filename="../src/ctelnet.cpp" line="1819"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
       <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;).</translation>
     </message>
@@ -3996,94 +3990,94 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="508"/>
-      <location filename="../src/ctelnet.cpp" line="521"/>
+      <location filename="../src/ctelnet.cpp" line="520"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
       <translation>[ ACHTUNG ] - Verbindung wurde getrennt.
 Grund: </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="573"/>
+      <location filename="../src/ctelnet.cpp" line="572"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
       <translation>[ INFO ]  - Versuche, eine Verbindung aufzubauen zu %1:%2 ...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="575"/>
+      <location filename="../src/ctelnet.cpp" line="574"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
       <translation>[ INFO ]  - Versuche, eine Verbindung über Proxy aufzubauen zu %1:%2 ...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2105"/>
+      <location filename="../src/ctelnet.cpp" line="2107"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2117"/>
+      <location filename="../src/ctelnet.cpp" line="2119"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>LUA</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2128"/>
+      <location filename="../src/ctelnet.cpp" line="2130"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>WARNUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2139"/>
+      <location filename="../src/ctelnet.cpp" line="2141"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>ACHTUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2150"/>
+      <location filename="../src/ctelnet.cpp" line="2152"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>INFO</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2161"/>
+      <location filename="../src/ctelnet.cpp" line="2163"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2350"/>
+      <location filename="../src/ctelnet.cpp" line="2352"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ INFO ]  - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2369"/>
+      <location filename="../src/ctelnet.cpp" line="2371"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>Kann Wiederholung nicht anzeigen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2371"/>
+      <location filename="../src/ctelnet.cpp" line="2373"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ WARNUNG ]  - Kann Wiederholung nicht ausführen. Eine andere könnte 
 bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2379"/>
+      <location filename="../src/ctelnet.cpp" line="2381"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>Kann Datei &quot;%1&quot; nicht lesen, Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2382"/>
+      <location filename="../src/ctelnet.cpp" line="2384"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[FEHLER] - Kann Datei &quot;%1&quot; nicht lesen,
 Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2410"/>
+      <location filename="../src/ctelnet.cpp" line="2412"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[  OK  ]  - Wiederholung beendet.</translation>
     </message>
@@ -4625,145 +4619,145 @@ Nutzungen</translation>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16875"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16860"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>norden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16877"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16862"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16879"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16864"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>osten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16866"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16883"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16868"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>süden</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16885"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16870"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16887"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16872"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>westen</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16889"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16874"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>w</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16891"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16876"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16893"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16878"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>no</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16895"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16880"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südosten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16897"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16882"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>so</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16899"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16884"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>südwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16901"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16886"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16903"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16888"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordwesten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16905"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16890"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nw</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16907"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16892"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16909"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16894"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>rein</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16911"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16896"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16913"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16898"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>raus</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16915"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16900"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>oben</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16917"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16902"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ob</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16919"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16904"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>unten</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16921"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16906"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
@@ -5189,27 +5183,27 @@ Nutzungen</translation>
       <translation>Verbinden</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1197"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1198"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>Dieses Profil ist momentan geladen - Beende es, bevor die Verbindungsparameter geändert werden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2315"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
       <translation>Das Zeichen %1 ist nicht erlaubt. Verwende eines der Folgenden:</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2345"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>Du musst eine Zahl eingeben. Andere Zeichen sind nicht erlaubt.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2330"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2331"/>
       <source>This profile name is already in use.</source>
       <translation>Dieser Profilname wird bereits verwendet.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="473"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="474"/>
       <source>Could not rename your profile data on the computer.</source>
       <translation>Konnte deine Profil-Daten auf dem Computer nicht umbenennen.</translation>
     </message>
@@ -5245,105 +5239,105 @@ Nutzungen</translation>
       <translation>Das Passwort des Charakters. Beachte, dass das Kennwort nicht verschlüsselt gespeichert wird</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="482"/>
       <source>Could not create the new profile folder on your computer.</source>
       <translation>Konnte den neuen Profil-Ordner auf dem Computer nicht erstellen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="576"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="577"/>
       <source>new profile name</source>
       <translation>neuer Profilname</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="674"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="675"/>
       <source>Deleting &apos;%1&apos;</source>
       <translation>Lösche &apos;%1&apos;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1250"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1251"/>
       <source>Discord integration not available on this platform</source>
       <translation>Discord Integration ist auf dieser Plattform nicht verfügbar</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1256"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1257"/>
       <source>Discord integration not supported by game</source>
       <translation>Discord Integration wird durch dieses Spiel nicht unterstützt</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1259"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1260"/>
       <source>Check to enable Discord integration</source>
       <translation>Aktiviere die Discord Integration</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1916"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1917"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
       <translation>Bild zurücksetzen</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1919"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
       <translation>Neues Bild wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1928"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1929"/>
       <source>Select custom image for profile (should be 120x30)</source>
       <translation>Wählen ein neues Bild für das Profil (sollte 120x30 sein)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1930"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1931"/>
       <source>Images (%1)</source>
       <translation>Bilder (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2358"/>
       <source>Port number must be above zero and below 65535.</source>
       <translation>Die Portnummer muss größer als null sein und unter 65535.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2384"/>
       <source>Mudlet can not load support for secure connections.</source>
       <translation>Mudlet kann keine Unterstützung für sichere Verbindungen laden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2401"/>
       <source>Please enter the URL or IP address of the Game server.</source>
       <translation>Bitte gib die URL oder IP-Adresse des Spielservers ein.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2414"/>
       <source>SSL connections require the URL of the Game server.</source>
       <translation>SSL-Verbindungen erfordern die URL des Spielservers.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2436"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Profil laden ohne zu verbinden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2450"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Bitte stelle vor dem Laden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2454"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Bitte stelle vor dem Verbinden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2505"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2506"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke hier, um das Kennwort auszublenden. Es wird auch ausgeblendet, wenn ein anderes Profil ausgewählt wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2509"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2510"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Klicke hier, um das Kennwort für dieses Profil einzublenden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2365"/>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2371"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2366"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2372"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet ist nicht für sichere Verbindungen konfiguriert.</translation>
     </message>
@@ -6497,1073 +6491,1085 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
   <context>
     <name>dlgTriggerEditor</name>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="246"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="248"/>
       <source>-- Enter your lua code here
 </source>
       <translation>-- Gib deinen Lua-Code hier ein
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="288"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="328"/>
       <source>*** starting new session ***
 </source>
       <translation>*** Neue Sitzung wird gestartet ***
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="376"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5792"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="416"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5839"/>
       <source>Triggers</source>
       <translation>Trigger</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="377"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
       <source>Show Triggers</source>
       <translation>Trigger anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="380"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5816"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5863"/>
       <source>Buttons</source>
       <translation>Buttons</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="381"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
       <source>Show Buttons</source>
       <translation>Buttons anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="385"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
       <source>Aliases</source>
       <translation>Aliase</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="386"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
       <source>Show Aliases</source>
       <translation>Aliase anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="390"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5798"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5845"/>
       <source>Timers</source>
       <translation>Timer</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="391"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
       <source>Show Timers</source>
       <translation>Timer anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="394"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5804"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5851"/>
       <source>Scripts</source>
       <translation>Skripte</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="395"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="435"/>
       <source>Show Scripts</source>
       <translation>Skripte anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="398"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Keys</source>
       <translation>Tasten</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="399"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="439"/>
       <source>Show Keybindings</source>
       <translation>Verbundene Tasten anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="402"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="6204"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6251"/>
       <source>Variables</source>
       <translation>Variablen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="403"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
       <source>Show Variables</source>
       <translation>Variablen anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="406"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
       <source>Activate</source>
       <translation>Aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="407"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <source>Toggle Active or Non-Active Mode for Triggers, Scripts etc.</source>
       <translation>Wechsle aktiven und inaktiven Status des Triggers.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="457"/>
       <source>Add Item</source>
       <translation>Element hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="458"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
       <translation>Ergänze neue Trigger, Skripte, Aliase oder Filter</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="421"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="461"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
       <source>Delete Item</source>
       <translation>Element löschen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="422"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="462"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
       <translation>Lösche Trigger, Skripte, Aliase oder Filter</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="429"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="469"/>
       <source>Add Group</source>
       <translation>Gruppe hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="470"/>
       <source>Add new Group</source>
       <translation>Neue Gruppe hinzufügen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="473"/>
       <source>Save Item</source>
       <translation>Element speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8206"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8225"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="474"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8320"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8339"/>
       <source>Ctrl+S</source>
       <translation>Ctrl+S</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="476"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
       <translation>Speichert das gewählte Element. (Strg+S)&lt;/p&gt; Speichern bewirkt, dass alle Änderungen des Elements wirksam werden.
 Es speichert nicht auf die Festplatte, also können Änderungen bei einem Absturz des Computers/Programms verloren gehen (&apos;Profil speichern&apos; rechts ist sicher.)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="478"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
       <translation>Speichert die ausgewählten Trigger, Skripte, Aliase, usw, wodurch die neuen Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8670"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8676"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="481"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8791"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8797"/>
       <source>Copy</source>
       <translation>Kopieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="485"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="486"/>
       <source>Copy the trigger/script/alias/etc</source>
       <translation>Kopiere Trigger/Skript/Alias/etc</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="455"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8671"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8677"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="495"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8792"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8798"/>
       <source>Paste</source>
       <translation>Einfügen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="459"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="460"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="499"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="500"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
       <translation>Trigger/Skripte/Aliase/Etc aus der Zwischenablage einfügen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="474"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="514"/>
       <source>Import</source>
       <translation>Importieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="478"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="518"/>
       <source>Export</source>
       <translation>Exportieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="482"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8515"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="522"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8635"/>
       <source>Save Profile</source>
       <translation>Profil speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8208"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8227"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="524"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8322"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8341"/>
       <source>Ctrl+Shift+S</source>
       <translation>Strg+Shift+S</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="487"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="527"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
       <translation>Speichert dein Profil. (Strg+Shift+S)&lt;p&gt;Speichert dein gesamtes Profil (Trigger, Aliase, Skripte, Timer, Buttons und Tasten, aber nicht die Karte oder Skript-spezifische Einstellungen) auf deinem Computerlaufwerk, so dass deine ganzen Änderungen bei einem Absturz des Programms oder Computers beibehalten werden.&lt;/p&gt;&lt;p&gt;Es wird auch ein Backup des Profils anlegen, so dass du beim Verbinden eine ältere Version laden kannst.&lt;/p&gt;&lt;p&gt;Sollten irgendwelche Module vorhanden und &quot;&lt;i&gt;zur Synchronisierung&lt;/i&gt;&quot; vorgemerkt sein, werden sie hierdurch auch gespeichern und in anderen Profilen neu geladen, falls diese auch aktiv sind.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="489"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="529"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
       <translation>Speichert dein gesamtes Profil (Trigger, Aliase, Skripte, Timer, Buttons und Tasten, aber nicht die Karte oder skriptspezifische Einstellungen); synchronisiert auch Module, die dazu markiert sind.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="492"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="532"/>
       <source>Save Profile As</source>
       <translation>Profil speichern als</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="496"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="536"/>
       <source>Statistics</source>
       <translation>Statistiken</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="497"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="537"/>
       <source>Generates a statistics summary display on the main profile console.</source>
       <translation>Erstellt zusammenfassende Statistiken im Hauptfenster.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="500"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
       <source>errors</source>
       <translation>Fehler</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="501"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
       <translation>Zeigt/Versteckt die Fehler-Konsole in der unteren rechten Seite des Editors.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="504"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="544"/>
       <source>Debug</source>
       <translation>Debug</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="505"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="545"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
       <translation>Aktiviert Debug-Nachrichten -&gt; Das System wird &lt;b&gt;&lt;i&gt;langsamer&lt;/i&gt;&lt;/b&gt; sein.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="506"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="546"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
       <translation>Zeigt/Versteckt die separate zentrale Debug-Konsole - während der Anzeige wird das System langsamer sein.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="625"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="569"/>
+      <source>Editor Toolbar - %1 - Actions</source>
+      <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="605"/>
+      <source>Editor Toolbar - %1 - Items</source>
+      <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="672"/>
       <source>Search Options</source>
       <translation>Suchoptionen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="629"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="676"/>
       <source>Case sensitive</source>
       <translation>Groß-/Kleinschreibung beachten</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="682"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="729"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
       <translation>Art</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="683"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="730"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
       <translation>Name</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="684"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="731"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
       <translation>Wo</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="685"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="732"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
       <translation>Was</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="779"/>
       <source>start of line</source>
       <translation>Zeilenanfang</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2727"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2774"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2729"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2776"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2733"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2780"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;b&gt;Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2870"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2917"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2872"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2919"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2876"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2923"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2914"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2961"/>
       <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2916"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2963"/>
       <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2920"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2967"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;Alias oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3018"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3065"/>
       <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3020"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3067"/>
       <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3024"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3071"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;Skriptgruppe oder Skript oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3089"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3136"/>
       <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3091"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3138"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
       <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3095"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3142"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;&lt;b&gt;Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3209"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4054"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3256"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger group</source>
       <translation>Neue Trigger-Gruppe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3211"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4054"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3258"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger</source>
       <translation>Neuer Trigger</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3310"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3357"/>
       <source>New timer group</source>
       <translation>Neue Timer-Gruppe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3312"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3359"/>
       <source>New timer</source>
       <translation>Neuer Timer</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3400"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3447"/>
       <source>Table name...</source>
       <translation>Tabellenname...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3407"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3454"/>
       <source>Variable name...</source>
       <translation>Name der Variable...</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3464"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3511"/>
       <source>New key group</source>
       <translation>Neue Tasten-Gruppe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3466"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3513"/>
       <source>New key</source>
       <translation>Neue Taste</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3548"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3595"/>
       <source>New alias group</source>
       <translation>Neue Alias-Gruppe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3550"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4162"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4232"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3597"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4209"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4279"/>
       <source>New alias</source>
       <translation>Neuer Alias</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3639"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3686"/>
       <source>New menu</source>
       <translation>Neues Menü</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3641"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3688"/>
       <source>New button</source>
       <translation>Neuer Button</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3682"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3729"/>
       <source>New toolbar</source>
       <translation>Neue Symbolleiste</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3740"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4477"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3787"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4524"/>
       <source>New script group</source>
       <translation>Neue Skript-Gruppe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="3742"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4477"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4524"/>
       <source>New script</source>
       <translation>Neues Skript</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4176"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4223"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
       <translation>Alias &lt;em&gt;%1&lt;/em&gt; weist eine Endlosschleife auf - Die Ersetzung stimmt mit dem eigenen Muster überein. Bitte korrigieren, da das Alias sich immer wieder selbst aufrufen wird.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4716"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4763"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
       <translation>Markierte Variablen werden mit deinem Profil gespeichert und geladen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4868"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4915"/>
       <source>match on the prompt line</source>
       <translation>Promptzeile erkennen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4871"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4918"/>
       <source>match on the prompt line (disabled)</source>
       <translation>Promptzeile erkennen (deaktiviert)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4872"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4919"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
       <translation>Ein Go-Ahead (GA) Signal aus dem Spiel ist erforderlich, damit dieses Feature funktioniert</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4921"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5031"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8414"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4968"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5078"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8534"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
       <translation>Vordergrundfarbe ignoriert</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4925"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5035"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8417"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4972"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5082"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8537"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
       <translation>Standard-Vordergrundfarbe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4929"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5039"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8420"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4976"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5086"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8540"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
       <translation>Vordergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4936"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5046"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8477"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4983"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5093"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8597"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
       <translation>Hintergrundfarbe ignoriert</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4940"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5050"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8480"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4987"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5097"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8600"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
       <translation>Standard-Hintergrundfarbe</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="4944"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5054"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8483"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4991"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5101"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8603"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
       <translation>Hintergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5065"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5067"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5112"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5114"/>
       <source>fault</source>
       <translation>Fehler</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5565"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8289"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5612"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8409"/>
       <source>Command:</source>
       <translation>Befehl:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5604"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5651"/>
       <source>Menu properties</source>
       <translation>Menü-Eigenschaften</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5614"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5661"/>
       <source>Button properties</source>
       <translation>Button-Eigenschaften</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5669"/>
       <source>Command (down);</source>
       <translation>Befehl (unten);</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5810"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5857"/>
       <source>Aliases - Input Triggers</source>
       <translation>Aliase</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="5822"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5869"/>
       <source>Key Bindings</source>
       <translation>Tastenkürzel</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7484"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7488"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7508"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7512"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7532"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7536"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7560"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7580"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7584"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7604"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7609"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7629"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7633"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7656"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7675"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7679"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7598"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7602"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7626"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7646"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7650"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7670"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7674"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7698"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7702"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7721"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7725"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7744"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7718"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7723"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7743"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7747"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7766"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7770"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7793"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7812"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7835"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7839"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7863"/>
       <source>Export Package:</source>
       <translation>Paket exportieren:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7484"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7488"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7508"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7512"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7532"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7536"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7556"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7560"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7580"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7584"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7604"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7609"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7629"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7633"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7656"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7675"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7679"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7598"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7602"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7626"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7646"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7650"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7670"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7674"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7698"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7702"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7721"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7725"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7744"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7749"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7718"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7723"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7743"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7747"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7766"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7770"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7789"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7793"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7812"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7816"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7835"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7839"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7858"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7863"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
       <translation>Sie müssen zuerst ein Element für den Export wählen. Bitte wählen Sie ein Element aus dem Baum und klicken Sie dann erneut auf Exportieren.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7493"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7517"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7541"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7565"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7589"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7614"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7607"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7631"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7655"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7679"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7703"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7728"/>
       <source>Package %1 saved</source>
       <translation>Paket %1 gespeichert</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7661"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7730"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7754"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7752"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7775"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7798"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7821"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7868"/>
       <source>Copied %1 to clipboard</source>
       <translation>In die Zwischenablage kopiert: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7760"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
       <source>Export Triggers</source>
       <translation>Trigger exportieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7760"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
       <source>Mudlet packages (*.xml)</source>
       <translation>Mudlet Pakete (*.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>export package:</source>
       <translation>Paket exportieren:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>Cannot write file %1:
 %2.</source>
       <translation>Kann Datei %1 nicht schreiben:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8009"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8123"/>
       <source>Import Mudlet Package</source>
       <translation>Mudlet Paket importieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8016"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8030"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8130"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8144"/>
       <source>Import Mudlet Package:</source>
       <translation>Mudlet Paket importieren:</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8016"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8130"/>
       <source>Cannot read file %1:
 %2.</source>
       <translation>Kann Datei %1 nicht lesen:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8030"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8144"/>
       <source>Package %1 is already installed.</source>
       <translation>Paket %1 ist bereits installiert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8153"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8267"/>
       <source>Couldn&apos;t save profile</source>
       <translation>Konnte Profil nicht speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8153"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8267"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
       <translation>Leider konnte das Profil nicht gespeichert werden - folgende Fehlermeldung erhalten: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8160"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8274"/>
       <source>Backup Profile</source>
       <translation>Profil sichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8160"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8274"/>
       <source>trigger files (*.trigger *.xml)</source>
       <translation>Trigger-Dateien (*.trigger *.xml)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8276"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8396"/>
       <source>Seclect Icon</source>
       <translation>Bild wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8276"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8396"/>
       <source>Images (*.png *.xpm *.jpg)</source>
       <translation>Bilder (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8285"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8405"/>
       <source>Command (down):</source>
       <translation>Befehl (unten):</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8306"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8426"/>
       <source>Select foreground color to apply to matches</source>
       <translation>Wähle die Vordergrundfarbe, die Treffer erhalten sollen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8326"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8446"/>
       <source>Select background color to apply to matches</source>
       <translation>Wähle die Hintergrundfarbe, die Treffer erhalten sollen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8338"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8458"/>
       <source>Choose sound file</source>
       <translation>Audiodatei auswählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8342"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8462"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
       <translation>Audiodateien (*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-Stream (*.aac);;MPEG-2 Audio Layer 3 (*.mp3);;MPEG-4 Audio (*.mp4a);;Ogg Vorbis (*.oga *.ogg);;PCM Audio (*.pcm);;Wave (*.wav);;Windows Media Audio (*.wma);;Alle Dateien (*.*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8395"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8515"/>
       <source>Select foreground trigger color for item %1</source>
       <translation>Wähle die Vordergrundfarbe, bei der Element %1 auslösen soll</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8459"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8579"/>
       <source>Select background trigger color for item %1</source>
       <translation>Wähle die Hintergrundfarbe, bei der Element %1 auslösen soll</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8508"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8628"/>
       <source>Saving…</source>
       <translation>Speichere…</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8666"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8787"/>
       <source>Format All</source>
       <translation>Alles formatieren</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8669"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8675"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8790"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8796"/>
       <source>Cut</source>
       <translation>Ausschneiden</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8673"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8679"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8794"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8800"/>
       <source>Select All</source>
       <translation>Alles auswählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="8824"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8945"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Audiodatei, die wiedergegeben werden soll, wenn der Trigger ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="730"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="777"/>
       <source>substring</source>
       <translation>Ausschnitt</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="100"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="101"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Aliases can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permAlias(&amp;quot;my greets&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;^hi$&amp;quot;, [[send (&amp;quot;say Greetings, traveller!&amp;quot;) echo (&amp;quot;We said hi!&amp;quot;)]])&lt;/code&gt;&lt;/p&gt;&lt;p&gt;You can now greet by typing &apos;hi&apos;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Aliase reagieren auf Benutzereingaben. So erstellst du ein neues Alias:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol.&lt;/li&gt;&lt;li&gt;Definiere ein &lt;strong&gt;Eingabemuster&lt;/strong&gt; entweder wortwörtlich oder mit einem regulären Ausdruck (Perl Regex)&lt;/li&gt;&lt;li&gt;Definiere einen &lt;strong&gt;Befehl&lt;/strong&gt;, der als reiner Text &lt;strong&gt;anstelle des Alias-Musters&lt;/strong&gt; an das Spiel gesendet werden soll, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktiviere&lt;/strong&gt; das Alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Aliase können auch von der Befehlszeile im Hauptfenster des Profils wie folgt definiert werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permAlias(&amp;quot;mein Gruß&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;^hi$&amp;quot;, [[send (&amp;quot;sag Grüße, Reisender!&amp;quot;) echo (&amp;quot;Wir haben gegrüßt!&amp;quot;)]])&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Du kannst jetzt grüßen, indem du &apos;hi&apos; eingibst.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="111"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Triggers can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permSubstringTrigger(&amp;quot;My drink trigger&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;You are thirsty.&amp;quot;, function() send(&amp;quot;drink water&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will keep you refreshed.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Trigger reagieren auf Spielausgaben. So erstellst du einen neuen Trigger:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol.&lt;/li&gt;&lt;li&gt;Definiere ein &lt;strong&gt;Muster&lt;/strong&gt; auf das du reagieren möchtest.&lt;/li&gt;&lt;li&gt;Wähle die passende &lt;strong&gt;Art&lt;/strong&gt; des Musters.&lt;/li&gt;&lt;li&gt;Definiere einen &lt;strong&gt;Befehl&lt;/strong&gt;, der an das Spiel gesendet werden soll, wenn der Trigger das Muster im Spieltext findet, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktiviere&lt;/strong&gt; den Trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Trigger können auch von der Befehlszeile im Hauptfenster des Profils wie folgt definiert werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permSubstringTrigger(&amp;quot;mein Trinktrigger&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;Du bist durstig.&amp;quot;, function() send (&amp;quot;trinke wasser&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;So bleibst du erfrischt.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="121"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="122"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Skripte organisieren Code und können auf Ereignisse reagieren. So erstellst du ein neues Skript:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol.&lt;/li&gt;&lt;li&gt;Gebe ein Skript in die Box unten ein. Du kannst z.B. &lt;strong&gt;Funktionen&lt;/strong&gt; definieren, die von anderen Triggern, Aliasen, usw. aufgerufen werden.&lt;/li&gt;&lt;li&gt;Falls du &lt;strong&gt;Lua-Kommandos&lt;/strong&gt; schreibst, ohne eine Funktion zu definieren, werden sie beim Start von Mudlet ausgeführt, sowie jedes Mal, wenn du das Skript zur Bearbeitung öffnest.&lt;/li&gt;&lt;li&gt;Bei Bedarf kannst du eine Liste von &lt;strong&gt;Ereignissen&lt;/strong&gt; registrieren mit den + und - Symbolen. Wenn eines dieser Ereignisse stattfindet, wird die Funktion mit dem gleichen Namen wie das Skriptelement aufgerufen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktiviere&lt;/strong&gt; das Skript.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Skripte werden bei Ansicht automatisch ausgeführt, sogar wenn sie deaktiviert sind.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Ereignisse können einem Skript auch von der Befehlszeile im Hauptfenster des Profils wie folgt hinzugefügt werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;NameDesMudletEreignisses&amp;quot;, &amp;quot;NameDeinerAufzurufendenFunktion&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="132"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="133"/>
       <source>&lt;p&gt;Timers react after a timespan once or regularly. To add a new timer:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Timers can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Timer reagieren nach einer Zeitspanne einmalig oder regelmäßig. So erstellst du einen neuen Timer:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol.&lt;/li&gt;&lt;li&gt;Definiere die &lt;strong&gt;Zeitspanne&lt;/strong&gt;, nach der der Timer reagieren soll in folgendem Format: Stunden : Minuten : Sekunden.&lt;/li&gt;&lt;li&gt;Definiere einen &lt;strong&gt;Befehl&lt;/strong&gt;, der als reiner Text an das Spiel gesendet werden soll, wenn die Zeit verstrichen ist, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activiere&lt;/strong&gt; den Timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Wenn du möchtest, dass der Timer nur einmalig und nicht regelmäßig reagiert, benutze statt dessen die Lua-Funktion tempTimer().&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Timer können auch von der Befehlszeile im Hauptfenster des Profils wie folgt definiert werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;Hallo!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Dadurch wirst du genau Sekunden nach der Erstellung begrüßt.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="143"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>&lt;p&gt;Buttons react on mouse clicks. To add a new button:&lt;ol&gt;&lt;li&gt;Add a new group to define a new &lt;strong&gt;button bar&lt;/strong&gt; in case you don&apos;t have any.&lt;/li&gt;&lt;li&gt;Add new groups as &lt;strong&gt;menus&lt;/strong&gt; to a button bar or sub-menus to menus.&lt;li&gt;&lt;li&gt;Add new items as &lt;strong&gt;buttons&lt;/strong&gt; to a button bar or menu or sub-menu.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the toolbar, menu or button. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If a button is made a &lt;strong&gt;click-down&lt;/strong&gt; button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua &apos;getButtonState()&apos; function reports whether the button is up or down.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Buttons reagieren auf Mausklicks. So erstellst du einen neuen Button:&lt;ol&gt;&lt;li&gt;Erstelle eine neue Gruppe, um eine neue &lt;strong&gt;Button-Leiste&lt;/strong&gt; zu definieren, falls du noch keine hast.&lt;/li&gt;&lt;li&gt;Ergänze neue Gruppen als &lt;strong&gt;Menus&lt;/strong&gt; zu einer Button-Leiste oder Untermenus zu einem Menu.&lt;li&gt;&lt;li&gt;Ergänze neue Elemente als &lt;strong&gt;Buttons&lt;/strong&gt; zu einer Button-Leiste oder einem Menu oder Untermenu.&lt;/li&gt;&lt;li&gt;Definiere einen &lt;strong&gt;Befehl&lt;/strong&gt;, der als reiner Text an das Spiel gesendet werden soll, wenn der Button gedrückt wird, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activiere&lt;/strong&gt; die Leiste, das Menu oder den Button. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Deactivierte Elemente werden unsichtbar, und bei Leisten oder Menus werden auch alle darin enthaltenen Elemente unsichtbar.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Bei einem &lt;strong&gt;einrastenden Button&lt;/strong&gt; kannst du auch einen Befehl definieren, der als reiner Text an das Spiel gesendet werden soll, wenn der Button zum zweiten Mal gedrückt und somit gelöst wird, oder schreibe ein Skript, das dann ablaufen soll - in einem solchen Skript zeigt die Lua-Funktion &apos;getButtonState()&apos;, ob der Button gerade eingerastet oder gelöst ist.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="153"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>&lt;p&gt;Keys react on keyboard presses. To add a new key binding:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Keys can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;my jump key&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;jump&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Pressing F8 will make you jump.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Tasten reagieren auf die Tastatur. So erstellst du eine neue Taste:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol.&lt;/li&gt;&lt;li&gt;Klicke auf &lt;strong&gt;&apos;Taste erkennen&apos;&lt;/strong&gt; und drücke dann deine Tastenkombination, z.B. mit Hilfstasten wie Steuerung, Umschalttaste, etc.&lt;/li&gt;&lt;li&gt;Definiere einen &lt;strong&gt;Befehl&lt;/strong&gt;, der als reiner Text an das Spiel gesendet werden soll, wenn die Taste gedrückt wird, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktiviere&lt;/strong&gt; die neue Tastenverbindung.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Tasten können auch von der Befehlszeile im Hauptfenster des Profils wie folgt definiert werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua permKey(&amp;quot;Meine Sprungtaste&amp;quot;, &amp;quot;&amp;quot;, mudlet.key.F8, [[send(&amp;quot;springe&amp;quot;]]) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Durch Druck auf F8 wirst du springen.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="163"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>&lt;p&gt;Variables store information. To make a new variable:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables and tables can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Variablen speichern Informationen. So erstellst du eine neue Variable:&lt;ol&gt;&lt;li&gt;Klicke oben auf das &apos;Element hinzufügen&apos; Symbol. Klicke hingegen auf &apos;Gruppe hinzufügen&apos;, um eine Tabelle zu erstellen.&lt;/li&gt;&lt;li&gt;Wähle die Art des Werts der Variable (kann sein: String, Integer, Boolean)&lt;/li&gt;&lt;li&gt;Gib den Wert ein, den du in dieser Variable speichern möchtest&lt;/li&gt;&lt;li&gt;Wenn du die Variable in deiner nächsten Mudlet-Sitzung behalten möchtest, aktiviere das Kontrollkästchen auf der linken Seite in der Liste der Variablen.&lt;/li&gt;&lt;li&gt;Um eine Variable manuell zu entfernen, setze sie auf &apos;nil&apos; oder klicke oben auf das &apos;Löschen&apos; Symbol.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Hier erstellte Variablen werden nicht gespeichert, wenn Mudlet beendet wird, außer du aktivierst das Kontrollkästchen auf der linken Seite in der Liste der Variablen. Du könntest auch Skripte erstellen und darin die Variablen definieren.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Hinweis:&lt;/strong&gt; Variablen und Tabellen können auch von der Befehlszeile im Hauptfenster des Profils wie folgt definiert werden:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Dies erstellt eine String-Variable namens &apos;foo&apos; mit dem Wert &apos;bar&apos;.&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen&lt;/a&gt; im Handbuch.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="632"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="679"/>
       <source>Match case precisely</source>
       <translation>Groß - / Kleinschreibung genau</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="636"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="683"/>
       <source>Include variables</source>
       <translation>Variablen einschließen</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="639"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="686"/>
       <source>Search variables (slower)</source>
       <translation>Variablen suchen (langsamer)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="731"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="778"/>
       <source>perl regex</source>
       <translation>Perl-Regex</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="733"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="780"/>
       <source>exact match</source>
       <translation>Genauer Treffer</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="734"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="781"/>
       <source>lua function</source>
       <translation>Lua-Funktion</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="735"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="782"/>
       <source>line spacer</source>
       <translation>Zeilenabstandshalter</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="736"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="783"/>
       <source>color trigger</source>
       <translation>Farbtrigger</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="737"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="784"/>
       <source>prompt</source>
       <translation>Prompt</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1856"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1868"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1896"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1928"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1958"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1970"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1997"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2032"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1903"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1915"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1943"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1975"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2005"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2017"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2044"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2079"/>
       <source>Trigger</source>
       <translation>Trigger</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1376"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1419"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1491"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1563"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1685"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1769"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1856"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1958"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2064"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2153"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2239"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2363"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2437"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1423"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1466"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1538"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1610"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1816"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1903"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2005"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2111"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2200"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2286"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2410"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2484"/>
       <source>Name</source>
       <translation>Name</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1436"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1503"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1508"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1575"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1580"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1779"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1784"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1868"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1873"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1970"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1975"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2074"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2079"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2251"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2256"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2375"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2380"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2449"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2454"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1478"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1483"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1550"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1555"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1627"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1826"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1831"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1915"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1920"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2017"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2022"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2121"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2126"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2298"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2303"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2422"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2427"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2496"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2501"/>
       <source>Command</source>
       <translation>Befehl</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1896"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1901"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1997"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2002"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1943"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1948"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2044"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2049"/>
       <source>Pattern {%1}</source>
       <translation>Muster {%1}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1461"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1466"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1533"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1538"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1655"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1660"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1739"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1744"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1826"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1831"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1928"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1933"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2032"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2037"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2121"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2126"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2207"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2212"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2331"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2336"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2405"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2410"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2479"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2484"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1508"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1513"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1580"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1585"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1702"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1707"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1786"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1791"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1873"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1878"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1975"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1980"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2079"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2084"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2168"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2173"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2254"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2259"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2378"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2383"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2452"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2457"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2526"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2531"/>
       <source>Lua code (%1:%2)</source>
       <translation>Lua-code (%1:%2)</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1769"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1779"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1796"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1816"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1826"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2064"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2074"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2091"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1873"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2111"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2121"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2138"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2168"/>
       <source>Alias</source>
       <translation>Alias</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1796"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1801"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2091"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2096"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1848"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2138"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2143"/>
       <source>Pattern</source>
       <translation>Muster</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1685"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1707"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1739"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2153"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2175"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2207"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1732"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1754"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1786"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2200"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2222"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2254"/>
       <source>Script</source>
       <translation>Skript</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1707"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1712"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2175"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2180"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1754"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1759"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2222"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2227"/>
       <source>Event Handler</source>
       <translation>Ereignisbehandlung</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1563"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1575"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1594"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1655"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2239"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2251"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2270"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2331"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1610"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1641"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1702"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2286"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2298"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2317"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2378"/>
       <source>Button</source>
       <translation>Button</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1575"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1580"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2251"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2256"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1622"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1627"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2298"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2303"/>
       <source>Command {Down}</source>
       <translation>Befehl {Down}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1594"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1599"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2270"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2275"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1641"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1646"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2317"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2322"/>
       <source>Command {Up}</source>
       <translation>Befehl {Up}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1623"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2299"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1670"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2346"/>
       <source>Action</source>
       <translation>Aktion</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1623"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1628"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2299"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2304"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1670"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1675"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2346"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2351"/>
       <source>Stylesheet {L: %1 C: %2}</source>
       <translation>Stylesheet {L: %1 C: %2}</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1491"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1503"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1533"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2363"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2375"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2405"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1538"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1550"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1580"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2410"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2422"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2452"/>
       <source>Timer</source>
       <translation>Timer</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1419"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1431"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1461"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2437"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2449"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="2479"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1466"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1478"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1508"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2484"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2496"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2526"/>
       <source>Key</source>
       <translation>Taste</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1376"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1390"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1423"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1437"/>
       <source>Variable</source>
       <translation>Variable</translation>
     </message>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1390"/>
-      <location filename="../src/dlgTriggerEditor.cpp" line="1396"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1437"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="1443"/>
       <source>Value</source>
       <translation>Wert</translation>
     </message>
@@ -9579,19 +9585,19 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="422"/>
-      <location filename="../src/mudlet.cpp" line="4918"/>
+      <location filename="../src/mudlet.cpp" line="4956"/>
       <source>About</source>
       <translation>Über</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="423"/>
-      <location filename="../src/mudlet.cpp" line="4901"/>
+      <location filename="../src/mudlet.cpp" line="4939"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>&lt;p&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3960"/>
+      <location filename="../src/mudlet.cpp" line="3998"/>
       <source>Central Debug Console</source>
       <translation>Zentrale Debug-Konsole</translation>
     </message>
@@ -9671,102 +9677,102 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1750"/>
-      <location filename="../src/mudlet.cpp" line="4348"/>
+      <location filename="../src/mudlet.cpp" line="4386"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1986"/>
+      <location filename="../src/mudlet.cpp" line="1996"/>
       <source>User window - %1 - %2</source>
       <translation>Benutzerfenster - %1 - %2</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3626"/>
+      <location filename="../src/mudlet.cpp" line="3664"/>
       <source>Map - %1</source>
       <translation>Karte - %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3642"/>
+      <location filename="../src/mudlet.cpp" line="3680"/>
       <source>Pre-Map loading(3) report</source>
       <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3652"/>
+      <location filename="../src/mudlet.cpp" line="3690"/>
       <source>Loading map(3) at %1 report</source>
       <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3724"/>
+      <location filename="../src/mudlet.cpp" line="3762"/>
       <source>%1 - notes</source>
       <translation>%1 - Notizen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3829"/>
+      <location filename="../src/mudlet.cpp" line="3867"/>
       <source>Select Replay</source>
       <translation>Wiederholung auswählen</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3831"/>
+      <location filename="../src/mudlet.cpp" line="3869"/>
       <source>*.dat</source>
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4146"/>
+      <location filename="../src/mudlet.cpp" line="4184"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Profil &quot;%1&quot; im Offline-Modus geladen.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4171"/>
-      <location filename="../src/mudlet.cpp" line="4190"/>
+      <location filename="../src/mudlet.cpp" line="4209"/>
+      <location filename="../src/mudlet.cpp" line="4228"/>
       <source>Compact input line</source>
       <translation>Kompakte Eingabezeile</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4175"/>
-      <location filename="../src/mudlet.cpp" line="4193"/>
+      <location filename="../src/mudlet.cpp" line="4213"/>
+      <location filename="../src/mudlet.cpp" line="4231"/>
       <source>Standard input line</source>
       <translation>Normale Eingabezeile</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4250"/>
+      <location filename="../src/mudlet.cpp" line="4288"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4267"/>
+      <location filename="../src/mudlet.cpp" line="4305"/>
       <source>Faster</source>
       <translation>Schneller</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4270"/>
+      <location filename="../src/mudlet.cpp" line="4308"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4274"/>
+      <location filename="../src/mudlet.cpp" line="4312"/>
       <source>Slower</source>
       <translation>Langsamer</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4277"/>
+      <location filename="../src/mudlet.cpp" line="4315"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4287"/>
-      <location filename="../src/mudlet.cpp" line="4356"/>
-      <location filename="../src/mudlet.cpp" line="4369"/>
+      <location filename="../src/mudlet.cpp" line="4325"/>
+      <location filename="../src/mudlet.cpp" line="4394"/>
+      <location filename="../src/mudlet.cpp" line="4407"/>
       <source>Speed: X%1</source>
       <translation>Geschwindigkeit: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4294"/>
-      <location filename="../src/mudlet.cpp" line="4311"/>
+      <location filename="../src/mudlet.cpp" line="4332"/>
+      <location filename="../src/mudlet.cpp" line="4349"/>
       <source>Time: %1</source>
       <translation>Zeit: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4912"/>
+      <location filename="../src/mudlet.cpp" line="4950"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -9775,7 +9781,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4930"/>
+      <location filename="../src/mudlet.cpp" line="4968"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -9784,7 +9790,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4935"/>
+      <location filename="../src/mudlet.cpp" line="4973"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -9793,7 +9799,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="5034"/>
+      <location filename="../src/mudlet.cpp" line="5072"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ WARNUNG ] - Kann Wiederholung nicht ausführen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
