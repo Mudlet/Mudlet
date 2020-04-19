@@ -39,6 +39,7 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
@@ -416,7 +417,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-    void show_options_dialog(QString tab);
+    void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }

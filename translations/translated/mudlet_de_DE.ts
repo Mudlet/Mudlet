@@ -33,13 +33,13 @@
       <location filename="../src/Host.cpp" line="797"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ OK ] - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
+      <translation>[  OK  ] - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="798"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[ OK ] - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
+      <translation>[  OK  ] - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1522"/>

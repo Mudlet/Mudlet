@@ -3501,8 +3501,8 @@ void mudlet::show_action_dialog()
     pEditor->activateWindow();
 }
 
-
-void mudlet::show_options_dialog(QString tab)
+// tab must be the "objectName" of the tab in the preferences NOT the "titleText"
+void mudlet::show_options_dialog(const QString& tab)
 {
     Host* pHost = getActiveHost();
 
@@ -3612,7 +3612,7 @@ void mudlet::slot_update_shortcuts()
 
 void mudlet::slot_show_options_dialog()
 {
-    show_options_dialog("General");
+    show_options_dialog(QStringLiteral("tab_general"));
 }
 
 void mudlet::show_help_dialog()
@@ -5859,7 +5859,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     if (url.scheme() == QStringLiteral("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
