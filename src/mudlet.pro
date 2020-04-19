@@ -41,12 +41,6 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
-# Include luazip module (run time lua module - but not needed on Linux/Windows as
-# is available prebuilt for THOSE platforms!
-macx {
-    include(../3rdparty/luazip/luazip.pri)
-}
-
 !build_pass{
     include(../translations/translated/updateqm.pri)
 }
@@ -87,11 +81,11 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using Gamepad module")
+    !build_pass : message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
-    message("Using TextToSpeech module")
+    !build_pass : message("Using TextToSpeech module")
 }
 
 TEMPLATE = app
@@ -322,10 +316,9 @@ unix {
     exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
 }
 
-# There does not seem to be an obvious pkg-config option for these two
-macx:LIBS += \
-    -lz \
-    -lzzip
+# There does not seem to be an obvious pkg-config option for this one, it is
+# for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
+macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
@@ -338,7 +331,7 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
 ####################### Git Submodules check and install #######################
 # The "exists" tests and "include" directives uses qmakes internal path handling
-# (always uses '/' dirextroy separators); the git operations need to be done
+# (always uses '/' directory separators); the git operations need to be done
 # somewhere within the main git repository (which may not be the case for
 # "shadow builds" so we now explicitly change directory using native shell
 # command before carrying them out - however Windows cmd.exe uses a different
@@ -746,6 +739,7 @@ LUA.depends = mudlet
 # Geyser lua files:
 LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
@@ -1309,10 +1303,10 @@ win32 {
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-    ${LUA.files} \
-    ${LUA_GEYSER.files} \
-    ${LUA_TESTS.files} \
-    ${DISTFILES} \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
