@@ -79,7 +79,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mappa - %1</translation>
     </message>
   </context>
   <context>
@@ -1684,7 +1684,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="3025"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Utente - %1 - %2</translation>
     </message>
   </context>
   <context>
