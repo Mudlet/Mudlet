@@ -577,7 +577,7 @@ con un nuovo simbolo per questa stanza:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Impossibile trovare un percorso da %1 a %2 utilizzando le uscite conosciute.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1664,7 +1664,7 @@ per le stanze selezionate:</translation>
       <location filename="../src/TConsole.cpp" line="2715"/>
       <location filename="../src/TConsole.cpp" line="2754"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>Nessun risultato di ricerca!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2790"/>
@@ -1745,7 +1745,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>Nessun messaggio di errore disponibile da Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
@@ -1756,7 +1756,7 @@ per le stanze selezionate:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16827"/>
@@ -6746,13 +6746,13 @@ Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di 
       <location filename="../src/dlgTriggerEditor.cpp" line="569"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Barra degli strumenti Editor - %1 - Azioni</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="605"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Barra degli strumenti Editor - %1 - Elementi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
