@@ -48,7 +48,6 @@ jobs:
 
     - name: "Set location of vcpkg dependencies"
       env:
-#         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{matrix.triplet}}.txt
           vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
@@ -59,6 +58,12 @@ jobs:
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip
+
+    - name: (Linux) Install apt dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # these aren't available or don't work well in vcpkg
+        apt install pkg-config libzip-dev
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
