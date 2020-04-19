@@ -484,9 +484,6 @@
              <property name="duplicatesEnabled">
               <bool>true</bool>
              </property>
-             <property name="frame">
-              <bool>false</bool>
-             </property>
             </widget>
            </item>
            <item>
@@ -582,11 +579,11 @@
           <attribute name="headerVisible">
            <bool>true</bool>
           </attribute>
-          <attribute name="headerDefaultSectionSize">
-           <number>80</number>
-          </attribute>
           <attribute name="headerMinimumSectionSize">
            <number>20</number>
+          </attribute>
+          <attribute name="headerDefaultSectionSize">
+           <number>80</number>
           </attribute>
           <column>
            <property name="text">
