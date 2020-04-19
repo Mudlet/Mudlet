@@ -10,6 +10,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        include:
+          # - os: windows-latest
+          #   triplet: x64-windows
+          - os: ubuntu-latest
+            triplet: x64-linux
+          - os: macos-latest
+            triplet: x64-osx
     env:
       qt: "5.14.1"
 
@@ -41,7 +48,7 @@ jobs:
     - name: "Set location of vcpkg dependencies"
       env:
 #         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{matrix.triplet}}.txt
-          vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
+          vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
