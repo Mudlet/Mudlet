@@ -79,7 +79,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>地图 - %1</translation>
     </message>
   </context>
   <context>
@@ -7600,7 +7600,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished"/>
+      <translation>单个配置</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
