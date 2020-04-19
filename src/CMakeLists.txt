@@ -343,8 +343,6 @@ if(WIN32)
 endif()
 
 if(APPLE)
-  target_link_libraries(mudlet luazip)
-
   if(USE_UPDATER)
     target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
   endif(USE_UPDATER)
