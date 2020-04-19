@@ -63,7 +63,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         # these aren't available or don't work well in vcpkg
-        apt install pkg-config libzip-dev
+        sudo apt install pkg-config libzip-dev
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
