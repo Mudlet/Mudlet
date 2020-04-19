@@ -46,7 +46,8 @@ jobs:
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
 
-    - name: Install homebrew dependencies
+    - name: (macOS) Install homebrew dependencies
+      if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip
