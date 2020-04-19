@@ -79,7 +79,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mapa - %1</translation>
     </message>
   </context>
   <context>
@@ -1698,7 +1698,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>No hay mensaje de error disponible de Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
