@@ -1611,7 +1611,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2715"/>
       <location filename="../src/TConsole.cpp" line="2754"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>Aucun résultat de recherche, désolé !</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2790"/>
@@ -1692,7 +1692,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>Aucun message d'erreur disponible depuis Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
