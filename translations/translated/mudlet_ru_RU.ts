@@ -1772,13 +1772,13 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка Луа: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти модуль Lua %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16827"/>
@@ -6777,13 +6777,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="569"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Панель инструментов редактора - %1 - Кнопки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="605"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Панель инструментов редактора - %1 - Элементы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
