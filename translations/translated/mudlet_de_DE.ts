@@ -579,7 +579,7 @@ einem neuen Symbol für diesen Raum:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Kein Weg von %1 nach %2 konnte mit bekannten Ausgängen gefunden werden.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1680,7 +1680,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="2715"/>
       <location filename="../src/TConsole.cpp" line="2754"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>Leider keine Suchergebnisse!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2790"/>
@@ -1761,12 +1761,12 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>Keine Fehlermeldung von Lua verfügbar</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Lua-Fehler: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
