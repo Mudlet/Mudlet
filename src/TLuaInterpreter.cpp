@@ -64,16 +64,6 @@
 
 #include <limits>
 
-// Provides the lua zip module for MacOs platform that does not have an easy way
-// to provide it as a prebuilt library module (unlike Windows/Linux) - was
-// called luazip.c and it is an amalgum of both such files that came from
-// http://www.keplerproject.org/luazip {dead link} the Kelper Project has
-// restuctured their site but the URL can be pulled from the Wayback machine:
-// https://web.archive.org/web/20150129015700/http://www.keplerproject.org/luazip
-#ifdef Q_OS_MAC
-#include "luazip.h"
-#endif
-
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
         {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
@@ -16805,11 +16795,6 @@ void TLuaInterpreter::initLuaGlobals()
 
     luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
-#ifdef Q_OS_MAC
-    luaopen_zip(pGlobalLua);
-    lua_setglobal(pGlobalLua, "zip");
-#endif
-
 #if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
@@ -16825,7 +16810,11 @@ void TLuaInterpreter::initLuaGlobals()
 #endif
 
     loadLuaModule(QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
-    loadLuaModule(QLatin1String("zip"));
+#if defined(Q_OS_MAC)
+    loadLuaModule(QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
+#else
+    loadLuaModule(QLatin1String("zip"), QString(), QStringLiteral("luazip"));
+#endif
     loadLuaModule(QLatin1String("rex_pcre"), tr("Some functions may not be available."));
     loadLuaModule(QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
     loadLuaModule(QLatin1String("lua-utf8"), tr("utf8.* Lua functions won't be available."), QLatin1String("utf8"), QLatin1String("utf8"));
