@@ -1772,7 +1772,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Konnte Lua-Modul %1 nicht finden.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16827"/>
@@ -6747,13 +6747,13 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="569"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor-Symbolleiste - %1 - Aktionen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="605"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor-Symbolleiste - %1 - Elemente</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
