@@ -12,7 +12,7 @@ addons:
   apt:
     sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt-5.11.3-xenial'
-    - sourceline: 'ppa:beineri/opt-qt-5.12.3-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.7-xenial'
     - sourceline: 'ppa:ondrej/php' # more-or-less up to date libzip
     - sourceline: 'ppa:ubuntu-toolchain-r/test' # gcc 7
     packages: &common-packages
@@ -119,6 +119,9 @@ jobs:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
+    - WITH_UPDATER=no
+    - WITH_3DMAPPER=no
+    - WITH_FONTS=no
     - QT_VERSION=511 # actually Qt 5.11, used to check minimum supported Qt works
     addons:
       apt:
@@ -148,6 +151,9 @@ before_script: |
   # set the luarocks path here for OSX as we installed it later for that OS.
   if [ "${TRAVIS_OS_NAME}" = "osx" ]; then eval $(luarocks --lua-dir="$(brew --prefix lua@5.1)" path); fi
   mkdir -p build
+
+  # finally, validate that everthing is kosher before starting the build
+  source CI/travis.validate_deployment.sh
 script:
 - ./CI/travis.compile.sh
 after_success:

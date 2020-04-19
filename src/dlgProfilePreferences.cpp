@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -260,6 +260,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -1613,13 +1614,21 @@ void dlgProfilePreferences::setDisplayFont()
         return;
     }
 
+    label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
+    } else if (!QFontInfo(newFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
     }
-    label_invalidFontError->hide();
 
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+#endif
+
     auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
     if (!mainConsole) {
         return;
@@ -2848,8 +2857,9 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
 // updates latest edbee themes when the user opens up the editor tab
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
-    // bail out if this is not an editor tab
-    if (tabIndex != 3) {
+    // bail out if this is not the editor tab - or if the Host has gone away
+    Host* pHost = mpHost;
+    if (tabIndex != 3 || !pHost) {
         return;
     }
 
@@ -2894,7 +2904,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-    mpHost->updateProxySettings(manager);
+    pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
@@ -3175,18 +3185,18 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         // can render the codepoints:
         QVector<quint32> pCodePoints = symbol.toUcs4();
         // These can be used to flag symbols that cannot be reproduced
-        bool isSingleFontUsable=true;
-        bool isAllFontUsable=true;
+        bool isSingleFontUsable = true;
+        bool isAllFontUsable = true;
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
             codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isAllFontUsable=false;
+                isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the
                 // glyph then the specified one cannot either
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             }
         }
 

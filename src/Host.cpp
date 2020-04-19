@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -35,7 +35,6 @@
 #include "TScript.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -186,7 +185,7 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
-, mLuaInterpreter(this, id)
+, mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -377,6 +376,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerColor(Qt::white)
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
+, mProfileStyleSheet(QString())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -428,6 +429,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     loadSecuredPassword();
+
+    if (mudlet::scmIsPublicTestVersion) {
+        thankForUsingPTB();
+    }
 }
 
 Host::~Host()
@@ -574,6 +579,34 @@ void Host::reloadModule(const QString& reloadModuleName)
         QStringList entry = installedModules[moduleIterator.key()];
         mInstalledModules[moduleIterator.key()] = entry;
     }
+}
+
+std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
+{
+    if (moduleName.isEmpty()) {
+        return {false, QStringLiteral("module name cannot be an empty string")};
+    }
+
+    if (mInstalledModules.contains(moduleName)) {
+        QStringList moduleStringList = mInstalledModules[moduleName];
+        moduleStringList[1] = value;
+        mInstalledModules[moduleName] = moduleStringList;
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+}
+
+std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
+{
+    if (moduleName.isEmpty()) {
+        return {false, QStringLiteral("module name cannot be an empty string")};
+    }
+
+    if (mInstalledModules.contains(moduleName)) {
+        QStringList moduleStringList = mInstalledModules[moduleName];
+        return {true, moduleStringList[1]};
+    }
+    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -756,6 +789,15 @@ void Host::updateConsolesFont()
     }
 }
 
+// a little message to make the player feel special for helping us find bugs
+void Host::thankForUsingPTB()
+{
+    const QStringList happyIcons {"😀", "😃", "😄", "😁", "🙂", "🙃", "🤩", "🎉", "🚀", "🤟", "✌️", "👊"};
+    const auto randomIcon = happyIcons.at(QRandomGenerator::global()->bounded(happyIcons.size()));
+    postMessage(tr(R"([  OK  ]  - %1 Thanks a lot for using the Public Test Build!)", "%1 will be a random happy emoji").arg(randomIcon));
+    postMessage(tr(R"([  OK  ]  - %1 Help us make Mudlet better by reporting any problems.)", "%1 will be a random happy emoji").arg(randomIcon));
+}
+
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
     QUrl url = QUrl(mediaUrl);
@@ -896,14 +938,21 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (! mIsRemoteEchoingActive) && mPrintCommand) {
+    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
-        mpConsole->update();
+        //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
+#if defined(INCLUDE_3DMAPPER)
+        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
+#else
+        if (!mpMap->mpMapper) {
+#endif
+            mpConsole->update();
+        }
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
@@ -958,7 +1007,7 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
     int newWatchId = 1;
     while (mStopWatchMap.contains(newWatchId)) {
         ++newWatchId;
-    };
+    }
 
     // It is hard to imagine a situation in which this will fail - so we won't
     // bother coding for it:
@@ -1535,9 +1584,6 @@ bool Host::installPackage(const QString& fileName, int module)
                 moduleEntry << fileName;
                 moduleEntry << QStringLiteral("0");
                 mInstalledModules[packageName] = moduleEntry;
-                if (module == 1 || module == 3) {
-                    mModulePriorities[packageName] = 0;
-                }
                 mActiveModules.append(packageName);
             } else {
                 mInstalledPackages.append(packageName);
@@ -1551,6 +1597,7 @@ bool Host::installPackage(const QString& fileName, int module)
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
+        //mInstalledPackages.append( packageName );
         QString profileName = getName();
         QString login = getLogin();
         QString pass = getPass();
@@ -1560,9 +1607,6 @@ bool Host::installPackage(const QString& fileName, int module)
             moduleEntry << fileName;
             moduleEntry << QStringLiteral("0");
             mInstalledModules[packageName] = moduleEntry;
-            if (module == 1 || module == 3) {
-                mModulePriorities[packageName] = 0;
-            }
             mActiveModules.append(packageName);
         } else {
             mInstalledPackages.append(packageName);
@@ -2476,4 +2520,29 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     secondaryColor = mPlayerRoomInnerColor;
     // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
+}
+
+// Used to set the searchOptions here and the one in the editor if present, for
+// use by the XMLimporter class:
+void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    if (mpEditorDialog) {
+        mpEditorDialog->setSearchOptions(optionsState);
+    }
+}
+
+std::pair<bool, QString> Host::setMapperTitle(const QString& title)
+{
+    if (!mpDockableMapWidget) {
+        return {false, "no floating/dockable type map window found"};
+    }
+
+    if (title.isEmpty()) {
+        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+    } else {
+        mpDockableMapWidget->setWindowTitle(title);
+    }
+
+    return {true, QString()};
 }

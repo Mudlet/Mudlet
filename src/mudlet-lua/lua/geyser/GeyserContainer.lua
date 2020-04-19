@@ -114,9 +114,10 @@ end
 -- Called on window resize events.
 function Geyser.Container:reposition ()
   local x, y, w, h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
-  moveWindow(self.name, self:get_x(), self:get_y())
-  resizeWindow(self.name, self:get_width(), self:get_height())
-
+  if self.type ~= "userwindow" then
+    moveWindow(self.name, self:get_x(), self:get_y())
+    resizeWindow(self.name, self:get_width(), self:get_height())
+  end
   -- deal with all children of this container
   for k, v in pairs(self.windowList) do
     if k ~= self and not v.nestLabels then
@@ -154,11 +155,19 @@ end
 --- Shows this window and all windows it contains.
 function Geyser.Container:show (auto)
   auto = auto or false
+  -- If my container is hidden I stay hidden and after it get visible again I'm visible too
+  if self.container.hidden or self.container.auto_hidden then
+    if auto == false then
+      self.hidden = false
+    end
+    return false
+  end
   if auto then
     self.auto_hidden = false
   else
     self.hidden = false
   end
+
   if not self.hidden and not self.auto_hidden then
     self:show_impl()
   end
@@ -179,6 +188,41 @@ end
 --- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
 function Geyser.Container:lower ()
 	lowerWindow(self.name)
+end
+
+function Geyser.Container:raiseAll(container, me)
+  me = me or true
+  container = container or self
+  -- raise myself
+  if me then
+    container:raise()
+  end
+  local v
+  for i=1,#container.windows do
+    v = container.windows[i]
+    container.windowList[v]:raise()
+    container.windowList[v]:raiseAll(container.windowList[v], false)
+  end
+end
+
+local function createWindowTable(container)
+  local v
+  Geyser.Container.windowTable = Geyser.Container.windowTable or {}
+  for i=1,#container.windows do
+    v = container.windows[i]
+    Geyser.Container.windowTable[#Geyser.Container.windowTable+1] = container.windowList[v]
+    createWindowTable(container.windowList[v])
+  end
+end
+
+function Geyser.Container:lowerAll()
+  createWindowTable(self)
+  -- iterate in reverse order through all elements to keep the same z-axis inside the container
+  for i=#Geyser.Container.windowTable,1,-1 do
+    Geyser.Container.windowTable[i]:lower()
+  end
+  Geyser.Container.windowTable = nil
+  self:lower()
 end
 
 --- Moves this window according to the new x and y contraints set.
@@ -229,7 +273,7 @@ function Geyser.Container:flash (time)
   local time = time or 1.0
   local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
   local name = self.name .. "_dimensions_flash"
-  createLabel(name, x, y, width, height, 1)
+  createLabel(self.windowname ,name, x, y, width, height, 1)
   resizeWindow(name, width, height)
   moveWindow(name, x, y)
   setBackgroundColor(name, 190, 190, 190, 128)
@@ -272,6 +316,19 @@ function Geyser.Container:new(cons, container)
     else
       -- Else assume the root window is my container
       Geyser:add(me)
+      container=Geyser
+    end
+   --Create Root-Container for UserWindow and add Children
+   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
+        container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
+        container:add(me)
+        container.get_width = function()
+            return getUserWindowSize(me.windowname)
+        end
+        container.get_height = function()
+            local w, h = getUserWindowSize(me.windowname)
+            return h
+        end
     end
   end
 

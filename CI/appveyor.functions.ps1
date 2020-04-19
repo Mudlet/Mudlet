@@ -212,14 +212,14 @@ function InstallMsys() {
 }
 
 function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
-  Move-Item "boost_1_67_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
@@ -348,6 +348,7 @@ function InstallLibzip() {
   $Env:Path = $ShPath
 }
 
+# Shouldn't be needed now:
 function InstallZziplib() {
   DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
   ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
@@ -409,6 +410,16 @@ function InstallLuaUtf8() {
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
 }
 
+function InstallLuaLunajson() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lunajson")
+}
+
+function InstallLuaArgparse() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
+}
+
 function InstallLuaYajl() {
   Set-Location \LuaRocks
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
@@ -418,6 +429,12 @@ function InstallLuaYajl() {
 function InstallLuaZip () {
   Set-Location "$workingBaseDir"
   DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
+  # The above redirects to:
+  # "https://codeload.github.com/mpeterv/luazip/zip/master.zip"
+  # To avoid a dependency on zziplib we should switch to:
+  # "https://codeload.github.com/brimworks/lua-zip/zip/v0.2.0"
+  # TODO: it is not clear whether any extra tweaking, besides removing "-lzzip"
+  # is needed for the above alternative:
   ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
@@ -433,6 +450,8 @@ function InstallLuaModules(){
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
   CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
+  CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
+  CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
 }
 
 function CheckAndInstall7z(){
@@ -452,7 +471,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_67_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){

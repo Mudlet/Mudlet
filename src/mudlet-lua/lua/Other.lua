@@ -144,6 +144,9 @@ local group_creation_functions = {
   end,
   alias = function(name, parent)
     return not (permAlias(name, parent, "", "") == -1)
+  end,
+  script = function(name, parent)
+    return not (permScript(name, parent, "", "") == -1)
   end
 }
 
@@ -173,7 +176,19 @@ function permGroup(name, itemtype, parent)
   return group_creation_functions[itemtype](name, parent)
 end
 
-
+--- Appends code to an existing script
+---
+--- @param name name of the script item
+--- @param luaCode 
+function appendScript(name, luaCode, pos)
+  pos = pos or 1
+  assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
+  assert(type(name) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
+  if not getScript(name, pos) then
+    return nil, 'script "'..name..'" at position "'..pos..'" not found'
+  end
+  return setScript(name, getScript(name, pos).."\n"..luaCode, pos)
+end
 
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
 ---
@@ -470,13 +485,18 @@ function _comp(a, b)
     return false
   end
   if type(a) == 'table' then
+    local a_size = 0
     for k, v in pairs(a) do
+      a_size = a_size + 1
       if not b[k] then
         return false
       end
       if not _comp(v, b[k]) then
         return false
       end
+    end
+    if a_size ~= table.size(b) then
+      return false
     end
   else
     if a ~= b then
@@ -924,3 +944,16 @@ function translateTable(data, language)
 
   return t
 end
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param fileName name and location of the file
+-- @param suffix suffix of the file
+function packageDrop(event, fileName, suffix)
+  local acceptable_suffix = {"xml", "mpackage", "zip"}
+  if not table.contains(acceptable_suffix, suffix) then
+    return
+  end
+  installPackage(fileName)
+end
+registerAnonymousEventHandler("sysDropEvent", "packageDrop")

@@ -39,6 +39,7 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
@@ -66,6 +67,22 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+// for system physical memory info
+#ifdef WIN32
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(__APPLE__)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#else
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 class QAction;
 class QCloseEvent;
@@ -129,10 +146,10 @@ public:
     bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
-    bool openWindow(Host*, const QString&, bool loadLayout = true);
-    bool createMiniConsole(Host*, const QString&, int, int, int, int);
-    bool createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough);
+    std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
+    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
+    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool echoWindow(Host*, const QString&, const QString&);
     bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
     void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
@@ -149,14 +166,17 @@ public:
     bool setBackgroundImage(Host*, const QString& name, QString& path);
     bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
-    bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelMoveCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelWheelCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelClickCallback(Host*, const QString&, const int);
+    bool setLabelDoubleClickCallback(Host*, const QString&, const int);
+    bool setLabelReleaseCallback(Host*, const QString&, const int);
+    bool setLabelMoveCallback(Host*, const QString&, const int);
+    bool setLabelWheelCallback(Host*, const QString&, const int);
+    bool setLabelOnEnter(Host*, const QString&, const int);
+    bool setLabelOnLeave(Host*, const QString&, const int);
     bool moveWindow(Host*, const QString& name, int, int);
+    std::pair<bool, QString> setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget(Host* pHost);
     void deleteLine(Host*, const QString& name);
     std::optional<QSize> getImageSize(const QString& imageLocation);
     bool insertText(Host*, const QString& windowName, const QString&);
@@ -397,7 +417,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-    void show_options_dialog(QString tab);
+    void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
@@ -423,7 +443,9 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void layoutModules();
-    void startAutoLogin();
+    void startAutoLogin(const QString&);
+    QPointer<QTableWidget> moduleTable;
+    int64_t getPhysicalMemoryTotal();
 
 
 #if defined(INCLUDE_UPDATER)
@@ -570,6 +592,8 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
+    static bool firstLaunch();
+    QString autodetectPreferredLanguage();
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -651,7 +675,6 @@ private:
     QPointer<QPushButton> installButton;
 
     QPointer<Host> mpModuleTableHost;
-    QPointer<QTableWidget> moduleTable;
     QPointer<QPushButton> moduleUninstallButton;
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;
@@ -669,7 +692,7 @@ private:
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
-    QString mInterfaceLanguage;
+    QString mInterfaceLanguage {};
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call
@@ -729,21 +752,15 @@ private:
     // Used for display in the profile preferences and is never translated:
     QString mNativeName;
     // ONLY if the translation is loaded from an embedded resource file,
-    // is the percentage complete of the translation - determined via a lua
-    // script that parses the output of the lrelease executable that
-    // converts the source mudlet_xx_YY.ts files into the binary
-    // mudlet_xx_YY.qm files placed into the embedded resource file during
-    // building the application:
+    // this is the percentage complete of the translation
     int mTranslatedPercentage;
-    // What the usable Mudlet translation file-was found to be:
+    // filename translation is loaded from
     QString mMudletTranslationFileName;
-    // What the usable Qt translation file was found to be, note that in most
+    // Qt translation file was found to be, note that in most
     // cases the loaded file will be a "xx" language only file even though it
     // is an "xx_YY" one here:
     QString mQtTranslationFileName;
-    // Further items like the above pair may be needed should some of the
-    // separate libraries with a textual content have their own translations
-    // that we do not provide ourselves.
+    // Similar filename locations will require adding for any 3rd party translations we load
 };
 
 #endif // MUDLET_MUDLET_H

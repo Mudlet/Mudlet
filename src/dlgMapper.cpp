@@ -45,22 +45,11 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
-        mpHost->mpMap->mpM->update();
-    }
-    glWidget = new GLWidget(widget);
-    glWidget->setObjectName(QString::fromUtf8("glWidget"));
-
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    sizePolicy.setHorizontalStretch(0);
-    sizePolicy.setVerticalStretch(0);
-    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
-    glWidget->setSizePolicy(sizePolicy);
-    verticalLayout_2->insertWidget(0, glWidget);
-
-    glWidget->mpMap = pM;
+    glWidget = nullptr;
+    QSurfaceFormat fmt;
+    fmt.setSamples(10);
+    QSurfaceFormat::setDefaultFormat(fmt);
 #endif
-
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
     // Have to do this here rather than in the T2DMap constructor because that
@@ -108,34 +97,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
 
-#if defined(INCLUDE_3DMAPPER)
-    connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
-    connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
-    connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
-    connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
-    connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
-    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
-    connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
-    connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
-    connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
-    connect(shiftRight, &QAbstractButton::pressed, glWidget, &GLWidget::shiftRight);
-    connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
-    connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
-    connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
-    connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
-    connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
-    connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
-    connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
-    connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
-    connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
-    connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
-
-    glWidget->hide();
-#else
-    dim2->setDisabled(true);
-    dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
-#endif
-
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
     QFont mapperFont = QFont(mpHost->getDisplayFont().family());
@@ -163,10 +124,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
     if (mpHost) {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
+        qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
 }
 
@@ -227,16 +188,60 @@ void dlgMapper::slot_togglePanel()
 void dlgMapper::show2dView()
 {
 #if defined(INCLUDE_3DMAPPER)
-    glWidget->setVisible(!glWidget->isVisible());
+
+    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
+        mpHost->mpMap->mpM->update();
+    }
+    if (!glWidget) {
+        glWidget = new GLWidget(widget);
+        glWidget->setObjectName(QString::fromUtf8("glWidget"));
+
+        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+        glWidget->setSizePolicy(sizePolicy);
+        verticalLayout_2->insertWidget(0, glWidget);
+
+        glWidget->mpMap = mpMap;
+        mpMap->mpM = mpMap->mpMapper->glWidget;
+        connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
+        connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
+        connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
+        connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
+        connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
+        connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
+        connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
+        connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
+        connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
+        connect(shiftRight, &QAbstractButton::pressed, glWidget, &GLWidget::shiftRight);
+        connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
+        connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
+        connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
+        connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
+        connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
+        connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
+        connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
+        connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
+        connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
+        connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
+    }
+
+
     mp2dMap->setVisible(!mp2dMap->isVisible());
+    glWidget->setVisible(!glWidget->isVisible());
     if (glWidget->isVisible()) {
         d3buttons->setVisible(true);
     } else {
-        d3buttons->setVisible(false);
+        // workaround for buttons reloading oddly
+        QTimer::singleShot(100, [this]() { d3buttons->setVisible(false); });
     }
+
 #else
     mp2dMap->setVisible(true);
     d3buttons->setVisible(false);
+    dim2->setDisabled(true);
+    dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
 #endif
 }
 
@@ -272,31 +277,23 @@ void dlgMapper::goRoom()
     //    searchList->clear();
     //    int id = txt.toInt();
 
-    //    if( id != 0 && mpMap->rooms.contains( id ) )
-    //    {
+    //    if (id != 0 && mpMap->rooms.contains(id)) {
     //        mpMap->mTargetID = id;
-    //        if( mpMap->findPath(0,0) )
-    //        {
-    //            qDebug()<<"glwidget: starting speedwalk path length="<<mpMap->mPathList.size();
+    //        if (mpMap->findPath(0,0)) {
+    //            qDebug() << "glwidget: starting speedwalk path length=" << mpMap->mPathList.size();
     //            mpMap->mpHost->startSpeedWalk();
-    //        }
-    //        else
-    //        {
+    //        } else {
     //            QString msg = "Cannot find a path to this room.\n";
     //            mpHost->mpConsole->printSystemMessage(msg);
     //        }
-    //    }
-    //    else
-    //    {
-    //        QMapIterator<int, TRoom *> it( mpMap->rooms );
-    //        while( it.hasNext() )
-    //        {
+    //    } else {
+    //        QMapIterator<int, TRoom *> it(mpMap->rooms);
+    //        while (it.hasNext()) {
     //            it.next();
     //            int i = it.key();
-    //            if( mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive ) )
-    //            {
-    //                qDebug()<<"inserting match:"<<i;
-    //                searchList->addItem( mpMap->rooms[i]->name );
+    //            if (mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive)) {
+    //                qDebug() << "inserting match:" << i;
+    //                searchList->addItem(mpMap->rooms[i]->name);
     //            }
     //        }
     //    }

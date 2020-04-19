@@ -5,6 +5,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
+ *   Copyright (C) 2011-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -125,7 +126,7 @@ QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 
 const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
-const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD) == QStringLiteral("-public-test-build");
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
 const bool mudlet::scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
 
 QVariantHash mudlet::mLuaFunctionNames;
@@ -161,7 +162,6 @@ mudlet::mudlet()
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
@@ -412,7 +412,7 @@ mudlet::mudlet()
         QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
         mpActionReportIssue->setIcon(QIcon(QStringLiteral(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
-        mpActionReportIssue->setToolTip(tr("Report an issue about the Mudlet Public Test Build"));
+        mpActionReportIssue->setToolTip(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!"));
         mpMainToolBar->addAction(mpActionReportIssue);
         mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
         mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
@@ -884,6 +884,12 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
+// returns true if this is the first launch of Mudlet on this machine
+bool mudlet::firstLaunch()
+{
+    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+}
+
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -954,7 +960,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
             } else if (!languageCode.compare(QLatin1String("it_IT"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Italiano");
             } else if (!languageCode.compare(QLatin1String("pl_PL"), Qt::CaseInsensitive)) {
-                currentTranslation.mNativeName = QStringLiteral("Polszczyzna");
+                currentTranslation.mNativeName = QStringLiteral("Polski");
             } else if (!languageCode.compare(QLatin1String("ru_RU"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Pусский");
             } else if (!languageCode.compare(QLatin1String("es_ES"), Qt::CaseInsensitive)) {
@@ -1552,6 +1558,9 @@ void mudlet::slot_tab_changed(int tabID)
         QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+        mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     } else {
         mpCurrentActiveHost = nullptr;
         return;
@@ -1957,10 +1966,20 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
 }
 
-bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
+std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
+    }
+
+    if (name.isEmpty()) {
+        return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
+    }
+
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    if (pL) {
+        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
     }
 
     auto hostName(pHost->getName());
@@ -1985,81 +2004,120 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         console->mConsoleName = name;
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
-        console->show();
         console->layerCommandLine->hide();
         console->mpScrollBar->hide();
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
-        // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
+        dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-
         setWindowFontSize(pHost, name, 10);
-
-        if (loadLayout && !dockwidget->hasLayoutAlready) {
-            loadWindowLayout();
-            dockwidget->hasLayoutAlready = true;
-        }
-
-        return true;
-    } else if (console && dockwidget) {
-        // The name is used in BOTH the QMaps of all user created TConsole
-        // and TDockWidget instances - so we HAVE an existing user window,
-        // Lets confirm this:
-        Q_ASSERT_X(console->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-        dockwidget->update();
-        //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-        console->show();
-        dockwidget->show();
-        console->showWindow(name);
-
-        if (loadLayout && !dockwidget->hasLayoutAlready) {
-            loadWindowLayout();
-            dockwidget->hasLayoutAlready = true;
-        }
-
-        return true;
     }
 
-    return false;
+    if (!console || !dockwidget) {
+        return {false, QStringLiteral("cannot create userwindow \"%1\"").arg(name)};
+    }
+
+    // The name is used in BOTH the QMaps of all user created TConsole
+    // and TDockWidget instances - so we HAVE an existing user window,
+    // Lets confirm this:
+    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+    dockwidget->update();
+
+    if (loadLayout && !dockwidget->hasLayoutAlready) {
+        loadWindowLayout();
+        dockwidget->hasLayoutAlready = true;
+    }
+
+    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
+    console->show();
+    dockwidget->show();
+    console->showWindow(name);
+
+    if (!autoDock) {
+        dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
+    } else {
+        dockwidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+    }
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!dockwidget->isFloating()) {
+            dockwidget->setFloating(true);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            dockwidget->setFloating(false);
+            addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
 }
 
-bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
     if (!pC) {
-        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
-            return true;
+            return {true, QString()};
         }
-    } else {
+    } else if (pC) {
         // CHECK: The absence of an explict return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
-        pC->resize(width, height);
-        pC->move(x, y);
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+        }
     }
-    return false;
+    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough)
+std::pair<bool, QString> mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
-    if (!pL) {
-        pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg, clickthrough);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        pL = pHost->mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
         if (pL) {
-            return true;
+            return {true, QString()};
         }
+    } else if (pL) {
+        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+    } else if (pC) {
+        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
     }
-    return false;
+    return {false, QString()};
+
 }
 
 bool mudlet::createBuffer(Host* pHost, const QString& name)
@@ -2077,6 +2135,39 @@ bool mudlet::createBuffer(Host* pHost, const QString& name)
     }
     return false;
 }
+
+bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    pHost->mProfileStyleSheet = styleSheet;
+    pHost->mpConsole->setStyleSheet(styleSheet);
+    pHost->mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpNotePad) {
+        pHost->mpNotePad->setStyleSheet(styleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpDockableMapWidget) {
+        pHost->mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : pHost->mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+    if (pHost == mpCurrentActiveHost) {
+        mpMainToolBar->setStyleSheet(styleSheet);
+        mpTabBar->setStyleSheet(styleSheet);
+        menuBar()->setStyleSheet(styleSheet);
+    }
+    return true;
+}
+
 
 bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, int b, int alpha)
 {
@@ -2342,13 +2433,17 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     if (pL) {
         pL->move(x1, y1);
         return true;
-    } else if (pC && !pD) {
+    }
+
+    if (pC && !pD) {
         // NOT a floatable/dockable "user window"
         pC->move(x1, y1);
         pC->mOldX = x1;
         pC->mOldY = y1;
         return true;
-    } if (pC && pD) {
+    }
+
+    if (pC && pD) {
         if (!pD->isFloating()) {
             // Undock a docked window
             pD->setFloating(true);
@@ -2359,6 +2454,127 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     }
 
     return false;
+}
+
+std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
+    auto pW = pHost->mpConsole->mpMainFrame;
+    auto pM = pHost->mpConsole->mpMapper;
+
+    if (!pD && windowname.toLower() != QLatin1String("main")) {
+        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+    }
+
+    if (pD) {
+        pW = pD->widget();
+    }
+
+    if (pL) {
+        pL->setParent(pW);
+        pL->move(x1, y1);
+        if (show) {
+            pL->show();
+        }
+        return {true, QString()};
+    } else if (pC) {
+        pC->setParent(pW);
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        if (show) {
+            pC->show();
+        }
+        return {true, QString()};
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->setParent(pW);
+        pM->move(x1, y1);
+        if (show) {
+            pM->show();
+        }
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+}
+
+std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    auto pMapper = pHost->mpMap.data()->mpMapper;
+    if (!pM && !pMapper) {
+        createMapper(true);
+        pM = pHost->mpDockableMapWidget;
+    }
+    if (!pM) {
+        return {false, QStringLiteral("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    if (!pM) {
+        return {false, QStringLiteral("no map widget found to close")};
+    }
+    if (!pM->isVisible()) {
+        return {false, QStringLiteral("map widget already closed")};
+    }
+    pM->hide();
+    return {true, QString()};
 }
 
 bool mudlet::closeWindow(Host* pHost, const QString& name)
@@ -2375,13 +2591,11 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
-
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2389,14 +2603,13 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setClick(func, pA);
+        pL->setClick(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2404,14 +2617,13 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setDoubleClick(func, pA);
+        pL->setDoubleClick(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2419,14 +2631,13 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QSt
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setRelease(func, pA);
+        pL->setRelease(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2434,14 +2645,13 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QStrin
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setMove(func, pA);
+        pL->setMove(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2449,14 +2659,13 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setWheel(func, pA);
+        pL->setWheel(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2464,14 +2673,13 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setEnter(func, pA);
+        pL->setEnter(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
-bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
+bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2479,11 +2687,10 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setLeave(func, pA);
+        pL->setLeave(func);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
@@ -2985,7 +3192,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
+    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3294,8 +3501,8 @@ void mudlet::show_action_dialog()
     pEditor->activateWindow();
 }
 
-
-void mudlet::show_options_dialog(QString tab)
+// tab must be the "objectName" of the tab in the preferences NOT the "titleText"
+void mudlet::show_options_dialog(const QString& tab)
 {
     Host* pHost = getActiveHost();
 
@@ -3309,6 +3516,12 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    // pHost can be a nullptr here so we do not want to dereference it in that
+    // case {when there is no profile loaded}:
+    if (pHost) {
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
@@ -3399,7 +3612,7 @@ void mudlet::slot_update_shortcuts()
 
 void mudlet::slot_show_options_dialog()
 {
-    show_options_dialog("General");
+    show_options_dialog(QStringLiteral("tab_general"));
 }
 
 void mudlet::show_help_dialog()
@@ -3459,9 +3672,7 @@ void mudlet::createMapper(bool loadDefaultMap)
                                      pMap->mPlayerRoomInnerColor);
 
     pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
-#if defined(INCLUDE_3DMAPPER)
-    pMap->mpM = pMap->mpMapper->glWidget;
-#endif
+    pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);
     pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
@@ -3550,6 +3761,8 @@ void mudlet::slot_notes()
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
+        pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pNotes->raise();
     pNotes->show();
@@ -3717,14 +3930,14 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin()
+void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
     for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
-        if (val.toInt() == Qt::Checked) {
+        if (val.toInt() == Qt::Checked || host == cliProfile) {
             doAutoLogin(host);
             openedProfile = true;
         }
@@ -3735,10 +3948,43 @@ void mudlet::startAutoLogin()
     }
 }
 
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t mudlet::getPhysicalMemoryTotal()
+{
+#ifdef WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(__unix__) || defined(__unix) || defined(unix)
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#elif defined(__APPLE__)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
+    {
+        return memInfo;
+    }
+
+    return -1;
+#else
+    return -1;
+#endif
+}
+
 // Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
-    qDebug() << "start of attachDebugArea";
     if (mpDebugArea) {
         return;
     }
@@ -5059,6 +5305,32 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
     }
 }
 
+// return the user's desktop language if we have a quality translation for it
+// or a back-up language they've specified
+QString mudlet::autodetectPreferredLanguage()
+{
+    // en_GB is a temporary special exception due to its likeness to en_US, while its
+    // translation is still only at 20%
+    QVector<QString> availableQualityTranslations {QStringLiteral("en_GB")};
+    for (auto& code : getAvailableTranslationCodes()) {
+        auto& translation = mTranslationsMap.value(code);
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= mTranslationGoldStar) {
+                availableQualityTranslations.append(code);
+            }
+        }
+    }
+
+    for (auto language : QLocale::system().uiLanguages()) {
+        if (availableQualityTranslations.contains(language.replace(QStringLiteral("-"), QStringLiteral("_")))) {
+            return language;
+        }
+    }
+
+    return QStringLiteral("en_US");
+}
+
 bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -5587,7 +5859,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     if (url.scheme() == QStringLiteral("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);

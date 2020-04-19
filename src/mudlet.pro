@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
+#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -41,12 +41,6 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
-# Include luazip module (run time lua module - but not needed on Linux/Windows as
-# is available prebuilt for THOSE platforms!
-macx {
-    include(../3rdparty/luazip/luazip.pri)
-}
-
 !build_pass{
     include(../translations/translated/updateqm.pri)
 }
@@ -87,11 +81,11 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using Gamepad module")
+    !build_pass : message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
-    message("Using TextToSpeech module")
+    !build_pass : message("Using TextToSpeech module")
 }
 
 TEMPLATE = app
@@ -99,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.4.0
+VERSION = 4.6.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -109,9 +103,18 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
-# "-public-test-build" for the public test build
+# "-ptb" for the public test build
 # "" for the release build
    BUILD = "-dev"
+}
+
+# As the above also modifies the splash screen image (so developers get reminded
+# what they are working with!) Packagers (e.g. for Linux distributions) will
+# want to set the environmental variable WITH_VARIABLE_SPLASH_SCREEN to NO so
+# that their build does not appear to be a "DEV"elopment build!
+WITH_VS_SCREEN_TEST = $$upper($$(WITH_VARIABLE_SPLASH_SCREEN))
+isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
+    DEFINES += INCLUDE_VARIABLE_SPLASH_SCREEN
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -251,11 +254,12 @@ unix:!macx {
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
-    isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
+    MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
+        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -263,15 +267,13 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
-        -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -lWs2_32
     INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_67_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
-# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
-# hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+         "C:\\Libraries\\boost_1_71_0" \
+         "$${MINGW_BASE_DIR_TEST}\\include" \
+         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+    # Leave this unset - we do not need it on Windows:
+    # LUA_DEFAULT_DIR =
 }
 
 unix:!macx {
@@ -314,10 +316,9 @@ unix {
     exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
 }
 
-# There does not seem to be an obvious pkg-config option for these two
-macx:LIBS += \
-    -lz \
-    -lzzip
+# There does not seem to be an obvious pkg-config option for this one, it is
+# for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
+macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
@@ -330,7 +331,7 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 
 ####################### Git Submodules check and install #######################
 # The "exists" tests and "include" directives uses qmakes internal path handling
-# (always uses '/' dirextroy separators); the git operations need to be done
+# (always uses '/' directory separators); the git operations need to be done
 # somewhere within the main git repository (which may not be the case for
 # "shadow builds" so we now explicitly change directory using native shell
 # command before carrying them out - however Windows cmd.exe uses a different
@@ -464,6 +465,7 @@ SOURCES += \
     dlgRoomExits.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
+    dlgSourceEditorFindArea.cpp \
     dlgSystemMessageArea.cpp \
     dlgTimersMainArea.cpp \
     dlgTriggerEditor.cpp \
@@ -536,6 +538,7 @@ HEADERS += \
     dlgRoomExits.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
+    dlgSourceEditorFindArea.h \
     dlgSystemMessageArea.h \
     dlgTimersMainArea.h \
     dlgTriggerEditor.h \
@@ -616,6 +619,7 @@ FORMS += \
     ui/room_exits.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
+    ui/source_editor_find_area.ui \
     ui/system_message_area.ui \
     ui/timers_main_area.ui \
     ui/triggers_main_area.ui \
@@ -623,11 +627,19 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = mudlet.qrc \
-            ../translations/translated/qm.qrc
+RESOURCES += \
+    mudlet.qrc \
+    ../translations/translated/qm.qrc
 
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    RESOURCES += \
+        mudlet_fonts_common.qrc
+
+    linux {
+        RESOURCES += \
+            mudlet_fonts_linux.qrc
+    }
+
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
@@ -710,6 +722,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # Main lua files:
 LUA.files = \
+    $${PWD}/mudlet-lua/lua/CursorShapes.lua \
     $${PWD}/mudlet-lua/lua/DB.lua \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
@@ -726,6 +739,7 @@ LUA.depends = mudlet
 # Geyser lua files:
 LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
@@ -737,6 +751,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
@@ -1277,14 +1292,21 @@ win32 {
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+
+    # Product name determines the Windows Start Menu shortcut name
+    contains(BUILD, "-ptb.+") {
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
+    } else {
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+    }
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
 OTHER_FILES += \
-    ${LUA.files} \
-    ${LUA_GEYSER.files} \
-    ${LUA_TESTS.files} \
-    ${DISTFILES} \
+    $${LUA.files} \
+    $${LUA_GEYSER.files} \
+    $${LUA_TESTS.files} \
+    $${DISTFILES} \
     ../README \
     ../COMPILE \
     ../COPYING \
