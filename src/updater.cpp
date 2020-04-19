@@ -74,7 +74,7 @@ void Updater::checkUpdatesOnStart()
     setupOnWindows();
 #endif
 
-    mDailyCheck->setInterval(24h);
+    mDailyCheck->setInterval(12h);
     QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
           qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
