@@ -1750,7 +1750,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Errore Lua: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16354"/>
