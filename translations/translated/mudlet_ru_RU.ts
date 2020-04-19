@@ -79,7 +79,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Карта - %1</translation>
     </message>
   </context>
   <context>
@@ -577,7 +577,7 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Не удается найти путь от %1 до %2, используя известные выхода.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1686,7 +1686,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2715"/>
       <location filename="../src/TConsole.cpp" line="2754"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>Нет результатов поиска, к сожалению!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2790"/>
@@ -1706,7 +1706,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="3025"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Пользовательское окно - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1767,7 +1767,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16350"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>Нет сообщения об ошибке от Луа</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
