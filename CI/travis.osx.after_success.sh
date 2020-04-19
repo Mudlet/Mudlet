@@ -49,7 +49,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # ptb/release build
-    app="source/build/Mudlet.app"
+    app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
       echo "== Creating a public test build =="
       mv "$app" "source/build/Mudlet PTB.app"
