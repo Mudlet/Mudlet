@@ -79,7 +79,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>地图 - %1</translation>
     </message>
   </context>
   <context>
@@ -1651,7 +1651,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="3025"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>用户窗口 - %1 - %2</translation>
     </message>
   </context>
   <context>
