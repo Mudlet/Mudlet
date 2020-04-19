@@ -3653,6 +3653,32 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getMudletInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    QStringList knownEncodings{};
+    {
+        auto adjustEncoding = [](auto encodingName) {
+            auto originalEncoding = encodingName;
+            if (encodingName.startsWith("M_")) {
+                encodingName.remove(0, 2);
+            }
+
+            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
+        };
+        for (const auto& encoding : host.mTelnet.getEncodingsList()) {
+            knownEncodings.append(adjustEncoding(encoding));
+        }
+        knownEncodings.sort(Qt::CaseInsensitive);
+    }
+
+    host.postMessage(tr("[ INFO ]  - Available encodings:"));
+    host.postMessage(QStringLiteral("  %1").arg(knownEncodings.join(QStringLiteral(", "))));
+
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
@@ -16786,6 +16812,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
+    lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     const auto separator = QDir::separator();
