@@ -1,0 +1,69 @@
+name: Build Mudlet
+on:
+  - pull_request
+  - push
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.os}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [macos-latest]
+    env:
+      qt: "5.14.1"
+
+    steps:
+    - name: Restore Qt cache
+      uses: actions/cache@v1
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{runner.os}}-qt-${{env.qt}}
+        restore-keys: |
+          ${{runner.os}}-qt-
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      with:
+        version: ${{env.qt}}
+        dir: ${{runner.workspace}}
+        arch: win64_mingw73 # this key is relevant only for windows
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: "Set location of vcpkg dependencies"
+      env:
+#         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{matrix.triplet}}.txt
+          vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
+      run: |
+        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
+      shell: bash
+
+    - name: Install homebrew dependencies
+      run: |
+        # these aren't available or don't work well in vcpkg
+        brew install pkg-config libzzip libzip
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v2
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
+
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v2
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: '-G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
