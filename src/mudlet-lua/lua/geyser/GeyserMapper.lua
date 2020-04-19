@@ -65,10 +65,29 @@ function Geyser.Mapper:show_impl()
   end
 end
 
+-- Overridden raise and lower functions
+function Geyser.Mapper:raise()
+	raiseWindow("mapper")
+end
+
+function Geyser.Mapper:lower()
+	lowerWindow("mapper")
+end
+
 function Geyser.Mapper:setDockPosition(pos)
   if not self.embedded then
     return openMapWidget(pos)
   end
+end
+
+function Geyser.Mapper:setTitle(text)
+  self.titleText = text
+  return setMapWindowTitle(text)
+end
+
+function Geyser.Mapper:resetTitle()
+  self.titleText = ""
+  return resetMapWindowTitle()
 end
 
 -- Overridden constructor
@@ -105,6 +124,12 @@ function Geyser.Mapper:new (cons, container)
       me:get_width(), me:get_height())
     else
       openMapWidget()
+    end
+
+    if me.titleText then
+      me:setTitle(me.titleText)
+    else
+      me:resetTitle()
     end
   end
 

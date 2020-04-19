@@ -688,7 +688,7 @@ void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWal
         if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
-            mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.\n")
+            mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
                                                           .arg(QString::number(speedWalkStartRoomId),
                                                                QString::number(speedWalkTargetRoomId))));
         }
@@ -3435,16 +3435,7 @@ void T2DMap::slot_userAction(QString uniqueName)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         }
         mpHost->raiseEvent(event);
-    }
-    // Unreachable code as had effectively the same test as the previous "if"
-    // mMultiSelectionList is now mMultiSelectionSet:
-    //    else if( mMultiSelectionList.size() > 0 )
-    //    {
-    //        event.mArgumentList.append(QString::number(mMultiSelectionList[0]));
-    //        event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    //        mpHost->raiseEvent( & event );
-    //    }
-    else {
+    } else {
         event.mArgumentList.append(uniqueName);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         for (int i = 0; i < userEvent.size(); i++) {

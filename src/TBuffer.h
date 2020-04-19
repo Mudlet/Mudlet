@@ -83,8 +83,8 @@ public:
 
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
-        mFgColor=newForeGroundColor;
-        mBgColor=newBackGroundColor;
+        mFgColor = newForeGroundColor;
+        mBgColor = newBackGroundColor;
     }
     // Only considers the following flags: Bold, Italic, Overline, Reverse,
     // Strikeout, Underline, does not consider Echo:
@@ -176,7 +176,7 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, bool isFromServer=false);
+    void translateToPlainText(std::string& s, bool isFromServer = false);
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
@@ -204,7 +204,6 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    QList<bool> dirty;
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
     int mLinkID;

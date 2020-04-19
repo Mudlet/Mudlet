@@ -1960,3 +1960,78 @@ function setLabelCursor(labelname, cursorShape)
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end
+
+
+--These functions ensure backward compatibility for the setLabelCallback functions
+--unpack function which also returns the nil values
+-- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
+local function unpack_w_nil (arg_table, counter)
+  counter = counter or 1
+  if counter >= arg_table.n then
+    return arg_table[counter]
+  end
+  return arg_table[counter], unpack_w_nil(arg_table, counter + 1)
+end
+
+local function setLabelCallback(callbackFunc, labelname, func, ...)
+  local nr = arg.n + 1
+  arg.n = arg.n + 1
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+  end
+  assert(type(func) == 'function', '<setLabelCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  if nr > 1 then
+    return callbackFunc(labelname, 
+    function(event) 
+      if not event then 
+        arg.n = nr - 1 
+      end 
+      arg[nr] = event 
+      func(unpack_w_nil(arg)) 
+    end )
+  end 
+  callbackFunc(labelname, func) 
+end
+
+local setLC = setLC or setLabelClickCallback
+function setLabelClickCallback (...)
+  setLabelCallback(setLC, ...)
+end
+
+local setLDC = setLDC or setLabelDoubleClickCallback
+function setLabelDoubleClickCallback (...)
+  setLabelCallback(setLDC, ...)
+end
+
+local setLRC = setLRC or setLabelReleaseCallback
+function setLabelReleaseCallback(...)
+  setLabelCallback(setLRC, ...)
+end
+
+local setLMC = setLMC or setLabelMoveCallback
+function setLabelMoveCallback(...)
+  setLabelCallback(setLMC, ...)
+end
+
+local setLWC = setLWC or setLabelWheelCallback
+function setLabelWheelCallback(...)
+  setLabelCallback(setLWC, ...)
+end
+
+local setOnE = setOnE or setLabelOnEnter
+function setLabelOnEnter(...)
+  setLabelCallback(setOnE, ...)
+end
+
+local setOnL = setOnL or setLabelOnLeave
+function setLabelOnLeave(...)
+  setLabelCallback(setOnL,...)
+end
+
+function resetUserWindowTitle(windowname)
+  return setUserWindowTitle(windowname, "")
+end
+
+function resetMapWindowTitle()
+  return setMapWindowTitle("")
+end

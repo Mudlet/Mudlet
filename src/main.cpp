@@ -28,11 +28,12 @@
 #include <chrono>
 #include <QDesktopWidget>
 #include <QDir>
-#if defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
+#if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
-#endif // defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
+#endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
+#include <QCommandLineParser>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -67,73 +68,11 @@ static void pcre_free_dbg(void* ptr)
 
 #endif // _DEBUG && _MSC_VER
 
-QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action)
-{
-    action = 0;
-
-// A crude and simplistic commandline options processor - note that Qt deals
-// with its options automagically!
-#if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
-    // Handle other currently unconsidered OSs - what are they - by returning the
-    // normal GUI type application handle.
-    return new QApplication(argc, argv);
-#endif
-
-    for (int i = 1; i < argc; ++i) {
-        if (qstrcmp(argv[i], "--") == 0) {
-            break; // Bail out on end of option type arguments
-        }
-
-        char argument = 0;
-        bool isOption = false;
-        if (strlen(argv[i]) > 2 && strncmp(argv[i], "--", 2) == 0) {
-            argument = argv[i][2];
-            isOption = true;
-        } else if (strlen(argv[i]) > 1 && strncmp(argv[i], "-", 1) == 0) {
-            argument = argv[i][1];
-            isOption = true;
-        }
-
-        if (isOption) {
-            if (tolower(argument) == 'v') {
-                action = 2; // Make this the only action to do and do it directly
-                break;
-            }
-
-            if (tolower(argument) == 'h' || argument == '?') {
-                action = 1; // Make this the only action to do and do it directly
-                break;
-            }
-
-            if (tolower(argument) == 'q') {
-                action |= 4;
-            }
-        }
-    }
-
-    if ((action) & (1 | 2)) {
-        return new QCoreApplication(argc, argv);
-    } else {
-#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
-        // Workaround for horrible mac rendering issues once the mapper widget
-        // is open - see https://bugreports.qt.io/browse/QTBUG-41257
-        QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
-#elif defined(Q_OS_FREEBSD)
-        // Cure for diagnostic:
-        // "Qt WebEngine seems to be initialized from a plugin. Please set
-        // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
-        // before constructing QGuiApplication."
-        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#endif
-        return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
-    }
-}
-
 #if defined(INCLUDE_FONTS)
 void copyFont(const QString& externalPathName, const QString& resourcePathName, const QString& fileName)
 {
     if (!QFile::exists(QStringLiteral("%1/%2").arg(externalPathName, fileName))) {
-        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName,fileName));
+        QFile fileToCopy(QStringLiteral(":/%1/%2").arg(resourcePathName, fileName));
         fileToCopy.copy(QStringLiteral("%1/%2").arg(externalPathName, fileName));
     }
 }
@@ -181,7 +120,6 @@ int main(int argc, char* argv[])
     }
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
-    unsigned int startupAction = 0;
 
     // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
     // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
@@ -189,35 +127,65 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
-    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
-    auto * app = qobject_cast<QApplication*>(initApp.data());
+#if defined(Q_OS_MACOS)
+    // Workaround for horrible mac rendering issues once the mapper widget
+    // is open - see https://bugreports.qt.io/browse/QTBUG-41257
+    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#elif defined(Q_OS_FREEBSD)
+    // Cure for diagnostic:
+    // "Qt WebEngine seems to be initialized from a plugin. Please set
+    // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
+    // before constructing QGuiApplication."
+    QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
+
+    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
+#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
+    auto abortLaunch = runUpdate();
+    if (abortLaunch) {
+        return 0;
+    }
+#endif
+
+    // Turn the cursor into the waiting one during startup, so something shows
+    // activity even if the quiet, no splashscreen startup has been used
+    app->setOverrideCursor(QCursor(Qt::WaitCursor));
+    app->setOrganizationName(QStringLiteral("Mudlet"));
+
+    if (mudlet::scmIsPublicTestVersion) {
+        app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+        app->setApplicationVersion(APP_VERSION APP_BUILD);
+    } else {
+        app->setApplicationName(QStringLiteral("Mudlet"));
+        app->setApplicationVersion(APP_VERSION);
+    }
+
+    QCommandLineParser parser;
+    QCommandLineOption profileToOpen(QStringLiteral("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    parser.addOption(profileToOpen);
+
+    QCommandLineOption showHelp(QStringList() << "h" <<"help", QCoreApplication::translate("main", "Display help and exit"));
+    parser.addOption(showHelp);
+
+    QCommandLineOption showVersion(QStringList() << "v" << "version", QCoreApplication::translate("main", "Display version and exit"));
+    parser.addOption(showVersion);
+
+    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Display help and exit"));
+    parser.addOption(beQuiet);
+
+    parser.parse(app->arguments());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     QStringList texts;
-    if (startupAction & 2) {
-        // Do "version" action - wording and format is quite tightly specified by the coding standards
-#if defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
-         "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
-#else // ! defined(QT_DEBUG)
-        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
-#endif // ! defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
-             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
-        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
-        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
-        texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
-                                                     "There is NO WARRANTY, to the extent permitted by law.\n");
-        std::cout << texts.join(QString()).toStdString();
-        return 0;
-    } else if (startupAction & 1) {
+    if (parser.isSet(showHelp)) {
         // Do "help" action
         texts << QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
-                                                     "       -h, --help      displays this message.\n"
-                                                     "       -v, --version   displays version information.\n"
-                                                     "       -q, --quiet     no splash screen on startup.\n\n"
+                                                     "       -h, --help           displays this message.\n"
+                                                     "       -v, --version        displays version information.\n"
+                                                     "       -q, --quiet          no splash screen on startup.\n"
+                                                     "       --profile=<profile>  additional profile to open\n\n"
                                                      "There are other inherited options that arise from the Qt Libraries which are\n"
                                                      "less likely to be useful for normal use of this application:\n")
                  .arg(QLatin1String(APP_TARGET));
@@ -267,34 +235,40 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    if (parser.isSet(showVersion)) {
+        // Do "version" action - wording and format is quite tightly specified by the coding standards
+#if defined(QT_DEBUG)
+        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
+         "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
+#else // ! defined(QT_DEBUG)
+        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+#endif // ! defined(QT_DEBUG)
+        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
+             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << QCoreApplication::translate("main", "Copyright © 2008-2020  Mudlet developers\n");
+        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
+        texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
+                                                     "There is NO WARRANTY, to the extent permitted by law.\n");
+        std::cout << texts.join(QString()).toStdString();
+        return 0;
+    }
+
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
+    QString cliProfile = parser.value(profileToOpen);
 
-#if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
-    }
+
+    bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
+#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    QImage splashImage(mudlet::scmIsReleaseVersion ? QStringLiteral(":/Mudlet_splashscreen_main.png")
+                                                   : mudlet::scmIsPublicTestVersion ? QStringLiteral(":/Mudlet_splashscreen_ptb.png")
+                                                                                    : QStringLiteral(":/Mudlet_splashscreen_development.png"));
+#else
+    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
 #endif
 
-    // Turn the cursor into the waiting one during startup, so something shows
-    // activity even if the quiet, no splashscreen startup has been used
-    app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName(QStringLiteral("Mudlet"));
-
-    if (mudlet::scmIsPublicTestVersion) {
-        app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
-        app->setApplicationVersion(APP_VERSION APP_BUILD);
-    } else {
-        app->setApplicationName(QStringLiteral("Mudlet"));
-        app->setApplicationVersion(APP_VERSION);
-    }
-
-
-    bool show_splash = !(startupAction & 4); // Not --quiet.
-
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
@@ -378,7 +352,7 @@ int main(int argc, char* argv[])
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
-    QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString notoFontDirectory(QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -433,16 +407,16 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("README"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
     mudlet::debugMode = false;
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
-#ifdef Q_OS_WIN32
+#if defined(Q_OS_WIN32)
     /*
      * From Qt Documentation for:
      * bool QFile::link(const QString &linkName)
@@ -489,7 +463,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin();
+    mudlet::self()->startAutoLogin(cliProfile);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

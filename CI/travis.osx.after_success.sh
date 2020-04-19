@@ -2,14 +2,13 @@
 
 set -e
 
-if [[ "${MUDLET_VERSION_BUILD}" == -public-test-build* ]]; then
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
-
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
   # setup macOS keychain for code signing on development builds only,
@@ -86,10 +85,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION,,}${MUDLET_VERSION_BUILD,,}"
+      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}"
 
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION,,}${MUDLET_VERSION_BUILD,,}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
     else
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
