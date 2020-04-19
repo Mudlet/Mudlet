@@ -339,10 +339,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpErrorConsole->hide();
 
-    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
-                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
-                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
+    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on {border-image: url(:/icons/arrow-down_grey.png);} "
+                                                                 "QToolButton {border-image: url(:/icons/arrow-right_grey.png);} "
+                                                                 "QToolButton::on:hover {border-image: url(:/icons/arrow-down.png);} "
+                                                                 "QToolButton:hover {border-image: url(:/icons/arrow-right.png);}"));
     connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
