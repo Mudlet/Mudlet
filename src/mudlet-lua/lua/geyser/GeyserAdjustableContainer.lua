@@ -311,12 +311,14 @@ function Adjustable.Container:createContainers()
         y = "0",
         height = "100%",
         width = "100%",
+        name = self.name.."adjLabel"
     },self)
     self.Inside = Geyser.Container:new({
         x = self.padding,
         y = self.padding*2,
         height = "-"..self.padding,
         width = "-"..self.padding,
+        name = self.name.."InsideContainer"
     },self)
 end
 
@@ -492,14 +494,14 @@ end
 --- internal function to create the Minimize/Close and the right click Menu Labels
 function Adjustable.Container:createLabels()
     self.exitLabel = Geyser.Label:new({
-        x = -(self.buttonsize * 1.4), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize
+        x = -(self.buttonsize * 1.4), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize, name = self.name.."exitLabel"
         
     },self)
     self.exitLabel:echo("<center>x</center>")
     
     
     self.minimizeLabel = Geyser.Label:new({
-        x = -(self.buttonsize * 2.6), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize
+        x = -(self.buttonsize * 2.6), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize, name = self.name.."minimizeLabel"
         
     },self)
     self.minimizeLabel:echo("<center>-</center>")
@@ -754,6 +756,16 @@ end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
+    -- Prevents duplicates to be created
+    -- It's still important that the name of the container is unique!
+    if cons.name then
+        if Geyser.windowList[cons.name] then
+            return Geyser.windowList[cons.name]
+        end
+        if container and container.windowList[cons.name] then
+            return container.windowList[cons.name]
+        end
+    end
     local me = self.parent:new(cons,container)
     setmetatable(me, self)
     self.__index = self
