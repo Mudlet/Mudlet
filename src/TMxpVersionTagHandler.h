@@ -17,40 +17,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H
+#include "TMxpTagHandler.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+class TMxpVersionTagHandler : public TMxpSingleTagHandler {
+public:
+    TMxpVersionTagHandler() : TMxpSingleTagHandler("VERSION")
+    {}
+    inline static const QString scmVersionString = QStringLiteral("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=%1>\n");
 
-    return mLinkID;
-}
-
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag);
+};
+#include "TMxpTagHandler.h"
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H

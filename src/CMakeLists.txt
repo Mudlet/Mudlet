@@ -93,15 +93,32 @@ set(mudlet_SRCS
     TLuaInterpreter.cpp
     TMap.cpp
     TMedia.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
+    TMxpContext.cpp
+    TMxpFormattingTagsHandler.cpp
+    TMxpBRTagHandler.cpp
+    TMxpColorTagHandler.cpp
+    TMxpCustomElementTagHandler.cpp
+    TMxpFontTagHandler.cpp
+    TMxpLinkTagHandler.cpp
+    TMxpNodeBuilder.cpp
     TMxpProcessor.cpp
+    TMxpSendTagHandler.cpp
+    TMxpSupportTagHandler.cpp
+    MxpTag.cpp
     TMxpTagDetector.cpp
+    TMxpTagHandler.cpp
+    TMxpTagParser.cpp
     TMxpTagProcessor.cpp
+    TMxpVersionTagHandler.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
+    TStrUtils.cpp
     TTabBar.cpp
     TTextEdit.cpp
     TTimer.cpp
@@ -204,9 +221,27 @@ set(mudlet_HDRS
     TMap.h
     TMatchState.h
     TMedia.h
+    TMxpBRTagHandler.h
+    TMxpClient.h
+    TMxpColorTagHandler.h
+    TMxpCustomElementTagHandler.h
+    TMxpFontTagHandler.h
+    TMxpLinkTagHandler.h
+    TMxpElementDefinitionHandler.h
+    TMxpElementRegistry.h
+    TMxpContext.h
+    TMxpFormattingTagsHandler.h
+    TMxpMudlet.h
+    TMxpNodeBuilder.h
     TMxpProcessor.h
+    TMxpSendTagHandler.h
+    MxpTag.h
     TMxpTagDetector.h
+    TMxpTagHandler.h
+    TMxpTagParser.h
     TMxpTagProcessor.h
+    TMxpSupportTagHandler.cpp
+    TMxpVersionTagHandler.h
     Tree.h
     TriggerUnit.h
     TRoom.h
@@ -214,6 +249,7 @@ set(mudlet_HDRS
     TScript.h
     TSplitter.h
     TSplitterHandle.h
+    TStrUtils.h
     TTabBar.h
     TTextEdit.h
     TTimer.h

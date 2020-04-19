@@ -22,34 +22,43 @@
 
 #include "TEntityHandler.h"
 
-bool TEntityHandler::handle(std::string& localBuffer, size_t& localBufferPosition, size_t localBufferLength)
+// returns true if the char is handled by the EntityHandler (i.e. it is part of an entity)
+bool TEntityHandler::handle(char ch)
 {
-    char ch = localBuffer[localBufferPosition];
+    if (ch == ';' && !mCurrentEntity.isEmpty()) { // END OF ENTITY
+        mCurrentEntity.append(ch);
 
-    if (ch != '&' && currentEntity.isEmpty()) // currentEntity is not empty while reading an entity
-        return false; // do not handle
+        QString resolved = mEntityResolver.getResolution(mCurrentEntity);
+        // we only get the last character, current implementation of TBuffer loop is based on one char at a time
+        // TODO: it could be interesting to have a way to send longer sequences to the buffer
+        mResult = resolved.back().toLatin1();
 
-    do {
-        currentEntity.append(ch);
+        mIsResolved = true;
+        mCurrentEntity.clear();
+        return true;
+    } else if (ch == '&' || !mCurrentEntity.isEmpty()) { // START OR MIDDLE OF ENTITY
+        mIsResolved = false;
+        mCurrentEntity.append(ch);
+        return true;
+    } else if (mCurrentEntity.length() > 7) { // LONG ENTITY? MAYBE INVALID... IGNORE IT
+        reset();
+        return false;
+    } else {
+        return false;
+    }
+}
+bool TEntityHandler::isEntityResolved() const
+{
+    return mIsResolved;
+}
 
-        if (ch == ';') {
-            QString resolved = entityResolver.getResolution(currentEntity);
-            // only get the last character, current implementation of TBuffer loop doesn't support more chars
-            localBuffer[localBufferPosition] = resolved.back().toLatin1();
-
-            currentEntity.clear();
-            return false;
-        }
-
-        if (currentEntity.length() > 7) { // sequence too long, ignore it
-            localBufferPosition++; // discard char
-
-            currentEntity.clear();
-            return true; // return to loop start
-        }
-
-        ch = localBuffer[++localBufferPosition];
-    } while (localBufferPosition < localBufferLength);
-
-    return false;
+void TEntityHandler::reset()
+{
+    mCurrentEntity.clear();
+    mIsResolved = false;
+}
+char TEntityHandler::getResultAndReset()
+{
+    reset();
+    return mResult;
 }

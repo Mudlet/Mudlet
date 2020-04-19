@@ -17,40 +17,20 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H
 
-    return mLinkID;
-}
+#include "TMxpTagHandler.h"
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+class TMxpSupportTagHandler : public TMxpSingleTagHandler {
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+public:
+    QString processSupportsRequest(TMxpContext& ctx, MxpStartTag* tag);
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
+    explicit TMxpSupportTagHandler() : TMxpSingleTagHandler("SUPPORT")
+    {}
 
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+};
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H

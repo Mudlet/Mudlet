@@ -17,40 +17,21 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TMXPFORMATTINGTAGSHANDLER_H
+#define MUDLET_SRC_TMXPFORMATTINGTAGSHANDLER_H
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+#include "TMxpTagHandler.h"
 
-    return mLinkID;
-}
+class TMxpFormattingTagsHandler : public TMxpTagHandler {
+public:
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
+    void setAttribute(TMxpClient& client, MxpTag* tag, bool value) const;
 
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
+};
 
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+#endif //MUDLET_SRC_TMXPFORMATTINGTAGSHANDLER_H

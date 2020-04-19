@@ -26,19 +26,20 @@
 #include <string>
 
 class TMxpTagDetector {
-    int openT;
-    int closeT;
+    int mOpenTagCount;
+    int mCloseTagCount;
     bool mParsingVar;
     char mOpenMainQuote;
-    std::string currentToken;
+    std::string mCurrentToken;
     bool mIsTokenAvailable;
     bool mAssemblingToken;
 
 public:
-    TMxpTagDetector() : openT(0), closeT(0), mParsingVar(false), mAssemblingToken(false), mIsTokenAvailable(false)
+    TMxpTagDetector()
+            : mOpenTagCount(0), mCloseTagCount(0), mOpenMainQuote(0), mParsingVar(false), mAssemblingToken(false), mIsTokenAvailable(false)
     {}
 
-    bool handle(char& ch, size_t& localBufferPosition);
+    bool handle(char ch);
 
     bool hasToken() const;
 

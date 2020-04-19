@@ -21,14 +21,13 @@
  ***************************************************************************/
 
 #include "TMxpProcessor.h"
-#include "Host.h"
 
-bool TMxpProcessor::negotiate(const QString& code)
+bool TMxpProcessor::setMode(const QString& code)
 {
     bool isOk = false;
     int modeCode = code.toInt(&isOk);
     if (isOk) {
-        return negotiate(modeCode);
+        return setMode(modeCode);
     } else {
         // isOk is false here as toInt(...) failed
         qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code
@@ -36,12 +35,41 @@ bool TMxpProcessor::negotiate(const QString& code)
         return false;
     }
 }
-bool TMxpProcessor::negotiate(int modeCode)
+
+/*
+ * The documentation at https://www.zuggsoft.com/zmud/mxp.htm says: "
+ * * 0 - OPEN LINE - initial default mode: only MXP commands in the 'open'
+ *     category are allowed.  When a newline is received from the MUD, the
+ *     mode reverts back to the Default mode.  OPEN mode starts as the
+ *     default mode until changes with one of the 'lock mode' tags listed
+ *     below.
+ * * 1 - SECURE LINE (until next newline) all tags and commands in MXP are
+ *     allowed within the line.  When a newline is received from the MUD,
+ *     the mode reverts back to the Default mode.
+ * * 2 - LOCKED LINE (until next newline) no MXP or HTML commands are
+ *     allowed in the line.  The line is not parsed for any tags at all.
+ *     This is useful for "verbatim" text output from the MUD.  When a
+ *     newline is received from the MUD, the mode reverts back to the
+ *     Default mode.
+ * The following additional modes were added to the v0.4 MXP spec:
+ * * 3 - RESET close all open tags.  Set mode to Open.  Set text color and
+ *     properties to default.
+ * * 4 - TEMP SECURE MODE set secure mode for the next tag only.  Must be
+ *     immediately followed by a < character to start a tag.  Remember to
+ *     set secure mode when closing the tag also.
+ * * 5 - LOCK OPEN MODE set open mode.  Mode remains in effect until
+ *     changed.  OPEN mode becomes the new default mode.
+ * * 6 - LOCK SECURE MODE set secure mode.  Mode remains in effect until
+ *     changed.  Secure mode becomes the new default mode.
+ * * 7 - LOCK LOCKED MODE set locked mode.  Mode remains in effect until
+ *     changed.  Locked mode becomes the new default mode."
+ */
+bool TMxpProcessor::setMode(int modeCode)
 {
     // we really do not handle these well...
-    // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
-    mMXP = true; // some servers don't negotiate, they assume!
+    // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20TagsmMXP = true; // some servers don't negotiate, they assume!
 
+    mMXP = true;
     switch (modeCode) {
     case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
         mMXP_MODE = MXP_MODE_OPEN;
@@ -84,47 +112,50 @@ bool TMxpProcessor::isEnabled() const
 {
     return mMXP;
 }
-TMxpProcessingResult TMxpProcessor::processInput(char& ch,
-                                                 std::string& localBuffer,
-                                                 size_t& localBufferPosition,
-                                                 size_t localBufferLength)
-{
-    if (mMxpTagDetector.handle(ch, localBufferPosition)) {
-        return HANDLER_NEXT_CHAR;
-    }
 
-    if (mMxpTagDetector.hasToken()) {
-        std::string currentToken = mMxpTagDetector.getToken();
-
-        if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
-            mMXP_MODE = mMXP_DEFAULT;
-        }
-
-        TMxpProcessingResult result = mMxpTagProcessor.process(mpHost->mTelnet, *mLinkStore, currentToken, ch);
-        if (result != HANDLER_FALL_THROUGH) {
-            return result;
-        }
-    }
-
-    if (mEntityHandler.handle(localBuffer, localBufferPosition, localBufferLength)) {
-        return HANDLER_NEXT_CHAR;
-    } else {
-        ch = localBuffer[localBufferPosition];
-    }
-
-    mMxpTagProcessor.processTextContent(ch);
-
-    return HANDLER_FALL_THROUGH;
-}
 void TMxpProcessor::resetToDefaultMode()
 {
     mMXP_MODE = mMXP_DEFAULT;
 }
+
 void TMxpProcessor::enable()
 {
     mMXP = true;
 }
-bool TMxpProcessor::isInLinkMode()
+
+TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
 {
-    return mMxpTagProcessor.isInLinkMode();
+    if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
+        return HANDLER_NEXT_CHAR;
+    }
+
+    if (mMxpTagBuilder.hasTag()) {
+        QScopedPointer<MxpTag> tag(mMxpTagBuilder.buildTag());
+
+//        qDebug() << "TAG RECEIVED: " << tag->asString();
+        if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
+            mMXP_MODE = mMXP_DEFAULT;
+        }
+
+        TMxpTagHandlerResult result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+        return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
+    }
+
+    if (mEntityHandler.handle(ch)) { // ch is part of an entity
+        if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
+            ch = mEntityHandler.getResultAndReset();
+        } else { // ask for the next char
+            return HANDLER_NEXT_CHAR;
+        }
+    }
+
+    mMxpTagProcessor.handleContent(ch);
+
+    return HANDLER_FALL_THROUGH;
 }
+
+void TMxpProcessor::processRawInput(char ch)
+{
+    mMxpTagProcessor.handleContent(ch);
+}
+

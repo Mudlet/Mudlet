@@ -17,40 +17,38 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TMXPELEMENTREGISTRY_H
+#define MUDLET_SRC_TMXPELEMENTREGISTRY_H
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+#include <QStringList>
+#include <QMap>
+#include "MxpTag.h"
 
-    return mLinkID;
-}
+struct TMxpElement {
+    QString name;
+    QString definition;
+    QStringList attrs;
+    QString tag;
+    QString flags;
+    bool open;
+    bool del;
+    bool empty;
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+    QString href;
+    QString hint;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+    QList<QSharedPointer<MxpNode>> parsedDefinition;
+};
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
+class TMxpElementRegistry {
+    QMap<QString, TMxpElement> mMXP_Elements;
 
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
+public:
+    void registerElement(const TMxpElement& element);
+    void unregisterElement(const QString& name);
 
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+    bool containsElement(const QString& name) const;
+    TMxpElement getElement(const QString& name) const;
+};
+
+#endif //MUDLET_SRC_TMXPELEMENTREGISTRY_H

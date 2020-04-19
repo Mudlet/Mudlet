@@ -44,12 +44,12 @@ public:
 
     int addLinks(const QStringList& links, const QStringList& hints);
 
-    const QStringList getLinks(int id) const;
-    const QStringList getHints(int id) const;
+    QStringList& getLinks(int id);
+    QStringList& getHints(int id);
 
     int getCurrentLinkID() const;
 
-    const QStringList getCurrentLinks() const;
+    QStringList getCurrentLinks() const;
     void setCurrentLinks(const QStringList& links);
 };
 

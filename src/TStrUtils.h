@@ -17,40 +17,38 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TSTRUTILS_H
+#define MUDLET_SRC_TSTRUTILS_H
+#include <QString>
+#include <QStringList>
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
+class TStrUtils {
+public:
+    static bool isQuote(QChar ch);
+    static bool isOneOf(QChar ch, const char* str);
+
+    static QStringRef trimmedRef(const QStringRef& ref);
+    static QStringRef stripRef(const QString& str, QChar start, QChar end);
+
+    static QStringRef unquoteRef(const QStringRef& ref);
+    static bool isBetween(const QString& str, char first, char last);
+    static bool isBetween(const QStringRef& str, char first, char last);
+    static QStringRef trimmedRef(const QString& str);
+    static bool isQuoted(const QStringRef& ref);
+
+    static void toUpper(QString& str)
+    {
+        for (auto& ch : str) {
+            ch = ch.toUpper();
+        }
     }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
 
-    return mLinkID;
-}
+    static void apply(QStringList& strList, const std::function<void(QString&)>& func)
+    {
+        for (auto& ptr : strList) {
+            func(ptr);
+        }
+    }
+};
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+#endif //MUDLET_SRC_TSTRUTILS_H

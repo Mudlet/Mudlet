@@ -16,41 +16,26 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H
+#include "TMxpTagHandler.h"
 
-#include "TLinkStore.h"
+// <A href=URL [hint=text] [expire=name]>
+class TMxpLinkTagHandler : public TMxpSingleTagHandler {
+    bool mIsHrefInContent;
+    QString mCurrentTagContent;
+    int mLinkId;
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+    QString getHref(const MxpStartTag* tag);
 
-    return mLinkID;
-}
+public:
+    TMxpLinkTagHandler() : TMxpSingleTagHandler("A"), mIsHrefInContent(false), mLinkId(0)
+    {}
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+    void handleContent(char ch) override;
+};
+#include "TMxpTagHandler.h"
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H

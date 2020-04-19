@@ -17,40 +17,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
-
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+#include "TMxpElementRegistry.h"
+void TMxpElementRegistry::registerElement(const TMxpElement& element)
 {
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
-
-    return mLinkID;
+    mMXP_Elements[element.name.toUpper()] = element;
+}
+bool TMxpElementRegistry::containsElement(const QString& name) const
+{
+    return mMXP_Elements.contains(name.toUpper());
 }
 
-QStringList TLinkStore::getCurrentLinks() const
+TMxpElement TMxpElementRegistry::getElement(const QString& name) const
 {
-    return mLinkStore[mLinkID];
+    return mMXP_Elements[name.toUpper()];
+}
+void TMxpElementRegistry::unregisterElement(const QString& name)
+{
+    mMXP_Elements.remove(name.toUpper());
 }
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}

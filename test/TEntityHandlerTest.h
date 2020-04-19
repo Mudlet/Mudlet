@@ -57,8 +57,7 @@ private slots:
         std::string result2 = processString(handler, part2);
         QCOMPARE(result2.c_str(), "\" to you");
 
-        std::string result = result1.substr(0, result1.length() - 1);
-        result.append(result2);
+        std::string result = result1 + result2;
 
         qDebug() << result1.c_str();
         qDebug() << result2.c_str();
@@ -72,10 +71,11 @@ private slots:
         size_t len = str.length();
         std::string result;
         for (size_t i = 0; i < len; i++) {
-            if (handler.handle(str, i, len))
-                continue;
-
-            result += str[i];
+            if (!handler.handle(str[i])) {
+                result += str[i];
+            } else if (handler.isEntityResolved()) {
+                result += handler.getResultAndReset();
+            }
         }
         return result;
     }

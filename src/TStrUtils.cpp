@@ -16,41 +16,70 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#include "TStrUtils.h"
 
-#include "TLinkStore.h"
-
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+QStringRef TStrUtils::trimmedRef(const QStringRef& ref)
 {
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
+    int start = 0;
+    int end = ref.length();
+
+    while (start < end && ref[start].isSpace()) {
+        start++;
     }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
 
-    return mLinkID;
+    while (end > start && ref[end - 1].isSpace()) {
+        end--;
+    }
+
+    return QStringRef(ref.string(), ref.position() + start, end - start);
 }
 
-QStringList TLinkStore::getCurrentLinks() const
+QStringRef TStrUtils::trimmedRef(const QString& str)
 {
-    return mLinkStore[mLinkID];
+    return trimmedRef(QStringRef(&str));
 }
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
+QStringRef TStrUtils::stripRef(const QString& str, QChar start, QChar end)
 {
-    mLinkStore[mLinkID] = links;
+    int len = str.length();
+    if (len > 1 && str.front() == start && str.back() == end) {
+        return str.midRef(1, len - 2);
+    }
+
+    return QStringRef(&str);
 }
 
-QStringList& TLinkStore::getLinks(int id)
+bool TStrUtils::isQuote(QChar ch)
 {
-    return mLinkStore[id];
+    return isOneOf(ch, "\'\"");
 }
 
-QStringList& TLinkStore::getHints(int id)
+bool TStrUtils::isOneOf(QChar ch, const char* str)
 {
-    return mHintStore[id];
+    for (; *str; str++) {
+        if (*str == ch.toLatin1()) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-int TLinkStore::getCurrentLinkID() const
+bool TStrUtils::isQuoted(const QStringRef& ref)
 {
-    return mLinkID;
+    return TStrUtils::isQuote(ref.front()) && ref.front() == ref.back();
+}
+
+QStringRef TStrUtils::unquoteRef(const QStringRef& ref)
+{
+    return isQuoted(ref) ? ref.mid(1, ref.size() - 2) : ref;
+}
+bool TStrUtils::isBetween(const QString& str, char first, char last)
+{
+    return isBetween(QStringRef(&str), first, last);
+}
+
+bool TStrUtils::isBetween(const QStringRef& str, char first, char last)
+{
+    return str.front() == first && str.back() == last;
 }

@@ -26,7 +26,7 @@
 #include "TMxpTagDetector.h"
 #include "TMxpTagProcessor.h"
 #include "TEntityHandler.h"
-#include "TLinkStore.h"
+#include "TMxpNodeBuilder.h"
 #include <QString>
 
 class Host;
@@ -37,72 +37,49 @@ enum TMXPMode {
     MXP_MODE_LOCKED,
     MXP_MODE_TEMP_SECURE
 };
+enum TMxpProcessingResult {
+    HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE
+};
 
 // handles the MXP protocol
 class TMxpProcessor {
-
-    /*
-     * The documentation at https://www.zuggsoft.com/zmud/mxp.htm says: "
-     * * 0 - OPEN LINE - initial default mode: only MXP commands in the 'open'
-     *     category are allowed.  When a newline is received from the MUD, the
-     *     mode reverts back to the Default mode.  OPEN mode starts as the
-     *     default mode until changes with one of the 'lock mode' tags listed
-     *     below.
-     * * 1 - SECURE LINE (until next newline) all tags and commands in MXP are
-     *     allowed within the line.  When a newline is received from the MUD,
-     *     the mode reverts back to the Default mode.
-     * * 2 - LOCKED LINE (until next newline) no MXP or HTML commands are
-     *     allowed in the line.  The line is not parsed for any tags at all.
-     *     This is useful for "verbatim" text output from the MUD.  When a
-     *     newline is received from the MUD, the mode reverts back to the
-     *     Default mode.
-     * The following additional modes were added to the v0.4 MXP spec:
-     * * 3 - RESET close all open tags.  Set mode to Open.  Set text color and
-     *     properties to default.
-     * * 4 - TEMP SECURE MODE set secure mode for the next tag only.  Must be
-     *     immediately followed by a < character to start a tag.  Remember to
-     *     set secure mode when closing the tag also.
-     * * 5 - LOCK OPEN MODE set open mode.  Mode remains in effect until
-     *     changed.  OPEN mode becomes the new default mode.
-     * * 6 - LOCK SECURE MODE set secure mode.  Mode remains in effect until
-     *     changed.  Secure mode becomes the new default mode.
-     * * 7 - LOCK LOCKED MODE set locked mode.  Mode remains in effect until
-     *     changed.  Locked mode becomes the new default mode."
-     */
-
     Host* mpHost;
-    TLinkStore* mLinkStore;
 
     // State of MXP systen:
     bool mMXP;
     TMXPMode mMXP_MODE;
     TMXPMode mMXP_DEFAULT;
 
-    // delegated handlers
-    TMxpTagDetector mMxpTagDetector;
-    TMxpTagProcessor mMxpTagProcessor;
     TEntityHandler mEntityHandler;
 
+    // delegated handlers
+    TMxpTagDetector mMxpTagDetector;
+    TMxpNodeBuilder mMxpTagBuilder;
+    TMxpTagProcessor mMxpTagProcessor;
+
+    TMxpClient* mpMxpClient;
+
 public:
-    TMxpProcessor(Host* pH, TLinkStore* store) :
-            mpHost(pH), mLinkStore(store),
-            mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
+    TMxpProcessor(Host* pHost, TMxpClient* pMxpClient) :
+            mMxpTagBuilder(true),
+            mpHost(pHost),
+            mMXP(false),
+            mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN),
+            mpMxpClient(pMxpClient)
     {
+        mpMxpClient->initialize(&mMxpTagProcessor);
     }
 
-    bool negotiate(const QString& code);
-    bool negotiate(int modeCode);
+    bool setMode(const QString& code);
+    bool setMode(int modeCode);
 
     bool isEnabled() const;
-    TMXPMode getMode() const;
-
-    TMxpProcessingResult processInput(char& ch,
-                                      std::string& localBuffer,
-                                      size_t& localBufferPosition,
-                                      size_t localBufferLength);
-    void resetToDefaultMode();
     void enable();
-    bool isInLinkMode();
+    TMXPMode getMode() const;
+    void resetToDefaultMode();
+
+    TMxpProcessingResult processMxpInput(char& ch);
+    void processRawInput(char ch);
 };
 
 #endif //MUDLET_SRC_TMXPPROCESSOR_H

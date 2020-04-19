@@ -23,14 +23,24 @@
  ***************************************************************************/
 
 #include "TEntityResolver.h"
-
+#include <QDebug>
 // Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
 class TEntityHandler {
 private:
-    TEntityResolver entityResolver;
-    QString currentEntity;
+    QString mCurrentEntity;
+    bool mIsResolved;
+    char mResult;
 public:
-    bool handle(std::string& localBuffer, size_t& localBufferPosition, size_t localBufferLength);
+    TEntityHandler() : mIsResolved(false), mResult(0) {
+        qDebug() << "CONSTRUCT TENtity Handler:";
+    }
+    TEntityResolver mEntityResolver;
+
+    bool handle(char ch);
+    void reset();
+
+    bool isEntityResolved() const;
+    char getResultAndReset();
 };
 
 #endif //MUDLET_SRC_TENTITYHANDLER_H

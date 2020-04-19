@@ -17,40 +17,27 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
+#include "TMxpTagHandler.h"
+#include "TEntityResolver.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+// <SEND [href=command] [hint=text] [prompt] [expire=name]>
+class TMxpSendTagHandler : public TMxpSingleTagHandler {
+    bool mIsHrefInContent;
+    QString mCurrentTagContent;
+    int mLinkId;
 
-    return mLinkID;
-}
+public:
+    static QString extractHref(MxpStartTag* tag);
+    static QString extractHint(MxpStartTag* tag);
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+    TMxpSendTagHandler();
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+    void handleContent(char ch);
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+};
+#include "TMxpTagHandler.h"
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H

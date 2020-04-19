@@ -17,40 +17,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
-
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+#include "TMxpTagHandler.h"
+#include "TMxpClient.h"
+TMxpTagHandlerResult TMxpTagHandler::handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
+    if (!supports(ctx, client, tag)) {
+        return MXP_TAG_NOT_HANDLED;
     }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
 
-    return mLinkID;
-}
-
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
+    return tag->isStartTag()
+           ? handleStartTag(ctx, client, tag->asStartTag())
+           : handleEndTag(ctx, client, tag->asEndTag());
 }

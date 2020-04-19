@@ -17,40 +17,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
-
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+#include "TMxpColorTagHandler.h"
+#include "TMxpClient.h"
+bool TMxpColorTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
-
-    return mLinkID;
+    return tag->isNamed("COLOR") || tag->isNamed("C");
 }
-
-QStringList TLinkStore::getCurrentLinks() const
+TMxpTagHandlerResult TMxpColorTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    return mLinkStore[mLinkID];
+
+    QString fg = tag->getAttrByNameOrIndex("FORE", 0);
+    QString bg = tag->getAttrByNameOrIndex("BACK", 1);
+
+    client.pushColor(fg, bg);
+
+    return MXP_TAG_HANDLED;
 }
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
+TMxpTagHandlerResult TMxpColorTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
+    client.popColor();
+    return MXP_TAG_HANDLED;
 }

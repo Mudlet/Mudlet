@@ -1,3 +1,7 @@
+
+#ifndef MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#define MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
@@ -17,40 +21,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+#include "MxpTag.h"
+#include <QString>
 
-    return mLinkID;
-}
+class TMxpTagParser {
+    static int readTextBlock(const QStringRef& str, int start, int end, QChar terminatingChar);
+public:
+    static QStringList parseToList(const QStringRef& tagText);
+    static QStringList parseToList(const QString& tagText);
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+    QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false) const;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+    MxpTag* parseTag(const QString& tagText) const;
+    MxpStartTag* parseStartTag(const QString& tagText) const;
+    MxpEndTag* parseEndTag(const QString& tagText) const;
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
+    MxpTagAttribute parseAttribute(const QString& attr) const;
+};
 
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+#endif //MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H

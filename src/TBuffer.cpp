@@ -123,7 +123,8 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMxpProcessor(pH, &mLinkStore)
+, mMxpClient(pH, &mLinkStore)
+, mMxpProcessor(pH, &mMxpClient)
 , mEchoingText(false)
 , mGotESC(false)
 , mGotCSI(false)
@@ -542,7 +543,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mGotCSI = false;
 
                         QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
-                        mMxpProcessor.negotiate(code);
+                        mMxpProcessor.setMode(code);
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
@@ -606,15 +607,24 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled && (mMxpProcessor.getMode() != MXP_MODE_LOCKED)) {
-            TMxpProcessingResult result = mMxpProcessor.processInput(ch, localBuffer, localBufferPosition, localBufferLength);
-            if (result == HANDLER_SKIP_INPUT) {
-                return;
-            } else if (result == HANDLER_NEXT_CHAR) {
-                continue;
-            } else if (result == HANDLER_COMMIT_LINE) {
-                goto COMMIT_LINE;
-            } // else HANDLER_FALL_THROUGH -> do nothing
+        if (mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled) {
+            if (mMxpProcessor.getMode() != MXP_MODE_LOCKED) {
+                TMxpProcessingResult result = mMxpProcessor.processMxpInput(ch);
+                if (result == HANDLER_NEXT_CHAR) {
+                    localBufferPosition++;
+                    continue;
+                } else if (result == HANDLER_COMMIT_LINE) { // BR tag
+                    ch = '\n';
+                    goto COMMIT_LINE;
+                } else { //HANDLER_FALL_THROUGH -> do nothing
+                    assert(localBuffer[localBufferPosition] == ch);
+                    // the curent char may have changed if it is the last char of an entity such as &gt; ?
+//                    localBuffer[localBufferPosition] = ch;
+                }
+            } else {
+                mMxpProcessor.processRawInput(ch);
+            }
+
         }
 
         if (mMxpProcessor.isEnabled() && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
@@ -758,9 +768,17 @@ COMMIT_LINE:
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
-        if (mMxpProcessor.isInLinkMode()) {
+        if (mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
+        }
+
+        if (mMxpClient.hasFgColor()) {
+            c.mFgColor = mMxpClient.getFgColor();
+        }
+
+        if (mMxpClient.hasBgColor()) {
+            c.mBgColor = mMxpClient.getBgColor();
         }
 
         if (isTwoTCharsNeeded) {

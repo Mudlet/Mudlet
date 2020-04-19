@@ -1,10 +1,4 @@
-#ifndef MUDLET_SRC_TMXPTAGPROCESSOR_H
-#define MUDLET_SRC_TMXPTAGPROCESSOR_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,42 +17,33 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QString>
-#include <QMap>
-#include <QVector>
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPCUSTOMELEMENTTAGHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPCUSTOMELEMENTTAGHANDLER_H
 
-#include "MxpTag.h"
+#include "TMxpContext.h"
 #include "TMxpTagHandler.h"
 #include "TMxpElementRegistry.h"
-#include "TMxpTagHandlerResult.h"
-#include "TMxpContext.h"
-#include "TMxpClient.h"
-#include "TEntityResolver.h"
 
-typedef QPair<QString, QVector<QString>> TMxpFeatureOptions;
+class TMxpCustomElementTagHandler : public TMxpTagHandler {
+    QString mCurrentFlagName;
+    QString mCurrentFlagContent;
+    QMap<QString, QString> mCurrentFlagAttributes;
 
-class TMxpTagProcessor : public TMxpContext {
-    QMap<QString, QVector<QString>> mSupportedMxpElements;
-    QList<QSharedPointer<TMxpTagHandler>> mRegisteredHandlers;
-
-    TMxpElementRegistry mMxpElementRegistry;
-    TEntityResolver mEntityResolver;
+    MxpStartTag resolveElementDefinition(const TMxpElement& element, MxpStartTag* definitionTag, MxpStartTag* customTag) const;
+    static QString mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag);
+    void setFlag(TMxpClient& ctx, const MxpStartTag* tag, const TMxpElement& el);
+    void configFlag(TMxpClient& client, MxpStartTag* tag, const TMxpElement& el);
+    const QMap<QString, QString>& parseFlagAttributes(const MxpStartTag* tag, const TMxpElement& el);
 
 public:
-    explicit TMxpTagProcessor();
-    TMxpTagHandlerResult process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken);
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    {
+        return ctx.getElementRegistry().containsElement(tag->getName());
+    }
 
-    TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
     void handleContent(char ch) override;
-
-    void registerHandler(const TMxpFeatureOptions& supports, TMxpTagHandler* handler);
-    void registerHandler(TMxpTagHandler* handler);
-
-    TMxpElementRegistry& getElementRegistry() override;
-    QMap<QString, QVector<QString>>& getSupportedElements() override;
-    TMxpTagHandler& getMainHandler() override;
-
-    TEntityResolver& getEntityResolver() override;
 };
-
-#endif //MUDLET_SRC_TMXPTAGPROCESSOR_H
+#include "TMxpTagHandler.h"
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPCUSTOMELEMENTTAGHANDLER_H

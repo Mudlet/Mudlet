@@ -1,6 +1,7 @@
 #ifndef MUDLET_TENTITYRESOLVERTEST_H
 #define MUDLET_TENTITYRESOLVERTEST_H
 
+#include <QMap>
 #include <TEntityResolver.h>
 #include <QtTest/QtTest>
 
@@ -93,6 +94,31 @@ private slots:
         TEntityResolver resolver;
 
         QCOMPARE(resolver.getResolution("&symbol;"), "&symbol;");
+    }
+
+    void testInterpolation()
+    {
+        TEntityResolver resolver;
+
+        QCOMPARE(resolver.interpolate("2 &lt; 4"), "2 < 4");
+        QCOMPARE(resolver.interpolate("2 &Lt; 4"), "2 < 4");
+        QCOMPARE(resolver.interpolate("You say &quot;Hello World&quot;"), "You say \"Hello World\"");
+    }
+
+    void testCustomInterpolation()
+    {
+        const QMap<QString, QString> attributes = {
+                {QStringLiteral("&name;"), QStringLiteral("drunk sailor")},
+                {QStringLiteral("&desc;"), QStringLiteral("A drunk sailor is lying here")}
+        };
+
+        auto mapping = [attributes](auto& attr) {
+            auto ptr = attributes.find(attr);
+            return ptr != attributes.end() ? *ptr : attr;
+        };
+
+        QCOMPARE(TEntityResolver::interpolate("attack &#39;&name;&#39;|look &#39;&name;&#39;", mapping), "attack &#39;drunk sailor&#39;|look &#39;drunk sailor&#39;");
+        QCOMPARE(TEntityResolver::interpolate("desc: '&desc;'", mapping), "desc: 'A drunk sailor is lying here'");
     }
 
     void cleanupTestCase()

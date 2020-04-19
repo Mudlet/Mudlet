@@ -17,40 +17,23 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
-    }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
+#ifndef MUDLET_SRC_TMXPCONTEXT_H
+#define MUDLET_SRC_TMXPCONTEXT_H
 
-    return mLinkID;
-}
+#include "TMxpElementRegistry.h"
+#include "TMxpTagHandler.h"
+#include "TEntityResolver.h"
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
+class TMxpClient;
 
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
+class TMxpContext : public TMxpTagHandler {
+public:
+    virtual TMxpElementRegistry& getElementRegistry() = 0;
+    virtual QMap<QString, QVector<QString>>& getSupportedElements() = 0;
+    virtual TEntityResolver& getEntityResolver() = 0;
 
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
+    virtual TMxpTagHandler& getMainHandler() = 0;
+};
 
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+#endif //MUDLET_SRC_TMXPCONTEXT_H

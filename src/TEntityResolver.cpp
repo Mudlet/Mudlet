@@ -22,8 +22,9 @@
 
 QString TEntityResolver::getResolution(const QString& entity) const
 {
-    if (entity.front() != '&' || entity.back() != ';')
+    if (entity.front() != '&' || entity.back() != ';') {
         return entity;
+    }
 
     auto ptr = entities.find(entity.toLower());
     if (ptr != entities.end())
@@ -64,6 +65,32 @@ QString TEntityResolver::resolveCode(const QString& entityValue, int base)
 QString TEntityResolver::resolveCode(ushort val)
 {
     return QString(QChar(val));
+}
+
+QString TEntityResolver::interpolate(const QString& input, std::function<QString(const QString&)> resolver)
+{
+    QString output;
+    QString entity;
+
+    for (const auto& ch : input) {
+        if (ch == ';' && !entity.isEmpty()) {
+            entity.append(ch);
+            output.append(resolver(entity));
+            entity.clear();
+        } else if (ch == '&' || !entity.isEmpty()) {
+            entity.append(ch);
+        } else {
+            output.append(ch);
+        }
+    }
+
+    output.append(entity);
+    return output;
+}
+
+QString TEntityResolver::interpolate(const QString& input) const
+{
+    return interpolate(input, [this](const QString& it) { return getResolution(it); });
 }
 
 const QHash<QString, QString> TEntityResolver::standardEntities = {
@@ -132,3 +159,4 @@ const QHash<QString, QString> TEntityResolver::standardEntities = {
         {QStringLiteral("&frac34;"), QStringLiteral("¾")},
         {QStringLiteral("&iquest;"), QStringLiteral("¿")}
 };
+

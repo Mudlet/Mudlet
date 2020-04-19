@@ -17,40 +17,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TLinkStore.h"
+#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H
+#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H
+#include "TMxpTagHandler.h"
+#include "TMxpElementRegistry.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
-{
-    if (++mLinkID > maxLinks) {
-        mLinkID = 1;
+// https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
+// <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
+class TMxpElementDefinitionHandler : public TMxpTagHandler {
+public:
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    {
+        return tag->isNamed("!EL") || tag->isNamed(("!ELEMENT"));
     }
-    mLinkStore[mLinkID] = links;
-    mHintStore[mLinkID] = hints;
 
-    return mLinkID;
-}
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore[mLinkID];
-}
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
-}
+};
+#include "TMxpTagHandler.h"
+#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H

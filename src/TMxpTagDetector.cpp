@@ -21,10 +21,10 @@
  ***************************************************************************/
 #include "TMxpTagDetector.h"
 
-bool TMxpTagDetector::handle(char& ch, size_t& localBufferPosition)
+bool TMxpTagDetector::handle(char ch)
 {
     // ignore < and > inside of parameter strings
-    if (openT == 1) {
+    if (mOpenTagCount == 1) {
         if (ch == '\'' || ch == '\"') {
             if (!mParsingVar) {
                 mOpenMainQuote = ch;
@@ -39,32 +39,28 @@ bool TMxpTagDetector::handle(char& ch, size_t& localBufferPosition)
 
     if (ch == '<') {
         if (!mParsingVar) {
-            ++openT;
-            if (!currentToken.empty()) {
-                currentToken += ch;
-            }
+            ++mOpenTagCount;
+            mCurrentToken += ch;
             mAssemblingToken = true;
-            ++localBufferPosition;
             return true;
         }
     }
 
     if (ch == '>') {
         if (!mParsingVar) {
-            ++closeT;
+            ++mCloseTagCount;
         }
 
         // sanity check
-        if (closeT > openT) {
-            localBufferPosition++;
+        if (mCloseTagCount > mOpenTagCount) {
 
             reset();
             return true;
         }
 
-        if ((openT > 0) && (closeT == openT)) {
-            localBufferPosition++;
+        if ((mOpenTagCount > 0) && (mCloseTagCount == mOpenTagCount)) {
 
+            mCurrentToken += ch;
             mAssemblingToken = false;
             mIsTokenAvailable = true;
             return false;
@@ -73,14 +69,13 @@ bool TMxpTagDetector::handle(char& ch, size_t& localBufferPosition)
 
     if (mAssemblingToken) {
         if (ch == '\n') {
-            closeT = 0;
-            openT = 0;
+            mCloseTagCount = 0;
+            mOpenTagCount = 0;
             mAssemblingToken = false;
-            currentToken.clear();
+            mCurrentToken.clear();
             mParsingVar = false;
         } else {
-            currentToken += ch;
-            ++localBufferPosition;
+            mCurrentToken += ch;
             return true;
         }
     }
@@ -90,13 +85,13 @@ bool TMxpTagDetector::handle(char& ch, size_t& localBufferPosition)
 
 void TMxpTagDetector::reset()
 {
-    openT = 0;
-    closeT = 0;
+    mOpenTagCount = 0;
+    mCloseTagCount = 0;
     mIsTokenAvailable = false;
     mAssemblingToken = false;
     mParsingVar = false;
 
-    currentToken.clear();
+    mCurrentToken.clear();
 }
 
 bool TMxpTagDetector::hasToken() const
@@ -105,7 +100,7 @@ bool TMxpTagDetector::hasToken() const
 }
 std::string TMxpTagDetector::getToken()
 {
-    std::string result = currentToken;
+    std::string result = mCurrentToken;
     reset();
     return result;
 }

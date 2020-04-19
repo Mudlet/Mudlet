@@ -40,6 +40,7 @@
 #include "post_guard.h"
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
+#include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 
 #include <deque>
@@ -199,6 +200,7 @@ public:
 
 
     // State of MXP systen:
+    TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
     bool mEchoingText;
 
