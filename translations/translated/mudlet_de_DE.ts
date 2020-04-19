@@ -79,7 +79,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Karte - %1</translation>
     </message>
   </context>
   <context>
@@ -1700,7 +1700,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="3025"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster - %1 - %2</translation>
     </message>
   </context>
   <context>
