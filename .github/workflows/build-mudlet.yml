@@ -87,3 +87,5 @@ jobs:
       uses: GabrielBB/xvfb-action@v1.0
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet
+      env:
+        QT_DEBUG_PLUGINS: 1
