@@ -1548,7 +1548,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
                             }
                         }
-                        mpHost->getLuaInterpreter()->signalMXPEvent(_element.name, mxp_attrs, _tl);
+
+                        mMxpEvents.append(MxpEvent(_element.name, mxp_attrs, _tl));
 
                         mLinkStore[mLinkID] = _tl;
 
