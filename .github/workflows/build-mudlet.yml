@@ -84,8 +84,8 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
 
-    - name: (Linux) Run tests
-      if: runner.os == 'Linux'
-      uses: GabrielBB/xvfb-action@v1.0
-      with:
-        run: ${{runner.workspace}}/b/ninja/src/mudlet -profile Achaea
+    # - name: (Linux) Run tests
+    #   if: runner.os == 'Linux'
+    #   uses: GabrielBB/xvfb-action@v1.0
+    #   with:
+    #     run: ${{runner.workspace}}/b/ninja/src/mudlet
