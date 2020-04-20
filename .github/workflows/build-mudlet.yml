@@ -16,8 +16,10 @@ jobs:
           #   triplet: x64-windows
           - os: ubuntu-latest
             triplet: x64-linux
+            compiler: gcc_x64
           - os: macos-latest
             triplet: x64-osx
+            compiler: clang_x64
     env:
       qt: "5.14.1"
 
@@ -80,7 +82,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/ -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/gcc_64/
+        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
 
     - name: (Linux) Run tests
       if: runner.os == 'Linux'
