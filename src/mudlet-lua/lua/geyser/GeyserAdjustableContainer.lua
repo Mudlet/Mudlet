@@ -753,6 +753,17 @@ function Adjustable.Container:newCustomItem(name, func)
     self.customItems[#self.customItems+1] = {name, func}
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
+--- enablesAutoSave normally only used internally 
+function Adjustable.Container:enableAutoSave()
+    self.autoSave = true
+    self.autoSaveHandler = self.autoSaveHandler or registerAnonymousEventHandler("sysExitEvent", function() self:save() end)
+end
+
+-- disableAutoSave function to disable a before enabled autoSave
+function Adjustable.Container:disableAutoSave()
+    self.autoSave = false
+    killAnonymousEventHandler(self.autoSaveHandler)
+end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
@@ -837,9 +848,22 @@ function Adjustable.Container:new(cons,container)
     shrink_title(me)
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
-    me.raiseOnClick = me.raiseOnClick or true
+    if not(me.raiseOnClick == false) then
+        me.raiseOnClick = true
+    end
     -- save a list of all containers in this table
-    Adjustable.Container.all[#Adjustable.Container.all+1] = me
+    Adjustable.Container.all[#Adjustable.Container.all + 1] = me
+
+    -- Loads on creation (by Name) if autoLoad is not false
+    if not(me.autoLoad == false) then
+        me.autoLoad = true
+        me:load()
+    end
+    -- Saves on Exit if autoSave is not false
+    if not(me.autoSave == false) then
+        me.autoSave = true
+        me:enableAutoSave()
+    end
     return me
     
 end
