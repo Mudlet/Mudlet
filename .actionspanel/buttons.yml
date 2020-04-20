@@ -5,7 +5,7 @@ buttons:
 
   - title: Update 3rdparty sources
     action: update-3rdparty
-    description: "Update 3rdparty libraries used with Mudlet. This is: IRE Mapping script, Lua code formatter, character width algorithm, and our forks of edbee, sparkle-glue, dblsqd, qtkeychain. Note that fork updates don't check the origin repository but rather our forked version to ensure the main repo is up to date with it. When: every Friday night or manually."
+    description: "Update 3rdparty libraries used with Mudlet. This is: IRE Mapping script, Lua code formatter, character width algorithm, and our forks of edbee, sparkle-glue, dblsqd, qtkeychain. Note that fork updates don't check the origin repository but rather our forked version to ensure the main repo is up to date with it."
 
   - title: Update text for translators
     action: update-translations
