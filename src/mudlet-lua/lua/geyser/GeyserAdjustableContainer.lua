@@ -464,10 +464,11 @@ local function createMenus(self, menu, onClick)
     if not self[menu] then return end
     for i = self[menu.."Nr"], #self[menu] do
         local name = self[menu][i][1]
+        local menuTxt = self.Locale[self.Language][name] or name
         self[menu.."l"][i] = self[menu.."Label"]:addChild({
             width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
         })
-        self[menu.."l"][i].txt = [[<center>]]..name
+        self[menu.."l"][i].txt = [[<center>]]..menuTxt
         self[menu.."l"][i]:setClickCallback(onClick, self, i, name)
     end
     recursiveStyle(self, self[menu.."Label"].nestedLabels)
@@ -485,7 +486,7 @@ function Adjustable.Container:onEnterAtt()
             self.att[i]:changeContainer(Geyser)
         end
         self.att[i].flyDir = self.attLabel.flyDir
-        pEcho(self.att[i], "<center>"..attm[i])
+        pEcho(self.att[i], "<center>"..self.Locale[self.Language][attm[i]])
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
@@ -754,11 +755,67 @@ function Adjustable.Container:newCustomItem(name, func)
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
 
+Adjustable.Container.Locale = {
+        ["default"] = {
+        lock = "Lock",
+        min_restore = "Min/Restore",
+        save = "Save",
+        load = "Load",
+        attach = "Attach to:",
+        lockstyle= "Lockstyle:",
+        custom = "Custom:",
+        standard = "standard",
+        border = "border",
+        full = "full",
+        light = "light",
+        top = "top",
+        bottom = "bottom",
+        left = "left",
+        right = "right",
+        },
+
+        ["de_DE"] = {
+        lock = "Sperren",
+        min_restore = "Min/Wiederherstellen",
+        save = "Speichern",
+        load = "Laden",
+        attach = "Anheften:",
+        lockstyle= "Sperroption:",
+        custom = "Benutzerdefiniert:",
+        standard = "standard",
+        border = "umrandung",
+        full = "vollständig",
+        light = "einfach",
+        top = "oben",
+        bottom = "unten",
+        left = "links",
+        right = "rechts"
+        },
+
+        ["it_IT"] = {
+        lock = "Blocca",
+        min_restore = "Min/Ripristina",
+        save = "Salva",
+        load = "Carica",
+        attach = "Incolla:",
+        lockstyle= "Modo blocco:",
+        custom = "Personalizzato:",
+        standard = "standard",
+        border = "bordo",
+        full = "completo",
+        light = "semplice",
+        top = "sopra",
+        bottom = "sotto",
+        left = "sinistra",
+        right = "destra"
+        },
+}
+
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
     -- Prevents duplicates to be created
     -- It's still important that the name of the container is unique!
-    if cons.name then
+    if cons and cons.name then
         if Geyser.windowList[cons.name] then
             return Geyser.windowList[cons.name]
         end
@@ -766,6 +823,12 @@ function Adjustable.Container:new(cons,container)
             return container.windowList[cons.name]
         end
     end
+
+    self.Language = mudlet.translations.interfacelanguage
+    if not self.Locale[self.Language] then
+        self.Language = "default"
+    end
+
     local me = self.parent:new(cons,container)
     setmetatable(me, self)
     self.__index = self
@@ -800,15 +863,14 @@ function Adjustable.Container:new(cons,container)
     if me.locked then
         me:lockContainer()
     end
-
     me.adjLabelstyle = me.adjLabelstyle..[[ qproperty-alignment: 'AlignLeft | AlignTop';]]
-    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font> Lock/Unlock]]
-    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font> Min/Restore]]
-    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font> Save]]
-    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font> Load]]
-    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font> Attach to:]]
-    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font> Lockstyle:]]
-    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font> Custom:]]
+    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale[self.Language].lock
+    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale[self.Language].min_restore
+    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font>]].. self.Locale[self.Language].save
+    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font>]].. self.Locale[self.Language].load
+    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font>]]..self.Locale[self.Language].attach
+    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font>]]..self.Locale[self.Language].lockstyle
+    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font>]]..self.Locale[self.Language].custom
 
     me.adjLabel:setStyleSheet(me.adjLabelstyle)
     me.exitLabel:setStyleSheet(me.buttonstyle)
