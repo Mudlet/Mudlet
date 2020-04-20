@@ -86,4 +86,4 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         # -DLUA_LIBRARY is for https://github.com/awesomeWM/awesome/issues/1664#issuecomment-287648288
         # This path should match the output of 'Found Lua51:' exactly
-        cmakeAppendedArgs: --debug-output --trace --trace-expand -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/ -DLUA_LIBRARY=${{github.workspace}}/3rdparty/vcpkg/installed/x64-linux/debug/lib/liblua.a;/usr/lib/x86_64-linux-gnu/libdl.so
+        cmakeAppendedArgs: --debug-output --trace --trace-expand -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/
