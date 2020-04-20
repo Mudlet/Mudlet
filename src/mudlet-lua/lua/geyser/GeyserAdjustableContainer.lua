@@ -765,6 +765,7 @@ end
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
     local me = self.parent:new(cons, container)
+    cons = cons or {}
     setmetatable(me, self)
     self.__index = self
     me.type = "adjustablecontainer"
