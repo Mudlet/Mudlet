@@ -48,7 +48,7 @@ jobs:
 
     - name: "Set location of vcpkg dependencies"
       env:
-          vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
@@ -72,6 +72,10 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
+
+    - run: find /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/
+
+    - run: find /usr/lib/x86_64-linux-gnu/
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v2
