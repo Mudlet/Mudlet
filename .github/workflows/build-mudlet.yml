@@ -82,4 +82,7 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/
 
-    - run: find ${{runner.workspace}}
+    - name: Run tests
+      uses: GabrielBB/xvfb-action@v1.0
+      with:
+        run: ${{runner.workspace}}/b/ninja/src/mudlet
