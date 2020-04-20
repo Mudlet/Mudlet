@@ -83,7 +83,8 @@ endif()
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.6.2)
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
+                                         STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   set(APP_BUILD "-dev")
@@ -93,19 +94,24 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 include(IncludeOptionalModule)
 
-include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
-  OPTION_VARIABLE USE_UPDATER
-  READABLE_NAME "updater"
-  SUPPORTED_SYSTEMS "Linux" "Windows" "Darwin")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
-  OPTION_VARIABLE USE_FONTS
-  READABLE_NAME "fonts")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
-  OPTION_VARIABLE USE_3DMAPPER
-  READABLE_NAME "3D mapper")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
-  OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
-  READABLE_NAME "build-type splash screen")
+include_optional_module(
+  ENVIRONMENT_VARIABLE
+  WITH_UPDATER
+  OPTION_VARIABLE
+  USE_UPDATER
+  READABLE_NAME
+  "updater"
+  SUPPORTED_SYSTEMS
+  "Linux"
+  "Windows"
+  "Darwin")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
+                        USE_FONTS READABLE_NAME "fonts")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
+                        USE_3DMAPPER READABLE_NAME "3D mapper")
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN OPTION_VARIABLE
+  USE_VARIABLE_SPLASH_SCREEN READABLE_NAME "build-type splash screen")
 
 # The logic for this variable is not compatible with the current include_optional_module(...)
 # so we will need to process it manually
@@ -136,7 +142,7 @@ if(DEFINED ENV{WITH_SYSTEM_QTKEYCHAIN})
     option(USE_SYSTEM_QTKEYCHAIN
            "Use system QtKeyChain library."
            OFF)
-    message(STATUS "   ... should use Mudlet's own QtKeyChain library (explicitly).")
+    message(STATUS "   ... will use Mudlet's own QtKeyChain library (explicitly).")
   endif()
 else()
   option(USE_SYSTEM_QT5KEYCHAIN
@@ -145,16 +151,15 @@ else()
   option(USE_SYSTEM_QTKEYCHAIN
          "Use system QtKeyChain library."
          OFF)
-  message(STATUS "Did not detected WITH_SYSTEM_QTKEYCHAIN variable in environment...")
-  message(STATUS "   ... should use Mudlet's own QtKeyChain library (implicitly).")
+  message(STATUS "Did not detect WITH_SYSTEM_QTKEYCHAIN variable in environment...")
+  message(STATUS "   ... will use Mudlet's own QtKeyChain library (implicitly).")
 endif()
 
 include(InitGitSubmodule)
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
-  SUBMODULE_PATH "3rdparty/edbee-lib"
-  READABLE_NAME "edbee-lib editor widget")
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
 if(NOT(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN))
   git_submodule_init(
@@ -165,25 +170,24 @@ if(NOT(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN))
 endif()
 
 git_submodule_init(
-  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec"
-  SUBMODULE_PATH "3rdparty/lcf"
+  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
 
 if(USE_UPDATER)
-  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt"
-                     SUBMODULE_PATH "3rdparty/dblsqd"
-                     READABLE_NAME "DBLSQD updater")
+  git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
+                     "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
 endif()
 
 if(APPLE)
   if(USE_UPDATER)
     git_submodule_init(
-      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt"
-      SUBMODULE_PATH "3rdparty/sparkle-glue"
-      READABLE_NAME "Sparkle glue for updater")
+      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
+      "3rdparty/sparkle-glue" READABLE_NAME "Sparkle glue for updater")
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      message( STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
+      message(
+        STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it..."
+      )
       execute_process(
         TIMEOUT 30
         WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
