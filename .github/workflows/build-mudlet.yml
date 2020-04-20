@@ -80,9 +80,10 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/
+        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/ -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/gcc_64/
 
-    - name: Run tests
+    - name: (Linux) Run tests
+      if: runner.os == 'Linux'
       uses: GabrielBB/xvfb-action@v1.0
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet
