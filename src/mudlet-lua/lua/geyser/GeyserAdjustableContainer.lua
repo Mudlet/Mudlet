@@ -842,13 +842,19 @@ function Adjustable.Container:new(cons,container)
     if not Adjustable.Container.all[me.name] then
         Adjustable.Container.all_windows[#Adjustable.Container.all_windows + 1] = me.name
     else
-        --prevent showing the container on creation if hidden is true
-        if Adjustable.Container.all[me.name].hidden or me.hidden then
+        --prevent showing the container on recreation if hidden is true
+        if Adjustable.Container.all[me.name].hidden then
             me:hide()
         end
-        if Adjustable.Container.all[me.name].auto_hidden or me.auto_hidden then
+        if Adjustable.Container.all[me.name].auto_hidden then
             me:hide(true)
         end
+    end
+    -- hide/show on creation
+    if cons.hidden == true then
+        me:hide()
+    elseif cons.hidden == false then
+        me:show()
     end
     Adjustable.Container.all[me.name] = me
     return me
