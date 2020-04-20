@@ -73,10 +73,6 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
 
-    - run: find /home/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/
-
-    - run: find /usr/lib/x86_64-linux-gnu/
-
     - name: Build Mudlet
       uses: lukka/run-cmake@v2
       with:
@@ -84,6 +80,6 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        # -DLUA_LIBRARY is for https://github.com/awesomeWM/awesome/issues/1664#issuecomment-287648288
-        # This path should match the output of 'Found Lua51:' exactly
-        cmakeAppendedArgs: --debug-output --trace --trace-expand -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/
+        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/
+
+    - run: find ${{runner.workspace}}
