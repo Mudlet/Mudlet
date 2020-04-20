@@ -16,10 +16,10 @@ jobs:
           #   triplet: x64-windows
           - os: ubuntu-latest
             triplet: x64-linux
-            compiler: gcc_x64
+            compiler: gcc_64
           - os: macos-latest
             triplet: x64-osx
-            compiler: clang_x64
+            compiler: clang_64
     env:
       qt: "5.14.1"
 
