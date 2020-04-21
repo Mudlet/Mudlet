@@ -42,7 +42,7 @@ void TMxpFormattingTagsHandler::setAttribute(TMxpClient& client, MxpTag* tag, bo
     } else if (tag->isNamed("I")) {
         client.setItalic(value);
     } else if (tag->isNamed("U")) {
-        client.setUnderline(true);
+        client.setUnderline(value);
     } else {
         // do nothing
     }
