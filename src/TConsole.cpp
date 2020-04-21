@@ -1245,6 +1245,12 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
+    // TODO: move this somewhere else more appropriate
+    while (!buffer.mMxpClient.mMxpEvents.isEmpty()) {
+        const auto& event = buffer.mMxpClient.mMxpEvents.dequeue();
+        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
+    }
+
     double processT = mProcessingTime.elapsed();
     if (mpHost->mTelnet.mGA_Driver) {
         networkLatency->setText(QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency, 0, 'f', 3).arg(processT / 1000, 0, 'f', 3));

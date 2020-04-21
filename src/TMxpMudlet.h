@@ -23,7 +23,9 @@
 #include "Host.h"
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
+#include "TMxpEvent.h"
 
+#include <QQueue>
 #include <QList>
 
 class TMxpMudlet : public TMxpClient {
@@ -35,6 +37,8 @@ class TMxpMudlet : public TMxpClient {
     bool mLinkMode;
 
 public:
+    // Shouldn't be here, look for a better solution
+    QQueue<TMxpEvent> mMxpEvents;
 
     TMxpMudlet(Host* pHost, TLinkStore* linkStore)
             : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false)
@@ -164,11 +168,30 @@ public:
         // TODO: raise mxp event
     }
 
-    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
+    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
     {
-        // TODO: raise mxp event
+        if (tag->isStartTag()) {
+            if (mpContext->getElementRegistry().containsElement(tag->getName())) {
+                raiseMxpEvent(tag->asStartTag());
+            } else if (tag->isNamed("SEND")) {
+                raiseMxpEvent(tag->asStartTag());
+            }
+        }
+
         return result;
     }
+
+    void raiseMxpEvent(MxpStartTag* tag)
+    {
+        TMxpEvent ev;
+        ev.name = tag->getName();
+        for (const auto& attrName : tag->getAttrsNames()) {
+            ev.attrs[attrName] = tag->getAttrValue(attrName);
+        }
+        ev.actions = mpLinkStore->getCurrentLinks();
+        mMxpEvents.enqueue(ev);
+    }
+
 
 };
 
