@@ -25,7 +25,7 @@
 
 #include <QString>
 #include <QHash>
-#include <utility>
+#include <functional>
 
 class TEntityResolver {
     QHash<QString, QString> entities;
