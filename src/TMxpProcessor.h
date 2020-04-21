@@ -36,22 +36,20 @@ enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COM
 // handles the MXP protocol
 class TMxpProcessor
 {
-    Host* mpHost;
-
     // State of MXP systen:
     bool mMXP;
     TMXPMode mMXP_MODE;
     TMXPMode mMXP_DEFAULT;
 
+    // MXP delegated handlers
     TEntityHandler mEntityHandler;
-
     TMxpNodeBuilder mMxpTagBuilder;
     TMxpTagProcessor mMxpTagProcessor;
 
     TMxpClient* mpMxpClient;
 
 public:
-    TMxpProcessor(Host* pHost, TMxpClient* pMxpClient) : mMxpTagBuilder(true), mpHost(pHost), mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN), mpMxpClient(pMxpClient)
+    TMxpProcessor(TMxpClient* pMxpClient) : mMxpTagBuilder(true), mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN), mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }
