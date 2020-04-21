@@ -509,6 +509,7 @@ SOURCES += \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
+    TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
@@ -614,6 +615,7 @@ HEADERS += \
     TMxpLinkTagHandler.h \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
+    TMxpEntityTagHandler.h \
     TMxpContext.h \
     TMxpFormattingTagsHandler.h \
     TMxpMudlet.h \

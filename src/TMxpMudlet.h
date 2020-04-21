@@ -43,9 +43,9 @@ public:
 
     TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false) {}
 
-    virtual QString getVersion() { return scmVersion; };
+    virtual QString getVersion() { return scmVersion; }
 
-    virtual void sendToServer(QString& str) { mpHost->mTelnet.sendData(str); };
+    virtual void sendToServer(QString& str) { mpHost->mTelnet.sendData(str); }
 
     void setLinkMode(bool val) override { mLinkMode = val; }
 
@@ -121,6 +121,10 @@ public:
     virtual void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content)
     {
         // TODO: raise mxp event
+    }
+
+    void publishEntity(const QString& name, const QString& value) override {
+
     }
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override

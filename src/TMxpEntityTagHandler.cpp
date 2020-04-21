@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-use-nodiscard"
-
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
@@ -19,38 +16,37 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#ifndef MUDLET_MXPENTITYRESOLVER_H
-#define MUDLET_MXPENTITYRESOLVER_H
-
-#include <QHash>
-#include <QString>
-#include <functional>
-
-class TEntityResolver
+#include "TMxpEntityTagHandler.h"
+TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    QHash<QString, QString> mEntititesMap;
+    if (tag->getAttrsCount() < 2) {
+        return MXP_TAG_NOT_HANDLED;
+    }
 
-public:
-    static const QHash<QString, QString> scmStandardEntites;
-    static const TEntityResolver scmDefaultResolver;
+    static const QStringList boolOptions({"PRIVATE", "PUBLISH", "DELETE", "ADD", "REMOVE"});
+    TEntityResolver& resolver = ctx.getEntityResolver();
 
+    const QString& name = tag->getAttrName(1);
 
-    inline bool registerEntity(const QString& entity, const QChar ch) { return registerEntity(entity, QString(ch)); }
+    if (tag->hasAttr("DELETE")) {
+        resolver.unregisterEntity(name);
+    } else if (!boolOptions.contains(tag->getAttr(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
+        const QString& value = tag->getAttrName(1);
+        if (tag->hasAttr("ADD")) {
+            QString newDefinition = resolver.getResolution(name);
+            newDefinition.append("|");
+            newDefinition.append(value);
 
-    inline bool registerEntity(const QString& entity, const char ch) { return registerEntity(entity, QChar(ch)); }
+            resolver.registerEntity(name, newDefinition);
+        } else if (tag->hasAttr("REMOVE")) {
+            QString currentValue = resolver.getResolution(name);
+            QString toDelete = currentValue.contains("|") ? "|" + value : value;
+            resolver.registerEntity(name, currentValue.replace(toDelete, ""));
+        } else { // PUBLISH
+            resolver.registerEntity(name, value);
+            client.publishEntity(name, value);
+        }
+    }
 
-    bool registerEntity(const QString& entity, const QString& str);
-    bool unregisterEntity(const QString& entity);
-
-    QString getResolution(const QString& entityValue) const;
-
-    static QString resolveCode(ushort val);
-    static QString resolveCode(const QString& entityValue);
-    static QString resolveCode(const QString& entityValue, int base);
-    static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
-
-    QString interpolate(const QString& input) const;
-};
-
-#endif //MUDLET_MXPENTITYRESOLVER_H
+    return MXP_TAG_HANDLED;
+}

@@ -42,6 +42,8 @@ public:
 
     virtual void setFlag(const QString& elementName, const QMap<QString, QString>& params, const QString& content) = 0;
 
+    virtual void publishEntity(const QString &name, const QString &value) = 0;
+
     virtual void pushColor(const QString& fgColor, const QString& bgColor) = 0;
     virtual void popColor() = 0;
 

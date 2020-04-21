@@ -26,6 +26,7 @@
 #include "TMxpColorTagHandler.h"
 #include "TMxpCustomElementTagHandler.h"
 #include "TMxpElementDefinitionHandler.h"
+#include "TMxpEntityTagHandler.h"
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
 #include "TMxpLinkTagHandler.h"
@@ -85,6 +86,7 @@ TMxpTagProcessor::TMxpTagProcessor()
     mSupportedMxpElements["u"] = QVector<QString>();
     mRegisteredHandlers.append(QSharedPointer<TMxpTagHandler>(new TMxpFormattingTagsHandler()));
 
+    registerHandler(new TMxpEntityTagHandler());
     registerHandler(new TMxpElementDefinitionHandler());
     registerHandler(new TMxpCustomElementTagHandler());
 }

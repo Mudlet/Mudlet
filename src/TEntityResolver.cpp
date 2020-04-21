@@ -27,23 +27,32 @@ QString TEntityResolver::getResolution(const QString& entity) const
     }
 
     auto ptr = mEntititesMap.find(entity.toLower());
-    if (ptr != mEntititesMap.end())
+    if (ptr != mEntititesMap.end()) {
         return *ptr;
+    }
 
     auto stdPtr = scmStandardEntites.find(entity.toLower());
-    if (stdPtr != scmStandardEntites.end())
+    if (stdPtr != scmStandardEntites.end()) {
         return *stdPtr;
+    }
+
 
     return entity[1] == '#' ? resolveCode(entity.mid(2, entity.size() - 3)) : entity;
 }
 
 bool TEntityResolver::registerEntity(const QString& entity, const QString& str)
 {
-    if (entity.front() != '&' || entity.back() != ';')
+    if (entity.front() != '&' || entity.back() != ';') {
         return false;
+    }
+
 
     mEntititesMap[entity.toLower()] = str;
     return true;
+}
+
+bool TEntityResolver::unregisterEntity(const QString & entity){
+    return mEntititesMap.remove(entity) > 0;
 }
 
 QString TEntityResolver::resolveCode(const QString& entityValue)

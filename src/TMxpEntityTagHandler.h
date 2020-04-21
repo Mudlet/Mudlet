@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-use-nodiscard"
-
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
@@ -19,38 +16,25 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#ifndef MUDLET_SRC_TENTITYTAGHANDLER_H
+#define MUDLET_SRC_TENTITYTAGHANDLER_H
 
-#ifndef MUDLET_MXPENTITYRESOLVER_H
-#define MUDLET_MXPENTITYRESOLVER_H
 
-#include <QHash>
-#include <QString>
-#include <functional>
+#include "TMxpClient.h"
+#include "TMxpContext.h"
+#include "TMxpTagHandler.h"
 
-class TEntityResolver
+//<!ENTITY Name Value [DESC=description] [PRIVATE] [PUBLISH] [DELETE] [ADD] [REMOVE]>
+class TMxpEntityTagHandler : public TMxpTagHandler
 {
-    QHash<QString, QString> mEntititesMap;
-
 public:
-    static const QHash<QString, QString> scmStandardEntites;
-    static const TEntityResolver scmDefaultResolver;
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
+        return tag->isNamed("!ENTITY") || tag->isNamed("!EN");
+    }
 
 
-    inline bool registerEntity(const QString& entity, const QChar ch) { return registerEntity(entity, QString(ch)); }
-
-    inline bool registerEntity(const QString& entity, const char ch) { return registerEntity(entity, QChar(ch)); }
-
-    bool registerEntity(const QString& entity, const QString& str);
-    bool unregisterEntity(const QString& entity);
-
-    QString getResolution(const QString& entityValue) const;
-
-    static QString resolveCode(ushort val);
-    static QString resolveCode(const QString& entityValue);
-    static QString resolveCode(const QString& entityValue, int base);
-    static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
-
-    QString interpolate(const QString& input) const;
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 
-#endif //MUDLET_MXPENTITYRESOLVER_H
+
+#endif //MUDLET_SRC_TENTITYTAGHANDLER_H

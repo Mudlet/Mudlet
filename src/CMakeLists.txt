@@ -99,6 +99,7 @@ set(mudlet_SRCS
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
+    TMxpEntityTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpLinkTagHandler.cpp
     TMxpNodeBuilder.cpp
@@ -223,6 +224,7 @@ set(mudlet_HDRS
     TMxpClient.h
     TMxpColorTagHandler.h
     TMxpCustomElementTagHandler.h
+    TMxpEntityTagHandler.h
     TMxpFontTagHandler.h
     TMxpLinkTagHandler.h
     TMxpElementDefinitionHandler.h
