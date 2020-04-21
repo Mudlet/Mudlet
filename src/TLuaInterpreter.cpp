@@ -3653,6 +3653,32 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getMudletInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    QStringList knownEncodings{};
+    {
+        auto adjustEncoding = [](auto encodingName) {
+            auto originalEncoding = encodingName;
+            if (encodingName.startsWith("M_")) {
+                encodingName.remove(0, 2);
+            }
+
+            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
+        };
+        for (const auto& encoding : host.mTelnet.getEncodingsList()) {
+            knownEncodings.append(adjustEncoding(encoding));
+        }
+        knownEncodings.sort(Qt::CaseInsensitive);
+    }
+
+    host.postMessage(tr("[ INFO ]  - Available encodings:"));
+    host.postMessage(QStringLiteral("  %1").arg(knownEncodings.join(QStringLiteral(", "))));
+
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
@@ -16331,7 +16357,9 @@ static lua_State* newstate()
 static void storeHostInLua(lua_State* L, Host* h);
 
 // No documentation available in wiki - internal helper funtion
-void TLuaInterpreter::loadLuaModule(const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
+// On success will swap out any messages in the queue and replace them
+// with it's success message, on failure will just append...
+bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
 {
     int error = luaL_dostring(pGlobalLua, QStringLiteral("%1require \"%2\"")
                               .arg(luaModuleId.isEmpty() ? QString() : QStringLiteral("%1 =").arg(luaModuleId),
@@ -16341,23 +16369,25 @@ void TLuaInterpreter::loadLuaModule(const QString& requirement, const QString& f
         if (lua_isstring(pGlobalLua, -1)) {
             luaErrorMsg = tr("Lua error: %1").arg(QString::fromUtf8(lua_tostring(pGlobalLua, -1)));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
-                         // Intentional comment to separate arguments
-                         "%1 is the name of the module;"
-                         "%2 will be a line-feed inserted to put the next argument on a new line;"
-                         "%3 is the error message from the lua sub-system;"
-                         "%4 can be an additional message about the expected effect (but may be blank).")
-                .arg((description.isEmpty() ? requirement : description),
-                     QLatin1String("\n"),
-                     luaErrorMsg,
-                     (failureConsequence.isEmpty() ? QString() : QStringLiteral("\n%1").arg(failureConsequence)));
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-                         "%1 is the name of the module.")
-                .arg(description.isEmpty() ? requirement : description);
-        mpHost->postMessage(msg);
+        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
+                                   // Intentional comment to separate arguments
+                                   "%1 is the name of the module;"
+                                   "%2 will be a line-feed inserted to put the next argument on a new line;"
+                                   "%3 is the error message from the lua sub-system;"
+                                   "%4 can be an additional message about the expected effect (but may be blank).")
+                                .arg((description.isEmpty() ? requirement : description),
+                                     QLatin1String("\n"),
+                                     luaErrorMsg,
+                                     (failureConsequence.isEmpty() ? QString() : QStringLiteral("\n%1").arg(failureConsequence))));
+        return false;
     }
+
+    QQueue<QString> newMessageQueue;
+    newMessageQueue.enqueue(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name (may specify which variant) of the module.")
+                            .arg(description.isEmpty() ? requirement : description));
+    resultMsgsQueue.swap(newMessageQueue);
+    return true;
 }
 
 // No documentation available in wiki - internal function
@@ -16786,6 +16816,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
+    lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     const auto separator = QDir::separator();
@@ -16809,16 +16840,63 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
 #endif
 
-    loadLuaModule(QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
-#if defined(Q_OS_MAC)
-    loadLuaModule(QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
-#else
-    loadLuaModule(QLatin1String("zip"), QString(), QStringLiteral("luazip"));
-#endif
-    loadLuaModule(QLatin1String("rex_pcre"), tr("Some functions may not be available."));
-    loadLuaModule(QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
-    loadLuaModule(QLatin1String("lua-utf8"), tr("utf8.* Lua functions won't be available."), QLatin1String("utf8"), QLatin1String("utf8"));
-    loadLuaModule(QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    QQueue<QString> modLoadMessageQueue;
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    /*
+     * For uses like this where we try more than one alternative, only include
+     * the consequence message for the LAST one (it doesn't make sense to show
+     * it in multiple messages about the same functional library with alternative
+     * names):
+     * Reminder for parameters to loadLuaModule:
+     * 1 - Store for the result messaged (required!)
+     * 2 - string to pass to the Lua requires(...) function (required, will be
+     *     different for variants of the same module/library)
+     * 3 - string explaining what gets broken if (one of the alternatives of)
+     *     the module/library is not loaded (optional, may be a null/empty
+     *     QString if needed for a placeholder for following arguments)
+     * 4 - string describing the module (optional, for alternatives may be
+     *     different and reflect the luarock name for the particular
+     *     alternative, when ommitted or a null/empty QString the second
+     *     argument is used instead)
+     * 5 - string used in Lua as the identifier for the loaded module/libary,
+     *     passed as X in the lua 'X = require("name")' (optional, in which
+     *     case nothing is put before the "require" in that usage and the module
+     *     assumes whatever Lua name it offers).
+     */
+    bool loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
+    if (!loaded) {
+        loadLuaModule(modLoadMessageQueue, QLatin1String("zip"), QString(), QStringLiteral("luazip"));
+    }
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some functions may not be available."));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("lua-utf8"), QString(), QLatin1String("lua-utf8"), QLatin1String("utf8"));
+    if (!loaded) {
+        loadLuaModule(modLoadMessageQueue, QLatin1String("utf8"), tr("utf8.* Lua functions won't be available."));
+    }
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
+    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
 
     QString tn = "atcp";
     QStringList args;
