@@ -3590,6 +3590,90 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapWindowTitle
+int TLuaInterpreter::setMapWindowTitle(lua_State* L)
+{
+    QString title;
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setMapWindowTitle: bad argument #1 type (title as string is optional, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        title = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setMapperTitle(title); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::getMudletInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    QByteArrayList knownEncodings{"\"ASCII\""};
+    auto adjustEncoding = [](auto encodingName) {
+        auto originalEncoding = encodingName;
+        if (encodingName.startsWith("M_")) {
+            encodingName.remove(0, 2);
+        }
+
+        return (originalEncoding == encodingName) ? "\"" + originalEncoding + "\""
+                                                  : ("\"" + encodingName + "\" (\"" + originalEncoding + "\")");
+    };
+    for (const auto& encoding : host.mTelnet.getEncodingsList()) {
+        knownEncodings.append(adjustEncoding(encoding));
+    }
+
+    QString encodingNames{QLatin1String(knownEncodings.join(", "))};
+    encodingNames.append(QLatin1Char('.'));
+    // Have to wrap the above message as it is going to be too wide to fit on
+    // the screen. Split it at comma+space, keeping comma and
+    // replacing space with linefeed:
+    int startLineIndex = 0;
+    const QString needle = QStringLiteral(", ");
+    const int maxLineLength = 79;
+    int endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), maxLineLength);
+    // encodingNames.at(endLineIndex) should be on the last comma position in
+    // what will become the first line
+    encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
+    while (encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength) >= 0) {
+        // There is still a "needle" in the considered part of the haystack!
+        startLineIndex = endLineIndex + 2;
+        endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), startLineIndex + maxLineLength);
+
+        encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
+    }
+
+    QByteArray currentEncoding{host.mTelnet.getEncoding()};
+    if (currentEncoding.isEmpty()) {
+        currentEncoding = "\"ASCII\"";
+    } else {
+        currentEncoding = adjustEncoding(currentEncoding);
+    }
+    QString rawMessage{tr("============================== Mudlet Information ==============================\n"
+                          "--------------------------- Server Codec Information ---------------------------\n"
+                          "Current encoding (with internal name if different): %1\n"
+                          "Available encodings (and internal names):\n"
+                          "%2\n"
+                          "===================================== End ======================================\n",
+                          // Intentional comment to separate arguments
+                          "%1 is the current codec in use; %2 is a comma separated list of encoding names "
+                          "(which are always in Engineering English)")
+                       .arg(QLatin1String(currentEncoding),
+                            encodingNames)};
+    host.mpConsole->print(rawMessage, Qt::white, Qt::black);
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
