@@ -27,9 +27,9 @@ class TMxpFontTagHandler : public TMxpSingleTagHandler
 public:
     TMxpFontTagHandler() : TMxpSingleTagHandler("FONT") {}
 
-    virtual TMxpTagHandlerResult handleStartTag(TMxpClient* client, MxpStartTag* tag);
+    TMxpTagHandlerResult handleStartTag(TMxpContext &context, TMxpClient& client, MxpStartTag* tag) override;
 
-    virtual TMxpTagHandlerResult handleEndTag(TMxpClient* client, MxpEndTag* tag);
+    TMxpTagHandlerResult handleEndTag(TMxpContext &context, TMxpClient& client, MxpEndTag* tag) override;
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPFONTTAGHANDLER_H

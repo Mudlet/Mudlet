@@ -20,22 +20,22 @@
 #include "TMxpFontTagHandler.h"
 #include "TMxpClient.h"
 
-TMxpTagHandlerResult TMxpFontTagHandler::handleStartTag(TMxpClient* client, MxpStartTag* tag)
+TMxpTagHandlerResult TMxpFontTagHandler::handleStartTag(TMxpContext& context, TMxpClient& client, MxpStartTag* tag)
 {
     QString fontFace = tag->getAttrByNameOrIndex("FACE", 0);
     QString fontSize = tag->getAttrByNameOrIndex("SIZE", 1);
-    client->pushFont(fontFace, fontSize);
+    client.pushFont(fontFace, fontSize);
 
     QString fgColor = tag->getAttrByNameOrIndex("COLOR", 2);
     QString bgColor = tag->getAttrByNameOrIndex("BACK", 3);
-    client->pushColor(fgColor, bgColor);
+    client.pushColor(fgColor, bgColor);
 
     return MXP_TAG_HANDLED;
 }
-TMxpTagHandlerResult TMxpFontTagHandler::handleEndTag(TMxpClient* client, MxpEndTag* tag)
+TMxpTagHandlerResult TMxpFontTagHandler::handleEndTag(TMxpContext& context, TMxpClient& client, MxpEndTag* tag)
 {
-    client->popFont();
-    client->popColor();
+    client.popFont();
+    client.popColor();
 
     return MXP_TAG_HANDLED;
 }
