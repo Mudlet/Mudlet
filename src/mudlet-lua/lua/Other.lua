@@ -945,6 +945,29 @@ function translateTable(data, language)
   return t
 end
 
+--- loads Translations located in the /translations folder
+-- @param fileName default translation fileName
+-- @language locale code for example de_DE for German
+function loadTranslations(fileName, language)
+  local translation = {}
+  language = language or mudlet.translations.interfacelanguage
+  local file = luaGlobalPath.."/translations/translated/"..language.."_"..fileName..".json"
+  if io.exists(file) then
+    local filePointer = io.open(file, "r")
+    local str = filePointer:read("*all")
+    translation = yajl.to_value(str)
+    return translation
+  end
+  
+  file = luaGlobalPath.."/translations/"..fileName..".json"
+  if io.exists(file) then
+    local filePointer = io.open(file, "r")
+    local str = filePointer:read("*all")
+    translation = yajl.to_value(str)
+  end
+  return translation
+end
+
 --- Installs packages which are dropped on MainConsole or UserWindow
 -- @param event Drag and Drop Event
 -- @param fileName name and location of the file
