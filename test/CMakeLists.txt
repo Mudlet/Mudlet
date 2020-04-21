@@ -34,6 +34,10 @@ add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
 add_executable(TEntityHandlerTest TEntityHandlerTest.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
 
+add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
+add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
+
+
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStrUtils.cpp)
 
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStrUtils.cpp)

@@ -17,10 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMxpClient.h"
-#include "TEntityResolver.h"
-#include "TMxpTagParser.h"
 #include "TMxpCustomElementTagHandler.h"
+#include "TEntityResolver.h"
+#include "TMxpClient.h"
+#include "TMxpTagParser.h"
 
 
 TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -83,9 +83,7 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
 //              <help desc="1024">1024</help>
 // and returns a new tag interpolating the definition with the custom tag values:
 //              <send href='help 1024;' hint='Click for help on 1024;' expire=help>
-MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElement& element,
-                                                                  MxpStartTag* definitionTag,
-                                                                  MxpStartTag* customTag) const
+MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElement& element, MxpStartTag* definitionTag, MxpStartTag* customTag) const
 {
     auto mapping = [this, customTag, element](const MxpTagAttribute& attr) {
         if (!attr.hasValue()) {
@@ -96,18 +94,14 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
             } else {
                 return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
             }
-
         }
     };
 
     return definitionTag->transform(mapping);
 }
 
-QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element,
-                                                   const QString& input,
-                                                   MxpStartTag* tag)
+QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag)
 {
-
     auto mapEntityNameToTagAttributeValue = [element, tag](const QString& input) {
         QString attrName = input.mid(1, input.size() - 2);
         // get attribute value by NAME

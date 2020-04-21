@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 #include "TMxpTagParser.h"
-#include "TStrUtils.h"
 #include "TMxpNodeBuilder.h"
+#include "TStrUtils.h"
 
 static QStringRef stripTagAndTrim(const QString& tagText)
 {
@@ -57,9 +57,7 @@ QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& 
 
 MxpTag* TMxpTagParser::parseTag(const QString& tagText) const
 {
-    return isEndTag(tagText)
-           ? static_cast<MxpTag*>(parseEndTag(tagText))
-           : static_cast<MxpTag*>(parseStartTag(tagText));
+    return isEndTag(tagText) ? static_cast<MxpTag*>(parseEndTag(tagText)) : static_cast<MxpTag*>(parseStartTag(tagText));
 }
 
 MxpEndTag* TMxpTagParser::parseEndTag(const QString& tagText) const
@@ -174,4 +172,3 @@ int TMxpTagParser::readTextBlock(const QStringRef& str, int start, int end, QCha
 
     return pos;
 }
-

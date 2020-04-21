@@ -21,13 +21,14 @@
 #ifndef MUDLET_SRC_TMXPCONTEXT_H
 #define MUDLET_SRC_TMXPCONTEXT_H
 
+#include "TEntityResolver.h"
 #include "TMxpElementRegistry.h"
 #include "TMxpTagHandler.h"
-#include "TEntityResolver.h"
 
 class TMxpClient;
 
-class TMxpContext : public TMxpTagHandler {
+class TMxpContext : public TMxpTagHandler
+{
 public:
     virtual TMxpElementRegistry& getElementRegistry() = 0;
     virtual QMap<QString, QVector<QString>>& getSupportedElements() = 0;

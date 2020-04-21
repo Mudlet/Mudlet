@@ -19,20 +19,17 @@
 
 #ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H
 #define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H
-#include "TMxpTagHandler.h"
 #include "TMxpElementRegistry.h"
+#include "TMxpTagHandler.h"
 
 // https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
-class TMxpElementDefinitionHandler : public TMxpTagHandler {
+class TMxpElementDefinitionHandler : public TMxpTagHandler
+{
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
-    {
-        return tag->isNamed("!EL") || tag->isNamed(("!ELEMENT"));
-    }
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override { return tag->isNamed("!EL") || tag->isNamed(("!ELEMENT")); }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
-
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPELEMENTDEFINITIONHANDLER_H

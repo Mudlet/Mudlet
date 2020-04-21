@@ -22,15 +22,14 @@
 #include "TMxpTagHandler.h"
 
 // <FONT FACE=name [SIZE=size] [COLOR=foreground] [BACK=background]>
-class TMxpFontTagHandler : public TMxpSingleTagHandler {
+class TMxpFontTagHandler : public TMxpSingleTagHandler
+{
 public:
-    TMxpFontTagHandler() : TMxpSingleTagHandler("FONT")
-    {}
+    TMxpFontTagHandler() : TMxpSingleTagHandler("FONT") {}
 
     virtual TMxpTagHandlerResult handleStartTag(TMxpClient* client, MxpStartTag* tag);
 
     virtual TMxpTagHandlerResult handleEndTag(TMxpClient* client, MxpEndTag* tag);
-
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPFONTTAGHANDLER_H

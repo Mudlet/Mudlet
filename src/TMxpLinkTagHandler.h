@@ -21,7 +21,8 @@
 #include "TMxpTagHandler.h"
 
 // <A href=URL [hint=text] [expire=name]>
-class TMxpLinkTagHandler : public TMxpSingleTagHandler {
+class TMxpLinkTagHandler : public TMxpSingleTagHandler
+{
     bool mIsHrefInContent;
     QString mCurrentTagContent;
     int mLinkId;
@@ -29,8 +30,7 @@ class TMxpLinkTagHandler : public TMxpSingleTagHandler {
     QString getHref(const MxpStartTag* tag);
 
 public:
-    TMxpLinkTagHandler() : TMxpSingleTagHandler("A"), mIsHrefInContent(false), mLinkId(0)
-    {}
+    TMxpLinkTagHandler() : TMxpSingleTagHandler("A"), mIsHrefInContent(false), mLinkId(0) {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;

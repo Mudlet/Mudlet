@@ -23,14 +23,14 @@
 #include "TMxpTagHandler.h"
 
 // <C> <COLOR FORE=foreground [BACK=background]>
-class TMxpColorTagHandler : public TMxpTagHandler {
+class TMxpColorTagHandler : public TMxpTagHandler
+{
 public:
     TMxpColorTagHandler() = default;
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
-
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPCOLORTAGHANDLER_H

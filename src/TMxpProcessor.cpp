@@ -30,8 +30,7 @@ bool TMxpProcessor::setMode(const QString& code)
         return setMode(modeCode);
     } else {
         // isOk is false here as toInt(...) failed
-        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code
-                                     << " z received, Mudlet will ignore it.";
+        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
         return false;
     }
 }
@@ -97,8 +96,7 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
         break;
     default:
-        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI "
-                                     << QString::number(modeCode) << " z received, Mudlet will ignore it.";
+        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << QString::number(modeCode) << " z received, Mudlet will ignore it.";
         return false;
     }
 
@@ -132,7 +130,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
     if (mMxpTagBuilder.hasTag()) {
         QScopedPointer<MxpTag> tag(mMxpTagBuilder.buildTag());
 
-//        qDebug() << "TAG RECEIVED: " << tag->asString();
+        //        qDebug() << "TAG RECEIVED: " << tag->asString();
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }
@@ -141,7 +139,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
-    if (mEntityHandler.handle(ch)) { // ch is part of an entity
+    if (mEntityHandler.handle(ch)) {             // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
             ch = mEntityHandler.getResultAndReset();
         } else { // ask for the next char
@@ -158,4 +156,3 @@ void TMxpProcessor::processRawInput(char ch)
 {
     mMxpTagProcessor.handleContent(ch);
 }
-

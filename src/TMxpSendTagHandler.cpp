@@ -17,16 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "TMxpSendTagHandler.h"
-#include "TStrUtils.h"
 #include "TMxpClient.h"
+#include "TStrUtils.h"
 
-TMxpSendTagHandler::TMxpSendTagHandler()
-        : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false)
-{}
+TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-//    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
-//        return MXP_TAG_NOT_HANDLED;
+    //    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
+    //        return MXP_TAG_NOT_HANDLED;
 
     QString href = extractHref(tag);
     QString hint = extractHint(tag);
@@ -100,7 +98,7 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
     if (mIsHrefInContent) {
-        QStringList* hrefs, * hints;
+        QStringList *hrefs, *hints;
         if (client.getLink(mLinkId, &hrefs, &hints)) {
             if (hrefs != nullptr)
                 hrefs->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
@@ -110,7 +108,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
         }
         mCurrentTagContent.clear();
     }
-    
+
     mIsHrefInContent = false;
 
     client.setLinkMode(false);
@@ -121,4 +119,3 @@ void TMxpSendTagHandler::handleContent(char ch)
     if (mIsHrefInContent)
         mCurrentTagContent.append(ch);
 }
-

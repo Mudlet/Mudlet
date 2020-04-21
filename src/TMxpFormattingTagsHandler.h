@@ -22,7 +22,8 @@
 
 #include "TMxpTagHandler.h"
 
-class TMxpFormattingTagsHandler : public TMxpTagHandler {
+class TMxpFormattingTagsHandler : public TMxpTagHandler
+{
 public:
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
@@ -31,7 +32,6 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
     void setAttribute(TMxpClient& client, MxpTag* tag, bool value) const;
-
 };
 
 #endif //MUDLET_SRC_TMXPFORMATTINGTAGSHANDLER_H

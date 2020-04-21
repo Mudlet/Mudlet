@@ -19,11 +19,12 @@
 #ifndef MUDLET_SRC_TMXPTAGPARSER_CPP_TMXPNODEBUILDER_H
 #define MUDLET_SRC_TMXPTAGPARSER_CPP_TMXPNODEBUILDER_H
 
-#include <QString>
 #include "MxpTag.h"
 #include "TStrUtils.h"
+#include <QString>
 
-class TMxpNodeBuilder {
+class TMxpNodeBuilder
+{
     bool mOptionIgnoreText;
 
     // current tag attrs
@@ -55,8 +56,8 @@ class TMxpNodeBuilder {
     bool mIsInsideText;
 
     // overall processing state
-    bool mHasNode;  // a node is ready to be consumed
-    bool mIsText;   // the current node is a text node
+    bool mHasNode; // a node is ready to be consumed
+    bool mIsText;  // the current node is a text node
 
     bool acceptTag(char ch);
     void resetCurrentTag();
@@ -69,11 +70,18 @@ class TMxpNodeBuilder {
     void processAttribute();
 
 public:
-    TMxpNodeBuilder(bool ignoreText = false)
-            : mOptionIgnoreText(ignoreText), mIsInsideTag(false), mHasNode(false), mIsInsideAttr(false), mIsInsideSequence(false),
-              mHasSequence(false),
-              mIsQuotedSequence(false), mIsText(false), mIsInsideText(false)
-    {}
+    explicit TMxpNodeBuilder(bool ignoreText = false)
+    : mOptionIgnoreText(ignoreText)
+    , mIsInsideTag(false)
+    , mHasNode(false)
+    , mIsInsideAttr(false)
+    , mIsInsideSequence(false)
+    , mHasSequence(false)
+    , mIsQuotedSequence(false)
+    , mIsText(false)
+    , mIsInsideText(false)
+    {
+    }
 
     // returns true when a node (text/tag start/tag end) is available
     // the same char has to be input again when a match is found as it may be a boundary
@@ -85,30 +93,14 @@ public:
 
     void reset();
 
-    inline bool hasTag() const
-    {
-        return isTag() && hasNode();
-    }
+    inline bool hasTag() const { return isTag() && hasNode(); }
 
-    inline bool hasNode() const
-    {
-        return mHasNode;
-    }
+    inline bool hasNode() const { return mHasNode; }
 
-    inline bool isInsideTag() const
-    {
-        return mIsInsideTag;
-    }
+    inline bool isInsideTag() const { return mIsInsideTag; }
 
-    inline bool isTag() const
-    {
-        return !mIsText;
-    }
+    inline bool isTag() const { return !mIsText; }
 
-    inline bool isText() const
-    {
-        return mIsText;
-    }
-
+    inline bool isText() const { return mIsText; }
 };
 #endif //MUDLET_SRC_TMXPTAGPARSER_CPP_TMXPNODEBUILDER_H

@@ -16,10 +16,10 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include <string>
-#include "TStrUtils.h"
-#include "TMxpTagParser.h"
 #include "TMxpNodeBuilder.h"
+#include "TMxpTagParser.h"
+#include "TStrUtils.h"
+
 bool TMxpNodeBuilder::accept(char ch)
 {
     if (mIsInsideTag) { // inside tag
@@ -38,7 +38,7 @@ bool TMxpNodeBuilder::accept(char ch)
             mIsText = true;
             mHasNode = true;
             return true;
-        } else { // second call
+        } else {              // second call
             mHasNode = false; //mIsText = false
             return acceptTag(ch);
         }
@@ -190,18 +190,14 @@ void TMxpNodeBuilder::resetCurrentSequence()
 }
 MxpTag* TMxpNodeBuilder::buildTag()
 {
-    MxpTag* result = mIsEndTag
-                     ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName))
-                     : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName, mCurrentTagAttrs, mIsEmptyTag));
+    MxpTag* result = mIsEndTag ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName)) : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName, mCurrentTagAttrs, mIsEmptyTag));
     resetCurrentTag();
 
     return result;
 }
 MxpNode* TMxpNodeBuilder::buildNode()
 {
-    MxpNode* node = mIsText
-                    ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText))
-                    : static_cast<MxpNode*>(buildTag());
+    MxpNode* node = mIsText ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText)) : static_cast<MxpNode*>(buildTag());
     mCurrentText.clear();
     mHasNode = false;
     return node;

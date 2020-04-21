@@ -35,4 +35,3 @@ void TMxpElementRegistry::unregisterElement(const QString& name)
 {
     mMXP_Elements.remove(name.toUpper());
 }
-

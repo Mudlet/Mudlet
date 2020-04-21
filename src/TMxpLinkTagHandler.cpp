@@ -39,7 +39,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 }
 TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
-    QStringList* links, * hints;
+    QStringList *links, *hints;
     client.getLink(mLinkId, &links, &hints);
 
     if (links != nullptr) {

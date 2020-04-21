@@ -20,11 +20,12 @@
 #ifndef MUDLET_SRC_TMXPELEMENTREGISTRY_H
 #define MUDLET_SRC_TMXPELEMENTREGISTRY_H
 
-#include <QStringList>
-#include <QMap>
 #include "MxpTag.h"
+#include <QMap>
+#include <QStringList>
 
-struct TMxpElement {
+struct TMxpElement
+{
     QString name;
     QString definition;
     QStringList attrs;
@@ -40,7 +41,8 @@ struct TMxpElement {
     QList<QSharedPointer<MxpNode>> parsedDefinition;
 };
 
-class TMxpElementRegistry {
+class TMxpElementRegistry
+{
     QMap<QString, TMxpElement> mMXP_Elements;
 
 public:

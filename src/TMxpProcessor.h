@@ -23,25 +23,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMxpTagProcessor.h"
 #include "TEntityHandler.h"
 #include "TMxpNodeBuilder.h"
+#include "TMxpTagProcessor.h"
 #include <QString>
 
 class Host;
 
-enum TMXPMode {
-    MXP_MODE_OPEN,
-    MXP_MODE_SECURE,
-    MXP_MODE_LOCKED,
-    MXP_MODE_TEMP_SECURE
-};
-enum TMxpProcessingResult {
-    HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE
-};
+enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
+enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE };
 
 // handles the MXP protocol
-class TMxpProcessor {
+class TMxpProcessor
+{
     Host* mpHost;
 
     // State of MXP systen:
@@ -57,12 +51,7 @@ class TMxpProcessor {
     TMxpClient* mpMxpClient;
 
 public:
-    TMxpProcessor(Host* pHost, TMxpClient* pMxpClient) :
-            mMxpTagBuilder(true),
-            mpHost(pHost),
-            mMXP(false),
-            mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN),
-            mpMxpClient(pMxpClient)
+    TMxpProcessor(Host* pHost, TMxpClient* pMxpClient) : mMxpTagBuilder(true), mpHost(pHost), mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN), mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }

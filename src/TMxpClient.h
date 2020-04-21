@@ -21,21 +21,18 @@
 #define MUDLET_SRC_TMXPCLIENT_H
 
 #include "MxpTag.h"
-#include "TMxpTagHandlerResult.h"
 #include "TMxpContext.h"
+#include "TMxpTagHandlerResult.h"
 
-class TMxpClient {
+class TMxpClient
+{
 protected:
     TMxpContext* mpContext;
 
 public:
-    TMxpClient() : mpContext(nullptr)
-    {}
+    TMxpClient() : mpContext(nullptr) {}
 
-    virtual void initialize(TMxpContext* context)
-    {
-        mpContext = context;
-    }
+    virtual void initialize(TMxpContext* context) { mpContext = context; }
 
     virtual QString getVersion() = 0;
 
@@ -58,28 +55,13 @@ public:
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;
 
-    virtual bool tagReceived(MxpTag* tag)
-    {
-        return tag->isStartTag()
-               ? startTagReceived(tag->asStartTag())
-               : endTagReceived(tag->asEndTag());
-    }
+    virtual bool tagReceived(MxpTag* tag) { return tag->isStartTag() ? startTagReceived(tag->asStartTag()) : endTagReceived(tag->asEndTag()); }
 
-    virtual bool startTagReceived(MxpStartTag* startTag)
-    {
-        return true;
-    }
+    virtual bool startTagReceived(MxpStartTag* startTag) { return true; }
 
-    virtual bool endTagReceived(MxpEndTag* startTag)
-    {
-        return true;
-    }
+    virtual bool endTagReceived(MxpEndTag* startTag) { return true; }
 
-    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result)
-    {
-        return result;
-    }
-
+    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) { return result; }
 };
 
 #endif //MUDLET_SRC_TMXPCLIENT_H

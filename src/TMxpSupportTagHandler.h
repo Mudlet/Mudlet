@@ -23,13 +23,12 @@
 
 #include "TMxpTagHandler.h"
 
-class TMxpSupportTagHandler : public TMxpSingleTagHandler {
-
+class TMxpSupportTagHandler : public TMxpSingleTagHandler
+{
 public:
     QString processSupportsRequest(TMxpContext& ctx, MxpStartTag* tag);
 
-    explicit TMxpSupportTagHandler() : TMxpSingleTagHandler("SUPPORT")
-    {}
+    explicit TMxpSupportTagHandler() : TMxpSingleTagHandler("SUPPORT") {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };

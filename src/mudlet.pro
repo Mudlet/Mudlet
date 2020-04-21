@@ -509,7 +509,6 @@ SOURCES += \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
-    TMxpContext.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \

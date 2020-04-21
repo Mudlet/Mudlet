@@ -16,8 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "TMxpContext.h"
 #include "TMxpElementDefinitionHandler.h"
+#include "TMxpContext.h"
 #include "TMxpTagParser.h"
 
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>

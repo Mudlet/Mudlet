@@ -21,10 +21,11 @@
 #define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPCUSTOMELEMENTTAGHANDLER_H
 
 #include "TMxpContext.h"
-#include "TMxpTagHandler.h"
 #include "TMxpElementRegistry.h"
+#include "TMxpTagHandler.h"
 
-class TMxpCustomElementTagHandler : public TMxpTagHandler {
+class TMxpCustomElementTagHandler : public TMxpTagHandler
+{
     QString mCurrentFlagName;
     QString mCurrentFlagContent;
     QMap<QString, QString> mCurrentFlagAttributes;
@@ -36,10 +37,7 @@ class TMxpCustomElementTagHandler : public TMxpTagHandler {
     const QMap<QString, QString>& parseFlagAttributes(const MxpStartTag* tag, const TMxpElement& el);
 
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
-    {
-        return ctx.getElementRegistry().containsElement(tag->getName());
-    }
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override { return ctx.getElementRegistry().containsElement(tag->getName()); }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;

@@ -25,8 +25,10 @@
 #include "MxpTag.h"
 #include <QString>
 
-class TMxpTagParser {
+class TMxpTagParser
+{
     static int readTextBlock(const QStringRef& str, int start, int end, QChar terminatingChar);
+
 public:
     static QStringList parseToList(const QStringRef& tagText);
     static QStringList parseToList(const QString& tagText);

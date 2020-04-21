@@ -22,18 +22,18 @@
 
 
 #include "TMxpTagProcessor.h"
-#include "TMxpTagParser.h"
-#include "TMxpTagHandlerResult.h"
-#include "TMxpVersionTagHandler.h"
-#include "TMxpSupportTagHandler.h"
-#include "TMxpElementDefinitionHandler.h"
-#include "TMxpCustomElementTagHandler.h"
 #include "TMxpBRTagHandler.h"
-#include "TMxpSendTagHandler.h"
-#include "TMxpLinkTagHandler.h"
 #include "TMxpColorTagHandler.h"
+#include "TMxpCustomElementTagHandler.h"
+#include "TMxpElementDefinitionHandler.h"
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
+#include "TMxpLinkTagHandler.h"
+#include "TMxpSendTagHandler.h"
+#include "TMxpSupportTagHandler.h"
+#include "TMxpTagHandlerResult.h"
+#include "TMxpTagParser.h"
+#include "TMxpVersionTagHandler.h"
 
 TMxpTagHandlerResult TMxpTagProcessor::process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken)
 {
@@ -115,4 +115,3 @@ TEntityResolver& TMxpTagProcessor::getEntityResolver()
 {
     return mEntityResolver;
 }
-

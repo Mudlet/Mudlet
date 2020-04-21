@@ -19,11 +19,12 @@
 
 #ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
 #define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
-#include "TMxpTagHandler.h"
 #include "TEntityResolver.h"
+#include "TMxpTagHandler.h"
 
 // <SEND [href=command] [hint=text] [prompt] [expire=name]>
-class TMxpSendTagHandler : public TMxpSingleTagHandler {
+class TMxpSendTagHandler : public TMxpSingleTagHandler
+{
     bool mIsHrefInContent;
     QString mCurrentTagContent;
     int mLinkId;
@@ -37,7 +38,6 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
     void handleContent(char ch);
-
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H

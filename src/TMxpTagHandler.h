@@ -28,14 +28,12 @@
 class TMxpClient;
 class TMxpContext;
 
-class TMxpTagHandler {
+class TMxpTagHandler
+{
 public:
     virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
-    virtual void handleContent(char ch)
-    {
-
-    }
+    virtual void handleContent(char ch) {}
 
     void handleContent(const QString& text)
     {
@@ -44,32 +42,21 @@ public:
         }
     }
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
-    {
-        return true;
-    }
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return true; }
 
-    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
-    {
-        return MXP_TAG_NOT_HANDLED;
-    }
+    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) { return MXP_TAG_NOT_HANDLED; }
 
-    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
-    {
-        return MXP_TAG_NOT_HANDLED;
-    }
+    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) { return MXP_TAG_NOT_HANDLED; }
 };
 
-class TMxpSingleTagHandler : public TMxpTagHandler {
+class TMxpSingleTagHandler : public TMxpTagHandler
+{
     QString tagName;
-public:
-    TMxpSingleTagHandler(QString tagName) : tagName(std::move(tagName))
-    {}
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
-    {
-        return tag->isNamed(tagName);
-    }
+public:
+    explicit TMxpSingleTagHandler(QString tagName) : tagName(std::move(tagName)) {}
+
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return tag->isNamed(tagName); }
 };
 
 #endif //MUDLET_SRC_TMXPTAGHANDLER_H

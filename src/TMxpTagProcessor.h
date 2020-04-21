@@ -23,21 +23,22 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QString>
 #include <QMap>
+#include <QString>
 #include <QVector>
 
 #include "MxpTag.h"
-#include "TMxpTagHandler.h"
-#include "TMxpElementRegistry.h"
-#include "TMxpTagHandlerResult.h"
-#include "TMxpContext.h"
-#include "TMxpClient.h"
 #include "TEntityResolver.h"
+#include "TMxpClient.h"
+#include "TMxpContext.h"
+#include "TMxpElementRegistry.h"
+#include "TMxpTagHandler.h"
+#include "TMxpTagHandlerResult.h"
 
 typedef QPair<QString, QVector<QString>> TMxpFeatureOptions;
 
-class TMxpTagProcessor : public TMxpContext {
+class TMxpTagProcessor : public TMxpContext
+{
     QMap<QString, QVector<QString>> mSupportedMxpElements;
     QList<QSharedPointer<TMxpTagHandler>> mRegisteredHandlers;
 
@@ -45,7 +46,7 @@ class TMxpTagProcessor : public TMxpContext {
     TEntityResolver mEntityResolver;
 
 public:
-    explicit TMxpTagProcessor();
+    TMxpTagProcessor();
     TMxpTagHandlerResult process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken);
 
     TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;

@@ -23,174 +23,116 @@
 #define MUDLET_MXPTAG_H
 
 #include <QHash>
+#include <QPair>
 #include <QString>
 #include <QStringList>
-#include <QPair>
 #include <functional>
 
 #include <QDebug>
 
-class MxpTagAttribute : public QPair<QString, QString> {
+class MxpTagAttribute : public QPair<QString, QString>
+{
     friend class MxpTagLineParser;
 
 public:
     typedef std::function<MxpTagAttribute(const MxpTagAttribute&)> Transformation;
 
-    MxpTagAttribute(const QString& name, const QString& value) : QPair(name, value)
-    {}
+    MxpTagAttribute(const QString& name, const QString& value) : QPair(name, value) {}
 
-    MxpTagAttribute(const QString& name) : MxpTagAttribute(name, "")
-    {}
+    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, "") {}
 
-    MxpTagAttribute() : QPair()
-    {}
+    MxpTagAttribute() : QPair() {}
 
-    MxpTagAttribute transform(Transformation transformation) const
-    {
-        return transformation(*this);
-    }
+    MxpTagAttribute transform(Transformation transformation) const { return transformation(*this); }
 
-    virtual const QString& getName() const
-    {
-        return first;
-    }
+    virtual const QString& getName() const { return first; }
 
-    inline const QString& getValue() const
-    {
-        return second;
-    }
+    inline const QString& getValue() const { return second; }
 
-    inline bool hasValue() const
-    {
-        return !second.isEmpty();
-    }
+    inline bool hasValue() const { return !second.isEmpty(); }
 
-    inline bool isNamed(const QString& name) const
-    {
-        return name.compare(first, Qt::CaseInsensitive) == 0;
-    }
+    inline bool isNamed(const QString& name) const { return name.compare(first, Qt::CaseInsensitive) == 0; }
 };
 
 class MxpStartTag;
 class MxpEndTag;
 class MxpTextNode;
 
-class MxpNode {
-
+class MxpNode
+{
 public:
-    enum Type {
-        MXP_NODE_TYPE_TEXT, MXP_NODE_TYPE_START_TAG, MXP_NODE_TYPE_END_TAG
-    };
+    enum Type { MXP_NODE_TYPE_TEXT, MXP_NODE_TYPE_START_TAG, MXP_NODE_TYPE_END_TAG };
 
-    explicit MxpNode(MxpNode::Type type) : mType(type)
-    {}
+    explicit MxpNode(MxpNode::Type type) : mType(type) {}
 
-    MxpNode::Type getType() const
-    { return mType; }
+    MxpNode::Type getType() const { return mType; }
 
-    MxpStartTag* asStartTag() const
-    {
-        return mType == MXP_NODE_TYPE_START_TAG ? (MxpStartTag*) this : nullptr;
-    }
+    MxpStartTag* asStartTag() const { return mType == MXP_NODE_TYPE_START_TAG ? (MxpStartTag*)this : nullptr; }
 
-    MxpEndTag* asEndTag() const
-    {
-        return mType == MXP_NODE_TYPE_END_TAG ? (MxpEndTag*) this : nullptr;
-    }
+    MxpEndTag* asEndTag() const { return mType == MXP_NODE_TYPE_END_TAG ? (MxpEndTag*)this : nullptr; }
 
-    MxpTextNode* asText() const
-    {
-        return mType == MXP_NODE_TYPE_TEXT ? (MxpTextNode*) this : nullptr;
-    }
+    MxpTextNode* asText() const { return mType == MXP_NODE_TYPE_TEXT ? (MxpTextNode*)this : nullptr; }
 
     virtual QString asString() const = 0;
 
-    bool isTag()
-    {
-        return mType != MXP_NODE_TYPE_TEXT;
-    }
+    bool isTag() { return mType != MXP_NODE_TYPE_TEXT; }
 
-    bool isEndTag()
-    {
-        return mType == MXP_NODE_TYPE_END_TAG;
-    }
+    bool isEndTag() { return mType == MXP_NODE_TYPE_END_TAG; }
 
-    bool isStartTag()
-    {
-        return mType == MXP_NODE_TYPE_START_TAG;
-    }
+    bool isStartTag() { return mType == MXP_NODE_TYPE_START_TAG; }
+
 protected:
     MxpNode::Type mType;
-
 };
 
-class MxpTextNode : public MxpNode {
+class MxpTextNode : public MxpNode
+{
     QString mContent;
+
 public:
-    explicit MxpTextNode(const QString& content) : MxpNode(MXP_NODE_TYPE_TEXT), mContent(QString(content))
-    {}
+    explicit MxpTextNode(const QString& content) : MxpNode(MXP_NODE_TYPE_TEXT), mContent(QString(content)) {}
 
-    inline const QString& getContent() const
-    {
-        return mContent;
-    }
+    inline const QString& getContent() const { return mContent; }
 
-    virtual QString asString() const
-    {
-        return mContent;
-    }
-
+    virtual QString asString() const { return mContent; }
 };
 
-class MxpTag : public MxpNode {
+class MxpTag : public MxpNode
+{
     friend class TMxpTagParser;
+
 protected:
     QString name;
 
-    explicit MxpTag(MxpNode::Type type, const QString& name) : MxpNode(type), name(name)
-    {}
+    explicit MxpTag(MxpNode::Type type, const QString& name) : MxpNode(type), name(name) {}
 
 public:
-    inline const QString& getName() const
-    {
-        return name;
-    }
+    inline const QString& getName() const { return name; }
 
-    inline bool isStartTag() const
-    {
-        return mType == MXP_NODE_TYPE_START_TAG;
-    }
+    inline bool isStartTag() const { return mType == MXP_NODE_TYPE_START_TAG; }
 
-    inline bool isEndTag() const
-    {
-        return mType == MXP_NODE_TYPE_END_TAG;
-    }
+    inline bool isEndTag() const { return mType == MXP_NODE_TYPE_END_TAG; }
 
     bool isNamed(const QString& tagName) const;
-
 };
 
-class MxpEndTag : public MxpTag {
+class MxpEndTag : public MxpTag
+{
 public:
-    explicit MxpEndTag(const QString& name) :
-            MxpTag(MXP_NODE_TYPE_END_TAG, name)
-    {}
+    explicit MxpEndTag(const QString& name) : MxpTag(MXP_NODE_TYPE_END_TAG, name) {}
     QString asString() const override;
 };
 
-class MxpStartTag : public MxpTag {
+class MxpStartTag : public MxpTag
+{
     QMap<QString, MxpTagAttribute> mAttrsMap;
     QStringList mAttrsNames;
     bool mIsEmpty;
 
 public:
-    MxpStartTag(const QString& name) :
-            MxpStartTag(name, QList<MxpTagAttribute>(), false)
-    {}
+    explicit MxpStartTag(const QString& name) : MxpStartTag(name, QList<MxpTagAttribute>(), false) {}
 
-    MxpStartTag(const QString& name, const QList<MxpTagAttribute>& attributes, bool isEmpty) :
-            MxpTag(MXP_NODE_TYPE_START_TAG, QString(name)),
-            mIsEmpty(isEmpty)
+    MxpStartTag(const QString& name, const QList<MxpTagAttribute>& attributes, bool isEmpty) : MxpTag(MXP_NODE_TYPE_START_TAG, QString(name)), mIsEmpty(isEmpty)
     {
         for (const auto& attr : attributes) {
             mAttrsNames.append(attr.getName());
@@ -200,15 +142,9 @@ public:
 
     MxpStartTag transform(const MxpTagAttribute::Transformation& transformation) const;
 
-    inline const QStringList& getAttrsNames() const
-    {
-        return mAttrsNames;
-    }
+    inline const QStringList& getAttrsNames() const { return mAttrsNames; }
 
-    inline int getAttrsCount() const
-    {
-        return mAttrsNames.size();
-    }
+    inline int getAttrsCount() const { return mAttrsNames.size(); }
 
     bool hasAttr(const QString& attrName) const;
 
@@ -220,8 +156,7 @@ public:
     const QString& getAttrValue(const QString& attrName) const;
     const QString& getAttrByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = "") const;
     bool isAttrAt(int pos, const char* attrName);
-    inline bool isEmpty() const
-    { return mIsEmpty; }
+    inline bool isEmpty() const { return mIsEmpty; }
 
     QString asString() const override;
     const QString& getAttrName(int attrIndex) const;

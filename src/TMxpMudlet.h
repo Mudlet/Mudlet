@@ -19,16 +19,17 @@
 #ifndef MUDLET_SRC_TMXPMUDLET_H
 #define MUDLET_SRC_TMXPMUDLET_H
 
-#include "TMxpClient.h"
 #include "Host.h"
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
+#include "TMxpClient.h"
 #include "TMxpEvent.h"
 
-#include <QQueue>
 #include <QList>
+#include <QQueue>
 
-class TMxpMudlet : public TMxpClient {
+class TMxpMudlet : public TMxpClient
+{
     inline static const QString scmVersion = QStringLiteral("%1%2").arg(APP_VERSION, APP_BUILD);
 
     Host* mpHost;
@@ -40,31 +41,15 @@ public:
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
 
-    TMxpMudlet(Host* pHost, TLinkStore* linkStore)
-            : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false)
-    {
+    TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false) {}
 
-    }
+    virtual QString getVersion() { return scmVersion; };
 
-    virtual QString getVersion()
-    {
-        return scmVersion;
-    };
+    virtual void sendToServer(QString& str) { mpHost->mTelnet.sendData(str); };
 
-    virtual void sendToServer(QString& str)
-    {
-        mpHost->mTelnet.sendData(str);
-    };
+    void setLinkMode(bool val) override { mLinkMode = val; }
 
-    void setLinkMode(bool val) override
-    {
-        mLinkMode = val;
-    }
-
-    bool isInLinkMode()
-    {
-        return mLinkMode;
-    }
+    bool isInLinkMode() { return mLinkMode; }
 
     QList<QColor> fgColors, bgColors;
     virtual void pushColor(const QString& fgColor, const QString& bgColor)
@@ -97,24 +82,12 @@ public:
         }
     }
 
-    bool hasFgColor()
-    {
-        return !fgColors.isEmpty();
-    }
-    const QColor& getFgColor()
-    {
-        return fgColors.last();
-    }
+    bool hasFgColor() { return !fgColors.isEmpty(); }
+    const QColor& getFgColor() { return fgColors.last(); }
 
-    bool hasBgColor()
-    {
-        return !bgColors.isEmpty();
-    }
+    bool hasBgColor() { return !bgColors.isEmpty(); }
 
-    const QColor& getBgColor()
-    {
-        return bgColors.last();
-    }
+    const QColor& getBgColor() { return bgColors.last(); }
 
     static QColor mapColor(const QString& colorName)
     {
@@ -126,19 +99,10 @@ public:
     }
 
     // TODO: implement support for fonts?
-    void pushFont(const QString& fontFace, const QString& fontSize) override
-    {
+    void pushFont(const QString& fontFace, const QString& fontSize) override {}
+    void popFont() override {}
 
-    }
-    void popFont() override
-    {
-
-    }
-
-    int setLink(const QStringList& links, const QStringList& hints) override
-    {
-        return mpLinkStore->addLinks(links, hints);
-    }
+    int setLink(const QStringList& links, const QStringList& hints) override { return mpLinkStore->addLinks(links, hints); }
 
     bool getLink(int id, QStringList** links, QStringList** hints) override
     {
@@ -150,25 +114,16 @@ public:
 
     bool isBold, isItalic, isUnderline;
 
-    void setBold(bool bold) override
-    {
-        isBold = bold;
-    }
-    void setItalic(bool italic) override
-    {
-        isItalic = italic;
-    }
-    void setUnderline(bool underline) override
-    {
-        isUnderline = underline;
-    }
+    void setBold(bool bold) override { isBold = bold; }
+    void setItalic(bool italic) override { isItalic = italic; }
+    void setUnderline(bool underline) override { isUnderline = underline; }
 
     virtual void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content)
     {
         // TODO: raise mxp event
     }
 
-    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
+    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
     {
         if (tag->isStartTag()) {
             if (mpContext->getElementRegistry().containsElement(tag->getName())) {
@@ -191,8 +146,6 @@ public:
         ev.actions = mpLinkStore->getCurrentLinks();
         mMxpEvents.enqueue(ev);
     }
-
-
 };
 
 #endif //MUDLET_SRC_TMXPMUDLET_H

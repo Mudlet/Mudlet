@@ -21,10 +21,10 @@
 #define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPBRTAGHANDLER_H
 #include "TMxpTagHandler.h"
 
-class TMxpBRTagHandler : public TMxpSingleTagHandler {
+class TMxpBRTagHandler : public TMxpSingleTagHandler
+{
 public:
-    TMxpBRTagHandler() : TMxpSingleTagHandler("BR")
-    {}
+    TMxpBRTagHandler() : TMxpSingleTagHandler("BR") {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };

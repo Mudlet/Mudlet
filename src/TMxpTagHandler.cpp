@@ -25,7 +25,5 @@ TMxpTagHandlerResult TMxpTagHandler::handleTag(TMxpContext& ctx, TMxpClient& cli
         return MXP_TAG_NOT_HANDLED;
     }
 
-    return tag->isStartTag()
-           ? handleStartTag(ctx, client, tag->asStartTag())
-           : handleEndTag(ctx, client, tag->asEndTag());
+    return tag->isStartTag() ? handleStartTag(ctx, client, tag->asStartTag()) : handleEndTag(ctx, client, tag->asEndTag());
 }
