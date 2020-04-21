@@ -30,6 +30,7 @@
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
@@ -122,9 +123,16 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 
 
-class TBuffer
-{
-    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::defaultInstance;
+
+class TBuffer {
+    // need to use tr() on encoding names in csmEncodingTable
+    Q_DECLARE_TR_FUNCTIONS(TBuffer)
+
+    // private - a map of computer-friendly encoding names as keys,
+    // values are a pair of human-friendly name + encoding data
+    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
+
+    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -181,9 +189,10 @@ public:
     void logRemainingOutput();
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QString &);
+    void encodingChanged(const QString&);
     static int lengthInGraphemes(const QString& text);
 
+    QQueue<MxpEvent> mMxpEvents;
 
     std::deque<TChar> bufferLine;
     std::deque<std::deque<TChar>> buffer;
