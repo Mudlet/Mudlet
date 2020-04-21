@@ -34,6 +34,7 @@
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
+#include <QQueue>
 #include <QThread>
 #include <QTimer>
 #include <edbee/texteditorwidget.h>
@@ -93,6 +94,7 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -272,6 +274,7 @@ public:
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
+    static int setUserWindowTitle(lua_State* L);
     static int echoUserWindow(lua_State* L);
     static int clearUserWindow(lua_State* L);
     static int enableTimer(lua_State* L);
@@ -545,6 +548,8 @@ public:
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
     static int unzipAsync(lua_State* L);
+    static int setMapWindowTitle(lua_State*);
+    static int getMudletInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -574,6 +579,7 @@ private:
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
+    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
 
 
     QNetworkAccessManager* mpFileDownloader;

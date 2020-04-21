@@ -14,7 +14,15 @@ if [ -z "${TRAVIS_TAG}" ]; then
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
   else
     COMMIT=$(git rev-parse --short HEAD)
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+
+    if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
+      DATE=$(date +'%Y-%m-%d')
+      # add a short commit to version for changelog generation know  what was last released
+      SHORT_COMMIT=$(echo "${COMMIT}" | cut -c1-5)
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${SHORT_COMMIT}"
+    else
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+    fi
   fi
 fi
 

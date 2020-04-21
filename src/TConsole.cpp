@@ -1245,6 +1245,11 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
+    while (!buffer.mMxpEvents.isEmpty()) {
+        const MxpEvent &event = buffer.mMxpEvents.dequeue();
+        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
+    }
+
     double processT = mProcessingTime.elapsed();
     if (mpHost->mTelnet.mGA_Driver) {
         networkLatency->setText(QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency, 0, 'f', 3).arg(processT / 1000, 0, 'f', 3));
@@ -2712,7 +2717,7 @@ void TConsole::slot_searchBufferUp()
             return;
         }
     }
-    print(tr("No search results, sorry!\n"));
+    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
 }
 
 void TConsole::slot_searchBufferDown()
@@ -2751,7 +2756,7 @@ void TConsole::slot_searchBufferDown()
             return;
         }
     }
-    print(tr("No search results, sorry!\n"));
+    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
 }
 
 QSize TConsole::getMainWindowSize() const
@@ -2999,4 +3004,40 @@ void TConsole::dropEvent(QDropEvent* e)
             mpHost->raiseEvent(mudletEvent);
         }
     }
+}
+
+std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const QString& text)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a user window cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        return {false, QStringLiteral("user window name \"%1\" not found").arg(name)};
+    }
+
+    // If it does not have an mType of UserWindow then it does not in a
+    // floatable/dockable widget - so it can't have a titlebar...!
+    if (pC->getType() != UserWindow) {
+        return {false, QStringLiteral("\"%1\" is not a user window").arg(name)};
+    }
+
+    auto pD = mDockWidgetMap.value(name);
+    if (Q_LIKELY(pD)) {
+        if (text.isEmpty()) {
+            // Reset to default text:
+            pD->setWindowTitle(tr("User window - %1 - %2").arg(mpHost->getName(), name));
+            return {true, QString()};
+        }
+
+        pD->setWindowTitle(text);
+        return {true, QString()};
+    }
+
+    // This should be:
+    Q_UNREACHABLE();
+    // as it means that the TConsole is flagged as being a user window yet
+    // it does not have a TDockWidget to hold it...
+    return {false, QStringLiteral("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
 }

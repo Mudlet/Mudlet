@@ -28,7 +28,10 @@
 #include "pre_guard.h"
 #include <QPushButton>
 #include <QtConcurrent>
+#include <chrono>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 // update flows:
 // linux: new AppImage is downloaded, unzipped, and put in place of the old one
@@ -48,14 +51,18 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
 
     feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
                             mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
+
+    if (!mDailyCheck) {
+        mDailyCheck = std::make_unique<QTimer>();
+    }
 }
 Updater::~Updater()
 {
     delete (feed);
 }
 
-// start the update process and figure out what needs to be done
-// if it's silent updates, do that right away, otherwise
+// start the update process and figure out what needs to be done.
+// If it's silent updates, do that right away, otherwise
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {
@@ -66,6 +73,20 @@ void Updater::checkUpdatesOnStart()
 #elif defined(Q_OS_WIN32)
     setupOnWindows();
 #endif
+
+    mDailyCheck->setInterval(12h);
+    QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
+          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          if (updates.isEmpty()) {
+              return;
+          } else if (!updateAutomatically()) {
+              emit signal_updateAvailable(updates.size());
+          } else {
+              feed->downloadRelease(updates.first());
+          }
+    });
+    mDailyCheck->start();
 }
 
 void Updater::setAutomaticUpdates(const bool state)

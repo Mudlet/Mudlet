@@ -64,16 +64,6 @@
 
 #include <limits>
 
-// Provides the lua zip module for MacOs platform that does not have an easy way
-// to provide it as a prebuilt library module (unlike Windows/Linux) - was
-// called luazip.c and it is an amalgum of both such files that came from
-// http://www.keplerproject.org/luazip {dead link} the Kelper Project has
-// restuctured their site but the URL can be pulled from the Wayback machine:
-// https://web.archive.org/web/20150129015700/http://www.keplerproject.org/luazip
-#ifdef Q_OS_MAC
-#include "luazip.h"
-#endif
-
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
         {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
@@ -3562,31 +3552,81 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUserWindow
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
-    std::string luaSendText = "";
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "openUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
+    int n = lua_gettop(L);
+    QString name = QString();
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        name = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool loadLayout = true;
-    if (!lua_isnoneornil(L, 2) && lua_isboolean(L, 2)) {
-        loadLayout = lua_toboolean(L, 2);
+    bool loadLayout = true, autoDock = true;
+    if (n > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #2 type (loadLayout as boolean expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            loadLayout = lua_toboolean(L, 2);
+        }
+    }
+    if (n > 2) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "openUserWindow:  bad argument #3 type (autoDock as boolean expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            autoDock = lua_toboolean(L, 3);
+        }
+    }
+
+    QString area = QString();
+    if (n > 3) {
+        if (lua_type(L, 4) != LUA_TSTRING) {
+            lua_pushfstring(L, "openUserWindow: bad argument #4 type (area as string expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            area = QString::fromUtf8(lua_tostring(L, 4));
+        }
     }
 
     Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
-    auto pL = host.mpConsole->mLabelMap.value(text);
-    if (pL) {
-        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!", text.toUtf8().constData());
-        lua_error(L);
-        return 1;
+
+    if (auto [success, message] = mudlet::self()->openWindow(&host, name, loadLayout, autoDock, area.toLower()); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowTitle
+int TLuaInterpreter::setUserWindowTitle(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setUserWindowTitle: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    QString title;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, "setUserWindowTitle: bad argument #2 type (title as string is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        title = QString::fromUtf8(lua_tostring(L, 2));
     }
 
-    lua_pushboolean(L, mudlet::self()->openWindow(&host, text, loadLayout));
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->setUserWindowTitle(name, title); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -14826,6 +14866,64 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
+void
+TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
+    lua_State *L = pGlobalLua;
+    lua_getglobal(L, "mxp");
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "mxp");
+        lua_getglobal(L, "mxp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: mxp table not defined";
+            return;
+        }
+    }
+
+    lua_newtable(L);
+    lua_setfield(L, -2, type.toUtf8().toLower().constData());
+    lua_getfield(L, -1, type.toUtf8().toLower().constData());
+    if (!lua_istable(L, -1)) {
+        qDebug() << "ERROR: 'mxp." << type << "' table could not be defined";
+        return;
+    }
+
+    QMapIterator<QString, QString> itr(attrs);
+    while (itr.hasNext()) {
+        itr.next();
+        lua_pushstring(L, itr.value().toUtf8().constData());
+        lua_setfield(L, -2, itr.key().toUtf8().toLower().constData());
+    }
+
+    lua_newtable(L);
+    lua_setfield(L, -2, "actions");
+    lua_getfield(L, -1, "actions");
+    for (int i = 0; i < actions.size(); i++) {
+        lua_pushstring(L, actions[i].toUtf8().constData());
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    lua_pop(L, lua_gettop(L));
+
+
+    TEvent event{};
+    QString token("mxp");
+    token.append(".");
+    token.append(type.toUtf8().toLower().constData());
+
+    event.mArgumentList.append(token);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    Host &host = getHostFromLua(L);
+    if (mudlet::debugMode) {
+        QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg("mxp", token);
+        host.mpConsole->printSystemMessage(msg);
+    }
+    host.raiseEvent(event);
+}
+
+
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
@@ -16365,6 +16463,40 @@ static lua_State* newstate()
 // No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
 
+// No documentation available in wiki - internal helper funtion
+// On success will swap out any messages in the queue and replace them
+// with it's success message, on failure will just append...
+bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
+{
+    int error = luaL_dostring(pGlobalLua, QStringLiteral("%1require \"%2\"")
+                              .arg(luaModuleId.isEmpty() ? QString() : QStringLiteral("%1 =").arg(luaModuleId),
+                                   requirement).toUtf8().constData());
+    if (error) {
+        QString luaErrorMsg = tr("No error message available from Lua");
+        if (lua_isstring(pGlobalLua, -1)) {
+            luaErrorMsg = tr("Lua error: %1").arg(QString::fromUtf8(lua_tostring(pGlobalLua, -1)));
+        }
+        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
+                                   // Intentional comment to separate arguments
+                                   "%1 is the name of the module;"
+                                   "%2 will be a line-feed inserted to put the next argument on a new line;"
+                                   "%3 is the error message from the lua sub-system;"
+                                   "%4 can be an additional message about the expected effect (but may be blank).")
+                                .arg((description.isEmpty() ? requirement : description),
+                                     QLatin1String("\n"),
+                                     luaErrorMsg,
+                                     (failureConsequence.isEmpty() ? QString() : QStringLiteral("\n%1").arg(failureConsequence))));
+        return false;
+    }
+
+    QQueue<QString> newMessageQueue;
+    newMessageQueue.enqueue(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name (may specify which variant) of the module.")
+                            .arg(description.isEmpty() ? requirement : description));
+    resultMsgsQueue.swap(newMessageQueue);
+    return true;
+}
+
 // No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
@@ -16406,6 +16538,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setFontSize", TLuaInterpreter::setFontSize);
     lua_register(pGlobalLua, "getFontSize", TLuaInterpreter::getFontSize);
     lua_register(pGlobalLua, "openUserWindow", TLuaInterpreter::openUserWindow);
+    lua_register(pGlobalLua, "setUserWindowTitle", TLuaInterpreter::setUserWindowTitle);
     lua_register(pGlobalLua, "echoUserWindow", TLuaInterpreter::echoUserWindow);
     lua_register(pGlobalLua, "enableTimer", TLuaInterpreter::enableTimer);
     lua_register(pGlobalLua, "disableTimer", TLuaInterpreter::disableTimer);
@@ -16789,6 +16922,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
+    lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
+    lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     const auto separator = QDir::separator();
@@ -16797,13 +16932,6 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
     luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
-
-#ifdef Q_OS_MAC
-    luaopen_zip(pGlobalLua);
-    lua_setglobal(pGlobalLua, "zip");
-#endif
-    QString n;
-    int error;
 
 #if defined(Q_OS_LINUX)
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
@@ -16816,132 +16944,65 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_WIN32)
-     luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
+    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
 #endif
 
-    error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QStringLiteral("rex_pcre"),
-                 QStringLiteral("\n%1\n"))
-            .arg(tr("Some functions may not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QStringLiteral("rex_pcre"));
-        mpHost->postMessage(msg);
+    QQueue<QString> modLoadMessageQueue;
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    error = luaL_dostring(pGlobalLua, "require \"zip\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("zip"),
-                 QString());
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("zip"));
-        mpHost->postMessage(msg);
+    /*
+     * For uses like this where we try more than one alternative, only include
+     * the consequence message for the LAST one (it doesn't make sense to show
+     * it in multiple messages about the same functional library with alternative
+     * names):
+     * Reminder for parameters to loadLuaModule:
+     * 1 - Store for the result messaged (required!)
+     * 2 - string to pass to the Lua requires(...) function (required, will be
+     *     different for variants of the same module/library)
+     * 3 - string explaining what gets broken if (one of the alternatives of)
+     *     the module/library is not loaded (optional, may be a null/empty
+     *     QString if needed for a placeholder for following arguments)
+     * 4 - string describing the module (optional, for alternatives may be
+     *     different and reflect the luarock name for the particular
+     *     alternative, when ommitted or a null/empty QString the second
+     *     argument is used instead)
+     * 5 - string used in Lua as the identifier for the loaded module/libary,
+     *     passed as X in the lua 'X = require("name")' (optional, in which
+     *     case nothing is put before the "require" in that usage and the module
+     *     assumes whatever Lua name it offers).
+     */
+    bool loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
+    if (!loaded) {
+        loadLuaModule(modLoadMessageQueue, QLatin1String("zip"), QString(), QStringLiteral("luazip"));
+    }
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    error = luaL_dostring(pGlobalLua, "require \"lfs\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("lfs (Lua File System)"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Probably will not be able to access Mudlet Lua code."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("lfs"));
-        mpHost->postMessage(msg);
+    loadLuaModule(modLoadMessageQueue, QLatin1String("rex_pcre"), tr("Some functions may not be available."));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("luasql.sqlite3"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Database support will not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("sqlite3"));
-        mpHost->postMessage(msg);
+    loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("utf8"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("utf8.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("utf8"));
-        mpHost->postMessage(msg);
+    loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("lua-utf8"), QString(), QLatin1String("lua-utf8"), QLatin1String("utf8"));
+    if (!loaded) {
+        loadLuaModule(modLoadMessageQueue, QLatin1String("utf8"), tr("utf8.* Lua functions won't be available."));
+    }
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("yajl"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("yajl.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("yajl"));
-        mpHost->postMessage(msg);
+    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
     QString tn = "atcp";

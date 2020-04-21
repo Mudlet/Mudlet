@@ -1,15 +1,16 @@
+-- for appveyor
+mingw_base_dir = os.getenv("MINGW_BASE_DIR")
+package.path = package.path .. ";"..mingw_base_dir.."/share/lua/5.1/?.lua"
+
 local argparse = require "argparse"
-local http_request = require "http.request"
 local lunajson = require "lunajson"
-local pretty = require"pl.pretty"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
 loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
 loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
-parser:option("-o --os", "OS: win/linux/mac")
-parser:option("-a --architecture", "archite")
+parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
 local args = parser:parse()
 
 local MAX_COMMITS_PER_CHANGELOG = 100
@@ -31,6 +32,14 @@ function os.capture(cmd, raw)
   s = string.gsub(s, '%s+$', '')
   s = string.gsub(s, '[\n\r]+', ' ')
   return s
+end
+
+function read_file(path)
+    local file = io.open(path, "rb")
+    if not file then return nil end
+    local content = file:read "*a"
+    file:close()
+    return content
 end
 
 function extract_released_sha1s(input)
@@ -55,17 +64,8 @@ function extract_historical_sha1s()
   return t
 end
 
-function get_releases(os, architecture)
-  assert(os, "get_releases: os must be provided")
-  assert(architecture, "get_releases: architecture must be provided")
-
-  local headers, stream = assert(http_request.new_from_uri(string.format("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/%s/%s", os, architecture)):go())
-  local body = assert(stream:get_body_as_string())
-  local status = headers:get ":status"
-  if status ~= "200" then
-    error(string.format("%s/%s release feed failed to retrieve: %s %s", os, architecture, status, tostring(body)))
-  end
-  return body
+function get_releases(location)
+  return read_file(location)
 end
 
 -- returns a list of commits that have been added since the last release
@@ -112,7 +112,7 @@ function convert_to_html(text)
 end
 
 local historical_commits = extract_historical_sha1s()
-local released_commits = extract_released_sha1s(get_releases(args.os, args.architecture))
+local released_commits = extract_released_sha1s(get_releases(args.releasefile))
 local unpublished_commits = scan_commits(historical_commits, released_commits)
 
 if table.is_empty(unpublished_commits) then os.exit(1) end

@@ -46,6 +46,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QToolBar>
+#include <QScrollBar>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -173,7 +174,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
-    setWindowTitle(mpHost->getName());
+    const QString hostName{mpHost->getName()};
+    setWindowTitle(hostName);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
     auto statusBar = new QStatusBar(this);
     statusBar->setSizeGripEnabled(true);
@@ -247,6 +249,44 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    // edbee editor find area
+    mpSourceEditorFindArea = new dlgSourceEditorFindArea(mpSourceEditorEdbee);
+    mpSourceEditorEdbee->horizontalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
+    mpSourceEditorFindArea->hide();
+
+    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_move_source_find);
+    connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_close_source_find);
+
+    auto openSourceFindAction = new QAction(this);
+    openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
+    mpSourceEditorArea->addAction(openSourceFindAction);
+    connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_open_source_find);
+
+    QAction* closeSourceFindAction = new QAction(this);
+    closeSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
+    mpSourceEditorArea->addAction(closeSourceFindAction);
+    connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
+
+    QAction* sourceFindNextAction = new QAction(this);
+    sourceFindNextAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindNextAction->setShortcut(QKeySequence(QKeySequence::FindNext));
+    mpSourceEditorArea->addAction(sourceFindNextAction);
+    connect(sourceFindNextAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_next);
+
+    QAction* sourceFindPreviousAction = new QAction(this);
+    sourceFindPreviousAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
+    mpSourceEditorArea->addAction(sourceFindPreviousAction);
+    connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_previous);
+
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
@@ -299,10 +339,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpErrorConsole->hide();
 
-    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
-                                                                 "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
-                                                                 "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
-                                                                 "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
+    button_toggleSearchAreaResults->setStyleSheet(QStringLiteral("QToolButton::on {border-image: url(:/icons/arrow-down_grey.png);} "
+                                                                 "QToolButton {border-image: url(:/icons/arrow-right_grey.png);} "
+                                                                 "QToolButton::on:hover {border-image: url(:/icons/arrow-down.png);} "
+                                                                 "QToolButton:hover {border-image: url(:/icons/arrow-right.png);}"));
     connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
@@ -526,6 +566,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(saveAction);
+    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
+                               // Intentional comment to separate arguments
+                               "This is the toolbar that is initally placed at the top of the editor.")
+                            .arg(hostName));
 
     toolBar->addSeparator();
 
@@ -558,7 +602,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(showDebugAreaAction);
 
     toolBar2->setMovable(true);
-
+    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
+                                // Intentional comment to separate arguments
+                                "This is the toolbar that is initally placed at the left side of the editor.")
+                             .arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     QMainWindow::addToolBar(Qt::LeftToolBarArea, toolBar2);
@@ -7089,6 +7136,73 @@ void dlgTriggerEditor::slot_toggle_active()
     }
 }
 
+void dlgTriggerEditor::slot_move_source_find()
+{
+    int x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
+    int y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
+    if (mpSourceEditorEdbee->verticalScrollBar()->isVisible()) {
+        x = x - mpSourceEditorEdbee->verticalScrollBar()->width();
+    }
+    if (mpSourceEditorEdbee->horizontalScrollBar()->isVisible()) {
+        y = y - mpSourceEditorEdbee->horizontalScrollBar()->height();
+    }
+    mpSourceEditorFindArea->move(x, y);
+    mpSourceEditorFindArea->update();
+}
+
+void dlgTriggerEditor::slot_open_source_find()
+{
+    slot_move_source_find();
+    mpSourceEditorFindArea->show();
+    mpSourceEditorFindArea->lineEdit_findText->setFocus();
+    mpSourceEditorFindArea->lineEdit_findText->selectAll();
+}
+
+void dlgTriggerEditor::slot_close_source_find()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();
+    controller->update();
+    mpSourceEditorFindArea->hide();
+    mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_source_find_previous()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findPrev(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
+    slot_move_source_find();
+}
+
+void dlgTriggerEditor::slot_source_find_next()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setCaseSensitive(false);
+    searcher->findNext(mpSourceEditorEdbee);
+    controller->scrollCaretVisible();
+    controller->update();
+    slot_move_source_find();
+}
+
+void dlgTriggerEditor::slot_source_find_text_changed()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto searcher = controller->textSearcher();
+    controller->borderedTextRanges()->clear();
+    controller->textSelection()->range(0).clearSelection();
+    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->markAll(controller->borderedTextRanges());
+    controller->update();
+}
+
 void dlgTriggerEditor::slot_delete_item()
 {
     switch (mCurrentView) {
@@ -8236,6 +8350,12 @@ bool dlgTriggerEditor::event(QEvent* event)
     return QMainWindow::event(event);
 }
 
+void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
+{
+    if (mpSourceEditorArea->isVisible()) {
+        slot_move_source_find();
+    }
+}
 
 void dlgTriggerEditor::slot_key_grab()
 {
@@ -8537,6 +8657,7 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 
 void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString& initialText)
 {
+    mpSourceEditorFindArea->hide();
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
@@ -8891,6 +9012,9 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
         mTimerEditorSplitterState = splitter_right->saveState();
     } else if (mpVarsMainArea->isVisible()) {
         mVarEditorSplitterState = splitter_right->saveState();
+    }
+    if (mpSourceEditorFindArea->isVisible()) {
+        slot_move_source_find();
     }
 }
 

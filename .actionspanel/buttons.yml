@@ -1,0 +1,4 @@
+buttons:
+  - title: Update autocompletion
+    action: "update-autocompletion"
+    description: Update autocompletion json to latest from the manual

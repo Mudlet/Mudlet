@@ -32,6 +32,7 @@
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
@@ -131,8 +132,17 @@ enum TMXPMode
     MXP_MODE_TEMP_SECURE
 };
 
-class TBuffer
-{
+struct MxpEvent {
+    QString name;
+    QMap<QString, QString> attrs;
+    QStringList actions;
+
+    MxpEvent(QString name, QMap<QString, QString> attrs, QStringList actions)
+            : name(name), attrs(attrs), actions(actions)
+    {}
+};
+
+class TBuffer {
     // private - a map of computer-friendly encoding names as keys,
     // value is the encoding data.
     // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
@@ -195,6 +205,7 @@ public:
     void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
 
+    QQueue<MxpEvent> mMxpEvents;
 
     std::deque<TChar> bufferLine;
     std::deque<std::deque<TChar>> buffer;
@@ -269,7 +280,7 @@ private:
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
-    QString processSupportsRequest(const QString &attributes);
+    QString processSupportsRequest(const QString& attributes);
     void decodeSGR(const QString&);
     void decodeSGR38(const QStringList&, bool isColonSeparated = true);
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);

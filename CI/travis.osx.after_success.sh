@@ -9,7 +9,6 @@ fi
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
-
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
   # setup macOS keychain for code signing on development builds only,

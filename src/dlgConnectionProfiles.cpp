@@ -210,11 +210,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl()) {
         port_ssl_tsl->setEnabled(true);
-    } else
+    } else {
 #endif
-    {
         port_ssl_tsl->setEnabled(false);
+#if !defined(QT_NO_SSL)
     }
+#endif
 
     mRegularPalette.setColor(QPalette::Text, QColor(0, 0, 192));
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
