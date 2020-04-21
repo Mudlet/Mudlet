@@ -23,7 +23,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMxpTagDetector.h"
 #include "TMxpTagProcessor.h"
 #include "TEntityHandler.h"
 #include "TMxpNodeBuilder.h"
@@ -52,8 +51,6 @@ class TMxpProcessor {
 
     TEntityHandler mEntityHandler;
 
-    // delegated handlers
-    TMxpTagDetector mMxpTagDetector;
     TMxpNodeBuilder mMxpTagBuilder;
     TMxpTagProcessor mMxpTagProcessor;
 

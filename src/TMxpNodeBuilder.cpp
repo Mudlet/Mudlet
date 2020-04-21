@@ -206,3 +206,8 @@ MxpNode* TMxpNodeBuilder::buildNode()
     mHasNode = false;
     return node;
 }
+void TMxpNodeBuilder::reset()
+{
+    resetCurrentTag();
+    mCurrentText.clear();
+}

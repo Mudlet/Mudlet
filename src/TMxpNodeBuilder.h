@@ -83,6 +83,8 @@ public:
     MxpNode* buildNode();
     MxpTag* buildTag();
 
+    void reset();
+
     inline bool hasTag() const
     {
         return isTag() && hasNode();

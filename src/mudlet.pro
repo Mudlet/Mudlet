@@ -519,7 +519,6 @@ SOURCES += \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
     MxpTag.cpp \
-    TMxpTagDetector.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
@@ -620,7 +619,6 @@ HEADERS += \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
     MxpTag.h \
-    TMxpTagDetector.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
