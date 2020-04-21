@@ -23,25 +23,22 @@
 #ifndef MUDLET_MXPENTITYRESOLVER_H
 #define MUDLET_MXPENTITYRESOLVER_H
 
-#include <QString>
 #include <QHash>
+#include <QString>
 #include <functional>
 
-class TEntityResolver {
-    QHash<QString, QString> entities;
+class TEntityResolver
+{
+    QHash<QString, QString> mEntititesMap;
 
 public:
-    static const QHash<QString, QString> standardEntities;
+    static const QHash<QString, QString> scmStandardEntites;
+    static const TEntityResolver scmDefaultResolver;
 
-    inline bool registerEntity(const QString& entity, const QChar ch)
-    {
-        return registerEntity(entity, QString(ch));
-    }
 
-    inline bool registerEntity(const QString& entity, const char ch)
-    {
-        return registerEntity(entity, QChar(ch));
-    }
+    inline bool registerEntity(const QString& entity, const QChar ch) { return registerEntity(entity, QString(ch)); }
+
+    inline bool registerEntity(const QString& entity, const char ch) { return registerEntity(entity, QChar(ch)); }
 
     bool registerEntity(const QString& entity, const QString& str);
 
@@ -52,7 +49,7 @@ public:
     static QString resolveCode(const QString& entityValue, int base);
     static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
 
-    QString interpolate(const QString &input) const;
+    QString interpolate(const QString& input) const;
 };
 
 #endif //MUDLET_MXPENTITYRESOLVER_H

@@ -19,8 +19,10 @@
 
 #ifndef MUDLET_SRC_TSTRUTILS_H
 #define MUDLET_SRC_TSTRUTILS_H
+
 #include <QString>
 #include <QStringList>
+#include <functional>
 
 class TStrUtils {
 public:

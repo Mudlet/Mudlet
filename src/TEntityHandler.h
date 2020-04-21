@@ -25,16 +25,18 @@
 #include "TEntityResolver.h"
 #include <QDebug>
 // Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
-class TEntityHandler {
+class TEntityHandler
+{
 private:
+    const TEntityResolver* mpEntityResolver;
+
     QString mCurrentEntity;
     bool mIsResolved;
     char mResult;
+
 public:
-    TEntityHandler() : mIsResolved(false), mResult(0) {
-        qDebug() << "CONSTRUCT TENtity Handler:";
-    }
-    TEntityResolver mEntityResolver;
+    TEntityHandler() : TEntityHandler(&TEntityResolver::scmDefaultResolver) {}
+    explicit TEntityHandler(const TEntityResolver* pResolver) : mpEntityResolver(pResolver), mIsResolved(false), mResult(0) {}
 
     bool handle(char ch);
     void reset();

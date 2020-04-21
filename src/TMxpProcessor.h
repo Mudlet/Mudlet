@@ -42,14 +42,17 @@ class TMxpProcessor
     TMXPMode mMXP_DEFAULT;
 
     // MXP delegated handlers
-    TEntityHandler mEntityHandler;
     TMxpNodeBuilder mMxpTagBuilder;
     TMxpTagProcessor mMxpTagProcessor;
+    TEntityHandler mEntityHandler;
 
     TMxpClient* mpMxpClient;
 
 public:
-    TMxpProcessor(TMxpClient* pMxpClient) : mMxpTagBuilder(true), mMXP(false), mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN), mpMxpClient(pMxpClient)
+    TMxpProcessor(TMxpClient* pMxpClient)
+    : mMXP(false)
+    , mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
+    , mMxpTagBuilder(true), mEntityHandler(&mMxpTagProcessor.getEntityResolver()), mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }

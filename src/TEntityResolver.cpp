@@ -26,17 +26,15 @@ QString TEntityResolver::getResolution(const QString& entity) const
         return entity;
     }
 
-    auto ptr = entities.find(entity.toLower());
-    if (ptr != entities.end())
+    auto ptr = mEntititesMap.find(entity.toLower());
+    if (ptr != mEntititesMap.end())
         return *ptr;
 
-    ptr = standardEntities.find(entity.toLower());
-    if (ptr != standardEntities.end())
-        return *ptr;
+    auto stdPtr = scmStandardEntites.find(entity.toLower());
+    if (stdPtr != scmStandardEntites.end())
+        return *stdPtr;
 
-    return entity[1] == '#'
-           ? resolveCode(entity.mid(2, entity.size() - 3))
-           : entity;
+    return entity[1] == '#' ? resolveCode(entity.mid(2, entity.size() - 3)) : entity;
 }
 
 bool TEntityResolver::registerEntity(const QString& entity, const QString& str)
@@ -44,15 +42,13 @@ bool TEntityResolver::registerEntity(const QString& entity, const QString& str)
     if (entity.front() != '&' || entity.back() != ';')
         return false;
 
-    entities[entity.toLower()] = str;
+    mEntititesMap[entity.toLower()] = str;
     return true;
 }
 
 QString TEntityResolver::resolveCode(const QString& entityValue)
 {
-    return entityValue.front() == 'x'
-           ? resolveCode(entityValue.mid(1), 16)
-           : resolveCode(entityValue, 10);
+    return entityValue.front() == 'x' ? resolveCode(entityValue.mid(1), 16) : resolveCode(entityValue, 10);
 }
 
 QString TEntityResolver::resolveCode(const QString& entityValue, int base)
@@ -93,7 +89,10 @@ QString TEntityResolver::interpolate(const QString& input) const
     return interpolate(input, [this](const QString& it) { return getResolution(it); });
 }
 
-const QHash<QString, QString> TEntityResolver::standardEntities = {
+const TEntityResolver TEntityResolver::scmDefaultResolver = TEntityResolver();
+
+// clang-format off
+const QHash<QString, QString> TEntityResolver::scmStandardEntites = {
         {QStringLiteral("&tab;"), QStringLiteral("\t")},
         {QStringLiteral("&newline;"), QStringLiteral("\n")},
         {QStringLiteral("&excl;"), QStringLiteral("!")},
@@ -159,4 +158,4 @@ const QHash<QString, QString> TEntityResolver::standardEntities = {
         {QStringLiteral("&frac34;"), QStringLiteral("¾")},
         {QStringLiteral("&iquest;"), QStringLiteral("¿")}
 };
-
+// clang-format on
