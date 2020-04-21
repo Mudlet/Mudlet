@@ -25,6 +25,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QEvent>
 #include <QMutex>
@@ -553,7 +555,6 @@ public:
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-    void encodingChanged(const QString&);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);

@@ -3657,26 +3657,61 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QStringList knownEncodings{};
-    {
-        auto adjustEncoding = [](auto encodingName) {
-            auto originalEncoding = encodingName;
-            if (encodingName.startsWith("M_")) {
-                encodingName.remove(0, 2);
-            }
-
-            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
-        };
-        for (const auto& encoding : host.mTelnet.getEncodingsList()) {
-            knownEncodings.append(adjustEncoding(encoding));
+    QByteArrayList knownEncodings{"\"ASCII\""};
+    auto adjustEncoding = [](auto encodingName) {
+        auto originalEncoding = encodingName;
+        if (encodingName.startsWith("M_")) {
+            encodingName.remove(0, 2);
         }
-        knownEncodings.sort(Qt::CaseInsensitive);
+
+        return (originalEncoding == encodingName) ? "\"" + originalEncoding + "\""
+                                                  : ("\"" + encodingName + "\" (\"" + originalEncoding + "\")");
+    };
+    for (const auto& encoding : host.mTelnet.getEncodingsList()) {
+        knownEncodings.append(adjustEncoding(encoding));
     }
 
-    host.postMessage(tr("[ INFO ]  - Available encodings:"));
-    host.postMessage(QStringLiteral("  %1").arg(knownEncodings.join(QStringLiteral(", "))));
+    QString encodingNames{QLatin1String(knownEncodings.join(", "))};
+    encodingNames.append(QLatin1Char('.'));
+    // Have to wrap the above message as it is going to be too wide to fit on
+    // the screen. Split it at comma+space, keeping comma and
+    // replacing space with linefeed:
+    int startLineIndex = 0;
+    const QString needle = QStringLiteral(", ");
+    const int maxLineLength = 79;
+    int endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), maxLineLength);
+    // encodingNames.at(endLineIndex) should be on the last comma position in
+    // what will become the first line
+    encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
+    while (encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength) >= 0) {
+        // There is still a "needle" in the considered part of the haystack!
+        startLineIndex = endLineIndex + 2;
+        endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), startLineIndex + maxLineLength);
 
-    return 0;
+        encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
+    }
+
+    QByteArray currentEncoding{host.mTelnet.getEncoding()};
+    if (currentEncoding.isEmpty()) {
+        currentEncoding = "\"ASCII\"";
+    } else {
+        currentEncoding = adjustEncoding(currentEncoding);
+    }
+    QString rawMessage{tr("============================== Mudlet Information ==============================\n"
+                          "--------------------------- Server Codec Information ---------------------------\n"
+                          "Current encoding (with internal name if different): %1\n"
+                          "Available encodings (and internal names):\n"
+                          "%2\n"
+                          "===================================== End ======================================\n",
+                          // Intentional comment to separate arguments
+                          "%1 is the current codec in use; %2 is a comma separated list of encoding names "
+                          "(which are always in Engineering English)")
+                       .arg(QLatin1String(currentEncoding),
+                            encodingNames)};
+    host.mpConsole->print(rawMessage, Qt::white, Qt::black);
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
@@ -14438,24 +14473,22 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString newEncoding;
+    QByteArray newEncoding;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        newEncoding = QString::fromUtf8(lua_tostring(L, 1));
     }
-
+    newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
     if (results.first) {
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, results.second.toLatin1().constData());
-        return 2;
     }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, results.second.toLatin1().constData());
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncoding
@@ -14463,11 +14496,19 @@ int TLuaInterpreter::getServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString encoding = host.mTelnet.getEncoding();
+    // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
+    auto sanitizeEncoding = [] (auto encodingName) {
+        if (encodingName.startsWith("M_")) {
+            encodingName.remove(0, 2);
+        }
+        return encodingName;
+    };
+
+    QByteArray encoding = host.mTelnet.getEncoding();
     if (encoding.isEmpty()) {
-        encoding = QLatin1String("ASCII");
+        encoding = "ASCII";
     }
-    lua_pushstring(L, encoding.toLatin1().constData());
+    lua_pushstring(L, sanitizeEncoding(encoding).constData());
     return 1;
 }
 
@@ -14476,13 +14517,21 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    // don't leak if we're using a Mudlet or a Qt-supplied codec to Lua
+    auto sanitizeEncoding = [] (auto encodingName) {
+        if (encodingName.startsWith("M_")) {
+            encodingName.remove(0, 2);
+        }
+        return encodingName;
+    };
+
     lua_newtable(L);
     lua_pushnumber(L, 1);
     lua_pushstring(L, "ASCII");
     lua_settable(L, -3);
     for (int i = 0, total = host.mTelnet.getEncodingsList().count(); i < total; ++i) {
         lua_pushnumber(L, i + 2); // Lua indexes start with 1 but we already have one entry
-        lua_pushstring(L, host.mTelnet.getEncodingsList().at(i).toLatin1().data());
+        lua_pushstring(L, sanitizeEncoding(host.mTelnet.getEncodingsList().at(i)).constData());
         lua_settable(L, -3);
     }
     return 1;

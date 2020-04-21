@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QApplication>
 #include <QChar>
@@ -44,7 +46,6 @@
 #include <string>
 
 class Host;
-
 class QTextCodec;
 
 class TChar
@@ -142,12 +143,10 @@ struct MxpEvent {
 };
 
 class TBuffer {
-    // need to use tr() on encoding names in csmEncodingTable
-    Q_DECLARE_TR_FUNCTIONS(TBuffer)
-
     // private - a map of computer-friendly encoding names as keys,
-    // values are a pair of human-friendly name + encoding data
-    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
+    // value is the encoding data.
+    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
+    static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
@@ -199,13 +198,11 @@ public:
     void paste(QPoint&, TBuffer);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
-    static const QList<QString> getFriendlyEncodingNames();
-    static const QString& getComputerEncoding(const QString& encoding);
+    static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QString&);
+    void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
 
     QQueue<MxpEvent> mMxpEvents;
@@ -355,7 +352,7 @@ private:
     int lastloggedToLine;
     QString lastTextToLog;
 
-    QString mEncoding;
+    QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec;
 };
 
