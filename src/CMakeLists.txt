@@ -110,6 +110,7 @@ set(mudlet_SRCS
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
+    TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TriggerUnit.cpp
     TRoom.cpp
@@ -240,6 +241,7 @@ set(mudlet_HDRS
     TMxpTagParser.h
     TMxpTagProcessor.h
     TMxpSupportTagHandler.cpp
+    TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
     Tree.h
     TriggerUnit.h

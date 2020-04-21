@@ -121,7 +121,9 @@ public:
 
         return true;
     }
+    void publishEntity(const QString& name, const QString& value) override {}
 
+    void setVariable(const QString& name, const QString& value) override {}
 };
 
 #endif //MUDLET_TEST_TMXPSTUBCLIENT_H

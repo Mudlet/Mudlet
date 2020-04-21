@@ -123,9 +123,9 @@ public:
         // TODO: raise mxp event
     }
 
-    void publishEntity(const QString& name, const QString& value) override {
+    void publishEntity(const QString& name, const QString& value) override {}
 
-    }
+    void setVariable(const QString& name, const QString& value) override {}
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
     {

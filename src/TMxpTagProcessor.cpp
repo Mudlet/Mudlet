@@ -34,6 +34,7 @@
 #include "TMxpSupportTagHandler.h"
 #include "TMxpTagHandlerResult.h"
 #include "TMxpTagParser.h"
+#include "TMxpVarTagHandler.h"
 #include "TMxpVersionTagHandler.h"
 
 TMxpTagHandlerResult TMxpTagProcessor::process(TMxpContext& ctx, TMxpClient& client, const std::string& currentToken)
@@ -75,6 +76,7 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(new TMxpVersionTagHandler());
     registerHandler(new TMxpSupportTagHandler());
 
+    registerHandler(TMxpFeatureOptions({"var", {"publish"}}), new TMxpVarTagHandler());
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
     registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt"}}), new TMxpSendTagHandler());
     registerHandler(TMxpFeatureOptions({"a", {"href", "hint"}}), new TMxpLinkTagHandler());
