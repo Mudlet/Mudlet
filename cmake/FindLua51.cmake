@@ -52,8 +52,9 @@ if(LUA_LIBRARY)
      AND NOT BEOS
      AND NOT HAIKU)
     find_library(LUA_MATH_LIBRARY m)
+    find_library(LUA_DL_LIBRARY dl)
     set(LUA_LIBRARIES
-        "${LUA_LIBRARY};${LUA_MATH_LIBRARY}"
+        "${LUA_LIBRARY};${LUA_MATH_LIBRARY};${LUA_DL_LIBRARY}"
         CACHE STRING "Lua Libraries")
     # For Windows and Mac, don't need to explicitly include the math library
   else()
@@ -87,5 +88,5 @@ if(Lua51_FOUND AND NOT TARGET LUA51::LUA51)
     LUA51::LUA51
     PROPERTIES IMPORTED_LOCATION "${LUA_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES
                                                   "${LUA_INCLUDE_DIR}"
-               INTERFACE_LINK_LIBRARIES "${LUA_MATH_LIBRARY}")
+               INTERFACE_LINK_LIBRARIES "${LUA_MATH_LIBRARY};${LUA_DL_LIBRARY}")
 endif()

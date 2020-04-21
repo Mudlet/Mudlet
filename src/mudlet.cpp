@@ -4995,7 +4995,7 @@ void mudlet::slot_update_installed()
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
-    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
+    dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
 }
 
