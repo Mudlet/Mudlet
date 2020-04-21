@@ -14817,6 +14817,64 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
+void
+TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
+    lua_State *L = pGlobalLua;
+    lua_getglobal(L, "mxp");
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "mxp");
+        lua_getglobal(L, "mxp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: mxp table not defined";
+            return;
+        }
+    }
+
+    lua_newtable(L);
+    lua_setfield(L, -2, type.toUtf8().toLower().constData());
+    lua_getfield(L, -1, type.toUtf8().toLower().constData());
+    if (!lua_istable(L, -1)) {
+        qDebug() << "ERROR: 'mxp." << type << "' table could not be defined";
+        return;
+    }
+
+    QMapIterator<QString, QString> itr(attrs);
+    while (itr.hasNext()) {
+        itr.next();
+        lua_pushstring(L, itr.value().toUtf8().constData());
+        lua_setfield(L, -2, itr.key().toUtf8().toLower().constData());
+    }
+
+    lua_newtable(L);
+    lua_setfield(L, -2, "actions");
+    lua_getfield(L, -1, "actions");
+    for (int i = 0; i < actions.size(); i++) {
+        lua_pushstring(L, actions[i].toUtf8().constData());
+        lua_rawseti(L, -2, i + 1);
+    }
+
+    lua_pop(L, lua_gettop(L));
+
+
+    TEvent event{};
+    QString token("mxp");
+    token.append(".");
+    token.append(type.toUtf8().toLower().constData());
+
+    event.mArgumentList.append(token);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+    Host &host = getHostFromLua(L);
+    if (mudlet::debugMode) {
+        QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg("mxp", token);
+        host.mpConsole->printSystemMessage(msg);
+    }
+    host.raiseEvent(event);
+}
+
+
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
