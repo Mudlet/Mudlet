@@ -2152,6 +2152,8 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
         TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f);
     }
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 TConsole* TConsole::createBuffer(const QString& name)
