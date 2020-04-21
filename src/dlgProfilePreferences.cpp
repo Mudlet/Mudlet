@@ -880,15 +880,27 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         widget_playerRoomStyle->hide();
     }
 
-    comboBox_encoding->addItem(QLatin1String("ASCII"));
-    comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
+    comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
+    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
+        auto encodingTitle = mudlet::self()->getEncodingNamesMap().value(encoding, tr("%1 (*Error, report to Mudlet Makers*)",
+                                                                                      // Intentional comment to separate arguments
+                                                                                      "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
+                                                                         .arg(QLatin1String(encoding)));
+        comboBox_encoding->addItem(encodingTitle, encoding);
+    }
     if (pHost->mTelnet.getEncoding().isEmpty()) {
         // cTelnet::mEncoding is (or should be) empty for the default 7-bit
         // ASCII case, so need to set the control specially to its (the
         // first) value
         comboBox_encoding->setCurrentIndex(0);
     } else {
-        comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
+        int currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
+        if (currentIndex >=0) {
+            comboBox_encoding->setCurrentIndex(currentIndex);
+        } else {
+            // invalid or not found - so reset to ASCII:
+            comboBox_encoding->setCurrentIndex(0);
+        }
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
@@ -1051,7 +1063,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::copyMap);
     connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::loadMap);
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::saveMap);
-    connect(comboBox_encoding, &QComboBox::currentTextChanged, this, &dlgProfilePreferences::slot_setEncoding);
+    connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
@@ -2675,11 +2687,11 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
+void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+        pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
         if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
             // We are linking the Server encoding to this setting currently

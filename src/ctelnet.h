@@ -145,7 +145,7 @@ public:
     void atcpComposerSave(QString);
     void setDisplayDimensions();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QString&);
+    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
@@ -154,13 +154,10 @@ public:
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
+    const QByteArray & getEncoding() const { return mEncoding; }
+    QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
-    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
-    const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding() const;
+    const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -271,7 +268,7 @@ private:
 
     int curX, curY;
     QString termType;
-    QString mEncoding;
+    QByteArray mEncoding;
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mLF_ON_GA;
@@ -301,12 +298,13 @@ private:
     bool loadingReplay;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua;
-    QStringList mAcceptableEncodings;
-    QStringList mFriendlyEncodings;
+    QByteArrayList mAcceptableEncodings;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
+    // Same sort of thing if an encoder fails to be found/loaded:
+    bool mEncoderFailureNoticeIssued;
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;

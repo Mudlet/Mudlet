@@ -35,6 +35,7 @@
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -95,6 +96,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
 , mEncodingWarningIssued(false)
+, mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
 {
     mIsTimerPosting = false;
@@ -104,7 +106,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
-    encodingChanged(QStringLiteral("UTF-8"));
+    encodingChanged("UTF-8");
     termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QStringLiteral(APP_BUILD));
@@ -116,22 +118,15 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     curX = 80;
     curY = 25;
 
+    // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
-        mAcceptableEncodings << QStringLiteral("UTF-8");
-        mAcceptableEncodings << QStringLiteral("GBK");
-        mAcceptableEncodings << QStringLiteral("GB18030");
-        mAcceptableEncodings << QStringLiteral("Big5");
-        mAcceptableEncodings << QStringLiteral("ISO 8859-1");
-        mAcceptableEncodings << TBuffer::getComputerEncodingNames();
-    }
-
-    if (mFriendlyEncodings.isEmpty()) {
-        mFriendlyEncodings << QStringLiteral("UTF-8");
-        mFriendlyEncodings << QStringLiteral("GBK");
-        mFriendlyEncodings << QStringLiteral("GB18030");
-        mFriendlyEncodings << QStringLiteral("Big5");
-        mFriendlyEncodings << QStringLiteral("ISO 8859-1");
-        mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
+        mAcceptableEncodings << "UTF-8";
+        mAcceptableEncodings << "GBK";
+        mAcceptableEncodings << "GB18030";
+        mAcceptableEncodings << "BIG5";
+        mAcceptableEncodings << "BIG5-HKSCS";
+        mAcceptableEncodings << "ISO 8859-1";
+        mAcceptableEncodings << TBuffer::getEncodingNames();
     }
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
@@ -226,30 +221,54 @@ cTelnet::~cTelnet()
     socket.deleteLater();
 }
 
-
-void cTelnet::encodingChanged(const QString& encoding)
+// This configures two out of three of the QTextCodec used by this profile:
+// 1) A single or multi-byte encoder for all outgoing data
+// 2) A single or multi-byte encoder for incoming OutOfBand data
+// There is one more:
+// 3) A multi-byte ONLY decoder for incoming InBand data, set in:
+// the (void) TBuffer::encodingChanged(...) method and used in
+// the (bool) TBuffer::processXXXSequence(...) methods {where XXX is "UTF8",
+// "Big5" or "GB").
+// We have a few substute TTextCodecs that are derived from the QTextCodec
+// class and they all have a name the same as the ones we hoped that Qt would
+// provide except they have a "M_" prefix. We, however hide that detail from the
+// user so the value supplied as an argument MAY need to be matched against
+// the prefixed name or not:
+void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 {
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
+    // If there is a match in mAcceptableEncodings with an "M_" prefix then we
+    // need to add on that prefix:
+    QByteArray encoding = mAcceptableEncodings.contains("M_" + requestedEncoding) ? "M_" + requestedEncoding : requestedEncoding;
     if (mEncoding != encoding) {
         mEncoding = encoding;
         mEncodingWarningIssued = false;
+        mEncoderFailureNoticeIssued = false;
         // Not currently used as we do it by hand as we have to extract the data
         // from the telnet protocol and all the out-of-band stuff.  It might be
         // possible to use this in the future for non-UTF-8 traffic though.
-//    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+//    incomingDataCodec = QTextCodec::codecForName(encoding);
 //    incomingDataDecoder = incomingDataCodec->makeDecoder();
 
-        outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+        outgoingDataCodec = QTextCodec::codecForName(encoding);
         // Do NOT create BOM on out-going text data stream!
-        outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        if (outgoingDataCodec) {
+            outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        } else {
+            outgoingDataEncoder = nullptr;
+        }
 
-        if (!mEncoding.isEmpty() && mEncoding != QLatin1String("ASCII")) {
-            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding.toLatin1().constData());
-            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+        if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
+            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding);
+            if (mpOutOfBandDataIncomingCodec) {
+                qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+            } else {
+                qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate a codec for OOB protocols that can handle: " << mEncoding;
+            }
 
         } else if (mpOutOfBandDataIncomingCodec) {
             // Will get here if the encoding is ASCII (or empty which is treated
@@ -263,12 +282,6 @@ void cTelnet::encodingChanged(const QString& encoding)
         // profile to change its QTextCodec to match as it now checks for
         // changes here on each incoming packet
     }
-}
-
-// returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
-const QString& cTelnet::getComputerEncoding(const QString& encoding)
-{
-    return TBuffer::getComputerEncoding(encoding);
 }
 
 #if !defined(QT_NO_SSL)
@@ -293,23 +306,18 @@ QString cTelnet::errorString()
     return socket.errorString();
 }
 
-// returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
-const QString& cTelnet::getFriendlyEncoding() const
-{
-    int index = mAcceptableEncodings.indexOf(mEncoding);
-    return mFriendlyEncodings.at(index);
-}
-
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-// saveValue: if true, record this setting, otherwise it is ephemereal for this session
-QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool saveValue)
+// saveValue: if false do not bother to save the setting as a profile setting
+// to the filesystem (because we have just read it from there!) otherwise, and
+// by default, do save it:
+QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const bool saveValue)
 {
-    QString reportedEncoding = newEncoding;
-    if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
-        reportedEncoding = QStringLiteral("ASCII");
+    QByteArray reportedEncoding = newEncoding;
+    if (newEncoding.isEmpty() || newEncoding == "ASCII") {
+        reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
             // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
@@ -320,16 +328,35 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
-    } else if (!mAcceptableEncodings.contains(newEncoding)) {
-        // Not in list - so reject it
+    } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
+        // Not in list (even with a "M_" prefix that indicates the relevant
+        // QTextCodec is actually one of our own TTextCodecs) - so reject it
+        // Since we want to hide the implimentation detail that some of the
+        // encoding names could have a "M_"  prefix we will need to preprocess
+        // the list of encodings.
+        // Since the mAcceptableEncodings list is unchanging once it has been
+        // populated we only need to do this once and can save the results for
+        // reuse - in hindsight this is undoing part of:
+        // TBuffer::getEncodingNames() !
+        static QByteArrayList fixedUpEncodings;
+        if (fixedUpEncodings.isEmpty()) {
+            fixedUpEncodings = mAcceptableEncodings;
+            QMutableByteArrayListIterator itEncoding(fixedUpEncodings);
+            while (itEncoding.hasNext()) {
+                auto checkEncoding{itEncoding.next()};
+                if (checkEncoding.left(2) == "M_") {
+                    itEncoding.setValue(checkEncoding.mid(2));
+                }
+            }
+        }
         return qMakePair(false,
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                                 % mAcceptableEncodings.join(QLatin1String(R"(", ")"))
+                                 % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
-    } else if (mEncoding != newEncoding) {
+    } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
         if (saveValue) {
-            mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
+            mpHost->writeProfileData(QStringLiteral("encoding"), QLatin1String(mEncoding));
         }
     }
 
@@ -610,20 +637,35 @@ bool cTelnet::sendData(QString& data)
             "Note: this warning will only be issued once, even if this happens again, until\n"
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
-            if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr(errorMsgTemplate,
-                                      "%1 is the name of the encoding currently set.").arg(mEncoding);
-                postMessage(errorMsg);
-                mEncodingWarningIssued = true;
+            if (outgoingDataEncoder) {
+                if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
+                    QString errorMsg = tr(errorMsgTemplate,
+                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                    postMessage(errorMsg);
+                    mEncodingWarningIssued = true;
+                }
+                // Even if there are bad characters - try to send it anyway...
+                outData = outgoingDataEncoder->fromUnicode(data).constData();
+            } else {
+                if (!mEncoderFailureNoticeIssued) {
+                    postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"
+                                   "so Mudlet cannot send data in that format to the Game Server. Please\n"
+                                   "check to see if there is an alternative that the MUD and Mudlet can\n"
+                                   "use. Mudlet will attempt to send the data using the ASCII encoding\n"
+                                   "but will be limited to only unaccented characters of basic English.\n"
+                                   "Note: this warning will only be issued once, until the encoding is\n"
+                                   "changed.").arg(QLatin1String(mEncoding)));
+                    mEncoderFailureNoticeIssued = true;
+                }
+                // Even if there are unusable characters - try to send it as ASCII ...
+                outData = data.toStdString();
             }
-            // Even if there are bad characters - try to send it anyway...
-            outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                QString errorMsg = tr(errorMsgTemplate,
-                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                    QString errorMsg = tr(errorMsgTemplate,
+                                          "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
