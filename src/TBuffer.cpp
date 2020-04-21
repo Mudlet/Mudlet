@@ -1502,9 +1502,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             match = _rex.match(_tp, _rpos);
                         }
 
+                        QMap<QString, QString> mxp_attrs;
                         if ((_rl1.size() == _rl2.size()) && (!_rl1.empty())) {
                             for (int i = 0; i < _rl1.size(); i++) {
                                 QString _var = _rl1[i];
+                                mxp_attrs[_var] = _rl2[i];
                                 _var.prepend('&');
                                 if (_userTag || _t2.indexOf(_var) != -1) {
                                     _t2 = _t2.replace(_var, _rl2[i]);
@@ -1546,6 +1548,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
                             }
                         }
+
+                        mMxpEvents.enqueue(MxpEvent(_element.name, mxp_attrs, _tl));
 
                         mLinkStore[mLinkID] = _tl;
 

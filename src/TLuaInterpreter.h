@@ -92,6 +92,7 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
