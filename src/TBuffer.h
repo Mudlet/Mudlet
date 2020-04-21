@@ -30,6 +30,7 @@
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
@@ -46,7 +47,8 @@ class Host;
 
 class QTextCodec;
 
-class TChar {
+class TChar
+{
     friend class TBuffer;
 
 public:
@@ -81,39 +83,27 @@ public:
     TChar(const TChar&);
 
     bool operator==(const TChar&);
-    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor)
-    {
+    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
         mFgColor = newForeGroundColor;
         mBgColor = newBackGroundColor;
     }
     // Only considers the following flags: Bold, Italic, Overline, Reverse,
     // Strikeout, Underline, does not consider Echo:
-    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes)
-    { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
-    void setForeground(const QColor& newColor)
-    { mFgColor = newColor; }
-    void setBackground(const QColor& newColor)
-    { mBgColor = newColor; }
-    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes)
-    {
+    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
+    void setForeground(const QColor& newColor) { mFgColor = newColor; }
+    void setBackground(const QColor& newColor) { mBgColor = newColor; }
+    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes) {
         setColors(newFgColor, newBgColor);
         setAllDisplayAttributes(newDisplayAttributes);
     }
 
-    const QColor& foreground() const
-    { return mFgColor; }
-    const QColor& background() const
-    { return mBgColor; }
-    AttributeFlags allDisplayAttributes() const
-    { return mFlags & TestMask; }
-    void select()
-    { mIsSelected = true; }
-    void deselect()
-    { mIsSelected = false; }
-    bool isSelected() const
-    { return mIsSelected; }
-    int linkIndex() const
-    { return mLinkIndex; }
+    const QColor& foreground() const { return mFgColor; }
+    const QColor& background() const { return mBgColor; }
+    AttributeFlags allDisplayAttributes() const { return mFlags & TestMask; }
+    void select() { mIsSelected = true; }
+    void deselect() { mIsSelected = false; }
+    bool isSelected() const { return mIsSelected; }
+    int linkIndex () const { return mLinkIndex; }
 
 private:
     QColor mFgColor;
@@ -126,13 +116,15 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
-struct TMxpElement {
+struct TMxpElement
+{
     QString name;
     QString href;
     QString hint;
 };
 
-enum TMXPMode {
+enum TMXPMode
+{
     MXP_MODE_OPEN,
     MXP_MODE_SECURE,
     MXP_MODE_LOCKED,
@@ -151,7 +143,7 @@ struct MxpEvent {
 
 class TBuffer {
     // need to use tr() on encoding names in csmEncodingTable
-Q_DECLARE_TR_FUNCTIONS(TBuffer)
+    Q_DECLARE_TR_FUNCTIONS(TBuffer)
 
     // private - a map of computer-friendly encoding names as keys,
     // values are a pair of human-friendly name + encoding data
@@ -167,31 +159,15 @@ Q_DECLARE_TR_FUNCTIONS(TBuffer)
 
 public:
     TBuffer(Host* pH);
-    QPoint insert(QPoint&,
-                  const QString& text,
-                  int,
-                  int,
-                  int,
-                  int,
-                  int,
-                  int,
-                  bool bold,
-                  bool italics,
-                  bool underline,
-                  bool strikeout);
+    QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format);
-    QString bufferToHtml(const bool showTimeStamp = false,
-                         const int row = -1,
-                         const int endColumn = -1,
-                         const int startColumn = 0,
-                         int spacePadding = 0);
-    int size()
-    { return static_cast<int>(buffer.size()); }
+    QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
+    int size() { return static_cast<int>(buffer.size()); }
     QString& line(int n);
     int find(int line, const QString& what, int pos);
     int wrap(int);
@@ -211,34 +187,19 @@ public:
     void clear();
     QPoint getEndPos();
     void translateToPlainText(std::string& s, bool isFromServer = false);
-    void append(const QString& chunk,
-                int sub_start,
-                int sub_end,
-                const QColor& fg,
-                const QColor& bg,
-                const TChar::AttributeFlags flags = TChar::None,
-                const int linkID = 0);
+    void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
-    void appendLine(const QString& chunk,
-                    const int sub_start,
-                    const int sub_end,
-                    const QColor& fg,
-                    const QColor& bg,
-                    TChar::AttributeFlags flags = TChar::None,
-                    const int linkID = 0);
-    void setWrapAt(int i)
-    { mWrapAt = i; }
-    void setWrapIndent(int i)
-    { mWrapIndent = i; }
+    void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
+    void setWrapAt(int i) { mWrapAt = i; }
+    void setWrapIndent(int i) { mWrapIndent = i; }
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    static const QList<QString> getComputerEncodingNames()
-    { return csmEncodingTable.keys(); }
+    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
     void logRemainingOutput();
@@ -247,7 +208,7 @@ public:
     void encodingChanged(const QString&);
     static int lengthInGraphemes(const QString& text);
 
-    QList<MxpEvent> mMxpEvents;
+    QQueue<MxpEvent> mMxpEvents;
 
     std::deque<TChar> bufferLine;
     std::deque<std::deque<TChar>> buffer;
@@ -314,6 +275,7 @@ public:
     std::string mAssembleRef;
     bool mEchoingText;
 
+
 private:
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
@@ -340,6 +302,7 @@ private:
     // ESC character followed by the ']' one:
     bool mGotOSC;
     bool mIsDefaultColor;
+
 
     QColor mBlack;
     QColor mLightBlack;

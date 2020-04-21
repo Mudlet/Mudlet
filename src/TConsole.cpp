@@ -1246,9 +1246,8 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     mTriggerEngineMode = false;
 
     while (!buffer.mMxpEvents.isEmpty()) {
-        const MxpEvent &event = buffer.mMxpEvents.last();
+        const MxpEvent &event = buffer.mMxpEvents.dequeue();
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
-        buffer.mMxpEvents.removeLast();
     }
 
     double processT = mProcessingTime.elapsed();

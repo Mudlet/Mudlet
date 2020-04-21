@@ -1549,7 +1549,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             }
                         }
 
-                        mMxpEvents.append(MxpEvent(_element.name, mxp_attrs, _tl));
+                        mMxpEvents.enqueue(MxpEvent(_element.name, mxp_attrs, _tl));
 
                         mLinkStore[mLinkID] = _tl;
 
