@@ -8,8 +8,18 @@ jobs:
     name: ${{matrix.os}}
     runs-on: ${{matrix.os}}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest, macos-latest]
+        include:
+          # - os: windows-latest
+          #   triplet: x64-windows
+          - os: ubuntu-latest
+            triplet: x64-linux
+            compiler: gcc_64
+          - os: macos-latest
+            triplet: x64-osx
+            compiler: clang_64
     env:
       qt: "5.14.1"
 
@@ -40,16 +50,22 @@ jobs:
 
     - name: "Set location of vcpkg dependencies"
       env:
-#         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{matrix.triplet}}.txt
-          vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/.vcpkg-osx-dependencies
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
 
-    - name: Install homebrew dependencies
+    - name: (macOS) Install homebrew dependencies
+      if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip
+
+    - name: (Linux) Install apt dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # these aren't available or don't work well in vcpkg
+        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
@@ -66,4 +82,4 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '-G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/clang_64/'
+        cmakeAppendedArgs: -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
