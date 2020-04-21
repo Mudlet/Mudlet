@@ -188,9 +188,9 @@ function Geyser.Container:raise (changeWindowIndex)
     if index == #self.container.windows then
       return
     end
-    local tempValue = self.container.windows[index + 1]
-    self.container.windows[index + 1] = self.name
-    self.container.windows[index] = tempValue
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    self.container.windows[#self.container.windows+1] = tempValue
   end
 end
 
@@ -202,9 +202,9 @@ function Geyser.Container:lower (changeWindowIndex)
     if index == 1 then
       return
     end
-    local tempValue = self.container.windows[index - 1]
-    self.container.windows[index - 1] = self.name
-    self.container.windows[index] = tempValue
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    table.insert(self.container.windows, 1, tempValue)
   end
 end
 
