@@ -2143,9 +2143,13 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
 {
     if (customFormat) {
         buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
+        mUpperPane->showNewLines();
+        mLowerPane->showNewLines();
     } else {
         TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f);
+        mUpperPane->showNewLines();
+        mLowerPane->showNewLines();
     }
 }
 
