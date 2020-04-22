@@ -11015,7 +11015,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5110"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>poort</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
