@@ -3669,7 +3669,7 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
             return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
         };
         for (const auto& encoding : host.mTelnet.getEncodingsList()) {
-            knownEncodings.append(QString(adjustEncoding(encoding)));
+            knownEncodings.append(adjustEncoding(QString(encoding)));
         }
         knownEncodings.sort(Qt::CaseInsensitive);
 
