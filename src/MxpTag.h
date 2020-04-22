@@ -39,7 +39,7 @@ public:
 
     MxpTagAttribute(const QString& name, const QString& value) : QPair(name, value) {}
 
-    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, "") {}
+    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, QString::fromLatin1("")) {}
 
     MxpTagAttribute() : QPair() {}
 
@@ -154,7 +154,7 @@ public:
 
     const QString& getAttrValue(int attrIndex) const;
     const QString& getAttrValue(const QString& attrName) const;
-    const QString& getAttrByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = "") const;
+    const QString& getAttrByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = QString::fromLatin1("")) const;
     bool isAttrAt(int pos, const char* attrName);
     inline bool isEmpty() const { return mIsEmpty; }
 

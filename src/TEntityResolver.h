@@ -38,7 +38,7 @@ public:
 
     inline bool registerEntity(const QString& entity, const QChar ch) { return registerEntity(entity, QString(ch)); }
 
-    inline bool registerEntity(const QString& entity, const char ch) { return registerEntity(entity, QChar(ch)); }
+    inline bool registerEntity(const QString& entity, const char ch) { return registerEntity(entity, QChar::fromLatin1(ch)); }
 
     bool registerEntity(const QString& entity, const QString& str);
     bool unregisterEntity(const QString& entity);

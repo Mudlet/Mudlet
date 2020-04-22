@@ -163,7 +163,6 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void enableMXP() { mMxpProcessor.enable(); }
     void translateToPlainText(std::string& s, bool isFromServer = false);
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
@@ -190,7 +189,6 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    TLinkStore mLinkStore;
     int mLinesLimit;
     int mBatchDeleteSize;
     int mWrapAt;
@@ -200,8 +198,6 @@ public:
 
 
     // State of MXP systen:
-    TMxpMudlet mMxpClient;
-    TMxpProcessor mMxpProcessor;
     bool mEchoingText;
 
 

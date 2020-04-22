@@ -103,6 +103,7 @@ set(mudlet_SRCS
     TMxpFontTagHandler.cpp
     TMxpLinkTagHandler.cpp
     TMxpNodeBuilder.cpp
+    TMxpMudlet.cpp
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSupportTagHandler.cpp

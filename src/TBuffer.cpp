@@ -124,8 +124,6 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMxpClient(pH, &mLinkStore)
-, mMxpProcessor(&mMxpClient)
 , mEchoingText(false)
 , mGotESC(false)
 , mGotCSI(false)
@@ -272,7 +270,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    int id = mLinkStore.addLinks(command, hint);
+    int id = mpHost->mLinkStore.addLinks(command, hint);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -557,7 +555,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mGotCSI = false;
 
                         QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
-                        mMxpProcessor.setMode(code);
+                        mpHost->mMxpProcessor.setMode(code);
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
@@ -621,9 +619,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled) {
-            if (mMxpProcessor.getMode() != MXP_MODE_LOCKED) {
-                TMxpProcessingResult result = mMxpProcessor.processMxpInput(ch);
+        if (mpHost->mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled) {
+            if (mpHost->mMxpProcessor.getMode() != MXP_MODE_LOCKED) {
+                TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
                 if (result == HANDLER_NEXT_CHAR) {
                     localBufferPosition++;
                     continue;
@@ -636,14 +634,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 //                    localBuffer[localBufferPosition] = ch;
                 }
             } else {
-                mMxpProcessor.processRawInput(ch);
+                mpHost->mMxpProcessor.processRawInput(ch);
             }
 
         }
 
-        if (mMxpProcessor.isEnabled() && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
+        if (mpHost->mMxpProcessor.isEnabled() && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
             // after a newline (but not a <br>) return to default mode
-            mMxpProcessor.resetToDefaultMode();
+            mpHost->mMxpProcessor.resetToDefaultMode();
         }
 
 COMMIT_LINE:
@@ -782,17 +780,17 @@ COMMIT_LINE:
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
-        if (mMxpClient.isInLinkMode()) {
-            c.mLinkIndex = mLinkStore.getCurrentLinkID();
+        if (mpHost->mMxpClient.isInLinkMode()) {
+            c.mLinkIndex = mpHost->mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
         }
 
-        if (mMxpClient.hasFgColor()) {
-            c.mFgColor = mMxpClient.getFgColor();
+        if (mpHost->mMxpClient.hasFgColor()) {
+            c.mFgColor = mpHost->mMxpClient.getFgColor();
         }
 
-        if (mMxpClient.hasBgColor()) {
-            c.mBgColor = mMxpClient.getBgColor();
+        if (mpHost->mMxpClient.hasBgColor()) {
+            c.mBgColor = mpHost->mMxpClient.getBgColor();
         }
 
         if (isTwoTCharsNeeded) {
@@ -2945,7 +2943,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                 }
                 if (!incLinkID) {
                     incLinkID = true;
-                    mLinkStore.addLinks(linkFunction, linkHint);
+                    mpHost->mLinkStore.addLinks(linkFunction, linkHint);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }

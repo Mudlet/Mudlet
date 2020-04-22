@@ -31,7 +31,6 @@ link_libraries(
         Qt5::Widgets)
 
 
-
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
@@ -45,6 +44,7 @@ add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
 
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStrUtils.cpp)
+list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
 
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStrUtils.cpp)
 add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)

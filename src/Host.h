@@ -44,6 +44,10 @@
 #include <QTextStream>
 #include "post_guard.h"
 
+#include "TLinkStore.h"
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
+
 class QDialog;
 class QDockWidget;
 class QPushButton;
@@ -356,6 +360,10 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+
+    TLinkStore mLinkStore;
+    TMxpMudlet mMxpClient;
+    TMxpProcessor mMxpProcessor;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;

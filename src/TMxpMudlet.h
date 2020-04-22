@@ -19,18 +19,19 @@
 #ifndef MUDLET_SRC_TMXPMUDLET_H
 #define MUDLET_SRC_TMXPMUDLET_H
 
-#include "Host.h"
 #include "TEntityResolver.h"
-#include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
 
 #include <QList>
 #include <QQueue>
 
+class Host;
+class TLinkStore;
+
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral("%1%2").arg(APP_VERSION, APP_BUILD);
+    inline static const QString scmVersion = QStringLiteral("%1%2");//.arg(APP_VERSION, APP_BUILD);
 
     Host* mpHost;
     TLinkStore* mpLinkStore;
@@ -41,76 +42,41 @@ public:
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
 
-    TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false) {}
+    TMxpMudlet(Host* pHost, TLinkStore* linkStore);
 
-    virtual QString getVersion() { return scmVersion; }
+    QString getVersion() override;
 
-    virtual void sendToServer(QString& str) { mpHost->mTelnet.sendData(str); }
+    virtual void sendToServer(QString& str);
 
     void setLinkMode(bool val) override { mLinkMode = val; }
 
     bool isInLinkMode() { return mLinkMode; }
 
     QList<QColor> fgColors, bgColors;
-    virtual void pushColor(const QString& fgColor, const QString& bgColor)
-    {
-        pushColor(fgColors, fgColor);
-        pushColor(bgColors, bgColor);
-    }
+    void pushColor(const QString& fgColor, const QString& bgColor) override;
 
-    virtual void popColor()
-    {
-        popColor(fgColors);
-        popColor(bgColors);
-    }
+    void popColor() override;
 
-    static void pushColor(QList<QColor>& stack, const QString& color)
-    {
-        if (color.isEmpty()) {
-            if (!stack.isEmpty()) {
-                stack.push_back(stack.last());
-            }
-        } else {
-            stack.push_back(mapColor(color));
-        }
-    }
+    void pushColor(QList<QColor>& stack, const QString& color);
 
-    static void popColor(QList<QColor>& stack)
-    {
-        if (!stack.isEmpty()) {
-            stack.pop_back();
-        }
-    }
+    void popColor(QList<QColor>& stack);
 
-    bool hasFgColor() { return !fgColors.isEmpty(); }
+    bool hasFgColor() const { return !fgColors.isEmpty(); }
     const QColor& getFgColor() { return fgColors.last(); }
 
-    bool hasBgColor() { return !bgColors.isEmpty(); }
+    bool hasBgColor() const { return !bgColors.isEmpty(); }
 
     const QColor& getBgColor() { return bgColors.last(); }
 
-    static QColor mapColor(const QString& colorName)
-    {
-        if (colorName.startsWith("#")) {
-            return QColor::fromRgb(QRgb(colorName.mid(1).toInt(nullptr, 16)));
-        } else {
-            return QColor(colorName);
-        }
-    }
+    static QColor mapColor(const QString& colorName);
 
     // TODO: implement support for fonts?
     void pushFont(const QString& fontFace, const QString& fontSize) override {}
     void popFont() override {}
 
-    int setLink(const QStringList& links, const QStringList& hints) override { return mpLinkStore->addLinks(links, hints); }
+    int setLink(const QStringList& links, const QStringList& hints) override;
 
-    bool getLink(int id, QStringList** links, QStringList** hints) override
-    {
-        *links = &mpLinkStore->getLinks(id);
-        *hints = &mpLinkStore->getHints(id);
-
-        return true;
-    }
+    bool getLink(int id, QStringList** links, QStringList** hints) override;
 
     bool isBold, isItalic, isUnderline;
 
@@ -127,29 +93,9 @@ public:
 
     void setVariable(const QString& name, const QString& value) override {}
 
-    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override
-    {
-        if (tag->isStartTag()) {
-            if (mpContext->getElementRegistry().containsElement(tag->getName())) {
-                raiseMxpEvent(tag->asStartTag());
-            } else if (tag->isNamed("SEND")) {
-                raiseMxpEvent(tag->asStartTag());
-            }
-        }
+    TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
-        return result;
-    }
-
-    void raiseMxpEvent(MxpStartTag* tag)
-    {
-        TMxpEvent ev;
-        ev.name = tag->getName();
-        for (const auto& attrName : tag->getAttrsNames()) {
-            ev.attrs[attrName] = tag->getAttrValue(attrName);
-        }
-        ev.actions = mpLinkStore->getCurrentLinks();
-        mMxpEvents.enqueue(ev);
-    }
+    void raiseMxpEvent(MxpStartTag* tag);
 };
 
 #endif //MUDLET_SRC_TMXPMUDLET_H

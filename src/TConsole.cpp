@@ -1245,9 +1245,11 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
+    // dequeues MXP events and raise them through the LuaInterpreter
     // TODO: move this somewhere else more appropriate
-    while (!buffer.mMxpClient.mMxpEvents.isEmpty()) {
-        const auto& event = buffer.mMxpClient.mMxpEvents.dequeue();
+    auto &mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 

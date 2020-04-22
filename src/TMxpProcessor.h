@@ -52,7 +52,7 @@ public:
     explicit TMxpProcessor(TMxpClient* pMxpClient)
     : mMXP(false)
     , mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
-    , mMxpTagBuilder(true), mEntityHandler(&mMxpTagProcessor.getEntityResolver()), mpMxpClient(pMxpClient)
+    , mMxpTagBuilder(true), mEntityHandler(mMxpTagProcessor.getEntityResolver()), mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }
