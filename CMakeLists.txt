@@ -108,9 +108,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_SYSTEM_QTKEYCHAIN
-                        OPTION_VARIABLE USE_SYSTEM_QT5KEYCHAIN
-                        READABLE_NAME "system QKeychain (Qt5) library")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
+                        OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
+                        READABLE_NAME "own QKeychain (Qt5) library")
 
 include(InitGitSubmodule)
 
@@ -118,7 +118,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(NOT USE_SYSTEM_QT5KEYCHAIN)
+if(USE_OWN_QT5KEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"

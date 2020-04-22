@@ -321,18 +321,17 @@ if(Qt5Gamepad_FOUND)
   message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
-if(USE_SYSTEM_QT5KEYCHAIN)
+if(USE_OWN_QT5KEYCHAIN)
+  # An extra definition is needed if we are using our own QtKeyChain
+  target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+  message(STATUS "Using own QtKeyChain (Qt5) library.")
+else()
   # Only use this when we are using a system package and NOT our own local build
   find_package(Qt5Keychain REQUIRED)
 
   # No need to test for it being found as the REQUIRED will make it error out
   # if it is NOT found!
-  target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
   message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
-else()
-  # An extra definition is needed if we are using our own QtKeyChain
-  target_compile_definitions(mudlet PRIVATE QTKEYCHAIN_NO_EXPORT)
-  message(STATUS "Using own QtKeyChain (Qt5) library.")
 endif()
 
 target_link_libraries(mudlet qt5keychain)

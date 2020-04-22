@@ -192,19 +192,16 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 
 ######################## System QtKeyChain library ###############
 # To use a system provided QtKeyChain library set the environmental variable
-# WITH_SYSTEM_QTKEYCHAIN variable to "YES" or "QT5" to use one with files
-# located in "qt5keychain" sub-directories or "QT" to use one in "qtkeychain"
-# ones. Note that this is only likely to be useful on \*nix OSes (not MacOS nor
-# Windows). If NOT specified, (or set to "NO" or any other value than those
-# indicated) then the build process will download and link to a locally built
-# copy of the library. This is different to other "WITH_XXX" environmental build
-# variables and is designed to help Linux and other distribution package
-# builders integrate Mudlet into their system - if a system provided one is
-# specified and the library is NOT available (or is the "wrong" one) then the
+# WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
+# useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
+# any other value than "NO" then the build process will download and link to a
+# locally built copy of the library. This is designed to help Linux and other
+# distribution package builders integrate Mudlet into their system - if a system
+# provided one is specified and the library is NOT available then the
 # build will fail both at the compilation and the linking stages.
-SYSTEM_QTKEYCHAIN_TEST = $$upper($$(WITH_SYSTEM_QTKEYCHAIN))
-isEmpty( SYSTEM_QTKEYCHAIN_TEST ) | !equals( SYSTEM_QTKEYCHAIN_TEST, "NO" ) {
-  DEFINES += INCLUDE_SYSTEM_QT5_KEYCHAIN
+OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
+isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
+  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -383,7 +380,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
@@ -398,7 +395,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    !contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
@@ -442,7 +439,7 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-!contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
     } else {
@@ -713,8 +710,15 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
-contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+    !build_pass{
+        message("Including own copy of QtKeyChain library code in this configuration")
+    }
+} else {
     LIBS += -lqt5keychain
+    !build_pass{
+        message("Linking with system QtKeyChain library code in this configuration")
+    }
 }
 
 TRANSLATIONS = $$files(../translations/translated/*.ts)
