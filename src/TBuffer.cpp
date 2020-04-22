@@ -168,8 +168,8 @@ TBuffer::TBuffer(Host* pH)
 #ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
-    for (auto encodingName : csmEncodingTable.getEncodingNames()) {
-        Q_ASSERT_X(csmEncodingTable.getLookupTable(encodingName).size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
+    for (auto table : csmEncodingTable.getEncodings()) {
+        Q_ASSERT_X(table.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
 #endif
 }

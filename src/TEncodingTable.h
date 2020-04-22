@@ -22,18 +22,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QTextCodec>
 #include <QApplication>
 #include <QChar>
 #include <QMap>
 #include <QPair>
 #include <QString>
 #include <QVector>
-#include <QTextCodec>
 
 // a map of encoding names to encodings
 class TEncodingTable
 {
-
     static const QMap<QByteArray, QVector<QChar>> csmEncodings;
     inline static const QVector<QChar> csmEmptyLookupTable = {};
 
@@ -44,6 +43,7 @@ public:
 
     explicit TEncodingTable(const QMap<QByteArray, QVector<QChar>>& encodings) : mEncodingMap(encodings) {}
 
+    const QMap<QByteArray, QVector<QChar>> getEncodings() const { return mEncodingMap; }
     QList<QByteArray> getEncodingNames() const;
 
     const QVector<QChar>& getLookupTable(const QByteArray& encoding) const;
