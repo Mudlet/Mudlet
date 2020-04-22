@@ -5,7 +5,9 @@ on:
       - 'release-**'
 
   schedule:
-    - cron:  '0 0 * * fri'
+    - cron: '0 0 * * fri'
+  repository_dispatch:
+    types: update-translations
 
 jobs:
   update-and-commit-text:
