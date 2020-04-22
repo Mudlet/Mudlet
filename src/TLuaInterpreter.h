@@ -384,7 +384,6 @@ public:
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
-    static int getMudletLuaDefaultPaths(lua_State*);
     static int setTriggerStayOpen(lua_State*);
     static int wrapLine(lua_State*);
     static int getFgColor(lua_State*);
