@@ -24,12 +24,15 @@
  ***************************************************************************/
 
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
@@ -47,7 +50,6 @@
 #include <string>
 
 class Host;
-
 class QTextCodec;
 
 class TChar
@@ -121,10 +123,11 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 
 
-
-class TBuffer
-{
-    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::defaultInstance;
+class TBuffer {
+    // private - a map of computer-friendly encoding names as keys,
+    // value is the encoding data.
+    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
+    static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -175,13 +178,11 @@ public:
     void paste(QPoint&, TBuffer);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.getEncodingNames(); }
-    static const QList<QString> getFriendlyEncodingNames() { return csmEncodingTable.getFriendlyNames(); }
-    static const QString& getComputerEncoding(const QString& encoding) { return csmEncodingTable.getEncodingByFriendlyName(encoding); }
+    static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QString&);
+    void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
 
 
@@ -282,7 +283,7 @@ private:
     int lastloggedToLine;
     QString lastTextToLog;
 
-    QString mEncoding;
+    QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec;
 };
 
