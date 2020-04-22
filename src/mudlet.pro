@@ -517,6 +517,7 @@ SOURCES += \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
+    TMxpMudlet.cpp \
     TMxpNodeBuilder.cpp \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
