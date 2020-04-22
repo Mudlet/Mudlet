@@ -27,7 +27,7 @@ public:
     TMxpVersionTagHandler() : TMxpSingleTagHandler("VERSION") {}
     inline static const QString scmVersionString = QStringLiteral("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=%1>\n");
 
-    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag);
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H

@@ -31,7 +31,7 @@ class TLinkStore;
 
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral("%1%2");//.arg(APP_VERSION, APP_BUILD);
+    inline static const QString scmVersion = QStringLiteral("%1%2").arg(QString::fromLatin1(APP_VERSION), QString::fromLatin1(APP_BUILD));
 
     Host* mpHost;
     TLinkStore* mpLinkStore;
@@ -46,11 +46,11 @@ public:
 
     QString getVersion() override;
 
-    virtual void sendToServer(QString& str);
+    void sendToServer(QString& str) override;
 
     void setLinkMode(bool val) override { mLinkMode = val; }
 
-    bool isInLinkMode() { return mLinkMode; }
+    bool isInLinkMode() const { return mLinkMode; }
 
     QList<QColor> fgColors, bgColors;
     void pushColor(const QString& fgColor, const QString& bgColor) override;
@@ -84,7 +84,7 @@ public:
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
 
-    virtual void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content)
+    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override
     {
         // TODO: raise mxp event
     }
@@ -95,7 +95,7 @@ public:
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
-    void raiseMxpEvent(MxpStartTag* tag);
+    void enqueueMxpEvent(MxpStartTag* tag);
 };
 
 #endif //MUDLET_SRC_TMXPMUDLET_H

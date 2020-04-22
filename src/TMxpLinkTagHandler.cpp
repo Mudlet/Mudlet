@@ -40,7 +40,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
     QStringList *links, *hints;
-    client.getLink(mLinkId, &links, &hints);
+    if (!client.getLink(mLinkId, &links, &hints))
+        return MXP_TAG_NOT_HANDLED;
 
     if (links != nullptr) {
         links->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);

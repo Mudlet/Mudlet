@@ -22,7 +22,7 @@
 #include "TLinkStore.h"
 
 
-TMxpMudlet::TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mpLinkStore(linkStore), mLinkMode(false) {}
+TMxpMudlet::TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mLinkMode(false) {}
 
 QString TMxpMudlet::getVersion()
 {
@@ -81,15 +81,15 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 {
     if (tag->isStartTag()) {
         if (mpContext->getElementRegistry().containsElement(tag->getName())) {
-            raiseMxpEvent(tag->asStartTag());
+            enqueueMxpEvent(tag->asStartTag());
         } else if (tag->isNamed("SEND")) {
-            raiseMxpEvent(tag->asStartTag());
+            enqueueMxpEvent(tag->asStartTag());
         }
     }
 
     return result;
 }
-void TMxpMudlet::raiseMxpEvent(MxpStartTag* tag)
+void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
 {
     TMxpEvent ev;
     ev.name = tag->getName();
