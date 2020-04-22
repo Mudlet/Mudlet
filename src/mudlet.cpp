@@ -2041,7 +2041,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
         dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        dockwidget->setWindowTitle(name);
         pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
