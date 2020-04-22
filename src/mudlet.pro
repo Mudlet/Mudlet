@@ -229,9 +229,11 @@ unix:!macx {
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
-            -llua-5.1\
+            -llua-5.1 \
 # FreeBSD appends the version number to hunspell:
-            -lhunspell-1.7
+            -lhunspell-1.7 \
+# Needed for sysinfo(...) call in mudlet class:
+            -lsysinfo
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -448,6 +450,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
+    TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -521,6 +524,7 @@ SOURCES += \
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
+    TTextCodec.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \

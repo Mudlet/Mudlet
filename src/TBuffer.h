@@ -24,12 +24,15 @@
  ***************************************************************************/
 
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
 #include <QString>
@@ -43,7 +46,6 @@
 #include <string>
 
 class Host;
-
 class QTextCodec;
 
 class TChar
@@ -130,14 +132,21 @@ enum TMXPMode
     MXP_MODE_TEMP_SECURE
 };
 
-class TBuffer
-{
-    // need to use tr() on encoding names in csmEncodingTable
-    Q_DECLARE_TR_FUNCTIONS(TBuffer)
+struct MxpEvent {
+    QString name;
+    QMap<QString, QString> attrs;
+    QStringList actions;
 
+    MxpEvent(QString name, QMap<QString, QString> attrs, QStringList actions)
+            : name(name), attrs(attrs), actions(actions)
+    {}
+};
+
+class TBuffer {
     // private - a map of computer-friendly encoding names as keys,
-    // values are a pair of human-friendly name + encoding data
-    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodingTable;
+    // value is the encoding data.
+    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
+    static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
@@ -189,15 +198,14 @@ public:
     void paste(QPoint&, TBuffer);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
-    static const QList<QString> getFriendlyEncodingNames();
-    static const QString& getComputerEncoding(const QString& encoding);
+    static const QList<QByteArray> getEncodingNames();
     void logRemainingOutput();
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
-    void encodingChanged(const QString &);
+    void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
 
+    QQueue<MxpEvent> mMxpEvents;
 
     std::deque<TChar> bufferLine;
     std::deque<std::deque<TChar>> buffer;
@@ -272,7 +280,7 @@ private:
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
-    QString processSupportsRequest(const QString &attributes);
+    QString processSupportsRequest(const QString& attributes);
     void decodeSGR(const QString&);
     void decodeSGR38(const QStringList&, bool isColonSeparated = true);
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
@@ -344,7 +352,7 @@ private:
     int lastloggedToLine;
     QString lastTextToLog;
 
-    QString mEncoding;
+    QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec;
 };
 

@@ -4451,6 +4451,10 @@ void dlgTriggerEditor::writeScript(int id)
     }
 
     TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    if (!pT) {
+        return;
+    }
+
     QString scriptCode = pT->getScript();
     mpSourceEditorEdbeeDocument->setText(scriptCode);
 }
