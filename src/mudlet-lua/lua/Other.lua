@@ -949,13 +949,13 @@ end
 -- @param fileName default translation fileName
 -- @language locale code for example de_DE for German [optional]
 -- @folder folder where your translations can be found. [optional]
--- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/translated/lang_code_yourfiles.json
+-- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/yourFileName-translated/yourfiles_lang_code.json
 function loadTranslations(fileName, language, folder)
   local translation = {}
   language = language or mudlet.translations.interfacelanguage
-  folder = folder or "../translations/lua_translations/"..fileName.."/"
+  folder = folder or "../translations/lua_translations/"
 
-  local file = folder.."/translated/"..language.."_"..fileName..".json"
+  local file = folder.."/"..fileName.."-translated/"..fileName.."_"..language..".json"
   if not(io.exists(file)) then
     file = folder..fileName..".json"
   end
