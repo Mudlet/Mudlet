@@ -963,7 +963,7 @@ function loadTranslations(fileName, language, folder)
     translation = yajl.to_value(str)
     return translation
   end
-  return nil, "Unable to find translation file for"..fileName
+  return nil, "Unable to find translation file for "..fileName
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
