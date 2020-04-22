@@ -870,7 +870,6 @@ function Adjustable.Container:new(cons,container)
     end
   
     -- Loads on creation (by Name) if autoLoad is not false
-    -- autoloads only on the first time if autoLoad is not specified to be true
     if not(me.autoLoad == false) then
         me.autoLoad = true
         me:load()
