@@ -203,14 +203,8 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 # specified and the library is NOT available (or is the "wrong" one) then the
 # build will fail both at the compilation and the linking stages.
 SYSTEM_QTKEYCHAIN_TEST = $$upper($$(WITH_SYSTEM_QTKEYCHAIN))
-!isEmpty( SYSTEM_QTKEYCHAIN_TEST ) {
-  equals( SYSTEM_QTKEYCHAIN_TEST, "YES" ) | equals( SYSTEM_QTKEYCHAIN_TEST, "QT5" ) {
-    DEFINES += INCLUDE_SYSTEM_QT5_KEYCHAIN
-  } else {
-    equals(SYSTEM_QTKEYCHAIN_TEST, "QT") {
-      DEFINES += INCLUDE_SYSTEM_QT_KEYCHAIN
-    }
-  }
+isEmpty( SYSTEM_QTKEYCHAIN_TEST ) | !equals( SYSTEM_QTKEYCHAIN_TEST, "NO" ) {
+  DEFINES += INCLUDE_SYSTEM_QT5_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -389,7 +383,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !contains( DEFINES, "INCLUDE_SYSTEM_QT_KEYCHAIN" ) : ! contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+    !contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
@@ -404,7 +398,7 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    !contains( DEFINES, "INCLUDE_SYSTEM_QT_KEYCHAIN" ) : ! contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+    !contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
             system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
@@ -448,7 +442,7 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-!contains( DEFINES, "INCLUDE_SYSTEM_QT_KEYCHAIN" ) : ! contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
+!contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
     exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
         include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
     } else {
@@ -720,13 +714,7 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
 }
 
 contains( DEFINES, "INCLUDE_SYSTEM_QT5_KEYCHAIN" ) {
-    message("Libsecret (Qt5Keychain) support: from system")
     LIBS += -lqt5keychain
-} else {
-    contains( DEFINES, "INCLUDE_SYSTEM_QT_KEYCHAIN" ) {
-       message("Libsecret (QtKeychain) support: from system")
-       LIBS += -lqtkeychain
-    }
 }
 
 TRANSLATIONS = $$files(../translations/translated/*.ts)

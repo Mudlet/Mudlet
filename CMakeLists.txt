@@ -94,66 +94,23 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 include(IncludeOptionalModule)
 
-include_optional_module(
-  ENVIRONMENT_VARIABLE
-  WITH_UPDATER
-  OPTION_VARIABLE
-  USE_UPDATER
-  READABLE_NAME
-  "updater"
-  SUPPORTED_SYSTEMS
-  "Linux"
-  "Windows"
-  "Darwin")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
+                        OPTION_VARIABLE USE_UPDATER
+                        READABLE_NAME "updater"
+                        SUPPORTED_SYSTEMS "Linux"
+                                          "Windows"
+                                          "Darwin")
+
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
                         USE_FONTS READABLE_NAME "fonts")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
                         USE_3DMAPPER READABLE_NAME "3D mapper")
-include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN OPTION_VARIABLE
-  USE_VARIABLE_SPLASH_SCREEN READABLE_NAME "build-type splash screen")
-
-# The logic for this variable is not compatible with the current include_optional_module(...)
-# so we will need to process it manually
-if(DEFINED ENV{WITH_SYSTEM_QTKEYCHAIN})
-  message(STATUS "Detected WITH_SYSTEM_QTKEYCHAIN variable in environment, it is set to $ENV{WITH_SYSTEM_QTKEYCHAIN}...")
-  string(TOUPPER ENV{WITH_SYSTEM_QTKEYCHAIN} ENV{WITH_SYSTEM_QTKEYCHAIN})
-  if(($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "YES") OR ($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "QT5"))
-    # The specific tested for values were seen so set the appropriate values
-    option(USE_SYSTEM_QT5KEYCHAIN
-           "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
-           ON)
-    option(USE_SYSTEM_QTKEYCHAIN
-           "Use system QtKeyChain library."
-           OFF)
-    message(STATUS "   ... should use system Qt5KeyChain library.")
-  elseif($ENV{WITH_SYSTEM_QTKEYCHAIN} STREQUAL "QT")
-    option(USE_SYSTEM_QT5KEYCHAIN
-           "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
-           OFF)
-    option(USE_SYSTEM_QTKEYCHAIN
-           "Use system QtKeyChain library."
-           ON)
-    message(STATUS "  ... should use system QtKeyChain library.")
-  else()
-    option(USE_SYSTEM_QT5KEYCHAIN
-           "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
-           OFF)
-    option(USE_SYSTEM_QTKEYCHAIN
-           "Use system QtKeyChain library."
-           OFF)
-    message(STATUS "   ... will use Mudlet's own QtKeyChain library (explicitly).")
-  endif()
-else()
-  option(USE_SYSTEM_QT5KEYCHAIN
-         "Use system Qt5 specific QKeyChain library (overrides generic QKeyChain one)."
-         OFF)
-  option(USE_SYSTEM_QTKEYCHAIN
-         "Use system QtKeyChain library."
-         OFF)
-  message(STATUS "Did not detect WITH_SYSTEM_QTKEYCHAIN variable in environment...")
-  message(STATUS "   ... will use Mudlet's own QtKeyChain library (implicitly).")
-endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
+                        OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
+                        READABLE_NAME "build-type splash screen")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SYSTEM_QTKEYCHAIN
+                        OPTION_VARIABLE USE_SYSTEM_QT5KEYCHAIN
+                        READABLE_NAME "system QKeychain (Qt5) library")
 
 include(InitGitSubmodule)
 
@@ -161,7 +118,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(NOT(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN))
+if(NOT USE_SYSTEM_QT5KEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"

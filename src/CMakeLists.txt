@@ -264,11 +264,6 @@ if(USE_3DMAPPER)
   find_package(OpenGL REQUIRED)
 endif()
 
-if(USE_SYSTEM_QT5KEYCHAIN OR USE_SYSTEM_QTKEYCHAIN)
-  # Only use this when we are using a system package and NOT our own local build
-  find_package(Qt5Keychain REQUIRED)
-endif()
-
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
@@ -327,37 +322,20 @@ if(Qt5Gamepad_FOUND)
 endif(Qt5Gamepad_FOUND)
 
 if(USE_SYSTEM_QT5KEYCHAIN)
-  if(Qt5Keychain_FOUND)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
-    target_link_libraries(mudlet qt5keychain)
-    if(${QTKEYCHAIN_LIBRARIES} STREQUAL "qt5keychain")
-      message(STATUS "Using system Qt5KeyChain (QtKeyChain) library (found version \"${Qt5Keychain_VERSION}\").")
-    else()
-      message(WARNING "Expected to find library with the major Qt version number 5, i.e. \"qt5keychain\" but instead found \"${QTKEYCHAIN_LIBRARIES}\".")
-    endif()
-  else()
-    message(FATAL_ERROR "No QtKeyChain library found, build aborted.")
-  endif()
+  # Only use this when we are using a system package and NOT our own local build
+  find_package(Qt5Keychain REQUIRED)
 
-elseif(USE_SYSTEM_QTKEYCHAIN)
-  if(Qt5Keychain_FOUND)
-    target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT_KEYCHAIN)
-    target_link_libraries(mudlet qtkeychain)
-    if(${QTKEYCHAIN_LIBRARIES} STREQUAL "qt5keychain")
-      message(WARNING "Expected to find library without the major Qt version number, i.e. \"qtkeychain\" but instead found \"qt5keychain\".")
-    else()
-      message(STATUS "Using system QtKeyChain library (found version: \"${Qt5Keychain_VERSION}\").")
-    endif()
-  else()
-    message(FATAL_ERROR "No QtKeyChain library found, build aborted.")
-  endif()
-
+  # No need to test for it being found as the REQUIRED will make it error out
+  # if it is NOT found!
+  target_compile_definitions(mudlet PRIVATE INCLUDE_SYSTEM_QT5_KEYCHAIN)
+  message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
 else()
-  # An odd extra definition is needed if we are using our own QtKeyChain
+  # An extra definition is needed if we are using our own QtKeyChain
   target_compile_definitions(mudlet PRIVATE QTKEYCHAIN_NO_EXPORT)
-  target_link_libraries(mudlet qt5keychain)
-  message(STATUS "Using own Qt5KeyChain (QtKeyChain) library (we have version: \"${Qt5Keychain_VERSION}\").")
+  message(STATUS "Using own QtKeyChain (Qt5) library.")
 endif()
+
+target_link_libraries(mudlet qt5keychain)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)

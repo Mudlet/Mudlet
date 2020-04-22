@@ -62,8 +62,6 @@
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_SYSTEM_QT5_KEYCHAIN)
 #include <qt5keychain/keychain.h>
-#elif defined(INCLUDE_SYSTEM_QT_KEYCHAIN)
-#include <qtkeychain/keychain.h>
 #else
 #include <../3rdparty/qtkeychain/keychain.h>
 #endif
