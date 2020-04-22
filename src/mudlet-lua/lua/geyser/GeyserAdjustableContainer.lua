@@ -640,7 +640,7 @@ end
 --- saves all your container
 -- @see Adjustable.Container:save()
 function Adjustable.Container:saveAll()
-    for  k,v in ipairs(Adjustable.Container.all) do
+    for  k,v in pairs(Adjustable.Container.all) do
         v:save()
     end
 end
@@ -648,7 +648,7 @@ end
 --- loads all your container
 -- @see Adjustable.Container:load()
 function Adjustable.Container:loadAll()
-    for  k,v in ipairs(Adjustable.Container.all) do
+    for  k,v in pairs(Adjustable.Container.all) do
         v:load()
     end
 end
@@ -656,7 +656,7 @@ end
 --- shows all your container
 -- @see Adjustable.Container:doAll()
 function Adjustable.Container:showAll()
-    for  k,v in ipairs(Adjustable.Container.all) do
+    for  k,v in pairs(Adjustable.Container.all) do
         v:show()
     end
 end
@@ -664,7 +664,7 @@ end
 --- executes the function myfunc which affects all your containers
 -- @param myfunc function which will be executed at all your containers
 function Adjustable.Container:doAll(myfunc)
-    for  k,v in ipairs(Adjustable.Container.all) do
+    for  k,v in pairs(Adjustable.Container.all) do
         myfunc(v)
     end
 end
@@ -701,6 +701,7 @@ end
 Adjustable.Container.parent = Geyser.Container
 -- Create table to put every Adjustable.Container in it
 Adjustable.Container.all = Adjustable.Container.all or {}
+Adjustable.Container.all_windows = Adjustable.Container.all_windows or {}
 
 --- Internal function to create all the standard lockstyles
 function Adjustable.Container:globalLockStyles()
@@ -738,7 +739,10 @@ end
 -- @param name Name of the menu item/lockstyle
 -- @param func function of the new lockstyle
 function Adjustable.Container:newLockStyle(name, func)
-    self.lockStyles[#self.lockStyles+1] = {name, func}
+    if self.lockStyles[name] then
+        return
+    end
+    self.lockStyles[#self.lockStyles + 1] = {name, func}
     self.lockStyles[name] = self.lockStyles[#self.lockStyles]
     if self.lockStylesLabel then
         createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
@@ -750,23 +754,18 @@ end
 -- @param func function of the new custom menu item
 function Adjustable.Container:newCustomItem(name, func)
     self.customItems = self.customItems or {}
-    self.customItems[#self.customItems+1] = {name, func}
+    if self.customItems[name] then
+        return
+    end
+    self.customItems[#self.customItems + 1] = {name, func}
+    self.customItems[name] = self.customItems[#self.customItems]
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
-    -- Prevents duplicates to be created
-    -- It's still important that the name of the container is unique!
-    if cons.name then
-        if Geyser.windowList[cons.name] then
-            return Geyser.windowList[cons.name]
-        end
-        if container and container.windowList[cons.name] then
-            return container.windowList[cons.name]
-        end
-    end
-    local me = self.parent:new(cons,container)
+    local me = self.parent:new(cons, container)
+    cons = cons or {}
     setmetatable(me, self)
     self.__index = self
     me.type = "adjustablecontainer"
@@ -837,9 +836,27 @@ function Adjustable.Container:new(cons,container)
     shrink_title(me)
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
-    me.raiseOnClick = me.raiseOnClick or true
+    if not(me.raiseOnClick == false) then
+        me.raiseOnClick = true
+    end
     -- save a list of all containers in this table
-    Adjustable.Container.all[#Adjustable.Container.all+1] = me
+    if not Adjustable.Container.all[me.name] then
+        Adjustable.Container.all_windows[#Adjustable.Container.all_windows + 1] = me.name
+    else
+        --prevent showing the container on recreation if hidden is true
+        if Adjustable.Container.all[me.name].hidden then
+            me:hide()
+        end
+        if Adjustable.Container.all[me.name].auto_hidden then
+            me:hide(true)
+        end
+    end
+    -- hide/show on creation
+    if cons.hidden == true then
+        me:hide()
+    elseif cons.hidden == false then
+        me:show()
+    end
+    Adjustable.Container.all[me.name] = me
     return me
-    
 end
