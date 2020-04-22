@@ -257,7 +257,7 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
-if(NOT USE_OWN_QTKEYCHAIN)
+if(NOT USE_OWN_QT5KEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
   find_package(Qt5Keychain REQUIRED)
 
