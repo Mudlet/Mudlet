@@ -947,25 +947,25 @@ end
 
 --- loads Translations located in the /translations folder
 -- @param fileName default translation fileName
--- @language locale code for example de_DE for German
-function loadTranslations(fileName, language)
+-- @language locale code for example de_DE for German [optional]
+-- @folder folder where your translations can be found. [optional]
+-- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/translated/lang_code_yourfiles.json
+function loadTranslations(fileName, language, folder)
   local translation = {}
   language = language or mudlet.translations.interfacelanguage
-  local file = "../translations/translated/"..language.."_"..fileName..".json"
+  folder = folder or "../translations/lua_translations/"..fileName.."/"
+
+  local file = folder.."/translated/"..language.."_"..fileName..".json"
+  if not(io.exists(file)) then
+    file = folder..fileName..".json"
+  end
   if io.exists(file) then
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")
     translation = yajl.to_value(str)
     return translation
   end
-  
-  file = "../translations/"..fileName..".json"
-  if io.exists(file) then
-    local filePointer = io.open(file, "r")
-    local str = filePointer:read("*all")
-    translation = yajl.to_value(str)
-  end
-  return translation
+  return nil, "Unable to find translation file for"..fileName
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow

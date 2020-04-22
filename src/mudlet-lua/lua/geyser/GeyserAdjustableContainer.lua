@@ -464,7 +464,7 @@ local function createMenus(self, menu, onClick)
     if not self[menu] then return end
     for i = self[menu.."Nr"], #self[menu] do
         local name = self[menu][i][1]
-        local menuTxt = self.Locale[name] or name
+        local menuTxt = self.Locale[name].message or name
         self[menu.."l"][i] = self[menu.."Label"]:addChild({
             width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
         })
@@ -486,7 +486,7 @@ function Adjustable.Container:onEnterAtt()
             self.att[i]:changeContainer(Geyser)
         end
         self.att[i].flyDir = self.attLabel.flyDir
-        pEcho(self.att[i], "<center>"..self.Locale[attm[i]])
+        pEcho(self.att[i], "<center>"..self.Locale[attm[i]].message)
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
@@ -769,11 +769,6 @@ function Adjustable.Container:new(cons,container)
         end
     end
 
-    self.Language = mudlet.translations.interfacelanguage
-    if not self.Locale then
-        self.Language = "default"
-    end
-
     local me = self.parent:new(cons,container)
     setmetatable(me, self)
     self.__index = self
@@ -809,13 +804,13 @@ function Adjustable.Container:new(cons,container)
         me:lockContainer()
     end
     me.adjLabelstyle = me.adjLabelstyle..[[ qproperty-alignment: 'AlignLeft | AlignTop';]]
-    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale.lock
-    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale.min_restore
-    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font>]].. self.Locale.save
-    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font>]].. self.Locale.load
-    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font>]]..self.Locale.attach
-    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font>]]..self.Locale.lockstyle
-    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font>]]..self.Locale.custom
+    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale.lock.message
+    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale.min_restore.message
+    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font>]].. self.Locale.save.message
+    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font>]].. self.Locale.load.message
+    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font>]]..self.Locale.attach.message
+    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font>]]..self.Locale.lockstyle.message
+    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font>]]..self.Locale.custom.message
 
     me.adjLabel:setStyleSheet(me.adjLabelstyle)
     me.exitLabel:setStyleSheet(me.buttonstyle)
