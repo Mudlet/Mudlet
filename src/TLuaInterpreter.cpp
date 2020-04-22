@@ -3671,7 +3671,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
         for (const auto& encoding : host.mTelnet.getEncodingsList()) {
             knownEncodings.append(adjustEncoding(QString(encoding)));
         }
-        knownEncodings.sort(Qt::CaseInsensitive);
+        QCollator sorter;
+        sorter.setNumericMode(true);
+        sorter.setCaseSensitivity(Qt::CaseInsensitive);
+        std::sort(knownEncodings.begin(), knownEncodings.end(), sorter);
 
         if (currentEncoding.isEmpty()) {
             currentEncoding = "\"ASCII\"";
