@@ -123,11 +123,10 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
 
 
-class TBuffer {
-    // private - a map of computer-friendly encoding names as keys,
-    // value is the encoding data.
-    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
-    static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
+
+class TBuffer
+{
+    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 

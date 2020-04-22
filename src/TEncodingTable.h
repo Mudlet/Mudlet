@@ -23,39 +23,30 @@
  ***************************************************************************/
 
 #include <QApplication>
-#include <QMap>
-#include <QString>
-#include <QPair>
-#include <QVector>
 #include <QChar>
+#include <QMap>
+#include <QPair>
+#include <QString>
+#include <QVector>
+#include <QTextCodec>
 
-// a map of computer-friendly encoding names as keys,
-// values are a pair of human-friendly name + encoding data
-class TEncodingTable {
-    // need to use tr() on encoding names in csmEncodingTable
-Q_DECLARE_TR_FUNCTIONS(TEncodingTable)
+// a map of encoding names to encodings
+class TEncodingTable
+{
 
-    static const QMap<QString, QPair<QString, QVector<QChar>>> csmEncodings;
+    static const QMap<QByteArray, QVector<QChar>> csmEncodings;
+    inline static const QVector<QChar> csmEmptyLookupTable = {};
 
-    const QMap<QString, QPair<QString, QVector<QChar>>>& encodingMapping;
-
-    inline static const QVector<QChar> emptyLookupTable = {};
+    const QMap<QByteArray, QVector<QChar>>& mEncodingMap;
 
 public:
-    static const TEncodingTable defaultInstance;
+    static const TEncodingTable csmDefaultInstance;
 
-    explicit TEncodingTable(const QMap<QString, QPair<QString, QVector<QChar>>>& encodings)
-            : encodingMapping(encodings)
-    {
-    }
+    explicit TEncodingTable(const QMap<QByteArray, QVector<QChar>>& encodings) : mEncodingMap(encodings) {}
 
-    QList<QString> getEncodingNames() const;
+    QList<QByteArray> getEncodingNames() const;
 
-    QList<QString> getFriendlyNames() const;
-
-    const QString& getEncodingByFriendlyName(const QString& encoding) const;
-
-    const QVector<QChar>& getLookupTable(const QString& encoding) const;
+    const QVector<QChar>& getLookupTable(const QByteArray& encoding) const;
 };
 
 #endif //MUDLET_TENCODINGTABLE_H
