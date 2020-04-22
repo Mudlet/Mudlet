@@ -1,4 +1,17 @@
-{"lockstyle":"Lockstyle:",
-"right":"right","bottom":"bottom","min_restore":"Min/Restore","save":"Save","border":"border",
-"left":"left","top":"top","attach":"Attach to:","custom":"Custom:","lock":"Lock","full":"full",
-"standard":"standard","load":"Load","light":"light"}
+{
+  "attach": "Attach to:",
+  "border": "border",
+  "bottom": "bottom",
+  "custom": "Custom:",
+  "full": "full",
+  "left": "left",
+  "light": "light",
+  "load": "Load",
+  "lock": "Lock",
+  "lockstyle": "Lockstyle:",
+  "min_restore": "Min/Restore",
+  "right": "right",
+  "save": "Save",
+  "standard": "standard",
+  "top": "top"
+}
