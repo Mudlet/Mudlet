@@ -951,7 +951,7 @@ end
 function loadTranslations(fileName, language)
   local translation = {}
   language = language or mudlet.translations.interfacelanguage
-  local file = luaGlobalPath.."/translations/translated/"..language.."_"..fileName..".json"
+  local file = "../translations/translated/"..language.."_"..fileName..".json"
   if io.exists(file) then
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")
@@ -959,7 +959,7 @@ function loadTranslations(fileName, language)
     return translation
   end
   
-  file = luaGlobalPath.."/translations/"..fileName..".json"
+  file = "../translations/"..fileName..".json"
   if io.exists(file) then
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")

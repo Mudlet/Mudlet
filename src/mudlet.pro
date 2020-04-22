@@ -229,9 +229,11 @@ unix:!macx {
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
-            -llua-5.1\
+            -llua-5.1 \
 # FreeBSD appends the version number to hunspell:
-            -lhunspell-1.7
+            -lhunspell-1.7 \
+# Needed for sysinfo(...) call in mudlet class:
+            -lsysinfo
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -287,8 +289,6 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
-        LUA_TRANSLATIONS.path = $${LUA.path}/translations
-        LUA_TRANSLATED.path = $${LUA.path}/translations/translated
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -737,16 +737,6 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/TableUtils.lua \
     $${PWD}/mudlet-lua/lua/utf8_filenames.lua
 LUA.depends = mudlet
-
-# Geyser lua files:
-LUA_TRANSLATIONS.files = \
-    $${PWD}/mudlet-lua/lua/translations/*.json
-LUA_TRANSLATIONS.depends = mudlet
-
-# Geyser lua files:
-LUA_TRANSLATED.files = \
-    $${PWD}/mudlet-lua/lua/translations/translated/*.json
-LUA_TRANSLATED.depends = mudlet
 
 # Geyser lua files:
 LUA_GEYSER.files = \
@@ -1335,8 +1325,6 @@ unix:!macx {
         target \
         LUA \
         LUA_GEYSER \
-        LUA_TRANSLATIONS \
-        LUA_TRANSLATED \
         LUA_LCF \
         LUA_LCF_L1_GET__AST \
         LUA_LCF_L1_GET__FORMATTER__AST \
