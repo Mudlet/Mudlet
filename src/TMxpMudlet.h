@@ -20,6 +20,7 @@
 #define MUDLET_SRC_TMXPMUDLET_H
 
 #include "TEntityResolver.h"
+#include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
 
@@ -27,14 +28,12 @@
 #include <QQueue>
 
 class Host;
-class TLinkStore;
 
 class TMxpMudlet : public TMxpClient
 {
     inline static const QString scmVersion = QStringLiteral("%1%2").arg(QString::fromLatin1(APP_VERSION), QString::fromLatin1(APP_BUILD));
 
     Host* mpHost;
-    TLinkStore* mpLinkStore;
 
     bool mLinkMode;
 
@@ -42,7 +41,7 @@ public:
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
 
-    TMxpMudlet(Host* pHost, TLinkStore* linkStore);
+    TMxpMudlet(Host* pHost);
 
     QString getVersion() override;
 
@@ -96,6 +95,7 @@ public:
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 
     void enqueueMxpEvent(MxpStartTag* tag);
+    TLinkStore& getLinkStore();
 };
 
 #endif //MUDLET_SRC_TMXPMUDLET_H

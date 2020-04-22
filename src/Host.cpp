@@ -206,7 +206,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
-, mMxpClient(this, &mLinkStore)
+, mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
 , mMediaLocationGMCP(QString())
 , mMediaLocationMSP(QString())

@@ -44,7 +44,6 @@
 #include <QTextStream>
 #include "post_guard.h"
 
-#include "TLinkStore.h"
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 
@@ -361,7 +360,6 @@ public:
     bool mEnableMSDP;
     bool mServerMXPenabled;
 
-    TLinkStore mLinkStore;
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
     QString mMediaLocationGMCP;

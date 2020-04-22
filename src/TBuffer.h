@@ -189,6 +189,7 @@ public:
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
+    TLinkStore mLinkStore;
     int mLinesLimit;
     int mBatchDeleteSize;
     int mWrapAt;

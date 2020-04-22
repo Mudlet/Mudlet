@@ -270,7 +270,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    int id = mpHost->mLinkStore.addLinks(command, hint);
+    int id = mLinkStore.addLinks(command, hint);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -781,7 +781,7 @@ COMMIT_LINE:
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
         if (mpHost->mMxpClient.isInLinkMode()) {
-            c.mLinkIndex = mpHost->mLinkStore.getCurrentLinkID();
+            c.mLinkIndex = mLinkStore.getCurrentLinkID();
             c.mFlags |= TChar::Underline;
         }
 
@@ -2943,7 +2943,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                 }
                 if (!incLinkID) {
                     incLinkID = true;
-                    mpHost->mLinkStore.addLinks(linkFunction, linkHint);
+                    mLinkStore.addLinks(linkFunction, linkHint);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }

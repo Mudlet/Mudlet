@@ -19,10 +19,11 @@
 
 #include "TMxpMudlet.h"
 #include "Host.h"
+#include "TConsole.h"
 #include "TLinkStore.h"
 
 
-TMxpMudlet::TMxpMudlet(Host* pHost, TLinkStore* linkStore) : mpHost(pHost), mLinkMode(false) {}
+TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false) {}
 
 QString TMxpMudlet::getVersion()
 {
@@ -68,12 +69,12 @@ QColor TMxpMudlet::mapColor(const QString& colorName)
 }
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return mpLinkStore->addLinks(links, hints);
+    return getLinkStore().addLinks(links, hints);
 }
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
 {
-    *links = &mpLinkStore->getLinks(id);
-    *hints = &mpLinkStore->getHints(id);
+    *links = &getLinkStore().getLinks(id);
+    *hints = &getLinkStore().getHints(id);
 
     return true;
 }
@@ -96,6 +97,10 @@ void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
     for (const auto& attrName : tag->getAttrsNames()) {
         ev.attrs[attrName] = tag->getAttrValue(attrName);
     }
-    ev.actions = mpLinkStore->getCurrentLinks();
+    ev.actions = getLinkStore().getCurrentLinks();
     mMxpEvents.enqueue(ev);
+}
+TLinkStore& TMxpMudlet::getLinkStore()
+{
+    return mpHost->mpConsole->getLinkStore();
 }
