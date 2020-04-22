@@ -761,6 +761,17 @@ function Adjustable.Container:newCustomItem(name, func)
     self.customItems[name] = self.customItems[#self.customItems]
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
+--- enablesAutoSave normally only used internally 
+function Adjustable.Container:enableAutoSave()
+    self.autoSave = true
+    self.autoSaveHandler = self.autoSaveHandler or registerAnonymousEventHandler("sysExitEvent", function() self:save() end)
+end
+
+-- disableAutoSave function to disable a before enabled autoSave
+function Adjustable.Container:disableAutoSave()
+    self.autoSave = false
+    killAnonymousEventHandler(self.autoSaveHandler)
+end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
@@ -839,7 +850,7 @@ function Adjustable.Container:new(cons,container)
     if not(me.raiseOnClick == false) then
         me.raiseOnClick = true
     end
-    -- save a list of all containers in this table
+
     if not Adjustable.Container.all[me.name] then
         Adjustable.Container.all_windows[#Adjustable.Container.all_windows + 1] = me.name
     else
@@ -857,6 +868,19 @@ function Adjustable.Container:new(cons,container)
     elseif cons.hidden == false then
         me:show()
     end
+  
+    -- Loads on creation (by Name) if autoLoad is not false
+    if not(me.autoLoad == false) then
+        me.autoLoad = true
+        me:load()
+    end
+  
+    -- Saves on Exit if autoSave is not false
+    if not(me.autoSave == false) then
+        me.autoSave = true
+        me:enableAutoSave()
+    end
+  
     Adjustable.Container.all[me.name] = me
     return me
 end
