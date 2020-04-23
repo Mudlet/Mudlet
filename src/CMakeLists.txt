@@ -327,7 +327,7 @@ target_link_libraries(
   YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
-  qtkeychain)
+  qt5keychain)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
