@@ -10,3 +10,7 @@ buttons:
   - title: Update text for translators
     action: update-translations
     description: "Update text available in Crowdin for translation."
+
+  - title: Update Geyser docs
+    action: update-geyser-docs
+    description: "Update Geyser documentation on https://www.mudlet.org/geyser/files/index.html."

@@ -1,0 +1,34 @@
+name: Update Geyser docs
+
+on:
+  push:
+    branches:
+      - 'release-**'
+  repository_dispatch:
+    types: update-geyser-docs
+
+  schedule:
+    - cron: '0 0 * * fri'
+
+jobs:
+  update-geyser-docs:
+    runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: leafo/gh-actions-lua@v5
+      with:
+        luaVersion: "5.1.5"
+    - uses: leafo/gh-actions-luarocks@v2
+
+    - name: install Lua dependencies
+      run: |
+        luarocks install ldoc
+
+    - name: update geyser-docs data
+      run: cd "${WORKSPACE}/src/mudlet-lua" && ./genDoc.sh
+      env:
+        WORKSPACE: ${{github.workspace}}
+
+    # now, upload it
