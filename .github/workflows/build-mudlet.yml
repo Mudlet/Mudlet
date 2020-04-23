@@ -64,8 +64,11 @@ jobs:
     - name: (Linux) Install apt dependencies
       if: runner.os == 'Linux'
       run: |
+        sudo apt update
+        sudo apt upgrade
         # these aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0
+        sudo apt autoremove
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
