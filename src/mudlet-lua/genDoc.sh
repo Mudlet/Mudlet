@@ -12,4 +12,5 @@ ldoc --style "$(pwd)" --project Geyser --not_luadoc --dir ../mudlet-lua-doc/file
 cd ../mudlet-lua-doc/files || exit 1
 find . -type f -exec sed -i 's@modules/@geyser/@g' {} +
 rm -rf geyser/
+find .
 mv modules geyser
