@@ -2,11 +2,10 @@ name: Update Geyser docs
 
 on:
   push:
-    branches:
-      - 'release-**'
+    # branches:
+    #   - 'release-**'
   repository_dispatch:
     types: update-geyser-docs
-
   schedule:
     - cron: '0 0 * * fri'
 
