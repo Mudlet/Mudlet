@@ -9897,7 +9897,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="5046"/>
       <source>Update installed - restart to apply</source>
-      <translation type="unfinished"/>
+      <translation>Update installiert - Neustart zum Übernehmen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="5120"/>
