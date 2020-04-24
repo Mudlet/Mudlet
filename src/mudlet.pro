@@ -1394,6 +1394,19 @@ unix:!macx {
 DISTFILES += \
     CMakeLists.txt \
     .clang-format \
+    ../.github/pr-labeler.yml \
+    ../.github/CODEOWNERS.md \
+    ../.github/CODE_OF_CONDUCT.md \
+    ../.github/CONTRIBUTING.md \
+    ../.github/FUNDING.yml \
+    ../.github/ISSUE_TEMPLATE.md \
+    ../.github/PULL_REQUEST_TEMPLATE.md \
+    ../.github/SUPPORT.md \
+    ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/update-3rdparty.yml \
+    ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-translations.yml \
+    ../.github/workflows/whitespace-linter.yml \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \

@@ -64,7 +64,13 @@ jobs:
     - name: (Linux) Install apt dependencies
       if: runner.os == 'Linux'
       run: |
-        # these aren't available or don't work well in vcpkg
+        sudo apt update
+        # The above is enough to tell the OS's package system what versions
+        # of package it needs to get to install the following (so it does
+        # not error out by asking for older, no-longer available upstream
+        # versions - which was happening) whilst not burdening the run
+        # with a much more time consuming full system "upgrade".
+        # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
