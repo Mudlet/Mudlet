@@ -1,0 +1,19 @@
+{
+  "AdjustableContainer":{
+    "attach": "Attach to:",  
+    "bottom": "bottom",
+    "custom": "Custom:",
+    "lock": "Lock",
+    "lockstyle":"Lockstyle:",
+    "standard":"standard",
+    "light":"light",
+    "full":"full",
+    "border":"border",
+    "top":"top",
+    "left":"left",
+    "right": "right",
+    "load":"Load",
+    "save":"Save",
+    "min_restore": "Min/Restore"
+  }
+}

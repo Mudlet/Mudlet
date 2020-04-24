@@ -947,15 +947,16 @@ end
 -- @language locale code for example de_DE for German [optional]
 -- @folder folder where your translations can be found. [optional]
 -- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/yourFileName-translated/yourfiles_lang_code.json
-function loadTranslations(fileName, language, folder)
+function loadTranslations(packageName, fileName, language, folder)
   local translation = {}
+  fileName = fileName or "mudlet-lua"
   language = language or mudlet.translations.interfacelanguage
   -- get the right folder
-  folder = folder or io.exists("../translations/lua_translations/") and "../translations/lua_translations/"
-  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua_translations/") and luaGlobalPath.."/../../translations/lua_translations/"
-  folder = folder or luaGlobalPath.."/lua_translations/"
+  folder = folder or io.exists("../translations/lua/") and "../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua/") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or luaGlobalPath.."/translations/"
 
-  local file = folder.."/"..fileName.."-translated/"..fileName.."_"..language..".json"
+  local file = folder.."/translated/"..fileName.."_"..language..".json"
   if not(io.exists(file)) then
     file = folder..fileName..".json"
   end
@@ -963,7 +964,7 @@ function loadTranslations(fileName, language, folder)
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")
     translation = yajl.to_value(str)
-    return translation
+    return translation[packageName]
   end
   return nil, "Unable to find translation file for "..fileName
 end

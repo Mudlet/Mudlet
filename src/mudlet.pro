@@ -289,7 +289,7 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
-        LUA_TRANSLATIONS.path = $${LUA.path}
+        LUA_TRANSLATIONS.path = $${LUA.path}/translations
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -763,7 +763,7 @@ LUA_GEYSER.files = \
 LUA_GEYSER.depends = mudlet
 
 LUA_TRANSLATIONS.files = \
-    $${PWD}/../translations/lua_translations
+    $${PWD}/../translations/lua/*
 LUA_TRANSLATIONS.depends = mudlet
 
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt

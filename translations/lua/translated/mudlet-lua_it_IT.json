@@ -1,0 +1,19 @@
+{
+  "AdjustableContainer":{
+    "attach":"Incolla:",
+    "bottom":"sotto",
+    "custom":"Personalizzato:",
+    "lock":"Blocca",
+    "lockstyle":"Stile Blocco:",
+    "standard":"standard",
+    "light":"semplice",
+    "full":"completo",
+    "border":"bordo",
+    "top":"sopra",
+    "left":"sinistra",
+    "right":"destra",
+    "load":"Carica",
+    "save":"Salva",
+    "min_restore":"Min/Ripristino"
+  }
+}

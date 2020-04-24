@@ -1,0 +1,19 @@
+{
+  "AdjustableContainer":{
+    "attach":"Anhängen:",
+    "bottom":"unten",
+    "custom":"Benutzerdefiniert:",
+    "lock":"Sperren",
+    "lockstyle":"Sperrstil:",
+    "standard":"standard",
+    "light":"einfach",
+    "full":"voll",
+    "border":"umrandung",
+    "top":"oben",
+    "left":"links",
+    "right":"rechts",
+    "load":"Laden",
+    "save":"Speichern",
+    "min_restore":"Min/Wiederherstellen"
+  }
+}
