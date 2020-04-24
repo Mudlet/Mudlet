@@ -3960,7 +3960,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Senha:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2424"/>
@@ -4245,7 +4245,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -4273,7 +4273,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Salas</translation>
     </message>
   </context>
   <context>
@@ -4713,7 +4713,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>Padrão</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
@@ -4743,77 +4743,77 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Vermelho</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Verde</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Amarelo</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Azul</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Ciano</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Branco (cinza claro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Preto claro (Cinza escuro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Vermelho claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Verde claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Amarelo Claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Azul claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Ciano claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Branco claro</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
@@ -4868,7 +4868,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Offline</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
@@ -5131,7 +5131,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="57"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="58"/>
@@ -5612,7 +5612,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>Dicionários do sistema:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
