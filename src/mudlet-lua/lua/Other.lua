@@ -952,7 +952,7 @@ function loadTranslations(fileName, language, folder)
   language = language or mudlet.translations.interfacelanguage
   -- get the right folder
   folder = folder or io.exists("../translations/lua_translations/") and "../translations/lua_translations/"
-  folder = folder or io.exists("translations/lua_translations/") and "translations/lua_translations/"
+  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua_translations/") and luaGlobalPath.."/../../translations/lua_translations/"
   folder = folder or luaGlobalPath.."/lua_translations/"
 
   local file = folder.."/"..fileName.."-translated/"..fileName.."_"..language..".json"
