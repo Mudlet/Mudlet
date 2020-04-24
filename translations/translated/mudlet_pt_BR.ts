@@ -33,13 +33,13 @@
       <location filename="../src/Host.cpp" line="797"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>%1 Muito obrigado por usar o beta público!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="798"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>%1 Ajude-nos a fazer o Mudlet melhor reportando qualquer problema.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1522"/>
@@ -79,7 +79,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2543"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mapa - %1</translation>
     </message>
   </context>
   <context>
@@ -577,7 +577,7 @@ com um novo símbolo para esta sala:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Não foi possível um caminho de %1 para %2 usando saídas conhecidas.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1197,7 +1197,7 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="5048"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Use o botão esquerdo do mouse para adicionar um ponto, use o botão direito do mouse para desfazer/mudar/finalizar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5059"/>
@@ -1219,7 +1219,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>roomID=%1 não existe, não é possível adicionar propriedades a uma sala inexistente!</translation>
     </message>
   </context>
   <context>
@@ -1227,42 +1227,42 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="651"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar ao dicionário do usuário</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="653"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Remover do dicionário do usuário</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="657"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ sugestões do dicionário │ ▲Usuário▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Sistema▼ │ sugestões do dicionário │ ▲Usuário▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="735"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>sem sugestões (sistema)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="761"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>sem sugestões (compartilhada)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="765"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>sem sugestões (perfil)</translation>
     </message>
   </context>
   <context>
@@ -1270,17 +1270,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="115"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Debug Console</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="826"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Salvar o perfil?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="826"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Você deseja salvar o perfil %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="839"/>
@@ -1296,7 +1296,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="915"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="956"/>
@@ -1323,7 +1323,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2575"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem do sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="368"/>
@@ -1333,7 +1333,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Gravar um replay.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="391"/>
@@ -1358,12 +1358,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="464"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="475"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de pesquisa posterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1034"/>
@@ -1455,7 +1455,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2722"/>
       <location filename="../src/TConsole.cpp" line="2761"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum resultado da pesquisa, desculpe!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2797"/>
@@ -1496,36 +1496,36 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15566"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15567"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15578"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>objeto</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15567"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15578"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17161"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>nenhuma mensagem de erro disponível do Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17163"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Erro de Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16981"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Algumas funções podem não estar disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="3700"/>
@@ -1833,7 +1833,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1607"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Faça o download do mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1608"/>
@@ -1922,7 +1922,7 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2229"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Download do mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2289"/>
@@ -1933,7 +1933,7 @@ and there is enough space. The download operation has failed.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2228"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Abortar</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2226"/>
@@ -2339,17 +2339,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Área não nomeada</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Área padrão</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área com ID=%1 já existe!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="521"/>
@@ -2644,7 +2644,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1129"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Selecionar tudo</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1134"/>
@@ -3326,12 +3326,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Ignorar esta versão</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível abrir o arquivo baixado %1</translation>
     </message>
   </context>
   <context>
@@ -3346,7 +3346,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/updater.cpp" line="345"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Reinicie para aplicar a atualização</translation>
     </message>
   </context>
   <context>
@@ -3390,12 +3390,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Sobre o Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
@@ -3405,12 +3405,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Licença</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Terceiros</translation>
     </message>
   </context>
   <context>
@@ -3546,7 +3546,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>Tipo:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
@@ -3561,7 +3561,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
@@ -3688,25 +3688,25 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2149"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2161"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2172"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>AVISO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2183"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ALERTA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2194"/>
@@ -3939,7 +3939,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2375"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome do personagem:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2385"/>
@@ -5422,12 +5422,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2044"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Mapa salvo para %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2046"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível salvar o mapa para %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2068"/>
@@ -10514,7 +10514,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1851"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Salve seu mapa atual:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1861"/>
