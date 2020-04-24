@@ -1547,7 +1547,7 @@ Available encodings (and internal names):
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16473"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Erro de Lua: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16475"/>
@@ -1564,7 +1564,7 @@ Available encodings (and internal names):
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16947"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Provavelmente não será possível acessar o código Lua do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16986"/>
@@ -1664,7 +1664,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mapa carregado com sucesso (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="995"/>
@@ -1848,12 +1848,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2079"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas do mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2086"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de área</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2092"/>
@@ -1863,12 +1863,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2094"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Id da área: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2103"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de sala</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2110"/>
@@ -1939,7 +1939,7 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2226"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Baixando arquivo de mapa para uso em %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2256"/>
@@ -2013,79 +2013,79 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="107"/>
       <location filename="../src/TRoom.cpp" line="966"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Norte</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="108"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nordeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="109"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="110"/>
       <location filename="../src/TRoom.cpp" line="1008"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sul</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="111"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sudeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="112"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Sudoeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="113"/>
       <location filename="../src/TRoom.cpp" line="1050"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Leste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1064"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Oeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
       <location filename="../src/TRoom.cpp" line="1078"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Cima</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
       <location filename="../src/TRoom.cpp" line="1092"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Baixo</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
       <location filename="../src/TRoom.cpp" line="1106"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>Dentro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Fora</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Outro</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Desconhecido</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
@@ -2100,22 +2100,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nordeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Noroeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1022"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sudeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1036"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Sudoeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1141"/>
@@ -2186,17 +2186,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (aberto)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1334"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (fechado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1337"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (trancado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
@@ -3188,7 +3188,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2151"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Visual</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2094"/>
@@ -3341,7 +3341,7 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="188"/>
       <location filename="../src/updater.cpp" line="254"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Atualização</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="345"/>
@@ -3493,7 +3493,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
