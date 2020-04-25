@@ -56,8 +56,9 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
 
         if (result != MXP_TAG_NOT_HANDLED) {
             result = client.tagHandled(tag, result);
-            if (result != MXP_TAG_NOT_HANDLED)
+            if (result != MXP_TAG_NOT_HANDLED) {
                 return result;
+            }                
         }
     }
 
