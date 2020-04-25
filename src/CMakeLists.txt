@@ -329,10 +329,6 @@ target_link_libraries(
   ZLIB::ZLIB
   qt5keychain)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-  target_link_libraries(mudlet sysinfo)
-endif()
-
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
