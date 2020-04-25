@@ -92,7 +92,7 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
         return tag->getAttrName(1);
     }
 
-    return "";
+    return QString();
 }
 
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
