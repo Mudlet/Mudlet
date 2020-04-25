@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,8 +41,6 @@
 #include <QFile>
 #include <sstream>
 #include "post_guard.h"
-
-using namespace std;
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
@@ -334,7 +332,7 @@ bool XMLexport::saveXml(const QString& fileName)
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QFile& file)
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that impliments the
     // std::ostream interface into which it can push the data:
@@ -355,7 +353,7 @@ bool XMLexport::saveXmlFile(QFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
     mExportDoc.save(saveStringStream);
@@ -371,6 +369,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     auto hostPackage = mudletPackage.append_child("HostPackage");
     auto host = hostPackage.append_child("Host");
 
+    // Some of the data items being stored are simple numbers or other texts
+    // that can be expressed solely with the Latin1 character encoding so that
+    // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
@@ -393,6 +394,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mFORCE_GA_OFF") = pHost->mFORCE_GA_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_SAVE_ON_EXIT") = pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no";
     host.append_attribute("mEnableGMCP") = pHost->mEnableGMCP ? "yes" : "no";
+    host.append_attribute("mEnableMSSP") = pHost->mEnableMSSP ? "yes" : "no";
+    host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
@@ -404,6 +407,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
+    host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
@@ -413,14 +417,20 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
+    host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
-    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mUseProxy") = pHost->mUseProxy ? "yes" : "no";
+    host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
+    host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
+    host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
     host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
@@ -429,6 +439,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
+    quint8 styleCode = 0;
+    quint8 outerDiameterPercentage = 0;
+    quint8 innerDiameterPercentage = 0;
+    QColor outerColor;
+    QColor innerColor;
+    pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
@@ -436,6 +457,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         ignore = ignore.append(it.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
+    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toLatin1().constData();
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -495,7 +517,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
-        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
         host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
@@ -528,6 +550,27 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
 
+    {
+        auto stopwatches = host.append_child("stopwatches");
+        QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
+        while (itStopWatchId.hasNext()) {
+            auto stopWatchId = itStopWatchId.next();
+            auto pStopWatch = pHost->getStopWatch(stopWatchId);
+            if (pStopWatch->persistent()) {
+                auto stopwatch = stopwatches.append_child("stopwatch");
+                // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                if (pStopWatch->running()) {
+                    stopwatch.append_attribute("running") = "yes";
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                } else {
+                    stopwatch.append_attribute("running") = "no";
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                }
+                stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
+            }
+        }
+    }
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

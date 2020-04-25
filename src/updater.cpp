@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2017-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,8 +26,12 @@
 #endif
 
 #include "pre_guard.h"
+#include <QPushButton>
 #include <QtConcurrent>
+#include <chrono>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 // update flows:
 // linux: new AppImage is downloaded, unzipped, and put in place of the old one
@@ -37,16 +41,28 @@
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false), mpInstallOrRestart(new QPushButton(tr("Update")))
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+, updateDialog(nullptr)
+, mpInstallOrRestart(new QPushButton(tr("Update")))
+, mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
+                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
+
+    if (!mDailyCheck) {
+        mDailyCheck = std::make_unique<QTimer>();
+    }
+}
+Updater::~Updater()
+{
+    delete (feed);
 }
 
-// start the update process and figure out what needs to be done
-// if it's silent updates, do that right away, otherwise
+// start the update process and figure out what needs to be done.
+// If it's silent updates, do that right away, otherwise
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {
@@ -57,6 +73,20 @@ void Updater::checkUpdatesOnStart()
 #elif defined(Q_OS_WIN32)
     setupOnWindows();
 #endif
+
+    mDailyCheck->setInterval(12h);
+    QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
+          auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+          qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
+          if (updates.isEmpty()) {
+              return;
+          } else if (!updateAutomatically()) {
+              emit signal_updateAvailable(updates.size());
+          } else {
+              feed->downloadRelease(updates.first());
+          }
+    });
+    mDailyCheck->start();
 }
 
 void Updater::setAutomaticUpdates(const bool state)
@@ -99,9 +129,9 @@ void Updater::showChangelog() const
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().constFirst().getVersion();
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WIN32)
-    qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
+    qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -121,15 +151,14 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
-
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
-        auto updates = feed->getUpdates();
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
@@ -183,20 +212,18 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
-
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
-
-        // only update release builds to prevent auto-update from overwriting your
+        // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
-        auto updates = feed->getUpdates();
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
@@ -247,14 +274,13 @@ void Updater::untarOnLinux(const QString& fileName)
 
 void Updater::updateBinaryOnLinux()
 {
-    // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
     auto appimageLocation = systemEnvironment.contains(QStringLiteral("APPIMAGE")) ?
                 systemEnvironment.value(QStringLiteral("APPIMAGE"), QString()) :
                 QCoreApplication::applicationFilePath();
 
-    QString installedBinaryPath(appimageLocation);
+    const QString& installedBinaryPath(appimageLocation);
 
     auto executablePermissions = unzippedBinary.permissions();
     executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
@@ -280,7 +306,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, const QString& fi
 {
     Q_UNUSED(button)
 
-    // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
+    // moc, when used with cmake on macOS bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
 #if !defined(Q_OS_MACOS)
 
@@ -338,6 +364,9 @@ void Updater::recordUpdateTime() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
 }
@@ -354,6 +383,9 @@ void Updater::recordUpdatedVersion() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << APP_VERSION;
     file.close();
 }
@@ -380,6 +412,9 @@ bool Updater::shouldShowChangelog()
         return false;
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> updateTimestamp;
     file.close();
 
@@ -405,6 +440,9 @@ QString Updater::getPreviousVersion() const
         return QString();
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> previousVersion;
     file.close();
     file.remove();

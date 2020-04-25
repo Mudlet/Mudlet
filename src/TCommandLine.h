@@ -64,7 +64,7 @@ private:
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
-    bool processPotentialKeyBinding(QKeyEvent*);
+    bool keybindingMatched(QKeyEvent*);
 
 
     QPointer<Host> mpHost;
@@ -96,6 +96,7 @@ private:
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
     void spellCheckWord(QTextCursor& c);
+    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

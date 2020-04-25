@@ -39,7 +39,12 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFlags>
+#ifdef QT_GAMEPAD_LIB
+#include <QGamepad>
+#endif
+#include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
@@ -48,21 +53,36 @@
 #include <QQueue>
 #include <QReadWriteLock>
 #include <QSettings>
+#include <QShortcut>
 #include <QTextOption>
 #include <QTime>
 #include <QTimer>
 #include <QToolButton>
+#include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
-#include <QShortcut>
-#include <QKeySequence>
-#ifdef QT_GAMEPAD_LIB
-#include <QGamepad>
-#endif
+#include <../3rdparty/qtkeychain/keychain.h>
+#include <optional>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
+// for system physical memory info
+#ifdef WIN32
+#include <Windows.h>
+#include <Psapi.h>
+#elif defined(__APPLE__)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <array>
+#else
+#include <sys/resource.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 class QAction;
 class QCloseEvent;
@@ -88,6 +108,8 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
 
+class translation;
+
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
@@ -100,6 +122,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    void attachDebugArea(const QString& hostname);
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
@@ -123,10 +146,10 @@ public:
     bool setWindowFontSize(Host *, const QString &, int);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
-    bool openWindow(Host*, const QString&, bool loadLayout = true);
-    bool createMiniConsole(Host*, const QString&, int, int, int, int);
-    bool createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough);
+    std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
+    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
+    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool echoWindow(Host*, const QString&, const QString&);
     bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
     void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
@@ -143,15 +166,19 @@ public:
     bool setBackgroundImage(Host*, const QString& name, QString& path);
     bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
-    bool setLabelClickCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelDoubleClickCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelReleaseCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelMoveCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelWheelCallback(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
-    bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
+    bool setLabelClickCallback(Host*, const QString&, const int);
+    bool setLabelDoubleClickCallback(Host*, const QString&, const int);
+    bool setLabelReleaseCallback(Host*, const QString&, const int);
+    bool setLabelMoveCallback(Host*, const QString&, const int);
+    bool setLabelWheelCallback(Host*, const QString&, const int);
+    bool setLabelOnEnter(Host*, const QString&, const int);
+    bool setLabelOnLeave(Host*, const QString&, const int);
     bool moveWindow(Host*, const QString& name, int, int);
+    std::pair<bool, QString> setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget(Host* pHost);
     void deleteLine(Host*, const QString& name);
+    std::optional<QSize> getImageSize(const QString& imageLocation);
     bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
@@ -161,6 +188,8 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
     bool copy(Host* pHost, const QString& name);
@@ -214,8 +243,25 @@ public:
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
+    void updateMudletDiscordInvite();
+    std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    std::pair<bool, QString> resetProfileIcon(const QString& profile);
+#if defined(Q_OS_WIN32)
+    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
+#endif
 
+    // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
+    // unofficial "nightly" build - still a type of a release
+    static const bool scmIsPublicTestVersion;
+    // final, official release
+    static const bool scmIsReleaseVersion;
+
+    static const QVersionNumber scmRunTimeQtVersion;
+    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
+    // which can't be pulled from Qt as it is not going to be defined for older
+    // versions:
+    static const int scmQDataStreamFormat_5_12;
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
@@ -304,6 +350,12 @@ public:
         // supplied profle name does:
         profileHomePath,
         // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save media files - does NOT end in a '/'
+        profileMediaPath,
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        profileMediaPathFileName,
+        // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/':
         profileXmlFilesPath,
         // Takes one extra argument (profile name) that returns the directory
@@ -315,8 +367,8 @@ public:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
-        // Takes one extra argument (profile name) that returns the pathFile
-        // name for the downloaded IRE Server provided XML map:
+        // Takes one extra argument (profile name) that returns the file
+        // location for the downloaded MMP map:
         profileXmlMapPathFileName,
         // Takes two extra arguments (profile name, data item) that gives a
         // path file name for, typically a data item stored as a single item
@@ -365,11 +417,16 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-    void show_options_dialog(QString tab);
+    void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
-    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+    const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
+    QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
+    bool migratePasswordsToProfileStorage();
+    bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    bool migratePasswordsToSecureStorage();
+    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
@@ -383,6 +440,13 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     QPair<bool, bool> removeWordFromSet(const QString&);
     QSet<QString> getWordSet();
+    void scanForMudletTranslations(const QString&);
+    void scanForQtTranslations(const QString&);
+    void layoutModules();
+    void startAutoLogin(const QString&);
+    QPointer<QTableWidget> moduleTable;
+    int64_t getPhysicalMemoryTotal();
+    const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
 
 
 #if defined(INCLUDE_UPDATER)
@@ -399,26 +463,24 @@ public:
     // approximate max duration that 'Copy as image' is allowed to take (seconds)
     int mCopyAsImageTimeout;
 
-    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
-    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
-    // file for GUI translation
-    QString mInterfaceLanguage;
+    QMap<QString, translation> mTranslationsMap;
 
-    // ISO language code, translated human-readable name w/ English, and percent translated
-    // ie: ru_RU, Русский (Russian), 75
-    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it;
-    const int mTranslationStar = 95;
+    const int mTranslationGoldStar = 95;
 
-    // A different version of the above intended for Dictionary identification - it might be possible to merge them:
+    // A list of potential dictionary languages - probably will cover a much
+    // wider range of languages compared to the translations - and is intended
+    // for Dictionary identification - there is a request for users to submit
+    // entries in their system if they do not appear in this and thus get
+    // reported in the dictionary selection as the hunspell dictionary/affix
+    // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString>mDictionaryLanguageCodeMap;
 
     // This is used to keep track of where the main dictionary files are located
     // will be true if they are ones bundled with Mudlet, false if provided by
     // the system
     bool mUsingMudletDictionaries;
-
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -444,8 +506,8 @@ public slots:
     void slot_notes();
     void slot_reconnect();
     void slot_close_profile_requested(int);
-    void startAutoLogin();
     void slot_irc();
+    void slot_discord();
     void slot_uninstall_package();
     void slot_install_package();
     void slot_package_manager();
@@ -453,7 +515,6 @@ public slots:
     void slot_uninstall_module();
     void slot_install_module();
     void slot_module_manager();
-    void layoutModules();
     void slot_help_module();
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
@@ -480,13 +541,17 @@ signals:
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
+    void signal_guiLanguageChanged(const QString&);
+    void signal_passwordsMigratedToSecure();
+    void signal_passwordMigratedToSecure(const QString&);
+    void signal_passwordsMigratedToProfiles();
 
 
 private slots:
-    void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();
     void slot_show_connection_dialog();
+    void show_editor_dialog();
     void show_trigger_dialog();
     void show_alias_dialog();
     void show_script_dialog();
@@ -507,23 +572,33 @@ private slots:
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
+    void slot_report_issue();
 #endif
+    void slot_toggle_compact_input_line();
+    void slot_password_migrated_to_secure(QKeychain::Job *job);
+    void slot_password_migrated_to_profile(QKeychain::Job *job);
+
 
 private:
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
-    void loadTranslators();
     bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
-
+    void check_for_mappingscript();
+    void set_compact_input_line();
+    QSettings* getQSettings();
+    void loadTranslators(const QString &languageCode);
+    void loadMaps();
+    void migrateDebugConsole(Host* currentHost);
+    static bool firstLaunch();
+    QString autodetectPreferredLanguage();
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QPointer<Host> mpDefaultHost;
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
@@ -566,26 +641,30 @@ private:
     QKeySequence disconnectKeySequence;
     QKeySequence reconnectKeySequence;
 
-    void check_for_mappingscript();
-
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
+    QPointer<QToolButton> mpButtonConnect;
     QPointer<QAction> mpActionConnect;
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionIRC;
+    QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
-    QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionReportIssue;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
+    QPointer<QToolButton> mpButtonPackageManagers;
     QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;
@@ -597,7 +676,6 @@ private:
     QPointer<QPushButton> installButton;
 
     QPointer<Host> mpModuleTableHost;
-    QPointer<QTableWidget> moduleTable;
     QPointer<QPushButton> moduleUninstallButton;
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;
@@ -607,24 +685,21 @@ private:
     bool mshowMapAuditErrors;
 
     bool mCompactInputLine;
-    void slot_toggle_compact_input_line();
-    void set_compact_input_line();
-
-    QSettings* getQSettings();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
 
-    // QMap has key of interface languages (in format of mInterfaceLanguage)
-    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
-    // for the specific GUI Language, on language change to remove
-    // the translators for the old settings and add the ones for
-    // the new language
-    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage {};
+    // The next pair retains the path argument supplied to the corresponding
+    // scanForXxxTranslations(...) method so it is available to the subsquent
+    // loadTranslators(...) call
+    QString mQtTranslationsPathName;
+    QString mMudletTranslationsPathName;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
-    void loadLanguagesMap();
 
     // Points to the common mudlet dictionary handle once a profile has
     // requested it, then gets closed at termination of the application.
@@ -633,6 +708,16 @@ private:
     QSet<QString> mWordSet_shared;
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
+
+    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
+
+    // a list of profiles currently being migrated to secure or profile storage
+    QStringList mProfilePasswordsToMigrate {};
+
+    bool mStorePasswordsSecurely {true};
+    // Stores the translated names for the Encodings for the static and thus
+    // const TBuffer::csmEncodingTable:
+    QMap<QByteArray, QString> mEncodingNameMap;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
@@ -648,5 +733,38 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
 
+
+// A convenience class to keep all the details for the translators for a
+// specific locale code (langauge only "xx" or language/country "xx_YY")
+// in one unified structure.
+class translation
+{
+    // The following must have friendship so they can set private members:
+    friend void mudlet::scanForMudletTranslations(const QString&);
+    friend void mudlet::scanForQtTranslations(const QString&);
+
+public:
+    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+
+    const QString& getNativeName() const { return mNativeName; }
+    const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }
+    const QString& getQtTranslationFileName() const { return mQtTranslationFileName; }
+    const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
+    bool fromResourceFile() const { return mTranslatedPercentage >= 0; }
+
+private:
+    // Used for display in the profile preferences and is never translated:
+    QString mNativeName;
+    // ONLY if the translation is loaded from an embedded resource file,
+    // this is the percentage complete of the translation
+    int mTranslatedPercentage;
+    // filename translation is loaded from
+    QString mMudletTranslationFileName;
+    // Qt translation file was found to be, note that in most
+    // cases the loaded file will be a "xx" language only file even though it
+    // is an "xx_YY" one here:
+    QString mQtTranslationFileName;
+    // Similar filename locations will require adding for any 3rd party translations we load
+};
 
 #endif // MUDLET_MUDLET_H

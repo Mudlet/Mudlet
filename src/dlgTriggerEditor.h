@@ -4,8 +4,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2015-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,6 +39,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "dlgSourceEditorArea.h"
+#include "dlgSourceEditorFindArea.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
@@ -63,6 +65,7 @@
 #include "edbee/texteditorcontroller.h"
 #include "edbee/texteditorwidget.h"
 #include "edbee/views/components/texteditorcomponent.h"
+#include "edbee/views/textselection.h"
 
 #include "edbee/models/textsearcher.h" // These three are required for search highlighting
 #include "edbee/views/texttheme.h"
@@ -71,6 +74,7 @@
 class dlgTimersMainArea;
 class dlgSystemMessageArea;
 class dlgSourceEditorArea;
+class dlgSourceEditorFindArea;
 class dlgTriggersMainArea;
 class dlgActionMainArea;
 class dlgSearchArea;
@@ -140,16 +144,17 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
                  SearchResultIsValue = 0x8
     };
 
+public:
+    // This needs to be public so that the options can be used from the Host class:
     enum SearchOption {
         // Unset:
         SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1 /*,
-        SearchOptionRegExp = 0x2,
-        SearchOptionWholeWord = 0x4 */
+        SearchOptionCaseSensitive = 0x1,
+        SearchOptionIncludeVariables = 0x2 /*,
+        SearchOptionRegExp = 0x4,
+        SearchOptionWholeWord = 0x8 */
     };
 
-
-public:
     Q_DISABLE_COPY(dlgTriggerEditor)
     dlgTriggerEditor(Host*);
 
@@ -172,6 +177,7 @@ public:
     void enterEvent(QEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
+    void resizeEvent(QResizeEvent *event) override;
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&);
@@ -180,6 +186,7 @@ public:
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
     void doCleanReset();
+    void writeScript(int id);
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
@@ -209,6 +216,7 @@ public:
     void delete_timer();
     void delete_trigger();
     void delete_variable();
+    void setSearchOptions(const SearchOptions);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -226,12 +234,16 @@ public slots:
     void slot_import();
     void slot_viewStatsAction();
     void slot_debug_mode();
+    void slot_next_section();
+    void slot_previous_section();
+    void slot_show_current();
     void slot_show_timers();
     void slot_show_triggers();
     void slot_show_scripts();
     void slot_show_aliases();
     void slot_show_actions();
     void slot_show_keys();
+    void slot_activateMainWindow();
     void slot_tree_selection_changed();
     void slot_trigger_selected(QTreeWidgetItem* pItem);
     void slot_timer_selected(QTreeWidgetItem* pItem);
@@ -245,6 +257,12 @@ public slots:
     void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
     void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
+    void slot_open_source_find();
+    void slot_close_source_find();
+    void slot_move_source_find();
+    void slot_source_find_previous();
+    void slot_source_find_next();
+    void slot_source_find_text_changed();
     void slot_save_edit();
     void slot_copy_xml();
     void slot_paste_xml();
@@ -270,6 +288,7 @@ private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -331,7 +350,7 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
-    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
+    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText = QLatin1Literal(""));
 
     void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
@@ -423,10 +442,14 @@ private:
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
+    // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
+    // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
+    QWidget *mpNonCodeWidgets;
     dlgTriggersMainArea* mpTriggersMainArea;
     dlgTimersMainArea* mpTimersMainArea;
     dlgSystemMessageArea* mpSystemMessageArea;
     dlgSourceEditorArea* mpSourceEditorArea;
+    dlgSourceEditorFindArea* mpSourceEditorFindArea;
     dlgAliasMainArea* mpAliasMainArea;
     dlgActionMainArea* mpActionsMainArea;
     dlgScriptsMainArea* mpScriptsMainArea;
@@ -453,6 +476,7 @@ private:
     QIcon mIcon_searchOptions;
 
     QAction* mpAction_searchCaseSensitive;
+    QAction* mpAction_searchIncludeVariables;
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
@@ -469,6 +493,15 @@ private:
 
     // profile autosave interval in minutes
     int mAutosaveInterval;
+
+    // tracks location of the splitter in the trigger editor for each tab
+    QByteArray mTriggerEditorSplitterState;
+    QByteArray mAliasEditorSplitterState;
+    QByteArray mScriptEditorSplitterState;
+    QByteArray mActionEditorSplitterState;
+    QByteArray mKeyEditorSplitterState;
+    QByteArray mTimerEditorSplitterState;
+    QByteArray mVarEditorSplitterState;
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax;

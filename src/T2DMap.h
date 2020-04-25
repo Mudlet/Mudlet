@@ -36,10 +36,13 @@
 #include "post_guard.h"
 
 class Host;
+class TArea;
 class TMap;
+class TRoom;
 
 class QCheckBox;
 class QComboBox;
+class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
@@ -159,6 +162,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
+    void setPlayerRoomStyle(const int style);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -211,6 +215,10 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
+    void drawRoom(QPainter&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const int, const float, const float, const bool);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
+    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
+    void initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     bool mDialogLock;
 
@@ -236,18 +244,15 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
-
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;
     QFont mMapSymbolFont;
-
     QPointer<QAction> mpCreateRoomAction;
-    // Calculated near the top of the paintEvent() and is used in a couple of
-    // places where we need to pad roomIds to the same widths, it also affects
-    // the font size used to show roomId numbers (longer numbers need a smaller
-    // font to fit - as the numbers are NOW scaled to fit inside the room symbol
-    // - and they are suppressed if they would be too small.);
+    // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits;
+
+    // Holds the QRadialGradient details to use for the player room:
+    QGradientStops mPlayerRoomColorGradentStops;
 
 private slots:
     void slot_createRoom();

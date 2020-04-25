@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -36,17 +36,20 @@
 #include "edbee/views/texteditorscrollarea.h"
 
 #include "pre_guard.h"
+#include <chrono>
 #include <QtConcurrent>
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QPainter>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
@@ -85,7 +88,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     groupBox_discordPrivacy->hide();
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-    
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -251,24 +254,106 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
+    connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
 
     generateDiscordTooltips();
 
     label_languageChangeWarning->hide();
+    label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
-        auto& translatedName = pMudlet->mLanguageCodeMap.value(code).first;
-        int translatedPc = pMudlet->mLanguageCodeMap.value(code).second;
-        comboBox_guiLanguage->addItem(translatedName, code);
-        if (translatedPc >= pMudlet->mTranslationStar) {
-            comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
+        auto& translation = pMudlet->mTranslationsMap.value(code);
+        auto& nativeName = translation.getNativeName();
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= pMudlet->mTranslationGoldStar) {
+                comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
+                                              nativeName,
+                                              code);
+            } else {
+                // This will also be used if the percentage is set to zero
+                // because it was not found in the translation statistics file
+                // during compilation even though the Mudlet translation is in
+                // the resources file:
+                comboBox_guiLanguage->addItem(QIcon(),
+                                              tr("%1 (%2% done)",
+                                                 // Intentional argument to separate arguments
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.")
+                                              .arg(nativeName, QString::number(translatedPc)),
+                                              code);
+            }
+        } else {
+            // For translations that come from somewhere else we are not likely
+            // to have the translations statistics so no icon and no extra text:
+            comboBox_guiLanguage->addItem(QIcon(), nativeName, code);
         }
     }
     comboBox_guiLanguage->model()->sort(0);
-    auto current = pMudlet->mInterfaceLanguage;
-    comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
-    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
+    if (Q_LIKELY(currentIndex != -1)) {
+        // The language code has been found in the UserData role for one of the
+        // entries - so select it
+        comboBox_guiLanguage->setCurrentIndex(currentIndex);
+        connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    } else {
+        currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
+        if (Q_LIKELY(currentIndex != -1)) {
+           // The default code has been found in the UserData role for one of
+           // the entries - so select it as a fallback
+            comboBox_guiLanguage->setCurrentIndex(currentIndex);
+            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else if (comboBox_guiLanguage->count()) {
+            // There is at least ONE entry but it is not the expected one
+            // or the American English default - so select that first one as a
+            // last ditch effort:
+            comboBox_guiLanguage->setCurrentIndex(0);
+            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else {
+            // Nothing available - so disable the control:
+            comboBox_guiLanguage->setEnabled(false);
+            // And insert an Engineering English warning text - this is probably
+            // a sign of significant borkage in the translation system!
+            comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
+        }
+    }
+
+    setupPasswordsMigration();
+}
+
+void dlgProfilePreferences::setupPasswordsMigration()
+{
+    hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
+    hidePasswordMigrationLabelTimer->setSingleShot(true);
+
+    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
+
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
+        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
+        comboBox_store_passwords_in->setEnabled(true);
+        hidePasswordMigrationLabelTimer->start(10s);
+    });
+
+    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile) {
+        label_password_migration_notification->setText(
+                tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
+    });
+
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=]() {
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
+        comboBox_store_passwords_in->setEnabled(true);
+        hidePasswordMigrationLabelTimer->start(10s);
+    });
+
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        comboBox_store_passwords_in->setCurrentIndex(0);
+    } else {
+        comboBox_store_passwords_in->setCurrentIndex(1);
+    }
+
+    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwords_location_changed);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -276,7 +361,7 @@ void dlgProfilePreferences::disableHostDetails()
     // The Host pointer is a nullptr so disable every control that depends on it
 
     // on tab_general:
-    // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
+    // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
     label_encoding->setEnabled(false);
     comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
@@ -320,6 +405,7 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
+    hidePasswordMigrationLabel();
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
@@ -358,6 +444,7 @@ void dlgProfilePreferences::disableHostDetails()
 
 void dlgProfilePreferences::enableHostDetails()
 {
+    // on tab_general:
     label_encoding->setEnabled(true);
     comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
@@ -433,6 +520,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
+    acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
@@ -555,8 +643,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
-    fontComboBox->setCurrentFont(pHost->mDisplayFont);
-    mFontSize = pHost->mDisplayFont.pointSize();
+    fontComboBox->setCurrentFont(pHost->getDisplayFont());
+    mFontSize = pHost->getDisplayFont().pointSize();
     if (mFontSize < 0) {
         mFontSize = 10;
     }
@@ -665,6 +753,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    mEnableMSP->setChecked(pHost->mEnableMSP);
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
@@ -678,10 +768,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         QString s = profileList.at(i);
-        if (s.isEmpty() || !s.compare(pHost->getName()) || !s.compare(QStringLiteral("default_host"))) {
+        if (s.isEmpty() || !s.compare(pHost->getName())) {
             // Do not include THIS profile in the list - it will
             // automatically get saved - as the file to copy to the other
-            // profiles!  Also exclude the dummy "default_host" one
+            // profiles!
             continue;
         }
 
@@ -698,6 +788,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // label to show on successful map file action
     label_mapFileActionResult->hide();
+
+    hidePasswordMigrationLabel();
 
     //doubleclick ignore
     QString ignore;
@@ -761,6 +853,23 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+
+        widget_playerRoomStyle->show();
+        comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
+        // Custom colours only available in style '3' (of '0' to '3'):
+        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
+        spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
+        // Adjustable inner diameter not available for style '0' (original):
+        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+        connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
+        connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
+        connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
+        connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
+        connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -768,17 +877,30 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
+        widget_playerRoomStyle->hide();
     }
 
-    comboBox_encoding->addItem(QLatin1String("ASCII"));
-    comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
+    comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
+    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
+        auto encodingTitle = mudlet::self()->getEncodingNamesMap().value(encoding, tr("%1 (*Error, report to Mudlet Makers*)",
+                                                                                      // Intentional comment to separate arguments
+                                                                                      "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
+                                                                         .arg(QLatin1String(encoding)));
+        comboBox_encoding->addItem(encodingTitle, encoding);
+    }
     if (pHost->mTelnet.getEncoding().isEmpty()) {
         // cTelnet::mEncoding is (or should be) empty for the default 7-bit
         // ASCII case, so need to set the control specially to its (the
         // first) value
         comboBox_encoding->setCurrentIndex(0);
     } else {
-        comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
+        int currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
+        if (currentIndex >=0) {
+            comboBox_encoding->setCurrentIndex(currentIndex);
+        } else {
+            // invalid or not found - so reset to ASCII:
+            comboBox_encoding->setCurrentIndex(0);
+        }
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
@@ -791,68 +913,79 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
         QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
-        ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
-        ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
-        ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
-        ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-        checkBox_self_signed->setStyleSheet("");
-        checkBox_expired->setStyleSheet("");
-        ssl_issuer_label->setStyleSheet("");
-        ssl_expires_label->setStyleSheet("");
-        checkBox_ssl->setStyleSheet("");
+        if (cert.isNull()) {
+            groupBox_ssl_certificate->hide();
+        } else {
+            ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
+            ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
+            ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+            ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
+            checkBox_self_signed->setStyleSheet("");
+            checkBox_expired->setStyleSheet("");
+            ssl_issuer_label->setStyleSheet("");
+            ssl_expires_label->setStyleSheet("");
 
-        if (!pHost->mTelnet.getSslErrors().empty()) {
-            // handle ssl errors
-            notificationAreaIconLabelWarning->show();
-            notificationArea->show();
-            notificationAreaMessageBox->show();
-            //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            if (!pHost->mTelnet.getSslErrors().empty()) {
+                // handle ssl errors
+                notificationAreaIconLabelWarning->show();
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+                //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
 
-            QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+                QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
 
-            for (int a = 0; a < sslErrors.count(); a++) {
-                QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
-                notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
+                for (int a = 0; a < sslErrors.count(); a++) {
+                    QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                    notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
-                if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
-                    checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
-                    ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                    if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
+                        checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                        ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                    }
+                    if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
+                        checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                        ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                    }
                 }
-                if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
-                    checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
-                    ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
-                }
+
+            } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
+                // handle failed handshake, likely not ssl socket
+                notificationAreaIconLabelError->show();
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
             }
-
-        } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
-            // handle failed handshake, likely not ssl socket
-            notificationAreaIconLabelError->show();
-            notificationArea->show();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-            checkBox_ssl->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
-        }
-        if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
-            // handle ssl library error
-            notificationAreaIconLabelError->show();
-            notificationArea->show();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
-        }
-        if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
-            // handle invalid data (certificate, key, cypher, etc.)
-            notificationAreaIconLabelError->show();
-            notificationArea->show();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
+                // handle ssl library error
+                notificationAreaIconLabelError->show();
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            }
+            if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
+                // handle invalid data (certificate, key, cypher, etc.)
+                notificationAreaIconLabelError->show();
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+                notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            }
         }
     }
 #endif
 
-    checkBox_ssl->setChecked(pHost->mSslTsl);
+    groupBox_ssl->setChecked(pHost->mSslTsl);
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
+
+    groupBox_proxy->setEnabled(true);
+    groupBox_proxy->setChecked(pHost->mUseProxy);
+    lineEdit_proxyAddress->setText(pHost->mProxyAddress);
+    if (pHost->mProxyPort != 0) {
+        lineEdit_proxyPort->setText(QString::number(pHost->mProxyPort));
+    }
+    lineEdit_proxyUsername->setText(pHost->mProxyUsername);
+    lineEdit_proxyPassword->setText(pHost->mProxyPassword);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
@@ -920,6 +1053,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -928,7 +1063,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::copyMap);
     connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::loadMap);
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::saveMap);
-    connect(comboBox_encoding, &QComboBox::currentTextChanged, this, &dlgProfilePreferences::slot_setEncoding);
+    connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
@@ -999,6 +1134,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1014,6 +1151,13 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetLogDir, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
+
+    widget_playerRoomStyle->hide();
+    disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1025,11 +1169,10 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     acceptServerGUI->setChecked(false);
+    acceptServerMedia->setChecked(false);
 
     // Given that the IRC sub-system can handle there NOT being an active host
-    // this may need revising - but then the IRC sub-system may need to be fixed
-    // to handle switching back to the "default_host" should the currently
-    // active one be the one "going away" at this point...
+    // this may need revising
     ircHostName->clear();
     ircHostPort->clear();
     ircChannels->clear();
@@ -1078,6 +1221,8 @@ void dlgProfilePreferences::clearHostDetails()
     mAlertOnNewData->setChecked(false);
     mFORCE_SAVE_ON_EXIT->setChecked(false);
     mEnableGMCP->setChecked(false);
+    mEnableMSSP->setChecked(false);
+    mEnableMSP->setChecked(false);
     mEnableMSDP->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
@@ -1090,6 +1235,8 @@ void dlgProfilePreferences::clearHostDetails()
     pushButton_chooseProfiles->setEnabled(false);
 
     label_mapFileActionResult->hide();
+
+    hidePasswordMigrationLabel();
 
     doubleclick_ignore_lineedit->clear();
 
@@ -1114,6 +1261,10 @@ void dlgProfilePreferences::clearHostDetails()
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
 
+    groupBox_ssl_certificate->hide();
+    notificationArea->hide();
+    groupBox_proxy->setDisabled(true);
+
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
 }
@@ -1130,6 +1281,7 @@ void dlgProfilePreferences::loadEditorTab()
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
     config->setSmartTab(true);
+    config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
     config->setThemeName(pHost->mEditorTheme);
@@ -1138,9 +1290,10 @@ void dlgProfilePreferences::loadEditorTab()
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(pHost->mDisplayFont);
+    config->setFont(pHost->getDisplayFont());
+    config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
     config->endChanges();
-    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
@@ -1168,6 +1321,8 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setDuplicatesEnabled(true);
 
     theme_download_label->hide();
+
+    checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -1283,7 +1438,7 @@ void dlgProfilePreferences::setTab(QString tab)
 {
     foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
     {
-        if (child->objectName().contains(tab,Qt::CaseInsensitive))
+        if (child->objectName().contains(tab, Qt::CaseInsensitive))
         {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
@@ -1327,6 +1482,9 @@ void dlgProfilePreferences::resetColors()
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
+
+    // Copy across the colors to the Lua "color_table"
+    pHost->updateAnsi16ColorsInTable();
 }
 
 void dlgProfilePreferences::resetColors2()
@@ -1381,7 +1539,21 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
             }
         }
 
-        // Also set a contrasting foreground color so text will always be visible
+        if (b == pushButton_black || b == pushButton_lBlack
+                || b == pushButton_red || b == pushButton_lRed
+                || b == pushButton_green || b == pushButton_lGreen
+                || b == pushButton_yellow || b == pushButton_lYellow
+                || b == pushButton_blue || b == pushButton_lBlue
+                || b == pushButton_magenta || b == pushButton_lMagenta
+                || b == pushButton_cyan || b == pushButton_lCyan
+                || b == pushButton_white || b == pushButton_lWhite) {
+
+            pHost->updateAnsi16ColorsInTable();
+        }
+
+        // Also set a contrasting foreground color so text will always be
+        // visible - if the button is disabled the colors will be somewhat
+        // "greyed-out":
         setButtonColor(b, color);
     }
 }
@@ -1447,25 +1619,45 @@ void dlgProfilePreferences::setDisplayFont()
     if (!pHost) {
         return;
     }
-    QFont font = fontComboBox->currentFont();
-    font.setPointSize(mFontSize);
-    if (pHost->mDisplayFont != font) {
-        pHost->mDisplayFont = font;
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            mudlet::self()->mConsoleMap[pHost]->changeColors();
+    QFont newFont = fontComboBox->currentFont();
+    newFont.setPointSize(mFontSize);
 
-            // update the display properly when font or size selections change.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->refresh();
-        }
-        auto config = edbeePreviewWidget->config();
-        config->beginChanges();
-        config->setFont(font);
-        config->endChanges();
+    if (pHost->getDisplayFont() == newFont) {
+        return;
     }
+
+    label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
+    if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
+        label_invalidFontError->show();
+        return;
+    } else if (!QFontInfo(newFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
+    }
+
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+#endif
+
+    auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
+    if (!mainConsole) {
+        return;
+    }
+
+    // update the display properly when font or size selections change.
+    mainConsole->changeColors();
+    mainConsole->mUpperPane->updateScreenView();
+    mainConsole->mUpperPane->forceUpdate();
+    mainConsole->mLowerPane->updateScreenView();
+    mainConsole->mLowerPane->forceUpdate();
+    mainConsole->refresh();
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(newFont);
+    config->endChanges();
 }
 
 // Currently UNUSED!
@@ -1863,6 +2055,31 @@ void dlgProfilePreferences::hideActionLabel()
     label_mapFileActionResult->hide();
 }
 
+void dlgProfilePreferences::hidePasswordMigrationLabel()
+{
+    label_password_migration_notification->hide();
+}
+
+void dlgProfilePreferences::slot_passwords_location_changed(int index)
+{
+    // index 0 = use secure storage, index 1 = use profile storage
+    if (index == 0) {
+        if (mudlet::self()->migratePasswordsToSecureStorage()) {
+            label_password_migration_notification->setText(tr("Migrating passwords to secure storage..."));
+            label_password_migration_notification->show();
+            comboBox_store_passwords_in->setDisabled(true);
+            hidePasswordMigrationLabelTimer->stop();
+        }
+    } else {
+        if (mudlet::self()->migratePasswordsToProfileStorage()) {
+            label_password_migration_notification->setText(tr("Migrating passwords to profiles..."));
+            label_password_migration_notification->show();
+            comboBox_store_passwords_in->setDisabled(true);
+            hidePasswordMigrationLabelTimer->stop();
+        }
+    }
+}
+
 void dlgProfilePreferences::copyMap()
 {
     Host* pHost = mpHost;
@@ -2170,6 +2387,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
+        pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
@@ -2180,6 +2398,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
+        pHost->mEnableMSSP = mEnableMSSP->isChecked();
+        pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
@@ -2217,8 +2437,14 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
+        pHost->mUseProxy = groupBox_proxy->isChecked();
+        pHost->mProxyAddress = lineEdit_proxyAddress->text();
+        pHost->mProxyPort = lineEdit_proxyPort->text().toUInt();
+        pHost->mProxyUsername = lineEdit_proxyUsername->text();
+        pHost->mProxyPassword = lineEdit_proxyPassword->text();
+
         //tab security
-        pHost->mSslTsl = checkBox_ssl->isChecked();
+        pHost->mSslTsl = groupBox_ssl->isChecked();
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
@@ -2323,6 +2549,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
@@ -2380,10 +2607,29 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+
+        if (widget_playerRoomStyle->isVisible()) {
+            // Although the controls have been interactively modifying the
+            // TMap cached values for these, they were not being committed to
+            // the master values in the Host instance - but now we should write
+            // those - whilst we can get the first three (quint8) values
+            // directly from controls on this form/dialogue, the last two
+            // (QColors) are easiest to retrieve from the TMap instance as the
+            // colours are not directly stored here (as for some styles they
+            // show a partly "grey-ed out" colour as they are disabled for those
+            // styles):
+            pHost->setPlayerRoomStyleDetails(static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()),
+                                             static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()),
+                                             static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()),
+                                             pHost->mpMap->mPlayerRoomOuterColor,
+                                             pHost->mpMap->mPlayerRoomInnerColor);
+        }
     }
 
 #if defined(INCLUDE_UPDATER)
-    pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+        pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    }
 #endif
 
     pMudlet->setToolBarIconSize(MainIconSize->value());
@@ -2441,11 +2687,11 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
+void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+        pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
         if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
             // We are linking the Server encoding to this setting currently
@@ -2533,7 +2779,7 @@ void dlgProfilePreferences::populateScriptsList()
 // adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
+    std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
             items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
@@ -2548,7 +2794,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
 // adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAlias*>* childrenList = pAliasParent->getChildrenList();
+    std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
             items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
@@ -2563,7 +2809,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
 // adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
             items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
@@ -2578,7 +2824,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
 // adds key name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TKey*>* childrenList = pKeyParent->getChildrenList();
+    std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
             items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
@@ -2593,7 +2839,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
 // adds script name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TScript*>* childrenList = pScriptParent->getChildrenList();
+    std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
             items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
@@ -2608,7 +2854,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
 // adds action name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAction*>* childrenList = pActionParent->getChildrenList();
+    std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
             items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
@@ -2623,8 +2869,9 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
 // updates latest edbee themes when the user opens up the editor tab
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
-    // bail out if this is not an editor tab
-    if (tabIndex != 3) {
+    // bail out if this is not the editor tab - or if the Host has gone away
+    Host* pHost = mpHost;
+    if (tabIndex != 3 || !pHost) {
         return;
     }
 
@@ -2669,7 +2916,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
+    pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
@@ -2737,11 +2984,11 @@ void dlgProfilePreferences::populateThemesList()
             QString themeFileName = theme.toObject()["FileName"].toString();
 
             if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << make_pair(themeText, themeFileName);
+                sortedThemes << std::make_pair(themeText, themeFileName);
             }
         }
     }
-    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+    sortedThemes << std::make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
@@ -2850,21 +3097,18 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
 
 /*
  * This is to deal particularly with the case where the preferences dialog is
- * opened without a host instance (other than the dummy "default_host") being
- * around - and then the user starts up a profile and one gets created.
- * In that situation we detect the signal that the mudlet class sends out (now)
+ * opened without a host instance being around - and then the user starts up
+ * a profile and one gets created.
+ * In that situation we detect the signal that the mudlet class sends out
  * when a host is created and wire it up into the controls that until then
  * have been disabled/greyed-out.
  */
 void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 count)
 {
-    // count will be 2 in the case we particularly want to handle (adding the
-    // first real Host instance):
-    if (!mpHost && pHost && count < 3) {
+    if (!mpHost && pHost && count < 2) {
         // We have not been constructed with a valid Host pointer,
         // AND a real Host instance has just been created
-        // AND there are only two Host instances (the "real" one and the
-        // "default_host") around.
+        // AND there is only one Host instance around.
         mpHost = pHost;
         // So make connections to the details of the real Host instance:
         initWithHost(pHost);
@@ -2953,18 +3197,18 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         // can render the codepoints:
         QVector<quint32> pCodePoints = symbol.toUcs4();
         // These can be used to flag symbols that cannot be reproduced
-        bool isSingleFontUsable=true;
-        bool isAllFontUsable=true;
+        bool isSingleFontUsable = true;
+        bool isAllFontUsable = true;
         QStringList codePointsString;
         for (uint i = 0, total = pCodePoints.size(); i < total; ++i) {
             codePointsString << QStringLiteral("U+%1").arg(pCodePoints.at(i), 4, 16, QChar('0')).toUpper();
             if (!SymbolAnyFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isAllFontUsable=false;
+                isAllFontUsable = false;
                 // By definition if all the fonts together cannot render the
                 // glyph then the specified one cannot either
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             } else if (!SymbolInFontMetrics.inFontUcs4(pCodePoints.at(i))) {
-                isSingleFontUsable=false;
+                isSingleFontUsable = false;
             }
         }
 
@@ -3257,8 +3501,78 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 
 void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
 {
-    button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
-                                                                                              color.name()));
+    if (color.isValid()) {
+        if (button->isEnabled()) {
+            if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+                // These two buttons show a color that may have transparency; so,
+                // instead of colouring the background, we include a generated
+                // black/white checkerboard pattern overlaid with the colour which
+                // when its alpha is not a 100% opaque will (partly) show the
+                // checkerboard.
+
+                // Ensure the icon has a 3:1 aspect ratio:
+                if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                    button->setIconSize(QSize(iconHeight * 3, iconHeight));
+                }
+
+                // Create a black/white checker background and overlay
+                QPixmap labelBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+                labelBackground.fill(Qt::black);
+                QPainter painter(&labelBackground);
+                painter.drawImage(QRect(0, 0, labelBackground.width(), labelBackground.height()),
+                                  QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                          .scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
+                painter.fillRect(0, 0, labelBackground.width(), labelBackground.height(), color);
+                painter.end();
+                button->setIcon(QIcon(labelBackground));
+            } else {
+                button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                                              .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                                                   color.name()));
+            }
+            return;
+        }
+
+        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
+        if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+            // These two buttons show a color that may have transparency; so,
+            // instead of colouring the background, we include a generated
+            // black/white checkerboard pattern overlaid with the colour which
+            // when its alpha is not a 100% opaque will (partly) show the
+            // checkerboard.
+
+            // Ensure the icon has a 3:1 aspect ratio:
+            if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                button->setIconSize(QSize(iconHeight * 3, iconHeight));
+            }
+
+            QPixmap iconBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+            iconBackground.fill(Qt::black);
+            QPainter painter(&iconBackground);
+            painter.drawImage(QRect(0, 0, iconBackground.width(), iconBackground.height()),
+                              QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                      .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
+            painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
+            painter.end();
+            // Because the button is disabled we have to explictly force our
+            // icon to be used for that state otherwise the built-in icon engine
+            // will assume our image is for the normal state and grey it out
+            // completely by automagic means instead of making use of the
+            // partial (desaturating) effect that we want to use:
+            QIcon icon;
+            icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
+            button->setIcon(icon);
+        } else {
+            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                              .arg(QLatin1String("darkGray"), disabledColor.name()));
+        }
+        return;
+    }
+
+    button->setIcon(QIcon());
+    button->setStyleSheet(QString());
 }
 
 // These next eight slots are so that if there are multiple profile preferences
@@ -3366,17 +3680,187 @@ void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState sta
     }
 }
 
-void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
+// This slot is called when the QComboBox for the locale/language in this dialog
+// is changed by the user.
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString& language)
 {
     Q_UNUSED(language);
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
-    // WIP remove hardcoding when PR is done and languages have names in Preferences
-    if (languageCode == QStringLiteral("English")) {
-        mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));
-    } else {
-        mudlet::self()->setInterfaceLanguage(languageCode);
+    mudlet::self()->setInterfaceLanguage(languageCode);
+    label_languageChangeWarning->show();
+}
+
+// This slot is called when the mudlet singleton tells everything that the
+// locale/language selection has been changed (new translators installed)
+// It probably came about because the control for it on THIS dialog was changed
+// but it need not - the most obvious example would be if multi-playing and
+// the preferences were open for more than one profile and the control was
+// changed in another profile's preferences.
+void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
+{
+    // First ensure our QComboBox is set to the given value:
+    if (comboBox_guiLanguage->currentData().toString() != language) {
+        // Ah, it wasn't us who changed it - so we must adopt the new value
+        // but not signal anything to prevent endless loops:
+        comboBox_guiLanguage->blockSignals(true);
+        comboBox_guiLanguage->setCurrentIndex(comboBox_guiLanguage->findData(language));
+        comboBox_guiLanguage->blockSignals(false);
     }
 
-    label_languageChangeWarning->show();
+    // Now change the displayed texts that are translated - importantly this
+    // is done so that the message that says "restart Mudlet to finish changing
+    // the language" is shown in the newly selected langauge - on the basis that
+    // it is the one the user understands rather than the currently used one.
+    retranslateUi(this);
+
+    // Re identify which Profile we are showing the settings for (otherwise if
+    // multiple profiles have this dialog open they revert to a plain
+    // "Profile preferences" dialog title except that duplicates get a " <#>"
+    // suffix to the title to tell them apart which is not good for telling
+    // which profile is represented by each dialog when we were previously
+    // showing the profile name as well):
+    if (mpHost) {
+        setWindowTitle(tr("Profile preferences - %1").arg(mpHost->getName()));
+    }
+
+    // If we wanted to support changing the locale/language without having to
+    // restart then the above: retranslateUi(...) + regenerate texts that are
+    // assembled after the class instance was created {i.e. outside of the
+    // setupUi(...) call in the constructor} would be needed in every class with
+    // persistent UI texts - this is not trivial and has been deemed NWIH...!
+}
+
+void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    int style = index;
+    switch (index) {
+    case 1: // Red ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    case 2: // Blue-yellow ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    case 3: // Custom ring
+        pushButton_playerRoomPrimaryColor->setEnabled(true);
+        pushButton_playerRoomSecondaryColor->setEnabled(true);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    default:
+        style = 0;
+        [[fallthrough]];
+    case 0: // "Original"
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(false);
+    }
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+    pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    // And update the displayed map:
+    pHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        // Redefine the QGradientStops
+        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
+void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor
+                                                          ? tr("Set outer color of player room mark.")
+                                                          : tr("Set inner color of player room mark.")),
+                                        QColorDialog::ShowAlphaChannel);
+    if (color.isValid()) {
+        c = color;
+
+        // Also sets a contrasting foreground color so text will always be
+        // visible and adjusts the saturation of a disabled button:
+        setButtonColor(b, color);
+    }
 }

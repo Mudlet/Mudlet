@@ -25,6 +25,9 @@
 
 
 #include "TAstar.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -43,7 +46,9 @@
 
 class dlgMapper;
 class Host;
+#if defined(INCLUDE_3DMAPPER)
 class GLWidget;
+#endif
 class TArea;
 class TRoom;
 class TRoomDB;
@@ -107,7 +112,6 @@ public:
     bool findPath(int from, int to);
     bool gotoRoom(int);
     bool gotoRoom(int, int);
-    void setView(float, float, float, float);
     bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
@@ -151,6 +155,7 @@ public:
     void setMmpMapLocation(const QString &location);
     QString getMmpMapLocation() const;
 
+
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
@@ -174,7 +179,9 @@ public:
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
+#if defined(INCLUDE_3DMAPPER)
     QPointer<GLWidget> mpM;
+#endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 
@@ -230,7 +237,20 @@ public:
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 
-
+    // Base color(s) for the player room in the mappers:
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
+    // Mode selected - 0 is closest to original style:
+    quint8 mPlayerRoomStyle;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
 
 public slots:
     // Moved and revised from dlgMapper:

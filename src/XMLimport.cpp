@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -227,11 +227,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-    pair<dlgTriggerEditor::EditorViewType, int> result;
+    std::pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -539,7 +539,7 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
     dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
@@ -579,7 +579,7 @@ pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return make_pair(objectType, rootItemID);
+    return std::make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -801,6 +801,12 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
+        pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
+    }
+    if (attributes().hasAttribute(QLatin1String("mEnableMSP"))) {
+        pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == "yes");
+    }
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
@@ -809,7 +815,13 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mAcceptServerMedia"))) {
+        pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
+    }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
+        pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
+    }
     if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
         pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     }
@@ -834,7 +846,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -863,6 +875,32 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setMayRedefineColors(false);
     }
 
+    if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
+        quint8 styleCode = 0;
+        quint8 outerDiameterPercentage = 0;
+        quint8 innerDiameterPercentage = 0;
+        QColor outerColor;
+        QColor innerColor;
+        // Retrieve current (possibly default) settings:
+        pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        // Gather values from file:
+        styleCode = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
+        outerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
+        innerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
+        outerColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        innerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+        // Store all the settings in the Host instance:
+        pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        if (pHost->mpMap) {
+            // And the TMap instance:
+            pHost->mpMap->mPlayerRoomStyle = styleCode;
+            pHost->mpMap->mPlayerRoomOuterDiameterPercentage = outerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomInnerDiameterPercentage = innerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomOuterColor = outerColor;
+            pHost->mpMap->mPlayerRoomInnerColor = innerColor;
+        }
+    }
+
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mEnableTextAnalyzer = (attributes().value("enableTextAnalyzer") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
@@ -883,6 +921,19 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
+        pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value("EditorSearchOptions").toInt()));
+    }
+    pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
+    pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
+    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
+        pHost->mProxyPort = attributes().value("mProxyPort").toInt();
+    } else {
+        pHost->mProxyPort = 0;
+    }
+    pHost->mProxyUsername = attributes().value("mProxyUsername").toString();
+    pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
+
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
     pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
@@ -983,8 +1034,13 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->mDisplayFont.fromString(readElementText());
-                pHost->mDisplayFont.setFixedPitch(true);
+                pHost->setDisplayFontFromString(readElementText());
+#if defined(Q_OS_LINUX)
+                // On Linux ensure that emojis are displayed in colour even if
+                // this font doesn't support it:
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+#endif
+                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
             } else if (name() == "commandSeperator") {
@@ -1042,6 +1098,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "stopwatches") {
+                readStopWatchMap();
             } else {
                 readUnknownHostElement();
             }
@@ -1738,6 +1796,40 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
         } else {
             // Must advance the pattern interator if it isn't a colour pattern
             itPattern.next();
+        }
+    }
+}
+
+void XMLimport::readStopWatchMap()
+{
+    while (!atEnd()) {
+        readNext();
+
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "stopwatch") {
+                int watchId = attributes().value("id").toInt();
+                auto pStopWatch = new stopWatch();
+                pStopWatch->setName(attributes().value("name").toString());
+                pStopWatch->mIsPersistent = true;
+                pStopWatch->mIsInitialised = true;
+                if (attributes().value("running") == "yes") {
+                    pStopWatch->mIsRunning = true;
+                    // The stored value is the point in epoch time that the
+                    // stopwatch appears to have been started so we need to
+                    // make that into a QDateTime that is the equivalent:
+                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(attributes().value("effectiveStartDateTimeEpochMSecs").toLongLong());
+                } else {
+                    pStopWatch->mIsRunning = false;
+                    pStopWatch->mElapsedTime = attributes().value("elapsedDateTimeMSecs").toLongLong();
+                }
+                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                // A dummy read as there should not be any text for this element:
+                readElementText();
+            } else {
+                readUnknownHostElement();
+            }
         }
     }
 }

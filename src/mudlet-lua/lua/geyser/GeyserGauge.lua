@@ -31,6 +31,8 @@ Geyser.Gauge = Geyser.Container:new({
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
 function Geyser.Gauge:setValue (currentValue, maxValue, text)
+  assert(type(currentValue) == "number", string.format("bad argument #1 type (currentValue as number expected, got %s!)", type(currentValue)))
+  assert(maxValue == nil or type(maxValue) == "number", string.format("bad argument #2 type (optional maxValue as number expected, got %s!)", type(maxValue)))
   -- Use sensible defaults for missing parameters.
   if currentValue < 0 then
     currentValue = 0
@@ -83,12 +85,74 @@ function Geyser.Gauge:setText (text)
   end
 end
 
+--- Set the format for text on the gauge
+-- @param format the format to set. Same as Geyser.Label:setFormat
+function Geyser.Gauge:setFormat(format)
+  self.text:setFormat(format)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set whether or not the text in the gauge should be bold
+-- @param bool True for bold
+function Geyser.Gauge:setBold(bool)
+  self.text:setBold(bool)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set whether or not the text in the gauge should be italic
+-- @param bool True for bold
+function Geyser.Gauge:setItalics(bool)
+  self.text:setItalics(bool)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set whether or not the text in the gauge should be underlined
+-- @param bool True for underlined
+function Geyser.Gauge:setUnderline(bool)
+  self.text:setUnderline(bool)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set whether or not the text in the gauge should be strikethrough
+-- @param bool True for strikethrough
+function Geyser.Gauge:setStrikethrough(bool)
+  self.text:setStrikethrough(bool)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set the font size for the gauge to use
+-- @param fontSize the font size to use for the gauge. Should be a number
+function Geyser.Gauge:setFontSize(fontSize)
+  self.text:setFontSize(fontSize)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Set the alignment of the text on the gauge
+-- @param alignment Valid alignments are 'c', 'center', 'l', 'left', 'r', 'right', or '' to not include the alignment as part of the echo
+function Geyser.Gauge:setAlignment(alignment)
+  self.text:setAlignment(alignment)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
+end
+
+--- Sets the color of the text on the gauge
+-- @param color the color you want the text to be
+function Geyser.Gauge:setFgColor(color)
+  self.text:setFgColor(color)
+end
+
 --- Sets the text on the gauge, overwrites inherited echo function.
 -- @param text The text to set.
-function Geyser.Gauge:echo (text)
-  if text then
-    self.text:echo(text)
-  end
+function Geyser.Gauge:echo(message, color, format)
+  self.text:echo(message, color, format)
+  self.format = self.text.format
+  self.formatTable = self.text.formatTable
 end
 
 -- Sets the style sheet for the gauge
@@ -117,6 +181,18 @@ function Geyser.Gauge:disableClickthrough()
     self.text:disableClickthrough()
 end
 
+--- Sets the tooltip of the gauge
+-- @param txt the tooltip txt
+-- @param duration the duration of the tooltip
+function Geyser.Gauge:setToolTip(txt, duration)
+  duration = duration or 0
+  self.text:setToolTip(txt, duration)
+end
+
+--- Resets the tooltip of the gauge
+function Geyser.Gauge:resetToolTip()
+  self.text:resetToolTip()
+end
 -- Save a reference to our parent constructor
 Geyser.Gauge.parent = Geyser.Container
 
@@ -132,22 +208,25 @@ function Geyser.Gauge:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
+  me.windowname = me.windowname or me.container.windowname or "main"
   -----------------------------------------------------------
   -- Now create the Gauge using primitives and tastey classes
 
   -- Set up the constraints for the front label, the label that changes size to
-  -- indicated levels in the gauges.
+  -- indicated levels in the gauges. Message set to nil to avoid unwanted text
   local front = Geyser.copyTable(cons)
   front.name = me.name .. "_front"
   front.color = me.color
+  front.message = nil
   front.x, front.y, front.width, front.height = 0, 0, "100%", "100%"
 
   -- Set up the constraints for the back label, which is always the size of the gauge.
+  -- Message set to nil to avoid unwanted text
   local back = Geyser.copyTable(front)
   back.name = me.name .. "_back"
   local br, bg, bb = Geyser.Color.parse(me.color)
   back.color = Geyser.Color.hexa(br, bg, bb, 100)
+  back.message = nil
 
   -- Set up the constraints for the text label, which is also always the size of the gauge.
   -- We also set this label's color to 0,0,0,0 so it's black and full transparent.
@@ -162,12 +241,17 @@ function Geyser.Gauge:new (cons, container)
   me.back = Geyser.Label:new(back, me)
   me.front = Geyser.Label:new(front, me)
   me.text = Geyser.Label:new(text, me)
+  me.format = me.text.format
+  me.formatTable = me.text.formatTable
 
   -- Set whether this gauge is strict about its max value being 100 or not
   if cons.strict then me.strict = true else me.strict = false end
 
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
+
+  -- Echo text to the text label if 'message' constraint is set
+  if cons.message then me:echo(me.message) end
   
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

@@ -22,9 +22,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include <QOpenGLWidget>
 #include "pre_guard.h"
-#include <QtOpenGL/qgl.h> //problem with git
 #include <QPointer>
 #include "post_guard.h"
 
@@ -32,7 +31,7 @@ class Host;
 class TMap;
 
 
-class GLWidget : public QGLWidget
+class GLWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
@@ -112,15 +111,10 @@ private:
     float dehnung;
     int mShowTopLevels;
     int mShowBottomLevels;
-    QPoint lastPos;
-    QColor qtGreen;
-    QColor qtPurple;
 
-    GLfloat rotTri, rotQuad;
     float mScale;
     int mTarget;
     QPointer<Host> mpHost;
-    QMap<int, int> mQuads;
 };
 
 #endif // MUDLET_GLWIDGET_H

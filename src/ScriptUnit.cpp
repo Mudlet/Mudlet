@@ -25,12 +25,9 @@
 #include "Host.h"
 #include "TScript.h"
 
-
-using namespace std;
-
 void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
-    list<TScript*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TScript*>* childrenList = pChild->mpMyChildrenList;
     for (auto script : *childrenList) {
         _uninstall(script, packageName);
         uninstallList.append(script);
@@ -161,6 +158,7 @@ void ScriptUnit::unregisterScript(TScript* pT)
         removeScript(pT);
         return;
     } else {
+        removeScript(pT);
         removeScriptRootNode(pT);
         return;
     }
@@ -208,4 +206,15 @@ void ScriptUnit::compileAll()
             script->compileAll();
         }
     }
+}
+
+QVector<int> ScriptUnit::findScriptId(const QString& name) const
+{
+    QVector<int> Ids;
+    for (auto script : mScriptMap) {
+        if (script->getName() == name) {
+            Ids.append(script->getID());
+        }
+    }
+    return Ids;
 }

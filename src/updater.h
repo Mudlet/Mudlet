@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2017-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,6 +42,7 @@ class Updater : public QObject
 public:
     Q_DISABLE_COPY(Updater)
     explicit Updater(QObject* parent = nullptr, QSettings* settings = nullptr);
+    virtual ~Updater();
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
@@ -55,6 +56,7 @@ private:
     QPushButton* mpInstallOrRestart;
     bool mUpdateInstalled;
     QSettings* settings;
+    std::unique_ptr<QTimer> mDailyCheck;
 
 #if defined(Q_OS_LINUX)
     void setupOnLinux();

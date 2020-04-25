@@ -50,12 +50,12 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->mDisplayFont);
+    setFont(mpHost->getDisplayFont());
 
-    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
 
     setPalette(mRegularPalette);
 
@@ -88,7 +88,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     spellCheck();
 }
 
-bool TCommandLine::processPotentialKeyBinding(QKeyEvent* keyEvent)
+bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
     if (mpKeyUnit->processDataStream(keyEvent->key(), (int)keyEvent->modifiers())) {
         keyEvent->accept();
@@ -106,7 +106,7 @@ bool TCommandLine::event(QEvent* event)
 {
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
-        auto * ke = dynamic_cast<QKeyEvent*>(event);
+        auto* ke = dynamic_cast<QKeyEvent*>(event);
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
@@ -130,12 +130,13 @@ bool TCommandLine::event(QEvent* event)
                 mLastCompletion.clear();
                 break;
 
-            } else {
+            } else if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 // other than just a <SHIFT> one; may actaully be configured as
                 // a non-breaking space when used with a modifier!
-                return processPotentialKeyBinding(ke);
-
+                return true;
+            } else {
+                break;
             }
 
         case Qt::Key_Backtab:
@@ -161,11 +162,12 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
+            } else if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 // other than just the ignored <SHIFT> and the possible <CTRL>:
-                return processPotentialKeyBinding(ke);
-
+                return true;
+            } else {
+                break;
             }
 
         case Qt::Key_Tab:
@@ -193,7 +195,11 @@ bool TCommandLine::event(QEvent* event)
             // Process as a possible key binding if there are ANY modifiers
             // other than just the Ctrl one
             // CHECKME: What about system foreground application switching?
-            return processPotentialKeyBinding(ke);
+            if (keybindingMatched(ke)) {
+                return true;
+            } else {
+                break;
+            }
 
         case Qt::Key_unknown:
             qWarning() << "ERROR: key unknown!";
@@ -219,10 +225,13 @@ bool TCommandLine::event(QEvent* event)
                 adjustHeight();
 
                 return true;
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers
+                // other than <CTRL> and/or <SHIFT>
+                return true;
+            } else {
+                break;
             }
-            // Process as a possible key binding if there are ANY modifiers
-            // other than <CTRL> and/or <SHIFT>
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Delete:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -244,10 +253,11 @@ bool TCommandLine::event(QEvent* event)
                 QPlainTextEdit::event(event);
                 adjustHeight();
                 return true;
-
+            } else if (keybindingMatched(ke)) {
+                return true;
+            } else {
+                break;
             }
-            // Process as a possible key binding if there are ANY modifiers
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
@@ -289,11 +299,13 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                // other than just the Shift or just the Control modifiers
+                return true;
+            } else {
+                break;
             }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            // other than just the Shift or just the Control modifiers
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Enter:
             // This is usually the Keypad one, so may come with
@@ -318,10 +330,13 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                // other than just the Keypad modifier
+                return true;
+            } else {
+                break;
             }
-            // Process as a possible key binding if there are ANY modifiers,
-            // other than just the Keypad modifier
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Down:
 #if defined(Q_OS_MACOS)
@@ -347,11 +362,14 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                // other than just the Control modifier (or keypad modifier on
+                // macOs)
+                return true;
+            } else {
+                break;
             }
-            // Process as a possible key binding if there are ANY modifiers,
-            // other than just the Control modifier (or keypad modifier on
-            // macOs)
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Up:
 #if defined(Q_OS_MACOS)
@@ -378,12 +396,14 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                // other than just the Control modifier (or keypad modifier on
+                // macOs)
+                return true;
+            } else {
+                break;
             }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            // other than just the Control modifier (or keypad modifier on
-            // macOs)
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Escape:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -402,10 +422,12 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                return true;
+            } else {
+                break;
             }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -413,10 +435,12 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                return true;
+            } else {
+                break;
             }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -424,10 +448,12 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers,
+                return true;
+            } else {
+                break;
             }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            return processPotentialKeyBinding(ke);
 
         case Qt::Key_C:
             if (((ke->modifiers() & allModifiers) == Qt::ControlModifier)
@@ -439,27 +465,67 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            }
-
-            // Process as a possible key binding if there are ANY modifiers,
-            if (processPotentialKeyBinding(ke)) {
+            } else if (keybindingMatched(ke)) {
+                // Process as a possible key binding if there are ANY modifiers
                 return true;
-
+            } else {
+                processNormalKey(event);
+                return false;
+            }
+        case Qt::Key_1:
+            if (handleCtrlTabChange(ke, 1)) {
+                return true;
             }
 
-            processNormalKey(event);
-            return false;
+        case Qt::Key_2:
+            if (handleCtrlTabChange(ke, 2)) {
+                return true;
+            }
+
+        case Qt::Key_3:
+            if (handleCtrlTabChange(ke, 3)) {
+                return true;
+            }
+
+        case Qt::Key_4:
+            if (handleCtrlTabChange(ke, 4)) {
+                return true;
+            }
+
+        case Qt::Key_5:
+            if (handleCtrlTabChange(ke, 5)) {
+                return true;
+            }
+
+        case Qt::Key_6:
+            if (handleCtrlTabChange(ke, 6)) {
+                return true;
+            }
+
+        case Qt::Key_7:
+            if (handleCtrlTabChange(ke, 7)) {
+                return true;
+            }
+
+        case Qt::Key_8:
+            if (handleCtrlTabChange(ke, 8)) {
+                return true;
+            }
+
+        case Qt::Key_9:
+            if (handleCtrlTabChange(ke, 9)) {
+                return true;
+            }
 
         default:
-            // Process as a possible key binding if there are ANY modifiers,
-            if (processPotentialKeyBinding(ke)) {
+            // Process as a possible key binding if there are ANY modifiers
+            if (keybindingMatched(ke)) {
                 return true;
 
             }
 
             processNormalKey(event);
             return false;
-
         }
     }
 
@@ -491,7 +557,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->mDisplayFont).height();
+    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -971,7 +1037,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost||!mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
         return;
     }
 
@@ -1010,6 +1076,25 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
     c.setCharFormat(f);
     setTextCursor(c);
+}
+
+bool TCommandLine::handleCtrlTabChange(QKeyEvent* key, int tabNumber)
+{
+    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+
+    if ((key->modifiers() & allModifiers) == Qt::ControlModifier) {
+        // let user-defined Ctrl+# keys match first - and only if the user hasn't created
+        // then we fallback to tab switching
+        if (keybindingMatched(key)) {
+            return true;
+        } else if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
+            mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
+            key->accept();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void TCommandLine::recheckWholeLine()
