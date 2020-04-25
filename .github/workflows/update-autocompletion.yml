@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - 'release-**'
+  repository_dispatch:
+    types: update-autocompletion
 
   schedule:
-    - cron:  '0 0 * * fri'
+    - cron: '0 0 * * fri'
 
 jobs:
   update-autocompletion:

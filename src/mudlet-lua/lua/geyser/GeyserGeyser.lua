@@ -67,8 +67,12 @@ function Geyser:add (window, cons)
 
   -- Assume control of this window
   window.container = self
+  -- Don't allow duplication of same name in container
+  if not self.windowList[window.name] then
+    self.windows[#self.windows+1] = window.name
+  end
   self.windowList[window.name] = window
-  table.insert(self.windows, window.name)
+
   window.windowname = window.windowname or window.container.windowname or "main"
   Geyser.set_constraints(window, cons, self)
   if not self.defer_updates then

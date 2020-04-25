@@ -451,6 +451,7 @@ public:
     void startAutoLogin(const QString&);
     QPointer<QTableWidget> moduleTable;
     int64_t getPhysicalMemoryTotal();
+    const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
 
 
 #if defined(INCLUDE_UPDATER)
@@ -595,7 +596,7 @@ private:
     void set_compact_input_line();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
-    void loadDictionaryLanguageMap();
+    void loadMaps();
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
@@ -719,6 +720,9 @@ private:
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
+    // Stores the translated names for the Encodings for the static and thus
+    // const TBuffer::csmEncodingTable:
+    QMap<QByteArray, QString> mEncodingNameMap;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

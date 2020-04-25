@@ -243,9 +243,11 @@ unix:!macx {
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
-            -llua-5.1\
+            -llua-5.1 \
 # FreeBSD appends the version number to hunspell:
-            -lhunspell-1.7
+            -lhunspell-1.7 \
+# Needed for sysinfo(...) call in mudlet class:
+            -lsysinfo
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -468,6 +470,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
+    TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -541,6 +544,7 @@ SOURCES += \
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
+    TTextCodec.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -1421,6 +1425,19 @@ unix:!macx {
 DISTFILES += \
     CMakeLists.txt \
     .clang-format \
+    ../.github/pr-labeler.yml \
+    ../.github/CODEOWNERS.md \
+    ../.github/CODE_OF_CONDUCT.md \
+    ../.github/CONTRIBUTING.md \
+    ../.github/FUNDING.yml \
+    ../.github/ISSUE_TEMPLATE.md \
+    ../.github/PULL_REQUEST_TEMPLATE.md \
+    ../.github/SUPPORT.md \
+    ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/update-3rdparty.yml \
+    ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-translations.yml \
+    ../.github/workflows/whitespace-linter.yml \
     ../CMakeLists.txt \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindPCRE.cmake \

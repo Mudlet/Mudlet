@@ -181,26 +181,43 @@ function Geyser.Container:show_impl()
 end
 
 --- Raises the window to the top of the z-order stack, displaying in front of all other windows
-function Geyser.Container:raise ()
-	raiseWindow(self.name)
+function Geyser.Container:raise (changeWindowIndex)
+  raiseWindow(self.name)
+  if changeWindowIndex ~= false then
+    local index = table.index_of(self.container.windows, self.name)
+    if index == #self.container.windows then
+      return
+    end
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    self.container.windows[#self.container.windows+1] = tempValue
+  end
 end
 
 --- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
-function Geyser.Container:lower ()
-	lowerWindow(self.name)
+function Geyser.Container:lower (changeWindowIndex)
+  lowerWindow(self.name)
+  if changeWindowIndex ~= false then
+    local index = table.index_of(self.container.windows, self.name)
+    if index == 1 then
+      return
+    end
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    table.insert(self.container.windows, 1, tempValue)
+  end
 end
 
 function Geyser.Container:raiseAll(container, me)
-  me = me or true
   container = container or self
   -- raise myself
-  if me then
+  if me ~= false then
     container:raise()
   end
   local v
-  for i=1,#container.windows do
+  for i=1, #container.windows do
     v = container.windows[i]
-    container.windowList[v]:raise()
+    container.windowList[v]:raise(false)
     container.windowList[v]:raiseAll(container.windowList[v], false)
   end
 end
@@ -208,7 +225,7 @@ end
 local function createWindowTable(container)
   local v
   Geyser.Container.windowTable = Geyser.Container.windowTable or {}
-  for i=1,#container.windows do
+  for i=1, #container.windows do
     v = container.windows[i]
     Geyser.Container.windowTable[#Geyser.Container.windowTable+1] = container.windowList[v]
     createWindowTable(container.windowList[v])
@@ -219,7 +236,7 @@ function Geyser.Container:lowerAll()
   createWindowTable(self)
   -- iterate in reverse order through all elements to keep the same z-axis inside the container
   for i=#Geyser.Container.windowTable,1,-1 do
-    Geyser.Container.windowTable[i]:lower()
+    Geyser.Container.windowTable[i]:lower(false)
   end
   Geyser.Container.windowTable = nil
   self:lower()

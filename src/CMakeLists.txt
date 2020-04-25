@@ -96,6 +96,7 @@ set(mudlet_SRCS
     TSplitter.cpp
     TSplitterHandle.cpp
     TTabBar.cpp
+    TTextCodec.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -201,6 +202,7 @@ set(mudlet_HDRS
     TSplitter.h
     TSplitterHandle.h
     TTabBar.h
+    TTextCodec.h
     TTextEdit.h
     TTimer.h
     TToolBar.h

@@ -25,6 +25,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QEvent>
 #include <QMutex>
@@ -32,6 +34,7 @@
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
+#include <QQueue>
 #include <QThread>
 #include <QTimer>
 #include <edbee/texteditorwidget.h>
@@ -91,6 +94,7 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -380,7 +384,6 @@ public:
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
-    static int getMudletLuaDefaultPaths(lua_State*);
     static int setTriggerStayOpen(lua_State*);
     static int wrapLine(lua_State*);
     static int getFgColor(lua_State*);
@@ -545,12 +548,12 @@ public:
     static int getConnectionInfo(lua_State* L);
     static int unzipAsync(lua_State* L);
     static int setMapWindowTitle(lua_State*);
+    static int getMudletInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-    void encodingChanged(const QString&);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -575,7 +578,7 @@ private:
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
-    void loadLuaModule(const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
 
 
     QNetworkAccessManager* mpFileDownloader;
