@@ -102,7 +102,7 @@ bool TMxpProcessor::setMode(int modeCode)
 
     return true;
 }
-TMXPMode TMxpProcessor::getMode() const
+TMXPMode TMxpProcessor::mode() const
 {
     return mMXP_MODE;
 }
