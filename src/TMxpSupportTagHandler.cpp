@@ -61,11 +61,11 @@ QString TMxpSupportTagHandler::processSupportsRequest(TMxpContext& ctx, MxpStart
     };
 
     // empty <SUPPORT> - report all known elements
-    if (tag->getAttrsCount() == 0) {
+    if (tag->getAttributesCount() == 0) {
         result = reportAllElements(result, supportedMxpElements);
     } else {
         // otherwise it's <SUPPORT element1 element2 element3>
-        for (auto& element : tag->getAttrsNames()) {
+        for (auto& element : tag->getAttributesNames()) {
             if (!element.contains(QChar('.'))) {
                 if (supportedMxpElements.contains(element)) {
                     result = reportEntireElement(element, result, supportedMxpElements);

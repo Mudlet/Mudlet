@@ -19,11 +19,12 @@
 
 #include "TMxpTagParser.h"
 #include "TMxpNodeBuilder.h"
-#include "TStrUtils.h"
+#include "TStringUtils.h"
+#include <QDebug>
 
 static QStringRef stripTagAndTrim(const QString& tagText)
 {
-    return TStrUtils::trimmedRef(TStrUtils::stripRef(tagText, '<', '>'));
+    return TStringUtils::trimmedRef(TStringUtils::stripRef(tagText, '<', '>'));
 }
 
 static bool isEndTag(const QString& tagText)
@@ -33,7 +34,7 @@ static bool isEndTag(const QString& tagText)
 
 static bool isTag(const QString& tagString)
 {
-    return TStrUtils::isBetween(TStrUtils::trimmedRef(tagString), '<', '>');
+    return TStringUtils::isBetween(TStringUtils::trimmedRef(tagString), '<', '>');
 }
 
 QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& tagText, bool ignoreText) const
@@ -62,7 +63,7 @@ MxpTag* TMxpTagParser::parseTag(const QString& tagText) const
 
 MxpEndTag* TMxpTagParser::parseEndTag(const QString& tagText) const
 {
-    QStringRef tagContent = TStrUtils::trimmedRef(stripTagAndTrim(tagText)).mid(1);
+    QStringRef tagContent = TStringUtils::trimmedRef(stripTagAndTrim(tagText)).mid(1);
     const QStringList& parts = parseToList(tagContent);
 
     if (parts.size() > 1) {
@@ -74,7 +75,7 @@ MxpEndTag* TMxpTagParser::parseEndTag(const QString& tagText) const
 
 MxpStartTag* TMxpTagParser::parseStartTag(const QString& tagText) const
 {
-    QStringRef tagContent = TStrUtils::stripRef(tagText, '<', '>');
+    QStringRef tagContent = TStringUtils::stripRef(tagText, '<', '>');
 
     const QStringList& parts = parseToList(tagContent);
 
@@ -103,7 +104,7 @@ MxpTagAttribute TMxpTagParser::parseAttribute(const QString& attr) const
     }
 
     const QString& name = attr.left(sepIdx);
-    const QString& value = TStrUtils::unquoteRef(attr.midRef(sepIdx + 1)).toString();
+    const QString& value = TStringUtils::unquoteRef(attr.midRef(sepIdx + 1)).toString();
 
     return MxpTagAttribute(name, value);
 }
@@ -119,7 +120,7 @@ QStringList TMxpTagParser::parseToList(const QStringRef& tagText)
     int start = 0;
 
     while (start < tagText.length()) {
-        if (TStrUtils::isQuote(tagText[start])) {
+        if (TStringUtils::isQuote(tagText[start])) {
             auto end = readTextBlock(tagText, start + 1, tagText.length(), tagText[start]);
             if (start != end) {
                 result.append(tagText.mid(start + 1, end - start - 1).toString());
@@ -156,7 +157,7 @@ int TMxpTagParser::readTextBlock(const QStringRef& str, int start, int end, QCha
             break;
         }
 
-        if (TStrUtils::isQuote(str[pos])) {
+        if (TStringUtils::isQuote(str[pos])) {
             if (!inQuote) {
                 inQuote = true;
                 curQuote = str[pos];

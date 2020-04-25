@@ -20,7 +20,7 @@
 #define MUDLET_SRC_TMXPTAGPARSER_CPP_TMXPNODEBUILDER_H
 
 #include "MxpTag.h"
-#include "TStrUtils.h"
+#include "TStringUtils.h"
 #include <QString>
 
 class TMxpNodeBuilder

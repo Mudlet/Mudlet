@@ -16,9 +16,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "TStrUtils.h"
+#include "TStringUtils.h"
 
-QStringRef TStrUtils::trimmedRef(const QStringRef& ref)
+QStringRef TStringUtils::trimmedRef(const QStringRef& ref)
 {
     int start = 0;
     int end = ref.length();
@@ -34,12 +34,12 @@ QStringRef TStrUtils::trimmedRef(const QStringRef& ref)
     return QStringRef(ref.string(), ref.position() + start, end - start);
 }
 
-QStringRef TStrUtils::trimmedRef(const QString& str)
+QStringRef TStringUtils::trimmedRef(const QString& str)
 {
     return trimmedRef(QStringRef(&str));
 }
 
-QStringRef TStrUtils::stripRef(const QString& str, QChar start, QChar end)
+QStringRef TStringUtils::stripRef(const QString& str, QChar start, QChar end)
 {
     int len = str.length();
     if (len > 1 && str.front() == start && str.back() == end) {
@@ -49,12 +49,12 @@ QStringRef TStrUtils::stripRef(const QString& str, QChar start, QChar end)
     return QStringRef(&str);
 }
 
-bool TStrUtils::isQuote(QChar ch)
+bool TStringUtils::isQuote(QChar ch)
 {
     return isOneOf(ch, "\'\"");
 }
 
-bool TStrUtils::isOneOf(QChar ch, const char* str)
+bool TStringUtils::isOneOf(QChar ch, const char* str)
 {
     for (; *str; str++) {
         if (*str == ch.toLatin1()) {
@@ -65,21 +65,21 @@ bool TStrUtils::isOneOf(QChar ch, const char* str)
     return false;
 }
 
-bool TStrUtils::isQuoted(const QStringRef& ref)
+bool TStringUtils::isQuoted(const QStringRef& ref)
 {
-    return TStrUtils::isQuote(ref.front()) && ref.front() == ref.back();
+    return TStringUtils::isQuote(ref.front()) && ref.front() == ref.back();
 }
 
-QStringRef TStrUtils::unquoteRef(const QStringRef& ref)
+QStringRef TStringUtils::unquoteRef(const QStringRef& ref)
 {
     return isQuoted(ref) ? ref.mid(1, ref.size() - 2) : ref;
 }
-bool TStrUtils::isBetween(const QString& str, char first, char last)
+bool TStringUtils::isBetween(const QString& str, char first, char last)
 {
     return isBetween(QStringRef(&str), first, last);
 }
 
-bool TStrUtils::isBetween(const QStringRef& str, char first, char last)
+bool TStringUtils::isBetween(const QStringRef& str, char first, char last)
 {
     return str.front() == first && str.back() == last;
 }

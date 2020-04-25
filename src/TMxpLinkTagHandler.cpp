@@ -22,14 +22,14 @@
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->hasAttr("EXPIRE"))
+    if (tag->hasAttribute("EXPIRE"))
         return MXP_TAG_NOT_HANDLED;
 
     QString href = getHref(tag);
     if (href.isEmpty())
         return MXP_TAG_NOT_HANDLED;
 
-    QString hint = tag->hasAttr("hint") ? tag->getAttrValue("hint") : href;
+    QString hint = tag->hasAttribute("hint") ? tag->getAttributeValue("hint") : href;
 
     href = QStringLiteral("openUrl([[%1]])").arg(href);
 
@@ -52,14 +52,14 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 }
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
 {
-    if (tag->getAttrsCount() == 0) {
+    if (tag->getAttributesCount() == 0) {
         // <A>http://someurl.com/<A>
         mIsHrefInContent = true;
         return "&text;";
-    } else if (tag->hasAttr("href")) {
-        return tag->getAttrValue("href");
-    } else if (!tag->getAttr(0).hasValue()) {
-        return tag->getAttr(0).getName();
+    } else if (tag->hasAttribute("href")) {
+        return tag->getAttributeValue("href");
+    } else if (!tag->getAttribute(0).hasValue()) {
+        return tag->getAttribute(0).getName();
     } else {
         return "";
     }

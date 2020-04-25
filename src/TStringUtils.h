@@ -17,14 +17,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TSTRUTILS_H
-#define MUDLET_SRC_TSTRUTILS_H
+#ifndef MUDLET_SRC_TSTRINGUTILS_H
+#define MUDLET_SRC_TSTRINGUTILS_H
 
 #include <QString>
 #include <QStringList>
 #include <functional>
 
-class TStrUtils {
+class TStringUtils
+{
 public:
     static bool isQuote(QChar ch);
     static bool isOneOf(QChar ch, const char* str);
@@ -53,4 +54,4 @@ public:
     }
 };
 
-#endif //MUDLET_SRC_TSTRUTILS_H
+#endif //MUDLET_SRC_TSTRINGUTILS_H

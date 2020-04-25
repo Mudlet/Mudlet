@@ -18,7 +18,7 @@
  ***************************************************************************/
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagParser.h"
-#include "TStrUtils.h"
+#include "TStringUtils.h"
 
 bool TMxpNodeBuilder::accept(char ch)
 {
@@ -147,7 +147,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
         return true;
     }
 
-    if (TStrUtils::isQuote(ch)) {
+    if (TStringUtils::isQuote(ch)) {
         if (!mIsInsideSequence) {
             mIsInsideSequence = true;
             mIsQuotedSequence = true;

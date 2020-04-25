@@ -32,7 +32,7 @@ private slots:
         QCOMPARE(list.size(), 2);
         QVERIFY(list[0].get()->isTag());
         QCOMPARE(list[0]->asStartTag()->getName(), "COLOR");
-        QCOMPARE(list[0]->asStartTag()->getAttrValue("FORE"), "red");
+        QCOMPARE(list[0]->asStartTag()->getAttributeValue("FORE"), "red");
         QCOMPARE(list[1]->asStartTag()->getName(), "B");
     }
 
@@ -58,7 +58,7 @@ private slots:
         QCOMPARE(list.size(), 2);
         QVERIFY(list[0].get()->isTag());
         QCOMPARE(list[0]->asStartTag()->getName(), "COLOR");
-        QCOMPARE(list[0]->asStartTag()->getAttrValue("FORE"), "red");
+        QCOMPARE(list[0]->asStartTag()->getAttributeValue("FORE"), "red");
         QCOMPARE(list[1]->asStartTag()->getName(), "B");
     }
 
@@ -85,7 +85,7 @@ private slots:
         QCOMPARE(list.size(), 3);
         QVERIFY(list[0].get()->isTag());
         QCOMPARE(list[0]->asStartTag()->getName(), "SEND");
-        QCOMPARE(list[0]->asStartTag()->getAttrValue("href"), "&text;");
+        QCOMPARE(list[0]->asStartTag()->getAttributeValue("href"), "&text;");
 
         QVERIFY(!list[1]->isTag());
         QCOMPARE(list[1]->asText()->getContent(), "  go north...  ");
@@ -101,16 +101,16 @@ private slots:
         MxpStartTag tag = *parser.parseStartTag(tagLine);
 
         QCOMPARE(tag.getName(), "!EL");
-        QCOMPARE(tag.getAttrsCount(), 3);
+        QCOMPARE(tag.getAttributesCount(), 3);
 
-        QCOMPARE(tag.getAttr(0).getName(), "get");
-        QCOMPARE(tag.getAttr(0).getValue(), "");
+        QCOMPARE(tag.getAttribute(0).getName(), "get");
+        QCOMPARE(tag.getAttribute(0).getValue(), "");
 
-        QCOMPARE(tag.getAttr(1).getName(),
+        QCOMPARE(tag.getAttribute(1).getName(),
                  "<send href='examine &#34;&name;&#34;|get &#34;&name;&#34;' hint='Right mouse click to act on this item|Get &desc;|Examine &desc;|Look in &desc;' expire=get>");
-        QCOMPARE(tag.getAttrValue("ATT"), "name desc");
+        QCOMPARE(tag.getAttributeValue("ATT"), "name desc");
 
-        MxpStartTag sendTag = *parser.parseStartTag(tag.getAttr(1).getName());
+        MxpStartTag sendTag = *parser.parseStartTag(tag.getAttribute(1).getName());
         QCOMPARE(sendTag.getName(), "send");
     }
 
@@ -121,13 +121,13 @@ private slots:
 
         QCOMPARE(tag.getName(), "!EL");
 
-        QVERIFY(tag.hasAttr("RExit"));
-        QCOMPARE(tag.getAttrValue("RExit"), "");
-        QCOMPARE(tag.getAttr(0).getName(), "RExit");
-        QCOMPARE(tag.getAttr(0).getValue(), "");
+        QVERIFY(tag.hasAttribute("RExit"));
+        QCOMPARE(tag.getAttributeValue("RExit"), "");
+        QCOMPARE(tag.getAttribute(0).getName(), "RExit");
+        QCOMPARE(tag.getAttribute(0).getValue(), "");
 
-        QVERIFY(tag.hasAttr("FLAG"));
-        QCOMPARE(tag.getAttrValue("FLAG"), "RoomExit");
+        QVERIFY(tag.hasAttribute("FLAG"));
+        QCOMPARE(tag.getAttributeValue("FLAG"), "RoomExit");
     }
 
     void testComplexElementDefinitionToList()
@@ -214,9 +214,9 @@ private slots:
 
         MxpStartTag tag = *parser.parseStartTag(tagLine);
 
-        QVERIFY(tag.hasAttr("sHp"));
-        QVERIFY(tag.hasAttr("shp"));
-        QVERIFY(tag.hasAttr("shP"));
+        QVERIFY(tag.hasAttribute("sHp"));
+        QVERIFY(tag.hasAttribute("shp"));
+        QVERIFY(tag.hasAttribute("shP"));
 
     }
 
@@ -275,8 +275,8 @@ private slots:
         QVERIFY(tag->isStartTag());
         QVERIFY(tag->asStartTag()->isEmpty());
         QCOMPARE(tag->getName(), "RNum");
-        QCOMPARE(tag->asStartTag()->getAttr(0).getName(), "212");
-        QCOMPARE(tag->asStartTag()->getAttrsCount(), 1);
+        QCOMPARE(tag->asStartTag()->getAttribute(0).getName(), "212");
+        QCOMPARE(tag->asStartTag()->getAttributesCount(), 1);
     }
 
     void cleanupTestCase()

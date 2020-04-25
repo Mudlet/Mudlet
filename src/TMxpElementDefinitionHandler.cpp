@@ -23,41 +23,41 @@
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
 TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->getAttrsCount() < 2) { // UNEXPECTED: element without definition nor attributes
+    if (tag->getAttributesCount() < 2) { // UNEXPECTED: element without definition nor attributes
         return MXP_TAG_NOT_HANDLED;
     }
 
     TMxpElement el;
     el.name = tag->getAttrName(0); // element-name
 
-    if (tag->hasAttr("DELETE")) {
+    if (tag->hasAttribute("DELETE")) {
         ctx.getElementRegistry().unregisterElement(el.name);
         return MXP_TAG_HANDLED;
     }
 
     static const QStringList boolAttrs({"OPEN", "DELETE", "EMPTY"});
-    if (!tag->getAttr(1).hasValue()) {
+    if (!tag->getAttribute(1).hasValue()) {
         const QString& secondAttr = tag->getAttrName(1);
         if (!boolAttrs.contains(secondAttr, Qt::CaseInsensitive)) { // it is a definition and not  {OPEN, DELETE, EMPTY}
             el.definition = secondAttr;
         }
     }
 
-    if (tag->hasAttr("ATT")) {
-        el.attrs = tag->getAttrValue("ATT").toLower().split(' ', QString::SkipEmptyParts);
+    if (tag->hasAttribute("ATT")) {
+        el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', QString::SkipEmptyParts);
     }
 
-    if (tag->hasAttr("TAG")) {
-        el.tag = tag->getAttrValue("TAG");
+    if (tag->hasAttribute("TAG")) {
+        el.tag = tag->getAttributeValue("TAG");
     }
 
-    if (tag->hasAttr("FLAG")) {
-        el.flags = tag->getAttrValue("FLAG");
+    if (tag->hasAttribute("FLAG")) {
+        el.flags = tag->getAttributeValue("FLAG");
     }
 
-    el.open = tag->hasAttr("OPEN");
-    el.del = tag->hasAttr("DELETE");
-    el.empty = tag->hasAttr("EMPTY");
+    el.open = tag->hasAttribute("OPEN");
+    el.del = tag->hasAttribute("DELETE");
+    el.empty = tag->hasAttribute("EMPTY");
 
     if (!el.definition.isEmpty()) {
         TMxpTagParser parser;

@@ -19,37 +19,36 @@
 
 #include "MxpTag.h"
 #include "TMxpTagParser.h"
-#include <QtDebug>
 
-const MxpTagAttribute& MxpStartTag::getAttr(int attrIndex) const
+const MxpTagAttribute& MxpStartTag::getAttribute(int attrIndex) const
 {
-    return getAttr(mAttrsNames[attrIndex]);
+    return getAttribute(mAttrsNames[attrIndex]);
 }
 
-const MxpTagAttribute& MxpStartTag::getAttr(const QString& attrName) const
+const MxpTagAttribute& MxpStartTag::getAttribute(const QString& attrName) const
 {
     const auto ptr = mAttrsMap.find(attrName.toUpper());
     return *ptr;
 }
 
-const QString& MxpStartTag::getAttrValue(int attrIndex) const
+const QString& MxpStartTag::getAttributeValue(int attrIndex) const
 {
-    return getAttr(attrIndex).getValue();
+    return getAttribute(attrIndex).getValue();
 }
 
-const QString& MxpStartTag::getAttrValue(const QString& attrName) const
+const QString& MxpStartTag::getAttributeValue(const QString& attrName) const
 {
-    return getAttr(attrName).getValue();
+    return getAttribute(attrName).getValue();
 }
 
-bool MxpStartTag::hasAttr(const QString& attrName) const
+bool MxpStartTag::hasAttribute(const QString& attrName) const
 {
     return mAttrsMap.contains(attrName.toUpper());
 }
 
-bool MxpStartTag::isAttrAt(int pos, const char* str)
+bool MxpStartTag::isAttributeAt(const char* attrName, int attrIndex)
 {
-    return mAttrsNames[pos].compare(str, Qt::CaseInsensitive) == 0;
+    return mAttrsNames[attrIndex].compare(attrName, Qt::CaseInsensitive) == 0;
 }
 
 bool MxpTag::isNamed(const QString& tagName) const
@@ -57,7 +56,7 @@ bool MxpTag::isNamed(const QString& tagName) const
     return name.compare(tagName, Qt::CaseInsensitive) == 0;
 }
 
-QString MxpEndTag::asString() const
+QString MxpEndTag::toString() const
 {
     QString result;
     result.append("</");
@@ -66,7 +65,7 @@ QString MxpEndTag::asString() const
     return result;
 }
 
-QString MxpStartTag::asString() const
+QString MxpStartTag::toString() const
 {
     QString result;
     result.append('<');
@@ -81,7 +80,7 @@ QString MxpStartTag::asString() const
             result.append(attrName);
         }
 
-        const auto& attr = getAttr(attrName);
+        const auto& attr = getAttribute(attrName);
         if (attr.hasValue()) {
             result.append('=');
 
@@ -100,6 +99,7 @@ QString MxpStartTag::asString() const
 
     return result;
 }
+
 MxpStartTag MxpStartTag::transform(const MxpTagAttribute::Transformation& transformation) const
 {
     QList<MxpTagAttribute> newAttrs;
@@ -110,15 +110,16 @@ MxpStartTag MxpStartTag::transform(const MxpTagAttribute::Transformation& transf
     return MxpStartTag(name, newAttrs, mIsEmpty);
 }
 
-const QString& MxpStartTag::getAttrByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue) const
+const QString& MxpStartTag::getAttributeByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue) const
 {
-    if (hasAttr(attrName))
-        return getAttrValue(attrName);
-    if (getAttrsCount() > attrIndex && !getAttr(attrIndex).hasValue())
-        return getAttr(attrIndex).getName();
+    if (hasAttribute(attrName))
+        return getAttributeValue(attrName);
+    if (getAttributesCount() > attrIndex && !getAttribute(attrIndex).hasValue())
+        return getAttribute(attrIndex).getName();
 
     return defaultValue;
 }
+
 const QString& MxpStartTag::getAttrName(int attrIndex) const
 {
     return mAttrsNames[attrIndex];

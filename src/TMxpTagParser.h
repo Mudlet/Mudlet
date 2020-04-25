@@ -24,6 +24,8 @@
 
 #include "MxpTag.h"
 #include <QString>
+#include <QList>
+#include <QSharedPointer>
 
 class TMxpTagParser
 {

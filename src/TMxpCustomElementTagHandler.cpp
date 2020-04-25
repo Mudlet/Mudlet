@@ -107,16 +107,16 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
         // get attribute value by NAME
         // <!EL help "<send href='help &desc;' hint='Click for help on &desc;' expire=help>" ATT='desc'>
         // <help desc="1024">1024</help>
-        if (tag->hasAttr(attrName)) {
-            return tag->getAttrValue(attrName);
+        if (tag->hasAttribute(attrName)) {
+            return tag->getAttributeValue(attrName);
         }
 
         // get attribute value by INDEX
         // <!el i13 '<send href="look &id; on ground|get all from &id; on ground" hint="look &id; on ground|get all from &id; on ground" >' att='id'>
         //  <i13 "trash can 1">A trash can</i13>
         int attrIndex = element.attrs.indexOf(attrName.toLower());
-        if (attrIndex != -1 && tag->getAttrsCount() > attrIndex) {
-            return tag->getAttr(attrIndex).getName();
+        if (attrIndex != -1 && tag->getAttributesCount() > attrIndex) {
+            return tag->getAttribute(attrIndex).getName();
         }
 
         return input;
@@ -144,10 +144,10 @@ const QMap<QString, QString>& TMxpCustomElementTagHandler::parseFlagAttributes(c
     for (int i = 0; i < el.attrs.size(); i++) {
         const QString& attrName = el.attrs[i];
 
-        if (tag->hasAttr(attrName)) {
-            values[attrName] = tag->getAttrValue(attrName);
-        } else if (tag->getAttrsCount() > i) {
-            values[attrName] = tag->getAttr(i).getName();
+        if (tag->hasAttribute(attrName)) {
+            values[attrName] = tag->getAttributeValue(attrName);
+        } else if (tag->getAttributesCount() > i) {
+            values[attrName] = tag->getAttribute(i).getName();
         }
     }
     return values;

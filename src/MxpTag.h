@@ -22,18 +22,14 @@
 #ifndef MUDLET_MXPTAG_H
 #define MUDLET_MXPTAG_H
 
-#include <QHash>
+#include <QMap>
 #include <QPair>
 #include <QString>
 #include <QStringList>
 #include <functional>
 
-#include <QDebug>
-
 class MxpTagAttribute : public QPair<QString, QString>
 {
-    friend class MxpTagLineParser;
-
 public:
     typedef std::function<MxpTagAttribute(const MxpTagAttribute&)> Transformation;
 
@@ -73,7 +69,7 @@ public:
 
     MxpTextNode* asText() const { return mType == MXP_NODE_TYPE_TEXT ? (MxpTextNode*)this : nullptr; }
 
-    virtual QString asString() const = 0;
+    virtual QString toString() const = 0;
 
     bool isTag() { return mType != MXP_NODE_TYPE_TEXT; }
 
@@ -94,7 +90,7 @@ public:
 
     inline const QString& getContent() const { return mContent; }
 
-    virtual QString asString() const { return mContent; }
+    virtual QString toString() const { return mContent; }
 };
 
 class MxpTag : public MxpNode
@@ -120,7 +116,7 @@ class MxpEndTag : public MxpTag
 {
 public:
     explicit MxpEndTag(const QString& name) : MxpTag(MXP_NODE_TYPE_END_TAG, name) {}
-    QString asString() const override;
+    QString toString() const override;
 };
 
 class MxpStartTag : public MxpTag
@@ -142,23 +138,23 @@ public:
 
     MxpStartTag transform(const MxpTagAttribute::Transformation& transformation) const;
 
-    inline const QStringList& getAttrsNames() const { return mAttrsNames; }
+    inline const QStringList& getAttributesNames() const { return mAttrsNames; }
 
-    inline int getAttrsCount() const { return mAttrsNames.size(); }
+    inline int getAttributesCount() const { return mAttrsNames.size(); }
 
-    bool hasAttr(const QString& attrName) const;
+    bool hasAttribute(const QString& attrName) const;
 
-    const MxpTagAttribute& getAttr(int attrIndex) const;
+    const MxpTagAttribute& getAttribute(int attrIndex) const;
 
-    const MxpTagAttribute& getAttr(const QString& attrName) const;
+    const MxpTagAttribute& getAttribute(const QString& attrName) const;
 
-    const QString& getAttrValue(int attrIndex) const;
-    const QString& getAttrValue(const QString& attrName) const;
-    const QString& getAttrByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = QString::fromLatin1("")) const;
-    bool isAttrAt(int pos, const char* attrName);
+    const QString& getAttributeValue(int attrIndex) const;
+    const QString& getAttributeValue(const QString& attrName) const;
+    const QString& getAttributeByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = QString::fromLatin1("")) const;
+    bool isAttributeAt(const char* attrName, int attrIndex);
     inline bool isEmpty() const { return mIsEmpty; }
 
-    QString asString() const override;
+    QString toString() const override;
     const QString& getAttrName(int attrIndex) const;
 };
 

@@ -544,7 +544,7 @@ SOURCES += \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp \
-    TStrUtils.cpp
+    TStringUtils.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -653,7 +653,7 @@ HEADERS += \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStrUtils.h
+    TStringUtils.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

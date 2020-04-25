@@ -24,6 +24,8 @@
 #include "TEntityResolver.h"
 #include "TMxpElementRegistry.h"
 #include "TMxpTagHandler.h"
+#include <QMap>
+#include <QVector>
 
 class TMxpClient;
 

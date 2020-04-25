@@ -19,7 +19,7 @@
 #include "TMxpEntityTagHandler.h"
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->getAttrsCount() < 2) {
+    if (tag->getAttributesCount() < 2) {
         return MXP_TAG_NOT_HANDLED;
     }
 
@@ -28,17 +28,17 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
 
     const QString& name = tag->getAttrName(1);
 
-    if (tag->hasAttr("DELETE")) {
+    if (tag->hasAttribute("DELETE")) {
         resolver.unregisterEntity(name);
-    } else if (!boolOptions.contains(tag->getAttr(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
+    } else if (!boolOptions.contains(tag->getAttribute(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
-        if (tag->hasAttr("ADD")) {
+        if (tag->hasAttribute("ADD")) {
             QString newDefinition = resolver.getResolution(name);
             newDefinition.append("|");
             newDefinition.append(value);
 
             resolver.registerEntity(name, newDefinition);
-        } else if (tag->hasAttr("REMOVE")) {
+        } else if (tag->hasAttribute("REMOVE")) {
             QString currentValue = resolver.getResolution(name);
             QString toDelete = currentValue.contains("|") ? "|" + value : value;
             resolver.registerEntity(name, currentValue.replace(toDelete, ""));

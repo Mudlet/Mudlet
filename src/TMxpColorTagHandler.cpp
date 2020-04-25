@@ -25,8 +25,8 @@ bool TMxpColorTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag*
 }
 TMxpTagHandlerResult TMxpColorTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    QString fg = tag->getAttrByNameOrIndex("FORE", 0);
-    QString bg = tag->getAttrByNameOrIndex("BACK", 1);
+    QString fg = tag->getAttributeByNameOrIndex("FORE", 0);
+    QString bg = tag->getAttributeByNameOrIndex("BACK", 1);
 
     client.pushColor(fg, bg);
 

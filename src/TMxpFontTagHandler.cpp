@@ -22,12 +22,12 @@
 
 TMxpTagHandlerResult TMxpFontTagHandler::handleStartTag(TMxpContext& context, TMxpClient& client, MxpStartTag* tag)
 {
-    QString fontFace = tag->getAttrByNameOrIndex("FACE", 0);
-    QString fontSize = tag->getAttrByNameOrIndex("SIZE", 1);
+    QString fontFace = tag->getAttributeByNameOrIndex("FACE", 0);
+    QString fontSize = tag->getAttributeByNameOrIndex("SIZE", 1);
     client.pushFont(fontFace, fontSize);
 
-    QString fgColor = tag->getAttrByNameOrIndex("COLOR", 2);
-    QString bgColor = tag->getAttrByNameOrIndex("BACK", 3);
+    QString fgColor = tag->getAttributeByNameOrIndex("COLOR", 2);
+    QString bgColor = tag->getAttributeByNameOrIndex("BACK", 3);
     client.pushColor(fgColor, bgColor);
 
     return MXP_TAG_HANDLED;

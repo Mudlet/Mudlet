@@ -94,8 +94,8 @@ void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
 {
     TMxpEvent ev;
     ev.name = tag->getName();
-    for (const auto& attrName : tag->getAttrsNames()) {
-        ev.attrs[attrName] = tag->getAttrValue(attrName);
+    for (const auto& attrName : tag->getAttributesNames()) {
+        ev.attrs[attrName] = tag->getAttributeValue(attrName);
     }
     ev.actions = getLinkStore().getCurrentLinks();
     mMxpEvents.enqueue(ev);

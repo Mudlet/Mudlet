@@ -23,6 +23,8 @@
 #include "MxpTag.h"
 #include <QMap>
 #include <QStringList>
+#include <QList>
+#include <QSharedPointer>
 
 struct TMxpElement
 {

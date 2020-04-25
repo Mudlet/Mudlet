@@ -18,7 +18,7 @@
  ***************************************************************************/
 #include "TMxpSendTagHandler.h"
 #include "TMxpClient.h"
-#include "TStrUtils.h"
+#include "TStringUtils.h"
 
 TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -42,7 +42,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     // handle print to prompt feature PROMPT
     // <SEND "tell Zugg " PROMPT>Zugg</SEND>
-    bool sendToPrompt = tag->hasAttr("PROMPT");
+    bool sendToPrompt = tag->hasAttribute("PROMPT");
 
     for (int i = 0; i < hrefs.size(); i++) {
         hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
@@ -63,16 +63,16 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 }
 QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
-    if (tag->getAttrsCount() == 0) {
+    if (tag->getAttributesCount() == 0) {
         // <send>buy bread</send>
         return "&text;";
-    } else if (tag->hasAttr("href")) {
+    } else if (tag->hasAttribute("href")) {
         // <!ELEMENT Item '<send href="buy &text;">'>
         // <Item>bread</Item>
         // <!EL shop "<send href='shop identify &name;|shop buy &name;' hint='Right mouse click to act on items from this shop|Identify &desc;|Buy &desc;' expire=shop" ATT='name desc'>
         // <shop name="sword" desc="A shining sword">A shining sword of Lewshire</shop>
-        return tag->getAttrValue("href");
-    } else if (!tag->getAttr(0).isNamed("PROMPT") && !tag->getAttr(0).isNamed("HINT") && !tag->getAttr(0).isNamed("EXPIRE")) {
+        return tag->getAttributeValue("href");
+    } else if (!tag->getAttribute(0).isNamed("PROMPT") && !tag->getAttribute(0).isNamed("HINT") && !tag->getAttribute(0).isNamed("EXPIRE")) {
         // has one attribute, but not called href
         // <SEND "tell Zugg " PROMPT>Zugg</SEND>
         // <send "drink &text;">fountain</send>
@@ -84,15 +84,15 @@ QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 
 QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 {
-    if (tag->hasAttr("hint")) {
-        return tag->getAttrValue("hint");
+    if (tag->hasAttribute("hint")) {
+        return tag->getAttributeValue("hint");
     }
 
-    if (tag->getAttrsCount() > 1 && !tag->getAttr(1).isNamed("PROMPT") && !tag->getAttr(1).isNamed("EXPIRE")) {
+    if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed("PROMPT") && !tag->getAttribute(1).isNamed("EXPIRE")) {
         return tag->getAttrName(1);
     }
 
-    return "";
+    return QString();
 }
 
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
@@ -100,11 +100,13 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     if (mIsHrefInContent) {
         QStringList *hrefs, *hints;
         if (client.getLink(mLinkId, &hrefs, &hints)) {
-            if (hrefs != nullptr)
+            if (hrefs != nullptr) {
                 hrefs->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+            }
 
-            if (hints != nullptr)
+            if (hints != nullptr) {
                 hints->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+            }
         }
         mCurrentTagContent.clear();
     }
