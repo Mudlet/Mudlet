@@ -6618,27 +6618,6 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletLuaDefaultPaths
-int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
-{
-    int index = 0;
-    auto& host = getHostFromLua(L);
-    auto* pLua = host.getLuaInterpreter();
-    Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
-
-    QStringListIterator itPath(pLua->mPossiblePaths);
-    lua_newtable(L);
-    while (itPath.hasNext()) {
-        // We are hoping that the directory separators are not going to be a
-        // problem in reporting the details:
-        QString nativePath = QDir::toNativeSeparators(itPath.next());
-        lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
-        lua_pushstring(L, nativePath.toUtf8().constData());
-        lua_settable(L, -3);
-    }
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disconnect
 int TLuaInterpreter::disconnect(lua_State* L)
 {
@@ -16638,7 +16617,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setButtonStyleSheet", TLuaInterpreter::setButtonStyleSheet);
     lua_register(pGlobalLua, "reconnect", TLuaInterpreter::reconnect);
     lua_register(pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir);
-    lua_register(pGlobalLua, "getMudletLuaDefaultPaths", TLuaInterpreter::getMudletLuaDefaultPaths);
     lua_register(pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen);
     lua_register(pGlobalLua, "wrapLine", TLuaInterpreter::wrapLine);
     lua_register(pGlobalLua, "getFgColor", TLuaInterpreter::getFgColor);
