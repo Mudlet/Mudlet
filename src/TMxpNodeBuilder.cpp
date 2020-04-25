@@ -118,8 +118,9 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
     mIsInsideAttr = true;
 
     QString& buffer = mReadingAttrValue ? mCurrentAttrValue : mCurrentAttrName;
-    if (!acceptSequence(ch, buffer))
+    if (!acceptSequence(ch, buffer)) {
         return false;
+    }
 
     resetCurrentSequence();
 
