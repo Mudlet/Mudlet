@@ -620,7 +620,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         // We are outside of a CSI or OSC sequence if we get to here:
 
         if (mpHost->mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled) {
-            if (mpHost->mMxpProcessor.getMode() != MXP_MODE_LOCKED) {
+            if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                 TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
                 if (result == HANDLER_NEXT_CHAR) {
                     localBufferPosition++;

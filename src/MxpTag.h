@@ -39,8 +39,6 @@ public:
 
     MxpTagAttribute() : QPair() {}
 
-    MxpTagAttribute transform(Transformation transformation) const { return transformation(*this); }
-
     virtual const QString& getName() const { return first; }
 
     inline const QString& getValue() const { return second; }
@@ -150,7 +148,7 @@ public:
 
     const QString& getAttributeValue(int attrIndex) const;
     const QString& getAttributeValue(const QString& attrName) const;
-    const QString& getAttributeByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = QString::fromLatin1("")) const;
+    const QString& getAttributeByNameOrIndex(const QString& attrName, int attrIndex, const QString& defaultValue = QString()) const;
     bool isAttributeAt(const char* attrName, int attrIndex);
     inline bool isEmpty() const { return mIsEmpty; }
 

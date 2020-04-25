@@ -62,7 +62,7 @@ public:
 
     bool isEnabled() const;
     void enable();
-    TMXPMode getMode() const;
+    TMXPMode mode() const;
     void resetToDefaultMode();
 
     TMxpProcessingResult processMxpInput(char& ch);
