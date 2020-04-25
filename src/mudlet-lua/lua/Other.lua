@@ -942,6 +942,16 @@ function translateTable(data, language)
   return t
 end
 
+-- internal function to get the right keys from the translation json
+local function getTranslationTable(inputTable, packageName)
+  local outputTable = {}
+  inputTable = table.collect(inputTable, function(key) if key:match(packageName) then return true end end)
+  for k, v in pairs(inputTable) do
+    outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+  end
+  return outputTable
+end
+
 --- loads Translations located in the /translations folder
 -- @param fileName default translation fileName
 -- @language locale code for example de_DE for German [optional]
@@ -952,11 +962,11 @@ function loadTranslations(packageName, fileName, language, folder)
   fileName = fileName or "mudlet-lua"
   language = language or mudlet.translations.interfacelanguage
   -- get the right folder
-  folder = folder or io.exists("../translations/lua/") and "../translations/lua/"
-  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua/") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or io.exists("../translations/lua") and "../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
-  local file = folder.."/translated/"..fileName.."_"..language..".json"
+  local file = folder.."translated/"..fileName.."_"..language..".json"
   if not(io.exists(file)) then
     file = folder..fileName..".json"
   end
@@ -964,9 +974,9 @@ function loadTranslations(packageName, fileName, language, folder)
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")
     translation = yajl.to_value(str)
-    return translation[packageName]
+    return getTranslationTable(translation, packageName)
   end
-  return nil, "Unable to find translation file for "..fileName
+  return nil, "Unable to find translation file for "..packageName
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
