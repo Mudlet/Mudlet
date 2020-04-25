@@ -24,8 +24,9 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
     const QString& name = mCurrentStartTag.getAttrName(0);
     const QString& value = mCurrentVarContent;
 
-    if (mCurrentStartTag.hasAttr("PUBLISH") || !mCurrentStartTag.hasAttr("DELETE"))
+    if (mCurrentStartTag.hasAttr("PUBLISH") || !mCurrentStartTag.hasAttr("DELETE")) {
         client.setVariable(name, value);
+    }        
 
     return MXP_TAG_HANDLED;
 }
