@@ -950,7 +950,7 @@ local function getTranslationTable(inputTable, packageName)
       outputTable[k:gsub("^.*%.", "")] = inputTable[k]
     end
   end
-  if not(next(outputTable)) then
+  if table.is_empty(outputTable) then
     return nil, "couldn't find translations for '"..packageName.."'"
   end
   return outputTable
