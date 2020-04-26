@@ -21,13 +21,18 @@ jobs:
         luaVersion: "5.1.5"
     - uses: leafo/gh-actions-luarocks@v2
 
-    - name: install Lua dependencies
+    - name: Install LDoc
       run: |
         luarocks install ldoc
 
-    - name: update geyser-docs data
+    - name: Regenerate docs
       run: cd "${WORKSPACE}/src/mudlet-lua" && ./genDoc.sh
       env:
         WORKSPACE: ${{github.workspace}}
 
-    # now, upload it
+    - name: Upload docs
+      uses: JimCronqvist/action-ssh@master
+      with:
+        hosts: ${{secrets.UPLOAD_USER}}
+        privateKey: ${{secrets.UPLOAD_PRIVATEKEY}}
+        command: ls -lah
