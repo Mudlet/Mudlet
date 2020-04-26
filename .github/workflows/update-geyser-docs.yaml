@@ -35,6 +35,14 @@ jobs:
       env:
         WORKSPACE: ${{github.workspace}}
 
+    - name: Remove previous docs
+      uses: appleboy/ssh-action@master
+      with:
+        host: mudlet.org
+        username: ${{secrets.UPLOAD_USERNAME}}
+        key: ${{secrets.UPLOAD_PRIVATEKEY}}
+        script: "rm -rf /home/${{secrets.UPLOAD_USERNAME}}/geyser/"
+
     - name: Upload docs
       uses: appleboy/scp-action@master
       with:
