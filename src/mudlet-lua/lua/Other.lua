@@ -942,41 +942,50 @@ function translateTable(data, language)
   return t
 end
 
--- internal function to get the right keys from the translation json
+-- internal function to get the right keys from the translation json file
 local function getTranslationTable(inputTable, packageName)
   local outputTable = {}
-  inputTable = table.collect(inputTable, function(key) if key:match(packageName) then return true end end)
   for k, v in pairs(inputTable) do
-    outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+    if k:match("^"..packageName.."%.") then
+      outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+    end
+  end
+  if not(next(outputTable)) then
+    return nil, "couldn't find translations for '"..packageName.."'"
   end
   return outputTable
 end
 
 --- loads Translations located in the /translations folder
--- @param fileName default translation fileName
--- @language locale code for example de_DE for German [optional]
--- @folder folder where your translations can be found. [optional]
--- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/yourFileName-translated/yourfiles_lang_code.json
-function loadTranslations(packageName, fileName, language, folder)
-  local translation = {}
+-- @param packageName name of the lua package which needs the translations, for example "AdjustableContainer"
+-- @param fileName file name of the translations .json file, defaults to "mudlet-lua" [optional]
+-- @param languageCode for example de_DE for German, if not given it will take translations from the default file [optional]
+-- @param folder folder where your translations can be found, if not given it defaults to the default location [optional]
+-- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/translated/yourFileName_lang_code.json
+function loadTranslations(packageName, fileName, languageCode, folder)
   fileName = fileName or "mudlet-lua"
-  language = language or mudlet.translations.interfacelanguage
+  languageCode = languageCode or mudlet.translations.interfacelanguage
   -- get the right folder
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
-  local file = folder.."translated/"..fileName.."_"..language..".json"
+  assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
+  assert(type(fileName) == "string", string.format("loadTranslations: bad argument #2 type (fileName as string expected, got %s)", type(fileName)))
+  assert(type(languageCode) == "string", string.format("loadTranslations: bad argument #3 type (languageCode as string expected, got %s)", type(languageCode)))
+  assert(type(folder) == "string", string.format("loadTranslations: bad argument #4 type (folder path as string expected, got %s)", type(folder)))
+
+  local file = folder.."translated/"..fileName.."_"..languageCode..".json"
   if not(io.exists(file)) then
     file = folder..fileName..".json"
   end
   if io.exists(file) then
     local filePointer = io.open(file, "r")
     local str = filePointer:read("*all")
-    translation = yajl.to_value(str)
+    local translation = yajl.to_value(str)
     return getTranslationTable(translation, packageName)
   end
-  return nil, "Unable to find translation file for "..packageName
+  return nil, "unable to find '"..fileName..".json' in '"..folder.."'"
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
