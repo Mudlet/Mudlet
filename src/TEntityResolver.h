@@ -23,8 +23,10 @@
 #ifndef MUDLET_MXPENTITYRESOLVER_H
 #define MUDLET_MXPENTITYRESOLVER_H
 
+#include "pre_guard.h"
 #include <QHash>
 #include <QString>
+#include "post_guard.h"
 #include <functional>
 
 class TEntityResolver

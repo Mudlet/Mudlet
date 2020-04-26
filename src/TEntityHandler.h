@@ -23,7 +23,6 @@
  ***************************************************************************/
 
 #include "TEntityResolver.h"
-#include <QDebug>
 // Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
 class TEntityHandler
 {

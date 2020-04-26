@@ -29,6 +29,8 @@ class TMxpSendTagHandler : public TMxpSingleTagHandler
     QString mCurrentTagContent;
     int mLinkId;
 
+    void updateHrefInLinks(TMxpClient& client) const;
+    void resetCurrentTagContent(TMxpClient& client);
 public:
     static QString extractHref(MxpStartTag* tag);
     static QString extractHint(MxpStartTag* tag);
@@ -38,6 +40,7 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
     void handleContent(char ch) override;
+
 };
 #include "TMxpTagHandler.h"
 #endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H

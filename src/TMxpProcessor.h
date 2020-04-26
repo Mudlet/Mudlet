@@ -26,7 +26,6 @@
 #include "TEntityHandler.h"
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagProcessor.h"
-#include <QString>
 
 class Host;
 
@@ -36,7 +35,7 @@ enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COM
 // handles the MXP protocol
 class TMxpProcessor
 {
-    // State of MXP systen:
+    // State of MXP system:
     bool mMXP;
     TMXPMode mMXP_MODE;
     TMXPMode mMXP_DEFAULT;
@@ -59,10 +58,10 @@ public:
 
     bool setMode(const QString& code);
     bool setMode(int modeCode);
-
-    bool isEnabled() const;
-    void enable();
     TMXPMode mode() const;
+
+    void enable();
+    bool isEnabled() const;
     void resetToDefaultMode();
 
     TMxpProcessingResult processMxpInput(char& ch);

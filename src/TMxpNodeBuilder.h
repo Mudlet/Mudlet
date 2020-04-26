@@ -21,7 +21,10 @@
 
 #include "MxpTag.h"
 #include "TStringUtils.h"
+
+#include "pre_guard.h"
 #include <QString>
+#include "post_guard.h"
 
 class TMxpNodeBuilder
 {

@@ -86,9 +86,7 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 {
     if (tag->hasAttribute("hint")) {
         return tag->getAttributeValue("hint");
-    }
-
-    if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed("PROMPT") && !tag->getAttribute(1).isNamed("EXPIRE")) {
+    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed("PROMPT") && !tag->getAttribute(1).isNamed("EXPIRE")) {
         return tag->getAttrName(1);
     }
 
@@ -98,26 +96,37 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
     if (mIsHrefInContent) {
-        QStringList *hrefs, *hints;
-        if (client.getLink(mLinkId, &hrefs, &hints)) {
-            if (hrefs != nullptr) {
-                hrefs->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
-            }
-
-            if (hints != nullptr) {
-                hints->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
-            }
-        }
-        mCurrentTagContent.clear();
+        updateHrefInLinks(client);
     }
 
-    mIsHrefInContent = false;
-
-    client.setLinkMode(false);
+    resetCurrentTagContent(client);
     return MXP_TAG_HANDLED;
+}
+
+void TMxpSendTagHandler::resetCurrentTagContent(TMxpClient& client)
+{
+    mIsHrefInContent = false;
+    mCurrentTagContent.clear();
+    client.setLinkMode(false);
+}
+
+void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
+{
+    QStringList *hrefs, *hints;
+    if (client.getLink(mLinkId, &hrefs, &hints)) {
+        if (hrefs != nullptr) {
+            hrefs->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+        }
+
+        if (hints != nullptr) {
+            hints->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+        }
+    }
+
 }
 void TMxpSendTagHandler::handleContent(char ch)
 {
-    if (mIsHrefInContent)
+    if (mIsHrefInContent) {
         mCurrentTagContent.append(ch);
+    }
 }

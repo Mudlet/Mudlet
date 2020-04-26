@@ -20,10 +20,12 @@
 #ifndef MUDLET_SRC_TMXPTAGHANDLER_H
 #define MUDLET_SRC_TMXPTAGHANDLER_H
 
-#include <QString>
-
 #include "MxpTag.h"
 #include "TMxpTagHandlerResult.h"
+
+#include "pre_guard.h"
+#include <QString>
+#include "post_guard.h"
 
 class TMxpClient;
 class TMxpContext;

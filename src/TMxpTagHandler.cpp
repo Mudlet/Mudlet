@@ -19,6 +19,7 @@
 
 #include "TMxpTagHandler.h"
 #include "TMxpClient.h"
+
 TMxpTagHandlerResult TMxpTagHandler::handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
     if (!supports(ctx, client, tag)) {

@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "TEntityResolver.h"
-#include <QDebug>
 
 QString TEntityResolver::getResolution(const QString& entity) const
 {

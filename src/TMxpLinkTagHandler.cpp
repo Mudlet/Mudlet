@@ -22,12 +22,14 @@
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->hasAttribute("EXPIRE"))
+    if (tag->hasAttribute("EXPIRE")) {
         return MXP_TAG_NOT_HANDLED;
+    }
 
     QString href = getHref(tag);
-    if (href.isEmpty())
+    if (href.isEmpty()) {
         return MXP_TAG_NOT_HANDLED;
+    }
 
     QString hint = tag->hasAttribute("hint") ? tag->getAttributeValue("hint") : href;
 
@@ -40,8 +42,9 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
     QStringList *links, *hints;
-    if (!client.getLink(mLinkId, &links, &hints))
+    if (!client.getLink(mLinkId, &links, &hints)) {
         return MXP_TAG_NOT_HANDLED;
+    }
 
     if (links != nullptr) {
         links->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
@@ -66,6 +69,7 @@ QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
 }
 void TMxpLinkTagHandler::handleContent(char ch)
 {
-    if (mIsHrefInContent)
+    if (mIsHrefInContent) {
         mCurrentTagContent.append(ch);
+    }
 }

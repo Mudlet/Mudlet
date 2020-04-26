@@ -21,10 +21,12 @@
 #define MUDLET_SRC_TMXPELEMENTREGISTRY_H
 
 #include "MxpTag.h"
+#include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
 #include <QList>
 #include <QSharedPointer>
+#include "post_guard.h"
 
 struct TMxpElement
 {
