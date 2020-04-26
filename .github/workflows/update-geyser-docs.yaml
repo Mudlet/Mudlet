@@ -30,9 +30,10 @@ jobs:
       env:
         WORKSPACE: ${{github.workspace}}
 
-    - name: Upload docs
-      uses: JimCronqvist/action-ssh@master
+    - name: executing remote ssh commands using ssh key
+      uses: appleboy/ssh-action@master
       with:
-        hosts: ${{secrets.UPLOAD_USER}}
-        privateKey: ${{secrets.UPLOAD_PRIVATEKEY}}
-        command: ls -lah
+        host: mudlet.org
+        username: ${{secrets.UPLOAD_USERNAME}}
+        key: ${{secrets.UPLOAD_PRIVATEKEY}}
+        script: whoami
