@@ -43,4 +43,4 @@ jobs:
         key: ${{secrets.UPLOAD_PRIVATEKEY}}
         source: "${{github.workspace}}/src/mudlet-lua/mudlet-lua-doc/files/"
         target: "/home/${{secrets.UPLOAD_USERNAME}}/geyser/"
-        strip_components: 1
+        strip_components: 5
