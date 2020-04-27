@@ -6618,27 +6618,6 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletLuaDefaultPaths
-int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
-{
-    int index = 0;
-    auto& host = getHostFromLua(L);
-    auto* pLua = host.getLuaInterpreter();
-    Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
-
-    QStringListIterator itPath(pLua->mPossiblePaths);
-    lua_newtable(L);
-    while (itPath.hasNext()) {
-        // We are hoping that the directory separators are not going to be a
-        // problem in reporting the details:
-        QString nativePath = QDir::toNativeSeparators(itPath.next());
-        lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
-        lua_pushstring(L, nativePath.toUtf8().constData());
-        lua_settable(L, -3);
-    }
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disconnect
 int TLuaInterpreter::disconnect(lua_State* L)
 {
@@ -8445,12 +8424,11 @@ int TLuaInterpreter::getScript(lua_State* L)
         pos = lua_tonumber(L, 2);
     }
     Host& host = getHostFromLua(L);
-    pos--;
 
     auto ids = host.getScriptUnit()->findScriptId(name);
-    auto pS = host.getScriptUnit()->getScript(ids.value(pos, -1));
+    auto pS = host.getScriptUnit()->getScript(ids.value(--pos, -1));
     if (!pS) {
-        lua_pushnil(L);
+        lua_pushnumber(L, -1);
         lua_pushstring(L, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
         return 2;
     }
@@ -8486,15 +8464,13 @@ int TLuaInterpreter::setScript(lua_State* L)
         }
         pos = lua_tonumber(L, 3);
     }
-    pos--;
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
+    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
     lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
@@ -8530,7 +8506,6 @@ int TLuaInterpreter::permScript(lua_State* L)
     auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
     lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
@@ -16642,7 +16617,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setButtonStyleSheet", TLuaInterpreter::setButtonStyleSheet);
     lua_register(pGlobalLua, "reconnect", TLuaInterpreter::reconnect);
     lua_register(pGlobalLua, "getMudletHomeDir", TLuaInterpreter::getMudletHomeDir);
-    lua_register(pGlobalLua, "getMudletLuaDefaultPaths", TLuaInterpreter::getMudletLuaDefaultPaths);
     lua_register(pGlobalLua, "setTriggerStayOpen", TLuaInterpreter::setTriggerStayOpen);
     lua_register(pGlobalLua, "wrapLine", TLuaInterpreter::wrapLine);
     lua_register(pGlobalLua, "getFgColor", TLuaInterpreter::getFgColor);
