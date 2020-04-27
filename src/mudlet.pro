@@ -1257,7 +1257,7 @@ macx {
     APP_MUDLET_LUA_TRANSLATION.files = \
         ../translations/lua
 
-    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations/lua
+    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
 
     # Set the .app's icns file
