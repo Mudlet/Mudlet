@@ -1221,7 +1221,6 @@ macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = \
-        ../translations/lua translations\
         mudlet-lua \
         de_AT_frami.aff \
         de_AT_frami.dic \
@@ -1254,6 +1253,12 @@ macx {
 
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
+
+    APP_MUDLET_LUA_TRANSLATION.files = \
+        ../translations/lua
+
+    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations/lua
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
 
     # Set the .app's icns file
     ICON = icons/osx.icns
