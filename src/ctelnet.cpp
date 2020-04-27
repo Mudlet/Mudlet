@@ -143,7 +143,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 #else
         connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
 #endif
-        connect(&socket, qOverload<QAbstractSocket::SocketError>(&QAbstractSocket::error), this, &cTelnet::handle_socket_signal_error);
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
     });
@@ -176,15 +175,16 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     connect(this, &cTelnet::signal_disconnected, mpLuaSendPasswordTimer, &QTimer::stop);
     connect(this, &cTelnet::signal_disconnected, this, &cTelnet::slot_disableLuaSendPassword);
     connect(mpLuaSendPasswordTimer, &QTimer::timeout, this, &cTelnet::slot_disableLuaSendPassword);
+
 #if defined (QT_DEBUG)
-    // Extra lines to debug the sending password timeout
+    // Extra (temporary) lines to debug the sending password timeout
     connect(this, &cTelnet::signal_connected, this, [=]() {
         qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ENABLED (connected)...";
     });
     connect(this, &cTelnet::signal_disconnected, this, [=]() {
         qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ... DISABLED (disconnected)!";
     });
-        connect(mpLuaSendPasswordTimer, &QTimer::timeout, this, [=]() {
+    connect(mpLuaSendPasswordTimer, &QTimer::timeout, this, [=]() {
         qDebug().nospace().noquote() << "lambda in cTelnet::cTelnet(...) INFO - send password from Lua API - ... DISABLED (timeout after connection)!";
     });
 #endif
@@ -475,20 +475,8 @@ void cTelnet::abortConnection()
 
 void cTelnet::handle_socket_signal_error()
 {
-    // Normal behaviour when user quits from Game and Server disconnects, and we
-    // already handle this:
-    if (socket.error() == QAbstractSocket::RemoteHostClosedError ) {
-        return;
-    }
-
-    // We already detect and handle HostNotFoundError so do not put up the error
-    // message in THAT case:
-    if (socket.error() != QAbstractSocket::HostNotFoundError) {
-        postMessage(tr("[ ERROR ] - TCP/IP socket ERROR:\n%1").arg(socket.errorString()));
-    }
-
-    // In anycase we are now in an error state so tell the main TConsole:
-    emit signal_error(mpHost);
+    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
+    postMessage(err);
 }
 
 void cTelnet::slot_send_login()
@@ -764,6 +752,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         // terminate the writing of the bytes following it in the single
         // argument method call:
         qint64 chunkWritten = socket.write(data.substr(written).data(), (dataLength - written));
+
         if (chunkWritten < 0) {
             // -1 is the sentinel (error) value but any other negative value
             // would not make sense and it would break the cast to the
@@ -2613,8 +2602,6 @@ void cTelnet::handle_socket_signal_readyRead()
 
     char in_buffer[100010];
 
-    // amount can be -1 in the event of an error, or 0 if there is no data for
-    // reading:
     int amount = socket.read(in_buffer, 100000);
     processSocketData(in_buffer, amount);
 }
@@ -2623,9 +2610,9 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
 {
     mpHost->mInsertedMissingLF = false;
 
-    // Ensure the buffer is null terminated - even in the event of an error:
-    in_buffer[amount + 1] = '\0';
+    char out_buffer[100010];
 
+    in_buffer[amount + 1] = '\0';
     if (amount == -1) {
         return;
     }
@@ -2633,7 +2620,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         return;
     }
 
-    char out_buffer[100010];
     std::string cleandata = "";
     int datalen;
     do {

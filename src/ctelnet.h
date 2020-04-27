@@ -218,7 +218,6 @@ signals:
     void signal_connecting(Host*);
     void signal_connected(Host*);
     void signal_disconnected(Host*);
-    void signal_error(Host*);
 
 
 private:

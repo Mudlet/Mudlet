@@ -4071,7 +4071,10 @@ void mudlet::doAutoLoading(const QString& profile_name)
 
     // load an old profile if there is any
     // PLACEMARKER: Host creation (2) - autoload case
-    if (mHostManager.addHost(profile_name, readProfileData(profile_name, QStringLiteral("login")), readProfileData(profile_name, QStringLiteral("login")), readProfileData(profile_name, QStringLiteral("password")))) {
+    if (mHostManager.addHost(profile_name,
+                             readProfileData(profile_name, QStringLiteral("port")),
+                             readProfileData(profile_name, QStringLiteral("login")),
+                             readProfileData(profile_name, QStringLiteral("password")))) {
         pHost = mHostManager.getHost(profile_name);
         if (!pHost) {
             return;
