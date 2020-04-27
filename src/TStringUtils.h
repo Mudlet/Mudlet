@@ -26,6 +26,15 @@
 #include "post_guard.h"
 #include <functional>
 
+#define CHAR_NEW_LINE '\n'
+#define CHAR_CARRIAGE_RETURN '\r'
+#define CHAR_END_OF_FILE '\xff'
+#define CHAR_END_OF_TEXT '\004'
+#define CHAR_ESC '\033'
+
+#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_END_OF_FILE || (ch) == CHAR_END_OF_TEXT)
+
+
 class TStringUtils
 {
 public:

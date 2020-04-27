@@ -24,6 +24,7 @@
 
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TStringUtils.h"
 
 #include "pre_guard.h"
 #include <QTextBoundaryFinder>
@@ -619,33 +620,32 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mpHost->mMxpProcessor.isEnabled() && mpHost->mServerMXPenabled) {
-            if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
-                if (result == HANDLER_NEXT_CHAR) {
-                    localBufferPosition++;
-                    continue;
-                } else if (result == HANDLER_COMMIT_LINE) { // BR tag
-                    ch = '\n';
-                    goto COMMIT_LINE;
-                } else { //HANDLER_FALL_THROUGH -> do nothing
-                    assert(localBuffer[localBufferPosition] == ch);
-                    // the curent char may have changed if it is the last char of an entity such as &gt; ?
-//                    localBuffer[localBufferPosition] = ch;
+        if (mpHost->mMxpProcessor.isEnabled()) {
+            if (mpHost->mServerMXPenabled) {
+                if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
+                    TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
+                    if (result == HANDLER_NEXT_CHAR) {
+                        localBufferPosition++;
+                        continue;
+                    } else if (result == HANDLER_COMMIT_LINE) { // BR tag
+                        ch = '\n';
+                        goto COMMIT_LINE;
+                    } else { //HANDLER_FALL_THROUGH -> do nothing
+                        assert(localBuffer[localBufferPosition] == ch);
+                    }
+                } else {
+                    mpHost->mMxpProcessor.processRawInput(ch);
                 }
-            } else {
-                mpHost->mMxpProcessor.processRawInput(ch);
             }
 
-        }
-
-        if (mpHost->mMxpProcessor.isEnabled() && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
-            // after a newline (but not a <br>) return to default mode
-            mpHost->mMxpProcessor.resetToDefaultMode();
+            if (CHAR_IS_COMMIT_CHAR(ch)) {
+                // after a newline (but not a <br>) return to default mode
+                mpHost->mMxpProcessor.resetToDefaultMode();
+            }
         }
 
 COMMIT_LINE:
-        if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
+        if (CHAR_IS_COMMIT_CHAR(ch)) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
 
