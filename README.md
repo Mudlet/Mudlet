@@ -9,10 +9,6 @@
 <h4 align="center">Play immersive, multiplayer, pure-text RPGs on Mudlet.</h4>
 
 <p align="center">
-  <a href="http://mudlet.org/download/">
-    <img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development"
-         alt="Build status">
-  </a>
   <a href="https://discord.gg/kuYvMQ9">
     <img src="https://discordapp.com/api/guilds/283581582550237184/embed.png?style=shield">
   </a>
@@ -21,6 +17,14 @@
   </a>
   <a href="https://github.com/Mudlet/Mudlet/stargazers">
     <img src="https://img.shields.io/github/stars/Mudlet/Mudlet.svg"/>
+  </a>
+  <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
+    <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
+  </a>
+  <br>
+  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" alt="AppVeyor (Windows) CI Build status" style="max-width:100%;">
+  </a>
+  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" alt="Travis (Linux &amp; MacOs) CI Build status" style="max-width:100%;">
   </a>
 </p>
 
@@ -35,12 +39,12 @@
 </p>
 
 <p align="center">
-  <img alt="Interfaces players have created with Mudlet" height="500" src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/samplemudletuis.gif-20190701193442-s3gex5fzreha37jz-1/sample-mudlet-uis.gif">
+  <img alt="Interfaces players have created with Mudlet" height="500" src="https://github.com/Mudlet/artwork/raw/master/sample-mudlet-uis.gif">
 </p>
 
 ## About
 
-Mudlet is a quality MUD client, designed to take mudding to a new level.
+Mudlet is a quality [MUD](https://en.wikipedia.org/wiki/MUD) client, designed to take mudding to a new level.
 
 It’s a modern breed of a client on the gaming scene – with an intuitive user interface, a specially designed scripting framework, and a very fast text display. That, along with cross-platform capability and an open-source development model result in a very likable game client.
 
@@ -97,7 +101,7 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
 
 ## Roadmap
 
-See the [project's roadmap](https://www.mudlet.org/2018/02/mudlet-roadmap-2018) to get an idea of where it's headed, as well as contribute!
+See the [project's roadmap](https://www.mudlet.org/2019/09/mudlet-5-roadmap-focus-on-first-time-player-experience/) to get an idea of where it's headed, as well as contribute!
 
 ## Credits
 

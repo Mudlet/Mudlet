@@ -108,14 +108,14 @@ dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarte
 dlgIRC::~dlgIRC()
 {
     writeQSettings();
-    
+
     if (connection->isActive()) {
         const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
         connection->quit(quitMsg);
         connection->close();
     }
 
-    if (mudlet::self()->mpIrcClientMap.value(mpHost)) {
+    if (mudlet::self() && mudlet::self()->mpIrcClientMap.value(mpHost)) {
         mudlet::self()->mpIrcClientMap.remove(mpHost);
     }
 }
@@ -525,7 +525,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     auto * document = new QTextDocument(buffer);
-    document->setMaximumBlockCount(mMessageBufferLimit); 
+    document->setMaximumBlockCount(mMessageBufferLimit);
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
     auto * userModel = new IrcUserModel(buffer);
@@ -760,6 +760,9 @@ QString dlgIRC::readAppDefaultIrcNick()
     QString rstr;
     if (opened) {
         QDataStream ifs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> rstr;
         file.close();
     }
@@ -771,8 +774,11 @@ void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("irc_nick")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
-        QDataStream ifs(&file);
-        ifs << nick;
+        QDataStream ofs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
+        ofs << nick;
         file.close();
     }
 }
@@ -812,6 +818,9 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
     return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(QStringLiteral(" ")));
 }
 
-void dlgIRC::writeQSettings() {
-    mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+void dlgIRC::writeQSettings()
+{
+    if (mudlet::self()) {
+        mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+    }
 }

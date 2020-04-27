@@ -1,3 +1,8 @@
+# New to Git?
+If you don't have previous Git experience, we highly recommend downloading and installing
+the free [Github for Desktop](https://desktop.github.com) app to contribute code to Mudlet 🌟
+
+
 # Coding guidelines
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
@@ -92,6 +97,14 @@ Don't:
 * assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
 
 # Git commit guidelines for core team
+
+## Mega PRs
+
+Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned. 
+
+That does not mean we don't welcome large overhauls: we do. Just make sure to send it in as separate, logically broken-down improvements that implement the functionality you'd like to have in a step process.
+
+Of course, before embarking on such a journey, [discuss with the core team](https://discord.gg/kuYvMQ9) your ideas first so we can guide you on the best design!
 
 ## Merging Pull Requests (PRs)
 

@@ -123,10 +123,12 @@ public slots:
     void slot_save_and_exit();
 
     void hideActionLabel();
-    void slot_setEncoding(const QString&);
+    void slot_setEncoding(const int);
 
     void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);
+
+    void slot_guiLanguageChanged(const QString&);
 
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
@@ -147,12 +149,19 @@ private slots:
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
-    void slot_changeGuiLanguage(const QString &language);
+    void slot_changeGuiLanguage(const QString&);
+    void slot_passwords_location_changed(int);
+    void slot_changePlayerRoomStyle(const int);
+    void slot_setPlayerRoomPrimaryColor();
+    void slot_setPlayerRoomSecondaryColor();
+    void slot_setPlayerRoomOuterDiameter(const int);
+    void slot_setPlayerRoomInnerDiameter(const int);
 
 private:
     void setColors();
     void setColors2();
     void setColor(QPushButton*, QColor&);
+    void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
     void populateThemesList();
@@ -170,6 +179,8 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
+    void hidePasswordMigrationLabel();
+    void setupPasswordsMigration();
 
     int mFontSize;
     QPointer<Host> mpHost;
@@ -178,6 +189,7 @@ private:
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same

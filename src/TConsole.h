@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -26,6 +26,9 @@
 
 
 #include "TBuffer.h"
+
+
+#include "TTextCodec.h"
 
 #include "pre_guard.h"
 #include <QDataStream>
@@ -105,7 +108,7 @@ public:
     void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
-    void createMapper(int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -145,10 +148,12 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    TLabel*
-    createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
-    bool createButton(const QString& name, int x, int y, int width, int height, bool fillBackground);
+    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
+    std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
+    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
@@ -158,7 +163,7 @@ public:
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     QString getCurrentLine(std::string&);
     void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);    
+    bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
@@ -181,6 +186,7 @@ public:
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    QSize getUserWindowSize(const QString& windowname) const;
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
@@ -210,6 +216,7 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
 
 
     QPointer<Host> mpHost;
@@ -323,6 +330,10 @@ public slots:
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
 
+protected:
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dropEvent(QDropEvent*) override;
+
 private:
     void refreshMiniConsole() const;
 
@@ -359,7 +370,7 @@ private:
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 
-#if ! defined(QT_NO_DEBUG)
+#if !defined(QT_NO_DEBUG)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
@@ -378,6 +389,6 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     debug.nospace() << text;
     return debug;
 }
-#endif // ! defined(QT_NO_DEBUG)
+#endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H

@@ -129,6 +129,8 @@ function Geyser.MiniConsole:appendBuffer()
   appendBuffer(self.name)
 end
 
+--- Clears the miniconsole
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearWindow
 function Geyser.MiniConsole:clear()
   clearWindow(self.name)
 end
@@ -143,14 +145,118 @@ function Geyser.MiniConsole:bg(color)
   bg(self.name, color)
 end
 
---- inserts clickable text into the miniconsole at the end of the current line
+--- inserts clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#echoLink
 function Geyser.MiniConsole:echoLink(...)
   echoLink(self.name, ...)
 end
 
---- inserts clickable text into the miniconsole at the current cursor position
+--- inserts clickable text into the miniconsole at the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#insertLink
 function Geyser.MiniConsole:insertLink(...)
   insertLink(self.name, ...)
+end
+
+--- inserts clickable text with right-click menu into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#echoPopup
+function Geyser.MiniConsole:echoPopup(...)
+  echoPopup(self.name, ...)
+end
+
+--- inserts clickable text with right-click menu into the miniconsole at the end of the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#insertPopup
+function Geyser.MiniConsole:insertPopup(...)
+  insertPopup(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoLink
+function Geyser.MiniConsole:cechoLink(...)
+  cechoLink(self.name, ...)
+end
+
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dechoLink
+function Geyser.MiniConsole:dechoLink(...)
+  dechoLink(self.name, ...)
+end
+
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
+function Geyser.MiniConsole:hechoLink(...)
+  hechoLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cinsertLink
+function Geyser.MiniConsole:cinsertLink(...)
+  cinsertLink(self.name, ...)
+end
+
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dinsertLink
+function Geyser.MiniConsole:dinsertLink(...)
+  dinsertLink(self.name, ...)
+end
+
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertLink
+function Geyser.MiniConsole:hinsertLink(...)
+  hinsertLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoLink
+function Geyser.MiniConsole:cechoLink(...)
+  cechoLink(self.name, ...)
+end
+
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dechoLink
+function Geyser.MiniConsole:dechoLink(...)
+  dechoLink(self.name, ...)
+end
+
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoLink
+function Geyser.MiniConsole:hechoLink(...)
+  hechoLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cechoPopup
+function Geyser.MiniConsole:cechoPopup(...)
+  cechoPopup(self.name, ...)
+end
+
+--- inserts decimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dechoPopup
+function Geyser.MiniConsole:dechoPopup(...)
+  dechoPopup(self.name, ...)
+end
+
+--- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hechoPopup
+function Geyser.MiniConsole:hechoPopup(...)
+  hechoPopup(self.name, ...)
+end
+
+--- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#cinsertPopup
+function Geyser.MiniConsole:cinsertPopup(...)
+  cinsertPopup(self.name, ...)
+end
+
+--- inserts decimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#dinsertPopup
+function Geyser.MiniConsole:dinsertPopup(...)
+  dinsertPopup(self.name, ...)
+end
+
+--- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position.
+-- see: https://wiki.mudlet.org/w/Manual:UI_Functions#hinsertPopup
+function Geyser.MiniConsole:hinsertPopup(...)
+  hinsertPopup(self.name, ...)
 end
 
 --- turns selected text info clickable text into the miniconsole
@@ -208,34 +314,37 @@ function Geyser.MiniConsole:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
-  createMiniConsole(me.name, me:get_x(), me:get_y(),
-  me:get_width(), me:get_height())
+  if not string.find(me.name, ".*Class") then
+    me.windowname = me.windowname or me.container.windowname or "main"
+    createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
+    me:get_width(), me:get_height())
 
-  -- Set any defined colors
-  Geyser.Color.applyColors(me)
+    -- Set any defined colors
+    Geyser.Color.applyColors(me)
 
-  if cons.fontSize then
-    me:setFontSize(cons.fontSize)
-  elseif container then
-    me:setFontSize(container.fontSize)
-    cons.fontSize = container.fontSize
-  else
-    me:setFontSize(8)
-    cons.fontSize = 8
+    if cons.fontSize then
+      me:setFontSize(cons.fontSize)
+    elseif container then
+      me:setFontSize(container.fontSize)
+      cons.fontSize = container.fontSize
+    else
+      me:setFontSize(8)
+      cons.fontSize = 8
+    end
+    if cons.scrollBar then
+      me:enableScrollBar()
+    else
+      me:disableScrollBar()
+    end
+    if cons.font then
+      me:setFont(cons.font)
+    end
+    if cons.wrapAt == "auto" then
+      me:enableAutoWrap()
+    elseif cons.wrapAt then
+      me:setWrap(cons.wrapAt)
+    end
+    --print("  New in " .. self.name .. " : " .. me.name)
   end
-  if cons.scrollBar then
-    me:enableScrollBar()
-  else
-    me:disableScrollBar()
-  end
-  if cons.font then
-    me:setFont(cons.font)
-  end
-  if cons.wrapAt == "auto" then
-    me:setAutoWrap()
-  elseif cons.wrapAt then
-    me:setWrap(cons.wrapAt)
-  end
-  --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end

@@ -46,7 +46,6 @@
 #include <string>
 
 #if defined(Q_OS_WIN32)
-#include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -105,6 +104,7 @@ const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
+const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
@@ -112,6 +112,9 @@ const char OPT_MXP = 91;
 const char OPT_102 = 102;
 const char OPT_ATCP = static_cast<char>(200);
 const char OPT_GMCP = static_cast<char>(201);
+
+const char MSSP_VAR = 1;
+const char MSSP_VAL = 2;
 
 const char MSDP_VAR = 1;
 const char MSDP_VAL = 2;
@@ -130,16 +133,19 @@ public:
     cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
+    void reconnect();
     void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
+    void setMSSPVariables(const QByteArray&);
+    void setMSPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QString&);
+    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
@@ -148,13 +154,10 @@ public:
     bool isReplaying() { return loadingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
-    const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    const QByteArray & getEncoding() const { return mEncoding; }
+    QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
-    const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
-    const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
-    const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QByteArrayList & getEncodingsList() const { return mAcceptableEncodings; }
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -165,10 +168,13 @@ public:
     std::string encodeAndCookBytes(const std::string&);
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSSPEnabled() const { return enableMSSP; }
+    bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+    std::pair<QString, int> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -178,7 +184,7 @@ public:
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
-    dlgComposer* mpComposer;
+    QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
@@ -262,7 +268,7 @@ private:
 
     int curX, curY;
     QString termType;
-    QString mEncoding;
+    QByteArray mEncoding;
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mLF_ON_GA;
@@ -281,6 +287,8 @@ private:
     int lastTimeOffset;
     bool enableATCP;
     bool enableGMCP;
+    bool enableMSSP;
+    bool enableMSP;
     bool enableChannel102;
     bool mDontReconnect;
     bool mAutoReconnect;
@@ -290,12 +298,16 @@ private:
     bool loadingReplay;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua;
-    QStringList mAcceptableEncodings;
-    QStringList mFriendlyEncodings;
+    QByteArrayList mAcceptableEncodings;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
+    // Same sort of thing if an encoder fails to be found/loaded:
+    bool mEncoderFailureNoticeIssued;
+
+    // Set if the current connection is via a proxy
+    bool mConnectViaProxy;
 
 private slots:
 #if !defined(QT_NO_SSL)

@@ -220,10 +220,17 @@ private:
     DiscordEventHandlers* mpHandlers;
 
     // These are function pointers to functions located in the Discord RPC library:
-    std::function<void(const char*, DiscordEventHandlers*, int)> Discord_Initialize;
+    std::function<void(const char*, DiscordEventHandlers*, int, const char*)> Discord_Initialize;
     std::function<void(const DiscordRichPresence*)> Discord_UpdatePresence;
     std::function<void(void)> Discord_RunCallbacks;
     std::function<void(void)> Discord_Shutdown;
+    // Not used:
+    // std::function<void>(void)> Discord_ClearPresence;
+#if defined(DISCORD_DISABLE_IO_THREAD)
+    // std::function<void(void)> Discord_UpdateConnection;
+#endif
+    // std::function<void(const char*, int)> Discord_Respond;
+    // std::function<void(DiscordEventHandlers*)> Discord_UpdateHandlers;
 
     bool mLoaded;
 

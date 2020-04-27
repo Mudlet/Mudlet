@@ -27,9 +27,6 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
 , exportItem(true)
