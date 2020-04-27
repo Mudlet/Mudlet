@@ -1221,7 +1221,7 @@ macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
     APP_MUDLET_LUA_FILES.files = \
-        /../translations/lua \
+        ../translations/lua translations\
         mudlet-lua \
         de_AT_frami.aff \
         de_AT_frami.dic \
