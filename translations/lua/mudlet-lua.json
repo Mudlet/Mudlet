@@ -5,7 +5,7 @@
   },  
   "AdjustableContainer.bottom": { 
     "message":"bottom",
-    "description":"one of the borders to attach the containers"
+    "description":"one of the borders the container can be attached to"
   }, 
   "AdjustableContainer.top": {
     "message":"top",
@@ -21,7 +21,7 @@
   },
   "AdjustableContainer.custom": {
     "message":"Custom:",
-    "description":"a menu item in the right click menu with user/package made custom items in it"
+    "description":"a menu item in the right click menu. it contains user/package made custom items"
   },
   "AdjustableContainer.lock": {
     "message":"Lock",
@@ -37,7 +37,7 @@
   },
   "AdjustableContainer.light": {
     "message":"light",
-    "description":"one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stays intact"
+    "description":"one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
   },
   "AdjustableContainer.full": {
     "message":"full",
@@ -49,7 +49,7 @@
   },
   "AdjustableContainer.save": {
     "message":"Save",
-    "description":"saves settings of the container"
+    "description":"saves the containers settings"
   },
   "AdjustableContainer.load": {
     "message":"Load",
