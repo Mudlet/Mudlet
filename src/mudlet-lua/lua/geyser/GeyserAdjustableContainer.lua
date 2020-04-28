@@ -1,5 +1,5 @@
 --Adjustable Container
---Just use it like a normal Geyser Container with some extras like: 
+--Just use it like a normal Geyser Container with some extras like:
 --moveable, adjustable size, attach to borders, minimizeable, save/load...
 --right click on top border for menu
 --Inspired heavily by Adjustable Label (by Jor'Mox ) and EMCO (by demonnic )
@@ -7,14 +7,15 @@
 
 Adjustable = Adjustable or {}
 
---- Adjustable Container
--- @class table
--- @name Adjustable.Container
+------------
+-- Adjustable Container
+-- (LDoc)
+-- @module Adjustable.Container
 Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "AdjustableContainerClass"})
 
 local adjustInfo = {}
 
---- Internal function to add "%" to a value and round it
+-- Internal function to add "%" to a value and round it
 -- @param num is the value a "%" will be added to
 local function make_percent(num)
     num = math.floor(10000*num)/100
@@ -22,7 +23,7 @@ local function make_percent(num)
     return num
 end
 
---- Internal function: checks where the mouse is at on the Label 
+-- Internal function: checks where the mouse is at on the Label
 -- and saves the information for further use at resizing/repositioning
 -- also changes the mousecursor for easier use of the resizing/repositioning functionality
 -- @param self the Adjustable.Container it self
@@ -36,7 +37,7 @@ local function adjust_Info(self, label, event)
     local left, right, top, bottom = event.x <= 10, x >= x2 - 10, event.y <= 3, y >= y2 - 10
     if right and left then left = false end
     if top and bottom then top = false end
-    
+
     if event.button ~= "LeftButton" and not self.minimized then
         if (top or bottom) and not (left or right) then
             label:setCursor("ResizeVertical")
@@ -50,11 +51,11 @@ local function adjust_Info(self, label, event)
             label:setCursor("OpenHand")
         end
     end
-    
+
     adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move}
 end
 
---- Internal function: hides the window title if the window gets smaller
+-- Internal function: hides the window title if the window gets smaller
 -- @param lbl the Label which allows the Container to be adjustable and where the title text is on
 local function shrink_title(lbl)
     local  w  =  lbl:get_width()
@@ -67,7 +68,7 @@ local function shrink_title(lbl)
     lbl.adjLabel:echo(titleText, lbl.titleTxtColor, "l")
 end
 
---- Internal function: plain Echo which allows text manipulation by stylesheets
+-- Internal function: plain Echo which allows text manipulation by stylesheets
 -- @param self the menu label itself
 -- @param text the text to be shown on the menu label
 local function pEcho(self, text)
@@ -109,27 +110,27 @@ function Adjustable.Container:onClick(label, event)
         if self.raiseOnClick then
             self:raiseAll()
         end
-        adjustInfo.name = label.name  
+        adjustInfo.name = label.name
         adjustInfo.move = not (adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
         if self.minimized then adjustInfo.move = true end
         adjust_Info(self, label, event)
     end
     if event.button == "RightButton" then
         --if not in the Geyser main window attach Label is not needed and will be removed
-        if self.container ~= Geyser and table.index_of(self.rCLabel.nestedLabels, self.attLabel) then       
+        if self.container ~= Geyser and table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             table.remove(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.attLabel))
             -- if we are back to the Geyser main window attach Label will be readded
         elseif self.container == Geyser and not table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
             table.insert(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.lockStylesLabel)-1, self.attLabel)
             self.attLabel:changeContainer(Geyser)
         end
-        
+
         if table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel) and not self.customItemsLabel.nestedLabels then
             table.remove(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel))
         elseif self.rCLabel.nestedLabels[#self.rCLabel.nestedLabels] ~= self.customItemsLabel and self.customItemsLabel.nestedLabels then
             self.rCLabel.nestedLabels[#self.rCLabel.nestedLabels + 1] = self.customItemsLabel
         end
-        
+
         if self.rCLabel.windowname ~= self.customItemsLabel.windowname then
             if self.rCLabel.windowname == "main" then
                 self.customItemsLabel:changeContainer(Geyser)
@@ -137,7 +138,7 @@ function Adjustable.Container:onClick(label, event)
                 self.customItemsLabel:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
             end
         end
-        
+
         local winw = getUserWindowSize(self.windowname)
         local mousepos = self:get_x() + event.x
         local maxdiff = self.ParentMenuWidth + self.ChildMenuWidth
@@ -170,7 +171,7 @@ end
 -- @param event the onMove event and its informations
 function Adjustable.Container:onMove (label, event)
     if self.locked then
-        if label.cursorShape ~= 0 then 
+        if label.cursorShape ~= 0 then
             label:resetCursor()
         end
         return
@@ -247,15 +248,15 @@ end
 function Adjustable.Container:adjustBorder()
     local winw, winh = getMainWindowSize()
     local where = false
-    if type(self.attached) == "string" then 
+    if type(self.attached) == "string" then
         where = self.attached:lower()
         if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then self:detach()
         else
-            if        where == "right"   then setBorderRight(winw-self.get_x()) 
-            elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x())  
-            elseif  where == "bottom"  then setBorderBottom(winh-self.get_y())  
-            elseif  where == "top"     then setBorderTop(self.get_height()+self.get_y()) 
-            else self.attached= false 
+            if        where == "right"   then setBorderRight(winw-self.get_x())
+            elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x())
+            elseif  where == "bottom"  then setBorderBottom(winh-self.get_y())
+            elseif  where == "top"     then setBorderTop(self.get_height()+self.get_y())
+            else self.attached= false
             end
         end
     else
@@ -267,8 +268,8 @@ end
 function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
     self.timer_active = self.timer_active or true
-    -- Check if Window resize already happened. 
-    -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event 
+    -- Check if Window resize already happened.
+    -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event
     if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
         self.timer_active = false
         tempTimer(0.2, function() self:adjustBorder() end)
@@ -280,15 +281,15 @@ end
 --- attaches your container to the given border
 -- @param border possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:attachToBorder(border)
-    if self.attached then self:detach() end  
+    if self.attached then self:detach() end
     self.attached = border
     self:adjustBorder()
     self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
-    closeAllLevels(self.rCLabel)  
+    closeAllLevels(self.rCLabel)
 end
 
 --- detaches the given container
-function Adjustable.Container:detach()  
+function Adjustable.Container:detach()
     self:resetBorder(self.attached)
     self.attached=false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
@@ -297,9 +298,9 @@ end
 --- internal function to reset the given border
 -- @param where possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:resetBorder(where)
-    if        where == "right"   then setBorderRight(0) 
-    elseif  where == "left"    then setBorderLeft(0)  
-    elseif  where == "bottom"  then setBorderBottom(0)  
+    if        where == "right"   then setBorderRight(0)
+    elseif  where == "left"    then setBorderLeft(0)
+    elseif  where == "bottom"  then setBorderBottom(0)
     elseif  where == "top"     then setBorderTop(0)
     end
 end
@@ -327,20 +328,20 @@ end
 -- @param lockStyle the lockstyle used to lock the container, integrated lockStyles are "standard", "border", "full" and "light"
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
-    
+
     if type(lockNr) == "string" then
       lockStyle = lockNr
     elseif type(lockNr) == "number" then
       lockStyle = self.lockStyles[lockNr][1]
     end
-    
+
     lockStyle = lockStyle or self.lockStyle
     if not self.lockStyles[lockStyle] then
       lockStyle = "standard"
     end
-    
+
     self.lockStyle = lockStyle
-    
+
     if self.minimized == false then
         self.lockStyles[lockStyle][2](self)
         self.exitLabel:hide()
@@ -379,7 +380,7 @@ function Adjustable.Container:setPadding(padding)
         self:lockContainer()
     else
         self:unlockContainer()
-    end 
+    end
 end
 
 --- internal function: onClick Lock event
@@ -446,7 +447,7 @@ end
 -- @param self the container itself
 -- @param labelNest the given LabelNest
 local function recursiveStyle(self, labelNest)
-    if not labelNest then return end 
+    if not labelNest then return end
     for k,v in pairs (labelNest) do
         v:setStyleSheet(self.menustyle)
         pEcho(v, v.txt)
@@ -472,7 +473,7 @@ local function createMenus(self, menu, onClick)
     end
     recursiveStyle(self, self[menu.."Label"].nestedLabels)
     self[menu.."Nr"] = #self[menu]
-    
+
 end
 
 --- internal function: Handler for the onEnter event of the attach menu
@@ -495,65 +496,65 @@ end
 function Adjustable.Container:createLabels()
     self.exitLabel = Geyser.Label:new({
         x = -(self.buttonsize * 1.4), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize, name = self.name.."exitLabel"
-        
+
     },self)
     self.exitLabel:echo("<center>x</center>")
-    
-    
+
+
     self.minimizeLabel = Geyser.Label:new({
         x = -(self.buttonsize * 2.6), y=4, width = self.buttonsize, height = self.buttonsize, fontSize = self.buttonFontSize, name = self.name.."minimizeLabel"
-        
+
     },self)
     self.minimizeLabel:echo("<center>-</center>")
-    
+
     -- create a label with a nestable=true property to say that it can nest labels
     self.rCLabel = Geyser.Label:new({
     width = "0", height = "0", nestable=true, name = self.name.."rCLabel",
     message="<center>Clicky clicky</center>"}, self)
-    
+
     self.lockLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."lockLabel",
         layoutDir="RV", flyOut=true
     })
-    
+
     self.minLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."minLabel",
         layoutDir="RV", flyOut=true
-        
+
     })
-    
+
     self.saveLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."saveLabel",
         layoutDir="RV", flyOut=true
     })
-    
+
     self.loadLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."loadLabel",
         layoutDir="RV", flyOut=true
     })
-    
+
     self.attLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."attLabel"
     })
-    
+
     for i=1,4 do
         self.att[i] = self.attLabel:addChild({
             width = self.ChildMenuWidth, height = self.MenuHeight, layoutDir="RV", name = self.name.."att"..i
         })
     end
-    
+
     self.lockStylesLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight,  nestable = true, flyOut=true, layoutDir="RV", name = self.name.."lockStylesLabel"
     })
     createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
-    
+
     self.customItemsLabel = self.rCLabel:addChild({
         width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."customItemsLabel"
     })
-        
+
 end
-    
---- internal function to apply menustyle on all nested Labels    
+
+--- internal function to apply menustyle on all nested Labels
 function Adjustable.Container:styleLabels()
     recursiveStyle(self, self.rCLabel.nestedLabels)
 end
@@ -597,25 +598,25 @@ end
 -- loads your container settings
 function Adjustable.Container:load()
     local mytable = {}
-    
+
     if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
         table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
     end
-    
+
     self.lockStyle = mytable.lockStyle or self.lockStyle
     self.padding = mytable.padding or self.padding
-    
+
     if mytable.x then
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
         self.minimized = mytable.minimized
-        
+
         if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
-        
+
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
     end
-    
+
     if mytable.attached then self:attachToBorder(mytable.attached) end
     self:adjustBorder()
     if mytable.auto_hidden or mytable.hidden then
@@ -706,27 +707,27 @@ Adjustable.Container.all_windows = Adjustable.Container.all_windows or {}
 --- Internal function to create all the standard lockstyles
 function Adjustable.Container:globalLockStyles()
     self.lockStyles = self.lockStyles or {}
-    self:newLockStyle("standard", function (s) 
+    self:newLockStyle("standard", function (s)
         s.Inside:resize("100%",-1)
         s.Inside:move(0, s.padding)
         s.adjLabel:setStyleSheet(string.gsub(s.adjLabelstyle, "(border.-)%d(.-;)","%10%2"))
         s.adjLabel:echo("")
     end)
-    
-    self:newLockStyle("border",  function (s) 
+
+    self:newLockStyle("border",  function (s)
         s.Inside:resize("-"..s.padding,"-"..s.padding)
         s.Inside:move(s.padding, s.padding)
         s.adjLabel:setStyleSheet(s.adjLabelstyle)
         s.adjLabel:echo("")
     end)
-    
-    self:newLockStyle("full", function (s) 
+
+    self:newLockStyle("full", function (s)
         s.Inside:resize("100%","100%")
         s.Inside:move(0,0)
         s.adjLabel:setStyleSheet(string.gsub(s.adjLabelstyle, "(border.-)%d(.-;)","%10%2"))
         s.adjLabel:echo("")
     end)
-    
+
     self:newLockStyle("light", function (s)
         shrink_title(s)
         s.Inside:resize("-"..s.padding,"-"..s.padding)
@@ -761,7 +762,7 @@ function Adjustable.Container:newCustomItem(name, func)
     self.customItems[name] = self.customItems[#self.customItems]
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
---- enablesAutoSave normally only used internally 
+--- enablesAutoSave normally only used internally
 function Adjustable.Container:enableAutoSave()
     self.autoSave = true
     self.autoSaveHandler = self.autoSaveHandler or registerAnonymousEventHandler("sysExitEvent", function() self:save() end)
@@ -823,14 +824,14 @@ function Adjustable.Container:new(cons,container)
     me.adjLabel:setStyleSheet(me.adjLabelstyle)
     me.exitLabel:setStyleSheet(me.buttonstyle)
     me.minimizeLabel:setStyleSheet(me.buttonstyle)
-    
+
     me.rCLabel:setStyleSheet([[background-color: rgba(255,255,255,0%);]])
     me:styleLabels()
 
     me.adjLabel:setClickCallback("Adjustable.Container.onClick",me, me.adjLabel)
     me.adjLabel:setReleaseCallback("Adjustable.Container.onRelease",me, me.adjLabel)
     me.adjLabel:setMoveCallback("Adjustable.Container.onMove",me, me.adjLabel)
-    
+
     me.minLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.saveLabel:setClickCallback("Adjustable.Container.onClickSave", me)
     me.lockLabel:setClickCallback("Adjustable.Container.onClickL", me)
@@ -868,19 +869,19 @@ function Adjustable.Container:new(cons,container)
     elseif cons.hidden == false then
         me:show()
     end
-  
+
     -- Loads on creation (by Name) if autoLoad is not false
     if not(me.autoLoad == false) then
         me.autoLoad = true
         me:load()
     end
-  
+
     -- Saves on Exit if autoSave is not false
     if not(me.autoSave == false) then
         me.autoSave = true
         me:enableAutoSave()
     end
-  
+
     Adjustable.Container.all[me.name] = me
     return me
 end
