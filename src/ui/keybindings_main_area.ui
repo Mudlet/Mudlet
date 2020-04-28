@@ -16,7 +16,7 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,1,2" columnstretch="0,2,0,0,1,0,1">
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0" columnstretch="0,0,0,0,0,0">
    <item row="0" column="0">
     <widget class="QLabel" name="label_key_name">
      <property name="text">
@@ -57,7 +57,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="4" colspan="3">
+   <item row="0" column="4" colspan="2">
     <widget class="QLineEdit" name="lineEdit_key_command">
      <property name="toolTip">
       <string>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
@@ -72,12 +72,50 @@
      <property name="sizeHint" stdset="0">
       <size>
        <width>40</width>
-       <height>1</height>
+       <height>0</height>
       </size>
      </property>
     </spacer>
    </item>
-   <item row="1" column="6" rowspan="3">
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_key_binding_label">
+     <property name="text">
+      <string>Key:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="4">
+    <widget class="QLabel" name="label_key_binding_value">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string>no key chosen</string>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5" rowspan="2">
     <widget class="QPushButton" name="pushButton_key_grabKey">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -111,38 +149,6 @@ key</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_key_binding_label">
-     <property name="text">
-      <string>Key:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1" colspan="4">
-    <widget class="QLabel" name="label_key_binding_value">
-     <property name="frameShape">
-      <enum>QFrame::Box</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Plain</enum>
-     </property>
-     <property name="text">
-      <string>no key chosen</string>
-     </property>
-     <property name="scaledContents">
-      <bool>true</bool>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="textInteractionFlags">
-      <set>Qt::NoTextInteraction</set>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="0">
     <widget class="QLabel" name="label_key_modifiers_label">
      <property name="text">
@@ -152,6 +158,12 @@ key</string>
    </item>
    <item row="3" column="1" colspan="4">
     <widget class="QFrame" name="frame_modifiers">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>2</verstretch>
+      </sizepolicy>
+     </property>
      <property name="frameShape">
       <enum>QFrame::Box</enum>
      </property>
@@ -224,22 +236,6 @@ key</string>
       </item>
      </layout>
     </widget>
-   </item>
-   <item row="3" column="5">
-    <spacer name="verticalSpacer_forceKeyDetailsToTop">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::MinimumExpanding</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>1</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>
