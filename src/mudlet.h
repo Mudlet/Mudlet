@@ -235,7 +235,7 @@ public:
     bool resetFormat(Host*, QString& name);
     bool moduleTableVisible();
     bool mWindowMinimized;
-    void doAutoLoading(const QString&);
+    void doAutoLogin(const QString&);
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
@@ -443,7 +443,7 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void layoutModules();
-    void startAutoLoading(const QString&);
+    void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
 

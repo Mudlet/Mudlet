@@ -463,7 +463,7 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLoading(cliProfile);
+    mudlet::self()->startAutoLogin(cliProfile);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

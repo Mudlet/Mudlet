@@ -154,18 +154,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mpPostingTimer->setInterval(300); //FIXME
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
-    // Note that this pair of timers - although wired up to send the name and
-    // password here and now - are only started upon a sucessful connection and
-    // now, also they also require a (default enabled) checkbox option on the
-    // profile's connection preferences:
-    mTimerLogin = new QTimer(this);
-    mTimerLogin->setSingleShot(true);
-    connect(mTimerLogin, &QTimer::timeout, this, &cTelnet::slot_send_login);
-
-    mTimerPass = new QTimer(this);
-    mTimerPass->setSingleShot(true);
-    connect(mTimerPass, &QTimer::timeout, this, &cTelnet::slot_send_pass);
-
     mpLuaSendPasswordTimer->setInterval(Host::mLuaSendPasswordTimeout);
     mpLuaSendPasswordTimer->setSingleShot(true);
     connect(this, &cTelnet::signal_connected, this, &cTelnet::slot_enableLuaSendPassword);
@@ -479,18 +467,18 @@ void cTelnet::handle_socket_signal_error()
     postMessage(err);
 }
 
-void cTelnet::slot_send_login()
+void cTelnet::sendPlayerName()
 {
     if (!mpHost->getLogin().isEmpty()) {
-        qDebug().noquote() << "cTelnet::slot_send_pass() INFO - sending login name.";
+        qDebug().noquote() << "cTelnet::sendPlayerName() INFO - sending login name.";
         sendData(mpHost->getLogin());
     }
 }
 
-void cTelnet::slot_send_pass()
+void cTelnet::sendPlayerPassword()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
-        qDebug().noquote() << "cTelnet::slot_send_pass() INFO - sending password.";
+        qDebug().noquote() << "cTelnet::sendPlayerPassword() INFO - sending password.";
         sendData(mpHost->getPass());
     }
 }
@@ -509,18 +497,22 @@ void cTelnet::handle_socket_signal_connected()
     }
     msg.append(QStringLiteral("\n    \n    "));
     postMessage(msg);
-    QString func = "onConnect";
-    QString nothing = "";
+    QString func{QStringLiteral("onConnect")};
+    QString nothing;
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if (mpHost->getAutoPlayerLogin() && !mpHost->getLogin().isEmpty()) {
-        mTimerLogin->start(2000); // Wait 2 seconds before sending player name
-        if (!mpHost->getPass().isEmpty()) {
-            mTimerPass->start(3000); // Wait 3 seconds before sending player password - i.e. 1 second after player name
-        }
-    }
 
+    // Must do this before the next thing so that the password sending bit in
+    // the Lua system is set to be usable:
     emit signal_connected(mpHost);
+
+    // Code that was here has been moved to the Lua function "doLogin()" in
+    // LuaGlobal.lua which can be replaced by a user function to do things in
+    // a MUD specific way - or replaced by an empty function to do it via
+    // permenant (or temporary) triggers - or via a sysConnctionEvent handler:
+    func = QStringLiteral("doLogin");
+    mpHost->mLuaInterpreter.call(func, nothing);
+
 
     TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));

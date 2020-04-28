@@ -186,8 +186,6 @@ public:
     const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
     void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
-    bool               getAutoPlayerLogin()             { QMutexLocker locker(& mLock); return mAutoPlayerLogin; }
-    void               setAutoPlayerLogin(const bool b) { QMutexLocker locker(& mLock); mAutoPlayerLogin = b; }
 
     void closingDown();
     bool isClosingDown();
@@ -692,11 +690,6 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
-    // If true (default) then send the player name and password shortly after
-    // a successful connection - this used to happen outside of player control
-    // but since both of those details can now be scripted via Lua API call it
-    // need not be done now if the user doesn't want it:
-    bool mAutoPlayerLogin;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

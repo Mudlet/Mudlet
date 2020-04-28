@@ -63,7 +63,6 @@ public slots:
     void slot_reallyDeleteProfile();
 
     void slot_update_autologin(const int);
-    void slot_update_autoload(const int);
     void slot_update_autoreconnect(const int);
     void slot_update_discord_optin(const int);
     void slot_load();

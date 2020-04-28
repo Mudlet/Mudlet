@@ -2400,19 +2400,6 @@
              </widget>
             </item>
             <item row="2" column="0" colspan="2">
-             <widget class="QCheckBox" name="checkBox_autoLogin">
-              <property name="toolTip">
-               <string>&lt;p&gt;Previous version of Mudlet aways sent the player name and password (if they are set above) shortly after a successful connection to a Game server. However it can now also be done via the Lua script commands &lt;tt&gt;sendPlayerName()&lt;/tt&gt; and &lt;tt&gt;sendPlayerPassword()&lt;/tt&gt;; if that is being done it is likely that this option should be unchecked so as to leave it to those commands in a script.&lt;/p</string>
-              </property>
-              <property name="text">
-               <string extracomment="This enable the sending of the player login details upon connection older versions of Mudlet did this outside of player control but as it can now be done also via Lua API commands it now must be a user controlled option.">Send the above automatically when connected</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0" colspan="2">
              <widget class="QCheckBox" name="discord_optin_checkBox">
               <property name="enabled">
                <bool>false</bool>
@@ -2438,8 +2425,8 @@
               </property>
              </widget>
             </item>
-            <item row="4" column="0" colspan="2">
-             <widget class="QCheckBox" name="checkBox_autoLoad">
+            <item row="3" column="0" colspan="2">
+             <widget class="QCheckBox" name="autologin_checkBox">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -2457,7 +2444,7 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="0" colspan="2">
+            <item row="4" column="0" colspan="2">
              <widget class="QCheckBox" name="auto_reconnect">
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
@@ -2643,9 +2630,8 @@
   <tabstop>profile_history</tabstop>
   <tabstop>login_entry</tabstop>
   <tabstop>character_password_entry</tabstop>
-  <tabstop>checkBox_autoLogin</tabstop>
   <tabstop>discord_optin_checkBox</tabstop>
-  <tabstop>checkBox_autoLoad</tabstop>
+  <tabstop>autologin_checkBox</tabstop>
   <tabstop>auto_reconnect</tabstop>
   <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>

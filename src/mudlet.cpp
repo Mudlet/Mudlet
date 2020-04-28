@@ -160,7 +160,6 @@ mudlet::mudlet()
 , mpPackageManagerDlg(nullptr)
 , mShowIconsOnDialogs(true)
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
-, moduleTable(nullptr)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
@@ -175,6 +174,7 @@ mudlet::mudlet()
 , mpLabelReplayTime(nullptr)
 , mpTimerReplay(nullptr)
 , mpToolBarReplay(nullptr)
+, moduleTable(nullptr)
 , mshowMapAuditErrors(false)
 , mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
@@ -3978,7 +3978,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLoading(const QString& cliProfile)
+void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
@@ -3988,7 +3988,7 @@ void mudlet::startAutoLoading(const QString& cliProfile)
         // profile and not about logging into the server:
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked || host == cliProfile) {
-            doAutoLoading(host);
+            doAutoLogin(host);
             openedProfile = true;
         }
     }
@@ -4057,7 +4057,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     mpDebugArea->hide();
 }
 
-void mudlet::doAutoLoading(const QString& profile_name)
+void mudlet::doAutoLogin(const QString& profile_name)
 {
     if (profile_name.isEmpty()) {
         return;
@@ -4102,7 +4102,6 @@ void mudlet::doAutoLoading(const QString& profile_name)
 
 //    pHost->setLogin(readProfileData(profile_name, QStringLiteral("login")));
 //    pHost->setPass(readProfileData(profile_name, QStringLiteral("password")));
-    pHost->setAutoPlayerLogin(readProfileData(profile_name, QStringLiteral("autosendlogin")) != Qt::Unchecked);
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:

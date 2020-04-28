@@ -189,11 +189,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
-    connect(checkBox_autoLoad, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoload);
+    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
-    connect(checkBox_autoLogin, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
@@ -347,18 +346,6 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
 }
 
 void dlgConnectionProfiles::slot_update_autologin(int state)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QString profile = pItem->text();
-    // It would have been nice to use "autologin" but that string was already
-    // used for the "automatically load this profile on starting Mudlet" option:
-    writeProfileData(profile, QStringLiteral("autosendlogin"), QString::number(state));
-}
-
-void dlgConnectionProfiles::slot_update_autoload(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (!pItem) {
@@ -1063,20 +1050,13 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
 
-    val = readProfileData(profile, QStringLiteral("autosendlogin"));
-    if (val.toInt() == Qt::Checked) {
-        checkBox_autoLogin->setChecked(true);
-    } else {
-        checkBox_autoLogin->setChecked(false);
-    }
-
     // This option was mis-named in the past - it is about loading the profile
     // automatically when Mudlet starts
     val = readProfileData(profile, QStringLiteral("autologin"));
     if (val.toInt() == Qt::Checked) {
-        checkBox_autoLoad->setChecked(true);
+        autologin_checkBox->setChecked(true);
     } else {
-        checkBox_autoLoad->setChecked(false);
+        autologin_checkBox->setChecked(false);
     }
 
     val = readProfileData(profile, QStringLiteral("autoreconnect"));
@@ -2290,7 +2270,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerN
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
-        pHost->setAutoPlayerLogin(checkBox_autoLogin->isChecked());
 
         // This also writes the value out to the profile's base directory:
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);

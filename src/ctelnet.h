@@ -176,6 +176,8 @@ public:
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
     std::pair<QString, int> getConnectionInfo() const;
     const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
+    void sendPlayerName();
+    void sendPlayerPassword();
 
     // A one-shot timer used to prevent the Lua sendPlayerPassword() command
     // from functioning for more than a short time after a successful connection
@@ -208,8 +210,6 @@ public slots:
     void handle_socket_signal_readyRead();
     void handle_socket_signal_error();
     void slot_timerPosting();
-    void slot_send_login();
-    void slot_send_pass();
     void slot_enableLuaSendPassword();
     void slot_disableLuaSendPassword();
 
@@ -289,8 +289,6 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting;
-    QTimer* mTimerLogin;
-    QTimer* mTimerPass;
     QTime timeOffset;
     QTime mConnectionTime;
     int lastTimeOffset;

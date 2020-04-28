@@ -18191,7 +18191,7 @@ int TLuaInterpreter::sendPlayerName(lua_State* L)
         lua_pushstring(L, "no character name set so nothing to send");
         return 2;
     } else {
-        host.mTelnet.slot_send_login();
+        host.mTelnet.sendPlayerName();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -18215,7 +18215,7 @@ int TLuaInterpreter::sendPlayerPassword(lua_State* L)
         return 2;
     }
 
-    host.mTelnet.slot_send_pass();
+    host.mTelnet.sendPlayerPassword();
     lua_pushboolean(L, true);
     return 1;
 }
