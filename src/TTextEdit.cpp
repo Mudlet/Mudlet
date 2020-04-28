@@ -1485,10 +1485,12 @@ QString TTextEdit::getSelectedText(char newlineChar)
         // if the selection started on this line
         if (y == mPA.y()) {
             // start from the column where the selection started
-            if (mpBuffer->lineBuffer.at(y).size()) {
+            if (!mpBuffer->lineBuffer.at(y).isEmpty()) {
                 if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
                     x = mPA.x();
                 }
+            } else {
+                qDebug() << "mpBuffer->lineBuffer.at(y) is empty, y is" << y;
             }
             if (!isSingleLine) {
                 // insert the number of spaces to push the first line to the right
