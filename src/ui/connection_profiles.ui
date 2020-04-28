@@ -2440,7 +2440,7 @@
                <enum>Qt::LeftToRight</enum>
               </property>
               <property name="text">
-               <string extracomment="This option causes this profile to be automatically LOADED when the Mudlet application is started. This was previously called autoLogin_checkBox but that was functional incorrect and needed to be changed as we now have a separate checkBox_autoLogin that does enable the sending of the player login details upon connection.">Open profile on Mudlet start</string>
+               <string extracomment="This option causes this profile to be automatically LOADED when the Mudlet application is started; the internal name is functionally incorrect!">Open profile on Mudlet start</string>
               </property>
              </widget>
             </item>
