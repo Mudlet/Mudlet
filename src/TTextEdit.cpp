@@ -1469,6 +1469,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
 
 
     if(!mpBuffer->buffer[0].size()) {
+        qDebug() << "first line in the buffer is empty";
         return text;
     }
     // for each selected line
@@ -1479,6 +1480,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             mSelectedRegion = QRegion(0, 0, 0, 0);
             forceUpdate();
+            qDebug() << "2";
             return text;
         }
 
@@ -1511,6 +1513,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
                 if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
                     mSelectedRegion = QRegion(0, 0, 0, 0);
                     forceUpdate();
+                    qDebug() << "3";
                     return text;
                 }
             }
