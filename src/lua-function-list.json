@@ -153,7 +153,6 @@
     "getMousePosition": "x, y = getMousePosition()",
     "getMudletHomeDir": "getMudletHomeDir()",
     "getMudletInfo": "getMudletInfo()",
-    "getMudletLuaDefaultPaths": "getMudletLuaDefaultPaths()",
     "getMudletVersion": "getMudletVersion(style)",
     "getNetworkLatency": "getNetworkLatency()",
     "getOS": "getOS()",
