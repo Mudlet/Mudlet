@@ -650,7 +650,7 @@
             <string>Foreground</string>
            </property>
            <property name="buddy">
-            <cstring>pushButtonBgColor</cstring>
+            <cstring>pushButtonFgColor</cstring>
            </property>
           </widget>
          </item>
@@ -660,12 +660,12 @@
             <string>Background</string>
            </property>
            <property name="buddy">
-            <cstring>pushButtonFgColor</cstring>
+            <cstring>pushButtonBgColor</cstring>
            </property>
           </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QPushButton" name="pushButtonBgColor">
+          <widget class="QPushButton" name="pushButtonFgColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -678,7 +678,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QPushButton" name="pushButtonFgColor">
+          <widget class="QPushButton" name="pushButtonBgColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
