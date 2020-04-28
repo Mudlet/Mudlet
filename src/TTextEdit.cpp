@@ -1216,6 +1216,7 @@ void TTextEdit::slot_searchSelectionOnline()
 void TTextEdit::slot_copySelectionToClipboard()
 {
     QString selectedText = getSelectedText();
+    qDebug() << "selectedText: " << selectedText;
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
