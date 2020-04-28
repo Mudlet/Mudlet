@@ -64,7 +64,7 @@ jobs:
     - name: (Linux) Install apt dependencies
       if: runner.os == 'Linux'
       run: |
-        # Without this, installing packages might fail as the github image becomes outdated
+        # Installing packages might fail as the github image becomes outdated
         sudo apt update
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0
