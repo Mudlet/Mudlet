@@ -9457,19 +9457,19 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="873"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ASCII (Basis)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="874"/>
       <source>UTF-8 (Recommended)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>UTF-8 (empfohlen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-1 (Westeuropa/Western European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="880"/>
@@ -9560,21 +9560,21 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="895"/>
       <source>CP437 (OEM Font)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM-Schriftart)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="896"/>
       <location filename="../src/mudlet.cpp" line="897"/>
       <source>CP667 (Mazovia)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP667 (Masowien/Mazovia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="898"/>
       <location filename="../src/mudlet.cpp" line="899"/>
       <source>CP737 (DOS Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP737 (DOS-Griechisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="900"/>
@@ -9593,13 +9593,13 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="903"/>
       <source>CP869 (DOS Greek 2)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP869 (DOS-Griechisch 2)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="904"/>
       <source>CP1161 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP1161 (Lateinisch/Thailändisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="905"/>
@@ -9693,25 +9693,25 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="875"/>
       <source>GBK (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GBK (Chinesisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="876"/>
       <source>GB18030 (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GB18030 (Chinesisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="877"/>
       <source>Big5-ETen (Taiwan)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-ETen (Taiwan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="878"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-HKSCS (Hongkong)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1132"/>
