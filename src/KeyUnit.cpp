@@ -158,7 +158,7 @@ QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKey
         return {true, it.value()->getKeyModifiers()};
     }
 
-    return {false, qMakePair(Qt::NoModifier,Qt::NoModifier)};
+    return {false, qMakePair(Qt::NoModifier, Qt::NoModifier)};
 }
 
 // This currently only acts on the FIRST key-binding with the given name

@@ -1567,7 +1567,7 @@ int XMLimport::readKeyGroup(TKey* pParent)
                 pT->mKeyCode = readElementText().toInt();
             } else if (name() == "keyModifier") {
                 quint32 combinedModifiers = Qt::KeyboardModifiers(readElementText().toInt());
-                pT->setKeyModifiers(qMakePair(Qt::KeyboardModifiers(combinedModifiers & TKey::scmPresentModifierMask), Qt::KeyboardModifiers((combinedModifiers & TKey::scmAbsentModifierMask)<<8)));
+                pT->setKeyModifiers(qMakePair(Qt::KeyboardModifiers(combinedModifiers & TKey::scmPresentModifierMask), Qt::KeyboardModifiers((combinedModifiers & TKey::scmAbsentModifierMask) << 8)));
             } else if (name() == "KeyGroup" || name() == "Key") {
                 readKeyGroup(pT);
             } else {
