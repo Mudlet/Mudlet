@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPFONTTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPFONTTAGHANDLER_H
+#ifndef MUDLET_TMXPFONTTAGHANDLER_H
+#define MUDLET_TMXPFONTTAGHANDLER_H
 #include "TMxpTagHandler.h"
 
 // <FONT FACE=name [SIZE=size] [COLOR=foreground] [BACK=background]>
@@ -32,4 +32,4 @@ public:
     TMxpTagHandlerResult handleEndTag(TMxpContext &context, TMxpClient& client, MxpEndTag* tag) override;
 };
 #include "TMxpTagHandler.h"
-#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPFONTTAGHANDLER_H
+#endif //MUDLET_TMXPFONTTAGHANDLER_H

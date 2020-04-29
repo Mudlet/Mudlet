@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPELEMENTREGISTRY_H
-#define MUDLET_SRC_TMXPELEMENTREGISTRY_H
+#ifndef MUDLET_TMXPELEMENTREGISTRY_H
+#define MUDLET_TMXPELEMENTREGISTRY_H
 
 #include "MxpTag.h"
 #include "pre_guard.h"
@@ -57,4 +57,4 @@ public:
     TMxpElement getElement(const QString& name) const;
 };
 
-#endif //MUDLET_SRC_TMXPELEMENTREGISTRY_H
+#endif //MUDLET_TMXPELEMENTREGISTRY_H

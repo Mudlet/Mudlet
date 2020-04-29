@@ -16,8 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_SRC_TMXPMUDLET_H
-#define MUDLET_SRC_TMXPMUDLET_H
+#ifndef MUDLET_TMXPMUDLET_H
+#define MUDLET_TMXPMUDLET_H
 
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
@@ -100,4 +100,4 @@ public:
     TLinkStore& getLinkStore();
 };
 
-#endif //MUDLET_SRC_TMXPMUDLET_H
+#endif //MUDLET_TMXPMUDLET_H

@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 
-#ifndef MUDLET_SRC_TMXPCONTEXT_H
-#define MUDLET_SRC_TMXPCONTEXT_H
+#ifndef MUDLET_TMXPCONTEXT_H
+#define MUDLET_TMXPCONTEXT_H
 
 #include "TEntityResolver.h"
 #include "TMxpElementRegistry.h"
@@ -43,4 +43,4 @@ public:
     virtual TMxpTagHandler& getMainHandler() = 0;
 };
 
-#endif //MUDLET_SRC_TMXPCONTEXT_H
+#endif //MUDLET_TMXPCONTEXT_H

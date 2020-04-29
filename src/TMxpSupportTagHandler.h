@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H
+#ifndef MUDLET_TMXPSUPPORTTAGHANDLER_H
+#define MUDLET_TMXPSUPPORTTAGHANDLER_H
 
 #include "TMxpTagHandler.h"
 
@@ -32,4 +32,4 @@ public:
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
-#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSUPPORTTAGHANDLER_H
+#endif //MUDLET_TMXPSUPPORTTAGHANDLER_H

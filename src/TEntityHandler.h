@@ -1,5 +1,5 @@
-#ifndef MUDLET_SRC_TENTITYHANDLER_H
-#define MUDLET_SRC_TENTITYHANDLER_H
+#ifndef MUDLET_TENTITYHANDLER_H
+#define MUDLET_TENTITYHANDLER_H
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
@@ -44,4 +44,4 @@ public:
     char getResultAndReset();
 };
 
-#endif //MUDLET_SRC_TENTITYHANDLER_H
+#endif //MUDLET_TENTITYHANDLER_H

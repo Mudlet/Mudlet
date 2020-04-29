@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_H
+#ifndef MUDLET_TMXPTAGHANDLER_H
+#define MUDLET_TMXPTAGHANDLER_H
 
 #include "MxpTag.h"
 #include "TMxpTagHandlerResult.h"
@@ -61,4 +61,4 @@ public:
     virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return tag->isNamed(tagName); }
 };
 
-#endif //MUDLET_SRC_TMXPTAGHANDLER_H
+#endif //MUDLET_TMXPTAGHANDLER_H

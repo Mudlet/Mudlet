@@ -1,5 +1,5 @@
-#ifndef MUDLET_SRC_TMXPTAGPROCESSOR_H
-#define MUDLET_SRC_TMXPTAGPROCESSOR_H
+#ifndef MUDLET_TMXPTAGPROCESSOR_H
+#define MUDLET_TMXPTAGPROCESSOR_H
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -64,4 +64,4 @@ public:
     TEntityResolver& getEntityResolver() override;
 };
 
-#endif //MUDLET_SRC_TMXPTAGPROCESSOR_H
+#endif //MUDLET_TMXPTAGPROCESSOR_H

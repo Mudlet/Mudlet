@@ -1,6 +1,6 @@
 
-#ifndef MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H
-#define MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#ifndef MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#define MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H
 
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
@@ -47,4 +47,4 @@ public:
     MxpTagAttribute parseAttribute(const QString& attr) const;
 };
 
-#endif //MUDLET_SRC_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#endif //MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H

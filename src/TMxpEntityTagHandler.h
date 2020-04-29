@@ -16,8 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_SRC_TENTITYTAGHANDLER_H
-#define MUDLET_SRC_TENTITYTAGHANDLER_H
+#ifndef MUDLET_TENTITYTAGHANDLER_H
+#define MUDLET_TENTITYTAGHANDLER_H
 
 
 #include "TMxpClient.h"
@@ -37,4 +37,4 @@ public:
 };
 
 
-#endif //MUDLET_SRC_TENTITYTAGHANDLER_H
+#endif //MUDLET_TENTITYTAGHANDLER_H

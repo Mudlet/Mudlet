@@ -16,8 +16,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H
+#ifndef MUDLET_TMXPLINKTAGHANDLER_H
+#define MUDLET_TMXPLINKTAGHANDLER_H
 #include "TMxpTagHandler.h"
 
 // <A href=URL [hint=text] [expire=name]>
@@ -38,4 +38,4 @@ public:
     void handleContent(char ch) override;
 };
 #include "TMxpTagHandler.h"
-#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPLINKTAGHANDLER_H
+#endif //MUDLET_TMXPLINKTAGHANDLER_H

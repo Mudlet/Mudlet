@@ -1,5 +1,5 @@
-#ifndef MUDLET_SRC_TMXPPROCESSOR_H
-#define MUDLET_SRC_TMXPPROCESSOR_H
+#ifndef MUDLET_TMXPPROCESSOR_H
+#define MUDLET_TMXPPROCESSOR_H
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
@@ -68,4 +68,4 @@ public:
     void processRawInput(char ch);
 };
 
-#endif //MUDLET_SRC_TMXPPROCESSOR_H
+#endif //MUDLET_TMXPPROCESSOR_H

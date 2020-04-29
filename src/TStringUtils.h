@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TSTRINGUTILS_H
-#define MUDLET_SRC_TSTRINGUTILS_H
+#ifndef MUDLET_TSTRINGUTILS_H
+#define MUDLET_TSTRINGUTILS_H
 
 #include "pre_guard.h"
 #include <QString>
@@ -65,4 +65,4 @@ public:
     }
 };
 
-#endif //MUDLET_SRC_TSTRINGUTILS_H
+#endif //MUDLET_TSTRINGUTILS_H

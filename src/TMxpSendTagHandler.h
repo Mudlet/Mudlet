@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
+#ifndef MUDLET_TMXPSENDTAGHANDLER_H
+#define MUDLET_TMXPSENDTAGHANDLER_H
 #include "TEntityResolver.h"
 #include "TMxpTagHandler.h"
 
@@ -43,4 +43,4 @@ public:
 
 };
 #include "TMxpTagHandler.h"
-#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPSENDTAGHANDLER_H
+#endif //MUDLET_TMXPSENDTAGHANDLER_H

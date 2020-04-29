@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H
-#define MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H
+#ifndef MUDLET_TMXPVERSIONTAGHANDLER_H
+#define MUDLET_TMXPVERSIONTAGHANDLER_H
 #include "TMxpTagHandler.h"
 
 class TMxpVersionTagHandler : public TMxpSingleTagHandler
@@ -30,4 +30,4 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 #include "TMxpTagHandler.h"
-#endif //MUDLET_SRC_TMXPTAGHANDLER_CPP_TMXPVERSIONTAGHANDLER_H
+#endif //MUDLET_TMXPVERSIONTAGHANDLER_H

@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TMXPEVENT_H
-#define MUDLET_SRC_TMXPEVENT_H
+#ifndef MUDLET_TMXPEVENT_H
+#define MUDLET_TMXPEVENT_H
 
 #include "pre_guard.h"
 #include <QMap>
@@ -32,4 +32,4 @@ struct TMxpEvent
     QStringList actions;
 };
 
-#endif //MUDLET_SRC_TMXPEVENT_H
+#endif //MUDLET_TMXPEVENT_H
