@@ -1256,6 +1256,67 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // We have manually disabled MXP negotiation
                     break;
 
+                case static_cast<quint8>('C'): {
+                    // A workaround for the ONE cursor movement command we CAN
+                    // emulate - the CUF Cursor forward one:
+                    // Needed for mud.durismud.com see forum message topic:
+                    // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
+                    const int dataLength = spanEnd - spanStart;
+                    QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    bool isOk = false;
+                    int spacesNeeded = temp.toInt(&isOk);
+                    if (isOk && spacesNeeded > 0) {
+                        const TChar::AttributeFlags attributeFlags =
+                                ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                                | (mItalics ? TChar::Italic : TChar::None)
+                                | (mOverline ? TChar::Overline : TChar::None)
+                                | (mReverse ? TChar::Reverse : TChar::None)
+                                | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                                | (mUnderline ? TChar::Underline : TChar::None);
+
+                        // Note: we are using the background color for the
+                        // foreground color as well so that we are transparent:
+                        TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                        for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
+                            mMudLine.append(QChar::Space);
+                            mMudBuffer.push_back(c);
+                        }
+                        // For debugging:
+//                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - CUF (cursor forward) sequence of form CSI" << temp << "C received, converting into " << spacesNeeded << " spaces.";
+                    } else {
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp << "C received, that is supposed to be a CUF (cursor forward) sequence but doesn't make sense, Mudlet will ignore it.";
+                    }
+
+                }
+                    break;
+
+                case static_cast<quint8>('J'): {
+                    /*
+                     * Also seen in output from mud.durismud.com see 'C' case above:
+                     * Is ED 'Erase Display' command and has three variants:
+                     * * 0 (or ommitted): clear from cursor to end of screen
+                     *   - which is a NOP for us!
+                     * * 1: clear from cursor to beginning of screen
+                     *   - which is a NWIH for us!
+                     * * 2: clear entire screen and delete all lines saved in
+                     *   scrollback buffer - which is again a NWIH for us...!
+                     */
+                    const int dataLength = spanEnd - spanStart;
+                    QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    bool isOk = false;
+                    int argValue = temp.toInt(&isOk);
+                    if (isOk) {
+                        if (argValue >= 0 && argValue < 3) {
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - ED (erase in display) sequence of form CSI" << temp << "J received,\nrejecting as incompatible with Mudlet.";
+                        } else {
+                            qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Invalid ED (erase in display) sequence of form CSI" << temp << "J received,\nwhich Mudlet will ignore.";
+                        }
+                    } else {
+                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << temp << "J received, that is supposed to\nbe a ED (erase in display) sequence but it doesn't make sense, Mudlet will ignore it.";
+                    }
+                }
+                    break;
+
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled sequence of form CSI..." << localBuffer[spanEnd] << " received, Mudlet will ignore it.";
 
