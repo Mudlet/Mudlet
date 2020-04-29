@@ -32,7 +32,6 @@ public:
         return tag->isNamed("!ENTITY") || tag->isNamed("!EN");
     }
 
-
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 

@@ -33,7 +33,7 @@ bool TMxpProcessor::setMode(const QString& code)
         return setMode(modeCode);
     } else {
         // isOk is false here as toInt(...) failed
-        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+        qDebug().noquote().nospace() << "TMxpProcessor::setMode(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
         return false;
     }
 }
@@ -99,7 +99,7 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
         break;
     default:
-        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << QString::number(modeCode) << " z received, Mudlet will ignore it.";
+        qDebug().noquote().nospace() << "TMxpProcessor::setMode(...) INFO - Unhandled MXP control sequence CSI " << QString::number(modeCode) << " z received, Mudlet will ignore it.";
         return false;
     }
 

@@ -56,7 +56,6 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     }
 
     el.open = tag->hasAttribute("OPEN");
-    el.del = tag->hasAttribute("DELETE");
     el.empty = tag->hasAttribute("EMPTY");
 
     if (!el.definition.isEmpty()) {

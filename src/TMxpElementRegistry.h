@@ -36,7 +36,6 @@ struct TMxpElement
     QString tag;
     QString flags;
     bool open;
-    bool del;
     bool empty;
 
     QString href;

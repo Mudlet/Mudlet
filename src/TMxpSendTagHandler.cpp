@@ -29,12 +29,12 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QString href = extractHref(tag);
     QString hint = extractHint(tag);
 
-    if (href.contains("&text;", Qt::CaseInsensitive) || hint.contains("&text;", Qt::CaseInsensitive)) {
+    if (href.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive) || hint.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive)) {
         mIsHrefInContent = true;
     }
 
-    QStringList hrefs = href.split("|");
-    QStringList hints = hint.isEmpty() ? hrefs : hint.split("|");
+    QStringList hrefs = href.split('|');
+    QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
     while (hints.size() > hrefs.size()) {
         hints.removeFirst();
@@ -42,17 +42,13 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     // handle print to prompt feature PROMPT
     // <SEND "tell Zugg " PROMPT>Zugg</SEND>
-    bool sendToPrompt = tag->hasAttribute("PROMPT");
+    QString command = tag->hasAttribute(ATTR_PROMPT) ? QStringLiteral("printCmdLine") : QStringLiteral("send");
 
     for (int i = 0; i < hrefs.size(); i++) {
         hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
-        hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
+        hrefs[i] = QStringLiteral("%1([[%2]])").arg(command, hrefs[i]);
 
-        if (!sendToPrompt) {
-            hrefs[i] = QStringLiteral("send([[%1]])").arg(hrefs[i]);
-        } else {
-            hrefs[i] = QStringLiteral("printCmdLine([[%1]])").arg(hrefs[i]);
-        }
+        hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
     }
 
     mLinkId = client.setLink(hrefs, hints);
@@ -65,28 +61,32 @@ QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {
         // <send>buy bread</send>
-        return "&text;";
-    } else if (tag->hasAttribute("href")) {
+        return TAG_CONTENT_PLACEHOLDER;
+    }
+
+    if (tag->hasAttribute(ATTR_HREF)) {
         // <!ELEMENT Item '<send href="buy &text;">'>
         // <Item>bread</Item>
         // <!EL shop "<send href='shop identify &name;|shop buy &name;' hint='Right mouse click to act on items from this shop|Identify &desc;|Buy &desc;' expire=shop" ATT='name desc'>
         // <shop name="sword" desc="A shining sword">A shining sword of Lewshire</shop>
-        return tag->getAttributeValue("href");
-    } else if (!tag->getAttribute(0).isNamed("PROMPT") && !tag->getAttribute(0).isNamed("HINT") && !tag->getAttribute(0).isNamed("EXPIRE")) {
+        return tag->getAttributeValue(ATTR_HREF);
+    }
+
+    if (!tag->getAttribute(0).isNamed(ATTR_PROMPT) && !tag->getAttribute(0).isNamed(ATTR_HINT) && !tag->getAttribute(0).isNamed(ATTR_EXPIRE)) {
         // has one attribute, but not called href
         // <SEND "tell Zugg " PROMPT>Zugg</SEND>
         // <send "drink &text;">fountain</send>
         return tag->getAttrName(0);
-    } else {
-        return "&text;";
     }
+
+    return TAG_CONTENT_PLACEHOLDER;
 }
 
 QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 {
-    if (tag->hasAttribute("hint")) {
-        return tag->getAttributeValue("hint");
-    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed("PROMPT") && !tag->getAttribute(1).isNamed("EXPIRE")) {
+    if (tag->hasAttribute(ATTR_HINT)) {
+        return tag->getAttributeValue(ATTR_HINT);
+    } else if (tag->getAttributesCount() > 1 && !tag->getAttribute(1).isNamed(ATTR_PROMPT) && !tag->getAttribute(1).isNamed(ATTR_EXPIRE)) {
         return tag->getAttrName(1);
     }
 
@@ -115,14 +115,13 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
     QStringList *hrefs, *hints;
     if (client.getLink(mLinkId, &hrefs, &hints)) {
         if (hrefs != nullptr) {
-            hrefs->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+            hrefs->replaceInStrings(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
         }
 
         if (hints != nullptr) {
-            hints->replaceInStrings("&text;", mCurrentTagContent, Qt::CaseInsensitive);
+            hints->replaceInStrings(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
         }
     }
-
 }
 void TMxpSendTagHandler::handleContent(char ch)
 {
