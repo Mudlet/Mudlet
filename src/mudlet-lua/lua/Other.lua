@@ -179,7 +179,7 @@ end
 --- Appends code to an existing script
 ---
 --- @param name name of the script item
---- @param luaCode 
+--- @param luaCode
 function appendScript(name, luaCode, pos)
   pos = pos or 1
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
@@ -946,14 +946,21 @@ end
 local function getTranslationTable(inputTable, packageName)
   local outputTable = {}
   for k, v in pairs(inputTable) do
-    if k:match("^"..packageName.."%.") then
-      outputTable[k:gsub("^.*%.", "")] = inputTable[k]
-    end
-  end
-  if table.is_empty(outputTable) then
-    return nil, "couldn't find translations for '"..packageName.."'"
+      if k:match("^"..packageName.."%.") then
+          outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+      end
   end
   return outputTable
+end
+
+--internal function to read table from Json file
+local function readJsonFile(input)
+  local filePointer = io.open(input, "r")
+  local str = filePointer:read("*all")
+  if str == "" then
+    return {}
+  end
+  return yajl.to_value(str)
 end
 
 --- loads Translations located in the /translations folder
@@ -975,17 +982,24 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   assert(type(languageCode) == "string", string.format("loadTranslations: bad argument #3 type (languageCode as string expected, got %s)", type(languageCode)))
   assert(type(folder) == "string", string.format("loadTranslations: bad argument #4 type (folder path as string expected, got %s)", type(folder)))
 
-  local file = folder.."translated/"..fileName.."_"..languageCode..".json"
-  if not(io.exists(file)) then
-    file = folder..fileName..".json"
+  local langFile = io.exists(folder.."translated/"..fileName.."_"..languageCode..".json") and folder.."translated/"..fileName.."_"..languageCode..".json"
+  local defaultFile = io.exists(folder..fileName..".json") and folder..fileName..".json"
+  if not defaultFile and not langFile then
+    return nil, "unable to find '"..fileName..".json' in '"..folder.."'"
   end
-  if io.exists(file) then
-    local filePointer = io.open(file, "r")
-    local str = filePointer:read("*all")
-    local translation = yajl.to_value(str)
-    return getTranslationTable(translation, packageName)
+  local translation = {}
+  if langFile then
+      translation = readJsonFile(langFile)
+      translation = getTranslationTable(translation, packageName)
   end
-  return nil, "unable to find '"..fileName..".json' in '"..folder.."'"
+  if table.is_empty(translation) and defaultFile then
+      translation = readJsonFile(defaultFile)
+      translation = getTranslationTable(translation, packageName)
+  end
+  if table.is_empty(translation) then
+      return nil, "couldn't find translations for '"..packageName.."'"
+  end
+  return translation
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
