@@ -18174,6 +18174,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCharacterName
 int TLuaInterpreter::getCharacterName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -18189,6 +18190,7 @@ int TLuaInterpreter::getCharacterName(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCharacterName
 int TLuaInterpreter::sendCharacterName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -18204,6 +18206,7 @@ int TLuaInterpreter::sendCharacterName(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCharacterPassword
 int TLuaInterpreter::sendCharacterPassword(lua_State* L)
 {
     Host& host = getHostFromLua(L);
