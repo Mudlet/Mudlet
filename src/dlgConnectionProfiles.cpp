@@ -733,7 +733,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with players logging in "
                 "from all over the globe to test their skill in our medieval role-playing environment. With 15 separate guilds and 41 races to choose from, as a player the only limitation to your "
                 "achievements on the game is your own imagination and will to succeed.");
-    } else if (hostUrl == QLatin1String("carrionfields.org")) {
+    } else if (hostUrl == QLatin1String("carrionfields.net")) {
         return QLatin1String(
                 "Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore player-versus-player combat that has been running continuously, and 100% free, for over 25 years.\n\nChoose from among 21 races, 17 highly customizable classes, and several cabals and religions to suit your playstyle and the story you want to tell. Our massive, original world is full of secrets and envied limited objects that take skill to acquire and great care to keep.\n\nWe like to think of ourselves as the Dark Souls of MUDs, with a community that is supportive of new players - unforgiving though our world may be. Join us for a real challenge and real rewards: adrenalin-pumping battles, memorable quests run by our volunteer immortal staff, and stories that will stick with you for a lifetime.");
     } else if (hostUrl == QLatin1String("godwars2.org")) {
@@ -880,7 +880,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             host_url = QStringLiteral("zombiemud.org");
         }
         if (profile_name == QStringLiteral("Carrion Fields")) {
-            host_url = QStringLiteral("carrionfields.org");
+            host_url = QStringLiteral("carrionfields.net");
         }
         if (profile_name == QStringLiteral("3Scapes")) {
             host_url = QStringLiteral("3k.org");
@@ -1555,7 +1555,7 @@ void dlgConnectionProfiles::fillout_form()
         } else {
             setCustomIcon(mudServer, pM);
         }
-        description = getDescription(QStringLiteral("carrionfields.org"), 0, mudServer);
+        description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
@@ -2303,7 +2303,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
             || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
-        } else if (pHost->getUrl().contains(QStringLiteral("carrionfields.org"), Qt::CaseInsensitive) ) {
+        } else if (pHost->getUrl().contains(QStringLiteral("carrionfields.net"), Qt::CaseInsensitive) ) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/CF-loader.xml"));
         } else if (!pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive) ) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
