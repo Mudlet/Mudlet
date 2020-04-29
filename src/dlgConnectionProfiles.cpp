@@ -1113,7 +1113,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             val = QStringLiteral("<center><a href='http://www.zombiemud.org/'>http://www.zombiemud.org</a></center>");
         }
         if (profile_name == QStringLiteral("Carrion Fields")) {
-            val = QStringLiteral("<center><a href='www.carrionfields.net'>www.carrionfields.net</a></center>");
+            val = QStringLiteral("<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>");
         }
         if (profile_name == QStringLiteral("Aetolia")) {
             val = QStringLiteral("<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>");
