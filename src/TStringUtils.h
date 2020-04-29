@@ -39,7 +39,7 @@ class TStringUtils
 {
 public:
     static bool isQuote(QChar ch);
-    static bool isOneOf(QChar ch, const char* str);
+    static bool isOneOf(QChar ch, const QString &chars);
 
     static QStringRef trimmedRef(const QStringRef& ref);
     static QStringRef stripRef(const QString& str, QChar start, QChar end);
@@ -49,13 +49,6 @@ public:
     static bool isBetween(const QStringRef& str, char first, char last);
     static QStringRef trimmedRef(const QString& str);
     static bool isQuoted(const QStringRef& ref);
-
-    static void toUpper(QString& str)
-    {
-        for (auto& ch : str) {
-            ch = ch.toUpper();
-        }
-    }
 
     static void apply(QStringList& strList, const std::function<void(QString&)>& func)
     {

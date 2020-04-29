@@ -51,13 +51,13 @@ QStringRef TStringUtils::stripRef(const QString& str, QChar start, QChar end)
 
 bool TStringUtils::isQuote(QChar ch)
 {
-    return isOneOf(ch, "\'\"");
+    return isOneOf(ch, QStringLiteral("\'\""));
 }
 
-bool TStringUtils::isOneOf(QChar ch, const char* str)
+bool TStringUtils::isOneOf(QChar ch, const QString& chars)
 {
-    for (; *str; str++) {
-        if (*str == ch.toLatin1()) {
+    for (const auto& o : chars) {
+        if (o == ch) {
             return true;
         }
     }
