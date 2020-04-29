@@ -195,5 +195,7 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>icons/carrionfields.png</file>
+        <file>CF-loader.xml</file>
     </qresource>
 </RCC>
