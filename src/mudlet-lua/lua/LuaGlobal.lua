@@ -111,9 +111,9 @@ of the form:
 so that the Lua interpreter doesn't run this code.
 ]]
 function doLogin()
-  if getPlayerName() ~= "" then
-    tempTimer(2.0, [[sendPlayerName()]], 1)
-    tempTimer(3.0, [[sendPlayerPassword()]], 1)
+  if getCharacterName() ~= "" then
+    tempTimer(2.0, [[sendCharacterName()]], 1)
+    tempTimer(3.0, [[sendCharacterPassword()]], 1)
   end
 end
 

@@ -541,9 +541,9 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
-    static int getPlayerName(lua_State*);
-    static int sendPlayerName(lua_State*);
-    static int sendPlayerPassword(lua_State*);
+    static int getCharacterName(lua_State*);
+    static int sendCharacterName(lua_State*);
+    static int sendCharacterPassword(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);

@@ -2372,7 +2372,7 @@
             <item row="0" column="1">
              <widget class="QLineEdit" name="login_entry">
               <property name="toolTip">
-               <string>The characters name</string>
+               <string>&lt;p&gt;The identifier for this profile's player in the game; if given, it will be supplied on connection to enable automatic log-in to the game together with a password entered in the next field.&lt;/p&gt;</string>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::Normal</enum>
@@ -2392,7 +2392,7 @@
             <item row="1" column="1">
              <widget class="QLineEdit" name="character_password_entry">
               <property name="toolTip">
-               <string>Characters password. Note that the password isn't encrypted in storage</string>
+               <string notr="true" extracomment="The text for this item is varaible and is set the in constructor for the class that uses this form..."/>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::Password</enum>

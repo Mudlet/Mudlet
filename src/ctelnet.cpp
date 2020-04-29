@@ -467,18 +467,18 @@ void cTelnet::handle_socket_signal_error()
     postMessage(err);
 }
 
-void cTelnet::sendPlayerName()
+void cTelnet::sendCharacterName()
 {
     if (!mpHost->getLogin().isEmpty()) {
-        qDebug().noquote() << "cTelnet::sendPlayerName() INFO - sending login name.";
+        qDebug().noquote() << "cTelnet::sendCharacterName() INFO - sending login name.";
         sendData(mpHost->getLogin());
     }
 }
 
-void cTelnet::sendPlayerPassword()
+void cTelnet::sendCharacterPassword()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
-        qDebug().noquote() << "cTelnet::sendPlayerPassword() INFO - sending password.";
+        qDebug().noquote() << "cTelnet::sendCharacterPassword() INFO - sending password.";
         sendData(mpHost->getPass());
     }
 }
@@ -2906,7 +2906,7 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 void cTelnet::slot_enableLuaSendPassword()
 {
 #if defined(QT_DEBUG)
-    qDebug().nospace().noquote() << "cTelnet::slot_enableLuaSendPassword() INFO - Lua sendPlayerPassword() function enabled.";
+    qDebug().nospace().noquote() << "cTelnet::slot_enableLuaSendPassword() INFO - Lua sendCharacterPassword() function enabled.";
 #endif
     mLuaSendPasswordEnable = true;
 }
@@ -2914,7 +2914,7 @@ void cTelnet::slot_enableLuaSendPassword()
 void cTelnet::slot_disableLuaSendPassword()
 {
 #if defined(QT_DEBUG)
-    qDebug().nospace().noquote() << "cTelnet::slot_disableLuaSendPassword() INFO - Lua sendPlayerPassword() function disabled.";
+    qDebug().nospace().noquote() << "cTelnet::slot_disableLuaSendPassword() INFO - Lua sendCharacterPassword() function disabled.";
 #endif
     mLuaSendPasswordEnable = false;
 }

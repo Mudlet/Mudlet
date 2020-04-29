@@ -176,10 +176,10 @@ public:
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
     std::pair<QString, int> getConnectionInfo() const;
     const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
-    void sendPlayerName();
-    void sendPlayerPassword();
+    void sendCharacterName();
+    void sendCharacterPassword();
 
-    // A one-shot timer used to prevent the Lua sendPlayerPassword() command
+    // A one-shot timer used to prevent the Lua sendCharacterPassword() command
     // from functioning for more than a short time after a successful connection
     // this is intended as a security measure to limit the chance a rogue script
     // might have to send the password to the Game Server and then to that

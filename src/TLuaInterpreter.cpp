@@ -16890,9 +16890,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
-    lua_register(pGlobalLua, "getPlayerName", TLuaInterpreter::getPlayerName);
-    lua_register(pGlobalLua, "sendPlayerName", TLuaInterpreter::sendPlayerName);
-    lua_register(pGlobalLua, "sendPlayerPassword", TLuaInterpreter::sendPlayerPassword);
+    lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
+    lua_register(pGlobalLua, "sendCharacterName", TLuaInterpreter::sendCharacterName);
+    lua_register(pGlobalLua, "sendCharacterPassword", TLuaInterpreter::sendCharacterPassword);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
@@ -18174,48 +18174,59 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::getPlayerName(lua_State* L)
+int TLuaInterpreter::getCharacterName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    lua_pushstring(L, host.getLogin().toUtf8().constData());
+    const QString name{host.getLogin()};
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set, so nothing to return");
+        return 2;
+    }
+
+    lua_pushstring(L, name.toUtf8().constData());
     return 1;
 }
 
-int TLuaInterpreter::sendPlayerName(lua_State* L)
+int TLuaInterpreter::sendCharacterName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
     if (host.getLogin().isEmpty()) {
         lua_pushnil(L);
-        lua_pushstring(L, "no character name set so nothing to send");
+        lua_pushstring(L, "no character name set, so nothing to send");
         return 2;
     } else {
-        host.mTelnet.sendPlayerName();
+        host.mTelnet.sendCharacterName();
         lua_pushboolean(L, true);
         return 1;
     }
 }
 
-int TLuaInterpreter::sendPlayerPassword(lua_State* L)
+int TLuaInterpreter::sendCharacterPassword(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    // This is a tiny bit of information leak but give the overall security of
-    // things it is not likely to be a problem
-    if (host.getPass().isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no password set so nothing to send");
-        return 2;
-    }
-
     if (!host.mTelnet.getCanLuaSendPassword()) {
         lua_pushnil(L);
-        lua_pushstring(L, "password sending disabled, outside of period that follows making a successful connection to game-server");
+        lua_pushstring(L, "sending the password is only allowed for a short time, now expired, after connecting to the game");
         return 2;
     }
 
-    host.mTelnet.sendPlayerPassword();
+    // Knowing that there is no password set would theoretically be a bit of
+    // information leakage but given the overall security of things it is hard
+    // to see how this would be a problem - especially compared to that of not
+    // having a password at all - and, on the other hand it might help someone
+    // debugging a log-in script that we were ready and willing to send
+    // something but was just out of stock in the password department! 8-)
+    if (host.getPass().isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no password set, so nothing to send");
+        return 2;
+    }
+
+    host.mTelnet.sendCharacterPassword();
     lua_pushboolean(L, true);
     return 1;
 }
