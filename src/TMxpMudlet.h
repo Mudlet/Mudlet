@@ -69,8 +69,6 @@ public:
 
     const QColor& getBgColor() { return bgColors.last(); }
 
-    static QColor mapColor(const QString& colorName);
-
     // TODO: implement support for fonts?
     void pushFont(const QString& fontFace, const QString& fontSize) override {}
     void popFont() override {}

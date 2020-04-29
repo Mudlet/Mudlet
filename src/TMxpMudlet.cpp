@@ -50,21 +50,13 @@ void TMxpMudlet::pushColor(QList<QColor>& stack, const QString& color)
             stack.push_back(stack.last());
         }
     } else {
-        stack.push_back(mapColor(color));
+        stack.push_back(QColor(color));
     }
 }
 void TMxpMudlet::popColor(QList<QColor>& stack)
 {
     if (!stack.isEmpty()) {
         stack.pop_back();
-    }
-}
-QColor TMxpMudlet::mapColor(const QString& colorName)
-{
-    if (colorName.startsWith("#")) {
-        return QColor::fromRgb(QRgb(colorName.mid(1).toInt(nullptr, 16)));
-    } else {
-        return QColor(colorName);
     }
 }
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
