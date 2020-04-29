@@ -1261,7 +1261,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // emulate - the CUF Cursor forward one:
                     // Needed for mud.durismud.com see forum message topic:
                     // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
-                    QString temp = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
+                    const int dataLength = spanEnd - spanStart;
+                    QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
                     int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
@@ -1300,7 +1301,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                      * * 2: clear entire screen and delete all lines saved in
                      *   scrollback buffer - which is again a NWIH for us...!
                      */
-                    QString temp = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
+                    const int dataLength = spanEnd - spanStart;
+                    QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
                     int argValue = temp.toInt(&isOk);
                     if (isOk) {
