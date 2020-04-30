@@ -62,6 +62,3 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
-# Though these both come from the same source we use lua-yajl before
-# compilation, we may only need lua-zip at run-time:
-# luarocks-5.1 --local install lua-zip

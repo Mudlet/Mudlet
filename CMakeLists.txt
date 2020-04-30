@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -94,24 +95,23 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 include(IncludeOptionalModule)
 
-include_optional_module(
-  ENVIRONMENT_VARIABLE
-  WITH_UPDATER
-  OPTION_VARIABLE
-  USE_UPDATER
-  READABLE_NAME
-  "updater"
-  SUPPORTED_SYSTEMS
-  "Linux"
-  "Windows"
-  "Darwin")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
+                        OPTION_VARIABLE USE_UPDATER
+                        READABLE_NAME "updater"
+                        SUPPORTED_SYSTEMS "Linux"
+                                          "Windows"
+                                          "Darwin")
+
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
                         USE_FONTS READABLE_NAME "fonts")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
                         USE_3DMAPPER READABLE_NAME "3D mapper")
-include_optional_module(
-  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN OPTION_VARIABLE
-  USE_VARIABLE_SPLASH_SCREEN READABLE_NAME "build-type splash screen")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
+                        OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
+                        READABLE_NAME "build-type splash screen")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
+                        OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
+                        READABLE_NAME "own QKeychain (Qt5) library")
 
 include(InitGitSubmodule)
 
@@ -119,9 +119,13 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/qtkeychain" READABLE_NAME "QtKeychain")
+if(USE_OWN_QT5KEYCHAIN)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
+    SUBMODULE_PATH "3rdparty/qtkeychain"
+    READABLE_NAME "QtKeychain")
+  add_subdirectory(3rdparty/qtkeychain)
+endif()
 
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
@@ -157,7 +161,6 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
-add_subdirectory(3rdparty/qtkeychain)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)

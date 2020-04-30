@@ -60,7 +60,12 @@
 #include <QToolButton>
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
+#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
+#else
+#include <qt5keychain/keychain.h>
+#endif
+
 #include <optional>
 #include "post_guard.h"
 
