@@ -17141,11 +17141,9 @@ void TLuaInterpreter::initIndenterGlobals()
 #elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
     // to allow running from a shadow build directory (both qmake and cmake).
-    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
+    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;%1/../../mudlet/3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
-
-    luaL_dostring(pIndenterState.get(), "package.path = package.path");
 
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pIndenterState.get(), "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
@@ -17216,7 +17214,16 @@ void TLuaInterpreter::loadGlobal()
         // Windows builds (or others where the qmake project file has CONFIG
         // containing debug_and_release AND debug_and_release_target options)
         // may be an additional sub-directory down:
-        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // CMake builds done from Qt Creator tend to make their build directory
+        // be in a "out-of-source" (the more common name for what Qt calls
+        // "Shadow Builds") on the same level as the top level CMakeList.txt
+        // project file - which is one level up compared to the QMake case.
+        // and in a "src" subdirectory (to match the relative source file
+        // location to that top-level project file) of the main project
+        // "mudlet" directory:
+        QDir::toNativeSeparators(QStringLiteral("%1/../../mudlet/src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d

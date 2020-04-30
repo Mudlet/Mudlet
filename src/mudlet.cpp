@@ -4876,7 +4876,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.thTheme" that
+        // handles the special case of the default theme "mudlet.tmTheme" that
         // is carried internally in the resource file:
         if (extra1.compare(QStringLiteral("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
@@ -4925,15 +4925,28 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
         } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            // From debug or release subdirectory of a shadow build directory
+            // alongside the ./src one. {Typically QMake builds from Qtcreator
+            // with CONFIG containing both 'debug_and_release' and
+            // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
+            // From shadow build directory alongside the ./src one. {Typically
+            // QMake builds from Qtcreator with CONFIG NOT containing both
+            // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(QStringLiteral("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory above the ./src one. {Typically
+            // CMake builds from Qtcreator which are outside of the unpacked
+            // source code from a git repo or tarball - which has to have been
+            // unpacked/placed in a directory called 'mudlet'}:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return QStringLiteral("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
         } else {
-            // From build within ./src
+            // From build within ./src AND installer builds that bundle
+            // dictionaries in the same directory as the executable:
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
         }
