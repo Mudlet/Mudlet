@@ -190,6 +190,20 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+######################## System QtKeyChain library ###############
+# To use a system provided QtKeyChain library set the environmental variable
+# WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
+# useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
+# any other value than "NO" then the build process will download and link to a
+# locally built copy of the library. This is designed to help Linux and other
+# distribution package builders integrate Mudlet into their system - if a system
+# provided one is specified and the library is NOT available then the
+# build will fail both at the compilation and the linking stages.
+OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
+isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
+  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
+}
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -368,9 +382,11 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+            system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
+        }
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -381,9 +397,11 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
+    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
+        }
     }
 }
 
@@ -423,10 +441,12 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
-    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
-} else {
-    error("Cannot locate QtKeychain submodule source code, build abandoned!")
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+    exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
+        include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+    } else {
+        error("Cannot locate QtKeychain submodule source code, build abandoned!")
+    }
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -691,6 +711,17 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
 } else {
     !build_pass{
         message("The 3D mapper code is excluded from this configuration")
+    }
+}
+
+contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
+    !build_pass{
+        message("Including own copy of QtKeyChain library code in this configuration")
+    }
+} else {
+    LIBS += -lqt5keychain
+    !build_pass{
+        message("Linking with system QtKeyChain library code in this configuration")
     }
 }
 
