@@ -445,6 +445,6 @@
     "uninstallPackage": "uninstallPackage(name)",
     "unzipAsync": "unzipAsync(path, location)",
     "updateMap": "updateMap()",
-    "usingMudletsDiscordID": "usingMudletsDiscordID(state)",
+    "usingMudletsDiscordID": "usingMudletsDiscordID()",
     "wrapLine": "wrapLine(windowName, lineNumber)"
 }
