@@ -5932,10 +5932,18 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itRoom.hasNext()) {
             itRoom.next();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            keysSet.unite(QSet<QString>{itRoom.value()->userData.keys().begin(), itRoom.value()->userData.keys().end()});
+#else
             keysSet.unite(itRoom.value()->userData.keys().toSet());
+#endif
         }
 
-        QStringList keys = keysSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QStringList keys{keysSet.begin(), keysSet.end()};
+#else
+        QStringList keys{keysSet.toList()};
+#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5957,7 +5965,11 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-        QStringList values = valuesSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QStringList values{valuesSet.begin(), valuesSet.end()};
+#else
+        QStringList values{valuesSet.toList()};
+#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5978,7 +5990,11 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-        QList<int> roomIds = roomIdsSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QList<int> roomIds{roomIdsSet.begin(), roomIdsSet.end()};
+#else
+        QList<int> roomIds{roomIdsSet.toList()};
+#endif
         if (roomIds.size() > 1) {
             std::sort(roomIds.begin(), roomIds.end());
         }
@@ -6038,10 +6054,18 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itArea.hasNext()) {
             itArea.next();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            keysSet.unite(QSet<QString>{itArea.value()->mUserData.keys().begin(), itArea.value()->mUserData.keys().end()});
+#else
             keysSet.unite(itArea.value()->mUserData.keys().toSet());
+#endif
         }
 
-        QStringList keys = keysSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QStringList keys{keysSet.begin(), keysSet.end()};
+#else
+        QStringList keys{keysSet.toList()};
+#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -6063,7 +6087,11 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-        QStringList values = valuesSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QStringList values{valuesSet.begin(), valuesSet.end()};
+#else
+        QStringList values{valuesSet.toList()};
+#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -6084,7 +6112,11 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-        QList<int> areaIds = areaIdsSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.begin()};
+#else
+        QList<int> areaIds{areaIdsSet.toList()};
+#endif
         if (areaIds.size() > 1) {
             std::sort(areaIds.begin(), areaIds.end());
         }
@@ -17898,7 +17930,12 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-    QList<int> selectionRoomsList = pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(),
+                                  pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
+#else
+    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList()};
+#endif
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
@@ -18153,7 +18190,11 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
-    QStringList wordList = host.mpConsole->getWordSet().toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList{host.mpConsole->getWordSet().begin(), host.mpConsole->getWordSet().end()};
+#else
+    QStringList wordList{host.mpConsole->getWordSet().toList()};
+#endif
     int wordCount = wordList.size();
     if (wordCount > 1) {
         QCollator sorter;
