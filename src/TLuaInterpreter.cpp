@@ -5932,18 +5932,10 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itRoom.hasNext()) {
             itRoom.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            keysSet.unite(QSet<QString>{itRoom.value()->userData.keys().begin(), itRoom.value()->userData.keys().end()});
-#else
             keysSet.unite(itRoom.value()->userData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
+        QStringList keys = keysSet.toList();
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5965,11 +5957,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
+        QStringList values = valuesSet.toList();
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5990,11 +5978,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QList<int> roomIds{roomIdsSet.begin(), roomIdsSet.end()};
-#else
-        QList<int> roomIds{roomIdsSet.toList()};
-#endif
+        QList<int> roomIds = roomIdsSet.toList();
         if (roomIds.size() > 1) {
             std::sort(roomIds.begin(), roomIds.end());
         }
@@ -6054,18 +6038,10 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itArea.hasNext()) {
             itArea.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            keysSet.unite(QSet<QString>{itArea.value()->mUserData.keys().begin(), itArea.value()->mUserData.keys().end()});
-#else
             keysSet.unite(itArea.value()->mUserData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
+        QStringList keys = keysSet.toList();
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -6087,11 +6063,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
+        QStringList values = valuesSet.toList();
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -6112,11 +6084,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.begin()};
-#else
-        QList<int> areaIds{areaIdsSet.toList()};
-#endif
+        QList<int> areaIds = areaIdsSet.toList();
         if (areaIds.size() > 1) {
             std::sort(areaIds.begin(), areaIds.end());
         }
@@ -17141,9 +17109,11 @@ void TLuaInterpreter::initIndenterGlobals()
 #elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
     // to allow running from a shadow build directory (both qmake and cmake).
-    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;%1/../../mudlet/3rdparty/?.lua;' .. package.path")
+    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
+
+    luaL_dostring(pIndenterState.get(), "package.path = package.path");
 
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
     luaL_dostring(pIndenterState.get(), "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
@@ -17214,16 +17184,7 @@ void TLuaInterpreter::loadGlobal()
         // Windows builds (or others where the qmake project file has CONFIG
         // containing debug_and_release AND debug_and_release_target options)
         // may be an additional sub-directory down:
-        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
-
-        // CMake builds done from Qt Creator tend to make their build directory
-        // be in a "out-of-source" (the more common name for what Qt calls
-        // "Shadow Builds") on the same level as the top level CMakeList.txt
-        // project file - which is one level up compared to the QMake case.
-        // and in a "src" subdirectory (to match the relative source file
-        // location to that top-level project file) of the main project
-        // "mudlet" directory:
-        QDir::toNativeSeparators(QStringLiteral("%1/../../mudlet/src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
+        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
 
     // Although it is relatively easy to detect whether something is #define d
@@ -17937,12 +17898,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(),
-                                  pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
-#else
-    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList()};
-#endif
+    QList<int> selectionRoomsList = pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList();
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
@@ -18197,11 +18153,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QStringList wordList{host.mpConsole->getWordSet().begin(), host.mpConsole->getWordSet().end()};
-#else
-    QStringList wordList{host.mpConsole->getWordSet().toList()};
-#endif
+    QStringList wordList = host.mpConsole->getWordSet().toList();
     int wordCount = wordList.size();
     if (wordCount > 1) {
         QCollator sorter;
