@@ -45,10 +45,10 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
+# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
+# after for some warnings that we wish to ignore:
 !msvc:CONFIG += warn_off
-# ignore unused parameters, because boost has a ton of them and that is not something we need to know.
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
+!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
