@@ -370,7 +370,11 @@ void XMLimport::readMap()
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
-        QSet<int> areaRoomsSet = tempAreaRoomsHash.values(areaId).toSet();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).begin(), tempAreaRoomsHash.values(areaId).end()};
+#else
+        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
+#endif
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are

@@ -1462,7 +1462,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 } else {
                     QList<int> oldRoomsList;
                     ifs >> oldRoomsList;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                    pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
+#else
                     pA->rooms = oldRoomsList.toSet();
+#endif
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;

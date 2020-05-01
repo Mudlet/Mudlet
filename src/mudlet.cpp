@@ -2011,7 +2011,7 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     }
 
     auto fontMetrics = QFontMetrics(font);
-    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
 }
 
 std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -4511,10 +4511,15 @@ void mudlet::playSound(const QString& s, int soundVolume)
         if (state == QMediaPlayer::StoppedState) {
             TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().fileName());
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().path());
+#else
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+#endif
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             if (pHost) {
                 // The host may have gone away if the sound was a long one
@@ -5660,7 +5665,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to allow for persistant editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    wordSet = QSet<QString>(wordList.begin(), wordList.end());
+#else
     wordSet = wordList.toSet();
+#endif
 
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
@@ -5711,7 +5720,12 @@ Hunhandle* mudlet::prepareSharedDictionary()
         return nullptr;
     }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
+#else
     mWordSet_shared = wordList.toSet();
+#endif
+
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
@@ -5738,7 +5752,11 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
         return false;
     }
 
-    QStringList wordList(wordSet.toList());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList{wordList.begin(), wordList.end()};
+#else
+    QStringList wordList{wordSet.toList()};
+#endif
 
     // This also sorts wordList as a wanted side-effect:
     int wordCount = scanWordList(wordList, graphemeCounts);
