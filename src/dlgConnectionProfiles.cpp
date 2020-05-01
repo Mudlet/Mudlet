@@ -170,28 +170,26 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
-    character_password_entry->setToolTip(tr("<p>The secret text needed to log into the game in order to play this profile's "
-                                            "player; if given, it will be supplied on connection to enable automatic log-in "
-                                            "to the game.</p>"
-                                            "<p>For more advanced situations it can be sent via a function "
-                                            "<tt>sendCharacterPasssword()</tt> in a script. For security it is not possible for "
-                                            "the script or any installed package or module to find out what the password is. "
-                                            "Further details are available in the Wiki.</p>"
+    character_password_entry->setToolTip(tr("<p>The password needed to log into the game in order to play the character "
+                                            "in this profile.</p>"
+                                            "<p>By default this and the character name are sent shortly after a connection "
+                                            "is made to the Game. If that is not suitable the default process can be replaced "
+                                            "and it can be sent via a <tt>sendCharacterPasssword()</tt> function in a script. "
+                                            "Further details are available in the Wiki entry for this function.</p>"
                                             "<p>%1</p>",
                                             // Intentional comment to separate arguments
-                                            "%1 is an additional paragraph that indicates whether the password is current stored "
-                                            "EITHER: securely but not portably in the system's 'credential' store OR: insecurely "
-                                            "but portably {can be moved to another system or OS}. Note that the 'tt' tags and "
-                                            "the Lua function called 'sendCharacterPassword()' are to be left untranslated.")
+                                            "%1 is an additional paragraph indicating the current password storage method."
+                                            "Please leave the Lua function 'sendCharacterPassword()' untranslated and the "
+                                            "'tt' tags around it in place.")
                                           .arg(mudlet::self()->storingPasswordsSecurely()
-                                               ? tr("Characters password, stored securely in the computer's credential manager.",
-                                                    // Intentional comment to separate arguments)
-                                                    "Additional paragraph text inserted at end of password entry tooltip when secure storage is used.")
-                                               : tr("Note that the password is <b>not</b> currently encrypted in storage.",
-                                                    // Intentional comment to separate arguments)
-                                                    "Additional paragraph text inserted at end of password entry tooltip when portable storage is "
-                                                    "used - bold emphasis has been applied to the Engineering English word that stresses that the "
-                                                    "storage method is insecure!")));
+                                               ? tr("The password will be stored securely (but not portably) in the computer's "
+                                                    "credential manager.",
+                                                    // Intentional comment to separate arguments
+                                                    "Additional text at end of password entry tooltip when secure storage is used.")
+                                               : tr("The password will be stored portably (but <b>not</b> securely) in a file associated "
+                                                    "with this profile.",
+                                                    // Intentional comment to separate arguments
+                                                    "Additional text at end of password entry tooltip when portable storage is used.")));
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
