@@ -303,6 +303,7 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
+        LUA_TRANSLATIONS.path = $${LUA.path}/translations
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -792,6 +793,10 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
 
+LUA_TRANSLATIONS.files = \
+    $${PWD}/../translations/lua/*
+LUA_TRANSLATIONS.depends = mudlet
+
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
 # makefile constructor to reproduce the exact directory structure we have to
 # list EVERY SINGLE B****Y FILE in a per directory grouping; also in reproducing
@@ -1280,6 +1285,12 @@ macx {
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
+    APP_MUDLET_LUA_TRANSLATION.files = \
+        ../translations/lua
+
+    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
+
     # Set the .app's icns file
     ICON = icons/osx.icns
 
@@ -1340,6 +1351,7 @@ win32 {
 OTHER_FILES += \
     $${LUA.files} \
     $${LUA_GEYSER.files} \
+    $${LUA_TRANSLATIONS.files} \
     $${LUA_TESTS.files} \
     $${DISTFILES} \
     ../README \
@@ -1358,6 +1370,7 @@ unix:!macx {
         target \
         LUA \
         LUA_GEYSER \
+        LUA_TRANSLATIONS \
         LUA_LCF \
         LUA_LCF_L1_GET__AST \
         LUA_LCF_L1_GET__FORMATTER__AST \
