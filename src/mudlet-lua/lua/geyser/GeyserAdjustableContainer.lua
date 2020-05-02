@@ -7,10 +7,14 @@
 
 Adjustable = Adjustable or {}
 
-------------
+--------------------------------------
+--                                  --
+-- The Geyser Layout Manager by guy --
+-- Adjustable Container by Edru     --
+--                                  --
+--------------------------------------
 -- Adjustable Container
--- (LDoc)
--- @module Adjustable.Container
+-- @module AdjustableContainer
 Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "AdjustableContainerClass"})
 
 local adjustInfo = {}
@@ -279,6 +283,7 @@ function Adjustable.Container:resizeBorder()
 end
 
 --- attaches your container to the given border
+-- attach is only possible if the container is located near the border
 -- @param border possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:attachToBorder(border)
     if self.attached then self:detach() end
@@ -289,6 +294,7 @@ function Adjustable.Container:attachToBorder(border)
 end
 
 --- detaches the given container
+-- this means the mudlet main window border will be reseted
 function Adjustable.Container:detach()
     self:resetBorder(self.attached)
     self.attached=false
@@ -305,7 +311,7 @@ function Adjustable.Container:resetBorder(where)
     end
 end
 
---- creates the adjustable label and the container where all the elements will be put in
+-- creates the adjustable label and the container where all the elements will be put in
 function Adjustable.Container:createContainers()
     self.adjLabel = Geyser.Label:new({
         x = "0",
@@ -324,8 +330,13 @@ function Adjustable.Container:createContainers()
 end
 
 --- locks your adjustable container
+--lock means that your container is no longer moveable/resizable by mouse. 
+--You can also choose different lockStyles which changes the border or container style. 
+--if no lockStyle is added "standard" style will be used 
 -- @param lockNr the number of the lockStyle [optional]
--- @param lockStyle the lockstyle used to lock the container, integrated lockStyles are "standard", "border", "full" and "light"
+-- @param lockStyle the lockstyle used to lock the container, 
+-- the lockStyle is the behaviour/mode of the locked state.
+-- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
@@ -361,6 +372,7 @@ function Adjustable.Container:customMenu(customItem)
 end
 
 --- unlocks your previous locked container
+-- what means that the container is moveable/resizable by mouse again 
 function Adjustable.Container:unlockContainer()
     closeAllLevels(self.rCLabel)
     shrink_title(self)
@@ -373,6 +385,8 @@ function Adjustable.Container:unlockContainer()
 end
 
 --- sets the padding of your container
+-- changes how far the the container is positioned from the border of the container 
+-- padding behaviour also depends on your lockStyle
 -- @param padding the padding value (standard is 10)
 function Adjustable.Container:setPadding(padding)
     self.padding = padding
@@ -421,6 +435,7 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
+-- hides everything beside the title
 function Adjustable.Container:minimize()
     if self.minimized == false and self.locked == false then
         self.origh = self.height
@@ -578,7 +593,9 @@ function Adjustable.Container:show(auto)
 end
 
 --- saves your container settings
--- @see Adjustable.Container:load()
+-- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
+-- to be reliable it is important that the Adjustable.Container has an unique 'name'
+-- @see Adjustable.Container:load
 function Adjustable.Container:save()
     local mytable = {}
     mytable.x = self.x
@@ -597,8 +614,8 @@ function Adjustable.Container:save()
     table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
 end
 
---- loads your container settings
--- @see Adjustable.Container:load()
+--- restores/loads the before saved settings 
+-- @see Adjustable.Container:save
 function Adjustable.Container:load()
     local mytable = {}
 
@@ -641,24 +658,24 @@ function Adjustable.Container:reposition()
     end
 end
 
---- saves all your container
--- @see Adjustable.Container:save()
+--- saves all your adjustable containers at once
+-- @see Adjustable.Container:save
 function Adjustable.Container:saveAll()
     for  k,v in pairs(Adjustable.Container.all) do
         v:save()
     end
 end
 
---- loads all your container
--- @see Adjustable.Container:load()
+--- loads all your adjustable containers at once
+-- @see Adjustable.Container:load
 function Adjustable.Container:loadAll()
     for  k,v in pairs(Adjustable.Container.all) do
         v:load()
     end
 end
 
---- shows all your container
--- @see Adjustable.Container:doAll()
+--- shows all your adjustable containers
+-- @see Adjustable.Container:doAll
 function Adjustable.Container:showAll()
     for  k,v in pairs(Adjustable.Container.all) do
         v:show()
@@ -674,6 +691,7 @@ function Adjustable.Container:doAll(myfunc)
 end
 
 --- changes the values of your container to absolute values
+-- (standard settings are set values to percentages)
 -- @param size_as_absolute bool true to have the size as absolute values
 -- @param position_as_absolute bool true to have the position as absolute values
 function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute)
@@ -766,6 +784,7 @@ function Adjustable.Container:newCustomItem(name, func)
     createMenus(self, "customItems", "Adjustable.Container.customMenu")
 end
 --- enablesAutoSave normally only used internally
+-- only useful if autoSave was set to false before
 function Adjustable.Container:enableAutoSave()
     self.autoSave = true
     self.autoSaveHandler = self.autoSaveHandler or registerAnonymousEventHandler("sysExitEvent", function() self:save() end)
@@ -778,6 +797,35 @@ function Adjustable.Container:disableAutoSave()
 end
 
 --- constructor for the Adjustable Container
+---@param cons besides standard Geyser.Container parameters there are also:
+---@param container
+--@param[opt="102" ] cons.ParentMenuWidth  menu width of the main right click menu
+--@param[opt="82"] cons.ChildMenuWidth  menu width of the children in the right click menu (for attached, lockstyles and custom items)
+--@param[opt="22"] cons.MenuHeight  height of a single menu item
+--@param[opt="8"] cons.MenuFontSize  font size of the menu items
+--@param[opt="15"] cons.buttonsize  size of the minimize and close buttons
+--@param[opt="8"] cons.buttonFontSize  font size of the minimize and close buttons
+--@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting)
+--@param cons.adjLabelstyle  style of the main Label where all elements are in
+--@param cons.menustyle  menu items style
+--@param cons.buttonstyle close and minimize buttons style
+--@param[opt=false] cons.minimized  minimized at creation?
+--@param[opt=false] cons.locked  locked at creation?
+--@param cons.lockLabel.txt  text of the "lock" menu item
+--@param cons.minLabel.txt  text of the "min/restore" menu item
+--@param cons.saveLabel.txt  text of the "save" menu item
+--@param cons.loadLabel.txt  text of the "load" menu item
+--@param cons.attLabel.txt  text of the "attached menu" item
+--@param cons.lockStylesLabel.txt  text of the "lockstyle menu" item
+--@param cons.customItemsLabel.txt  text of the "custom menu" item
+--@param[opt="green"] cons.titleTxtColor  color of the title text
+--@param cons.titleText  title text
+--@param[opt="standard"] cons.lockStyle  choose lockstyle at creation. possible integrated lockstyle are: "standard", "border", "light" and "full"
+--@param[opt=false] cons.noLimit  there is a minimum size limit if this constraint is set to false.
+--@param[opt=true] cons.raiseOnClick  raise your container if you click on it with your left mouse button
+--@param[opt=true] cons.autoSave  saves your container settings on exit (sysExitEvent). If set to false it won't autoSave
+--@param[opt=true] cons.autoLoad  loads the container settings (if there are some to load) at creation of the container. If set to false it won't load the settings at creation
+
 function Adjustable.Container:new(cons,container)
     Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
     local me = self.parent:new(cons, container)
