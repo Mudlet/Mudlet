@@ -35,12 +35,12 @@
 #include "post_guard.h"
 
 TFlipButton::TFlipButton(TAction* pTAction, Host* pHost)
-: QPushButton( nullptr )
-, mpTAction( pTAction )
-, mID( pTAction->getID() )
-, mpHost( pHost )
-, mOrientation( Qt::Horizontal )
-, mMirrored( false )
+: QPushButton(nullptr)
+, mpTAction(pTAction)
+, mID(pTAction->getID())
+, mpHost(pHost)
+, mOrientation(Qt::Horizontal)
+, mMirrored(false)
 {
 }
 

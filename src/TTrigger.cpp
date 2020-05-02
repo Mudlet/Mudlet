@@ -1108,7 +1108,7 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 
     // If BOTH ansiFg AND ansiBg are scmIgnored then the color pattern is
     // totally unset
-    if (!(fgColor.isValid() || bgColor.isValid()) ) {
+    if (!(fgColor.isValid() || bgColor.isValid())) {
         return nullptr;
     }
 

@@ -412,7 +412,7 @@ void TAction::insertActions(TEasyButtonBar* pT, QMenu* menu)
     action->mID = mID;
     action->mpHost = mpHost;
     action->setStatusTip(mName);
-    Q_ASSERT_X(menu, "TAction::insertActions( TEasyButtonBar *, QMenu * )", "method called with a NULL QMenu pointer!");
+    Q_ASSERT_X(menu, "TAction::insertActions(TEasyButtonBar*, QMenu*)", "method called with a NULL QMenu pointer!");
     menu->addAction(action);
 }
 

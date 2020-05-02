@@ -301,7 +301,7 @@ void dlgRoomExits::save()
     }
 
     // Clean up after any deleted specialExits originally present but not now so
-    foreach (const QString& value, originalExitCmds) {
+    for (auto value : originalExitCmds) {
         pR->customLinesArrow.remove(value);
         pR->customLinesColor.remove(value);
         pR->customLinesStyle.remove(value);
@@ -1743,7 +1743,7 @@ void dlgRoomExits::initExit(int roomId,
 {
     QString doorAndWeightText; // lowercase, initials for XY-plane, words for others
     QString exitText;          // lowercase, full words, no space
-    switch( direction ) {
+    switch (direction) {
         case DIR_NORTHWEST: doorAndWeightText = QStringLiteral("nw");   exitText = tr("northwest"); break;
         case DIR_NORTH    : doorAndWeightText = QStringLiteral("n");    exitText = tr("north");     break;
         case DIR_NORTHEAST: doorAndWeightText = QStringLiteral("ne");   exitText = tr("northeast"); break;
@@ -2007,75 +2007,75 @@ void dlgRoomExits::init(int id)
 // things as some controls will issue unwanted signals upon setting values into
 // them as we have above...
     // clang-format off
-    connect( button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
-    connect( button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
-    connect( button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::save);
-    connect( button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
-    connect( specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
-    connect( specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
-    connect( button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
-    connect( button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
-    connect( nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);
-    connect( n,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_n_textEdited);
-    connect( ne,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_ne_textEdited);
-    connect( up,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_up_textEdited);
-    connect( w,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_w_textEdited);
-    connect( e,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_e_textEdited);
-    connect( down,                  &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_down_textEdited);
-    connect( sw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_sw_textEdited);
-    connect( s,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_s_textEdited);
-    connect( se,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_se_textEdited);
-    connect( in,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_in_textEdited);
-    connect( out,                   &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_out_textEdited);
-    connect( stub_nw,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_nw_stateChanged);
-    connect( stub_n,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_n_stateChanged);
-    connect( stub_ne,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_ne_stateChanged);
-    connect( stub_up,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_up_stateChanged);
-    connect( stub_w,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_w_stateChanged);
-    connect( stub_e,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_e_stateChanged);
-    connect( stub_down,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_down_stateChanged);
-    connect( stub_sw,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_sw_stateChanged);
-    connect( stub_s,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_s_stateChanged);
-    connect( stub_se,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_se_stateChanged);
-    connect( stub_in,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_in_stateChanged);
-    connect( stub_out,              &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_out_stateChanged);
-    connect( noroute_nw,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_n,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_ne,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_up,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_w,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_e,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_down,          &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_sw,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_s,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_se,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_in,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( noroute_out,           &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
-    connect( weight_nw,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_n,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_ne,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_up,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_w,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_e,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_down,           qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_sw,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_s,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_se,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_in,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( weight_out,            qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_nw,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_n,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_ne,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_up,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_w,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_e,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_down,         qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_sw,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_s,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_se,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_in,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_down,         qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
-    connect( doortype_out,          qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
+    connect(button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(button_save,           &QAbstractButton::clicked,                      this, &dlgRoomExits::save);
+    connect(button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
+    connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
+    connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
+    connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);
+    connect(n,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_n_textEdited);
+    connect(ne,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_ne_textEdited);
+    connect(up,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_up_textEdited);
+    connect(w,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_w_textEdited);
+    connect(e,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_e_textEdited);
+    connect(down,                  &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_down_textEdited);
+    connect(sw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_sw_textEdited);
+    connect(s,                     &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_s_textEdited);
+    connect(se,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_se_textEdited);
+    connect(in,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_in_textEdited);
+    connect(out,                   &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_out_textEdited);
+    connect(stub_nw,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_nw_stateChanged);
+    connect(stub_n,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_n_stateChanged);
+    connect(stub_ne,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_ne_stateChanged);
+    connect(stub_up,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_up_stateChanged);
+    connect(stub_w,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_w_stateChanged);
+    connect(stub_e,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_e_stateChanged);
+    connect(stub_down,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_down_stateChanged);
+    connect(stub_sw,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_sw_stateChanged);
+    connect(stub_s,                &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_s_stateChanged);
+    connect(stub_se,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_se_stateChanged);
+    connect(stub_in,               &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_in_stateChanged);
+    connect(stub_out,              &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_stub_out_stateChanged);
+    connect(noroute_nw,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_n,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_ne,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_up,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_w,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_e,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_down,          &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_sw,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_s,             &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_se,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_in,            &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(noroute_out,           &QCheckBox::stateChanged,                       this, &dlgRoomExits::slot_checkModified);
+    connect(weight_nw,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_n,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_ne,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_up,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_w,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_e,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_down,           qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_sw,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_s,              qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_se,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_in,             qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(weight_out,            qOverload<int>(&QSpinBox::valueChanged),        this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_nw,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_n,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_ne,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_up,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_w,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_e,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_down,         qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_sw,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_s,            qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_se,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_in,           qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_down,         qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
+    connect(doortype_out,          qOverload<int>(&QButtonGroup::buttonClicked),   this, &dlgRoomExits::slot_checkModified);
     // clang-format on
 }
 

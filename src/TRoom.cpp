@@ -41,7 +41,7 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
 {
     int temporary;
     ds >> temporary;
-    switch(temporary) {
+    switch (temporary) {
     case Qt::DotLine:
         [[fallthrough]];
     case Qt::DashLine:

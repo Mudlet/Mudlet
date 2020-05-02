@@ -3111,7 +3111,7 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    foreach (TConsole* pC, mConsoleMap) {
+    for (auto pC : mConsoleMap) {
         if (!pC->close()) {
             event->ignore();
             return;
@@ -3128,7 +3128,7 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
 
-    foreach (TConsole* pC, mConsoleMap) {
+    for (auto pC : mConsoleMap) {
         // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
         pC->mpHost->mTelnet.disconnectIt();
 

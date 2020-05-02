@@ -291,7 +291,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for(QString key : mudlet::mLuaFunctionNames.keys()) {
+    for (QString key : mudlet::mLuaFunctionNames.keys()) {
         provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
     }
 
@@ -3987,7 +3987,7 @@ void dlgTriggerEditor::saveTrigger()
         }
         regexList << pattern;
 
-        switch(mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex()) {
+        switch (mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex()) {
         case 0:
             regexPropertyList << REGEX_SUBSTRING;
             break;
@@ -5071,7 +5071,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             }
             pPatternItem->comboBox_patternType->setCurrentIndex(pType);
             setupPatternControls(pType, pPatternItem);
-            if (pType == REGEX_PROMPT ) {
+            if (pType == REGEX_PROMPT) {
                 pPatternItem->lineEdit_pattern->clear();
 
             } else if (pType == REGEX_COLOR_PATTERN) {
@@ -5842,13 +5842,13 @@ void dlgTriggerEditor::fillout_form()
     mNeedUpdateData = false;
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
     mpTriggerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/tools-wizard.png")));
-    treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
+    treeWidget_triggers->insertTopLevelItem(0, mpTriggerBaseItem);
     populateTriggers();
     mpTriggerBaseItem->setExpanded(true);
 
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Timers")));
-    mpTimerBaseItem->setIcon( 0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
-    treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
+    mpTimerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
+    treeWidget_timers->insertTopLevelItem(0, mpTimerBaseItem);
     populateTimers();
     mpTimerBaseItem->setExpanded(true);
 
@@ -6116,7 +6116,7 @@ void dlgTriggerEditor::populateTimers()
 {
     std::list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : baseNodeList_timers) {
-        if( timer->isTemporary() ) {
+        if (timer->isTemporary()) {
             continue;
         }
         QString s = timer->getName();
@@ -8715,7 +8715,7 @@ void dlgTriggerEditor::createSearchOptionIcon()
     // beforehand - which is simpler than having to do code to combine the
     // QPixMaps...
     QIcon newIcon;
-    switch(mSearchOptions) {
+    switch (mSearchOptions) {
     // Each combination must be handled here
     case SearchOptionCaseSensitive|SearchOptionIncludeVariables:
         newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive+withVariables.png"));
