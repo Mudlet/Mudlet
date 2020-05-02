@@ -2474,26 +2474,22 @@ bool T2DMap::event(QEvent* event)
     // day the setFocusPolicy() calls in the constructor need to be uncommented
 
     if (event->type() == QEvent::KeyPress) {
-        // auto* ke = static_cast<QKeyEvent*>(event);
-        //        if( ke->key() == Qt::Key_Delete )
-        //        {
-        //            if( mCustomLineSelectedRoom != 0  )
-        //            {
-        //                if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
-        //                {
-        //                    TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
-        //                    if( pR->customLines.contains( mCustomLineSelectedExit) )
-        //                    {
-        //                        pR->customLines.remove(mCustomLineSelectedExit);
-        //                        repaint();
-        //                        mCustomLineSelectedRoom = 0;
-        //                        mCustomLineSelectedExit = "";
-        //                        mCustomLineSelectedPoint = -1;
-        //                        return QWidget::event(event);
-        //                    }
-        //                }
-        //            }
-        //        }
+//        auto* ke = static_cast<QKeyEvent*>(event);
+//        if (ke->key() == Qt::Key_Delete ) {
+//            if (mCustomLineSelectedRoom != 0  ) {
+//                if (mpMap->rooms.contains(mCustomLineSelectedRoom)) {
+//                    TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
+//                    if (pR->customLines.contains( mCustomLineSelectedExit)) {
+//                        pR->customLines.remove(mCustomLineSelectedExit);
+//                        repaint();
+//                        mCustomLineSelectedRoom = 0;
+//                        mCustomLineSelectedExit = "";
+//                        mCustomLineSelectedPoint = -1;
+//                        return QWidget::event(event);
+//                    }
+//                }
+//            }
+//        }
     } else if (event->type() == QEvent::Resize) { // Tweak the room selection widget to fit
         resizeMultiSelectionWidget();
     }
