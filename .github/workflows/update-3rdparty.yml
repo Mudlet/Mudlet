@@ -1,8 +1,5 @@
 name: Update 3rdparty sources
 on:
-  push:
-    branches:
-      - 'release-**'
   repository_dispatch:
     types: update-3rdparty
 
