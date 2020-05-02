@@ -2168,12 +2168,12 @@ void dlgProfilePreferences::copyMap()
         int otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
-        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
-                                                 & otherProfileFileUsed,
-                                                 & otherProfileVersion,
-                                                 & otherProfileCurrentRoomId,
-                                                 & otherProfileAreaCount,
-                                                 & otherProfileRoomCount ) ) {
+        if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),
+                                               &otherProfileFileUsed,
+                                               &otherProfileVersion,
+                                               &otherProfileCurrentRoomId,
+                                               &otherProfileAreaCount,
+                                               &otherProfileRoomCount)) {
 
             qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
                      << itOtherProfile.key()

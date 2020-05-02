@@ -4208,7 +4208,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool resizeMudlet)
 {
     Host& host = getHostFromLua(L);
-    switch(position) {
+    switch (position) {
         case Qt::TopSection: host.mBorderTopHeight = size; break;
         case Qt::RightSection: host.mBorderRightWidth = size; break;
         case Qt::BottomSection: host.mBorderBottomHeight = size; break;
@@ -4232,7 +4232,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
     int sizeRight = 0;
     int sizeBottom = 0;
     int sizeLeft = 0;
-    switch(numberOfArguments) {
+    switch (numberOfArguments) {
         case 0: break;
         case 1: {
             if (!lua_isnumber(L, 1)) {
@@ -11936,7 +11936,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0 ) {
+    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0) {
         host.mpConsole->setFgColor(luaRed, luaGreen, luaBlue);
     } else {
         mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
@@ -11999,7 +11999,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0 ) {
+    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0) {
         host.mpConsole->setBgColor(luaRed, luaGreen, luaBlue);
     } else {
         mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
@@ -14792,19 +14792,19 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
     mMultiCaptureGroupList = captureList;
     mMultiCaptureGroupPosList = posList;
 
-    /*std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
-
-       int k=1;
-       for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
-       {
-        cout << "regex#"<<k<<" got:"<<endl;
-        std::list<string>::const_iterator it = (*mit).begin();
-        for( int i=1; it!=(*mit).end(); it++, i++ )
-        {
-            cout << i<<"#"<<"<"<<*it<<">"<<endl;
-        }
-        cout << "-----------------------------"<<endl;
-       }*/
+    /*
+     * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
+     *
+     * int k=1;
+     * for ( ; mit!=mMultiCaptureGroupList.end(); mit++, k++) {
+     *     cout << "regex#"<<k<<" got:"<<endl;
+     *     std::list<string>::const_iterator it = (*mit).begin();
+     *     for ( int i=1; it!=(*mit).end(); it++, i++ ) {
+     *         cout << i<<"#"<<"<"<<*it<<">"<<endl;
+     *     }
+     *     cout << "-----------------------------"<<endl;
+     * }
+     */
 }
 
 // No documentation available in wiki - internal function
@@ -14813,13 +14813,14 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     mCaptureGroupList = captureList;
     mCaptureGroupPosList = posList;
 
-    /*std::list<string>::iterator it2 = mCaptureGroupList.begin();
-       std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
-       int i=0;
-       for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
-       {
-        cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
-       } */
+    /*
+     * std::list<string>::iterator it2 = mCaptureGroupList.begin();
+     * std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
+     * int i=0;
+     * for ( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++) {
+     *     cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
+     * }
+     */
 }
 
 // No documentation available in wiki - internal function
@@ -15109,9 +15110,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             //   These are 'surrogate pairs', (U+D800-U+DBFF) followed by (U+DC00-U+DFFF).
             //   D800-DF00  DC00-DFFF
             int j = 0;
-            while((j = initialText.indexOf(codeRegex, j)) != -1){
+            while ((j = initialText.indexOf(codeRegex, j)) != -1) {
                 uint u;
-                switch(initialText.at(j+1).unicode()){
+                switch (initialText.at(j+1).unicode()){
                     case 'n' : initialText.replace(j, 2, '\n'); break;
                     case 't' : initialText.replace(j, 2, '\t'); break;
                     case '\"' : initialText.replace(j, 2, '\"'); break;

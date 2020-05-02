@@ -990,8 +990,8 @@ bool TMap::findPath(int from, int to)
             // the "previousVertex = p[currentVertex]" operation at the start of
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
-            mWeightList.prepend( r.cost );
-            switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
+            mWeightList.prepend(r.cost);
+            switch (r.direction) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
             case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
             case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
             case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
