@@ -996,7 +996,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 pA->rooms.unite(replacementRoomsSet);
             }
 
-            // Now compare pA->rooms to areaRoomMultiHash.values( itArea.key() )
+            // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key())
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             QSet<int> foundRooms{areaRoomMultiHash.values(itArea.key()).begin(), areaRoomMultiHash.values(itArea.key()).end()};
 #else
@@ -1123,7 +1123,7 @@ void TRoomDB::clearMapDB()
         delete room; // Uses the internally held value of the room Id
                      // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
-    //    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
+    //    assert(!rooms.size()); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
     for (auto area : areaList) {

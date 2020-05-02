@@ -37,12 +37,12 @@
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
-: QDialog( parent )
-, mProfileList( QStringList() )
-, offline_button( Q_NULLPTR )
-, connect_button( Q_NULLPTR )
-, delete_profile_lineedit( Q_NULLPTR )
-, delete_button( Q_NULLPTR )
+: QDialog(parent)
+, mProfileList(QStringList())
+, offline_button(nullptr)
+, connect_button(nullptr)
+, delete_profile_lineedit(nullptr)
+, delete_button(nullptr)
 , validName()
 , validUrl()
 , validPort()
@@ -199,7 +199,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
 
     // website_entry atm is only a label
-    //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
+    //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -545,8 +545,10 @@ void dlgConnectionProfiles::slot_save_name()
                 _pt.setPen(QColor(Qt::black));
             }
             _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-            /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
-                   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
+            /*
+             * if (QFontMetrics(_font).boundingRect(s).width() <= 80
+             *     && QFontMetrics(_font).boundingRect( s ).height() <= 30)
+             */
             if (_r.width() <= 90 && _r.height() <= 30) {
                 break;
             }

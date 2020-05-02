@@ -10813,9 +10813,9 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
         return 2;
     } else {
         // Turns out that an empty key IS possible, but if this changes this should be uncommented
-        //        if( key.isEmpty() ) {
-        //           // If the user accidently supplied an white-space only or empty key
-        //           // string we don't do anything, but we, sucessfully, fail to do it... 8-)
+        //        if (key.isEmpty()) {
+        //            // If the user accidently supplied an white-space only or empty key
+        //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
         //            lua_pushboolean( L, false );
         //        }
         /*      else */ if (pR->userData.contains(key)) {
@@ -11039,7 +11039,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
             it.next();
             int id_to = it.key();
             QString dir = it.value();
-            //lua_pushstring( L, dir.toLatin1().data() );
+            // lua_pushstring(L, dir.toLatin1().data());
             QString exitStatus;
             QString exit;
             if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
@@ -15372,7 +15372,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
         // set values
         int i = 1; // Lua indexes start with 1 as a general convention
         for (auto it = mCaptureGroupList.begin(); it != mCaptureGroupList.end(); it++, i++) {
-            //if( (*it).length() < 1 ) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
+            // if ((*it).length() < 1) continue; //have empty capture groups to be undefined keys i.e. machts[emptyCapGroupNumber] = nil otherwise it's = "" i.e. an empty string
             lua_pushnumber(L, i);
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);

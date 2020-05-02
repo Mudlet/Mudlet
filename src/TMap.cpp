@@ -617,7 +617,7 @@ void TMap::initGraph()
         location l;
         l.pR = pR;
         l.id = itRoom.key();
-        // locations is std::vector<location> and (locations.at( k )).id will give room ID value
+        // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
         // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
@@ -1442,9 +1442,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             }
         }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(( mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
-                                                                          | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                          | QFont::PreferNoShaping
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                          |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+                                                                          |QFont::PreferNoShaping
                                                                           ));
 
         if (mVersion >= 14) {
