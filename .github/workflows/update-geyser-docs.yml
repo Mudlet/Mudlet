@@ -1,9 +1,6 @@
 name: Update Geyser docs
 
 on:
-  push:
-    branches:
-      - 'release-**'
   repository_dispatch:
     types: update-geyser-docs
   schedule:
