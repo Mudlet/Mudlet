@@ -18,8 +18,8 @@ Geyser.UserWindow = Geyser.MiniConsole:new({
 function Geyser.UserWindow:set_uwconstr()
   Geyser.set_constraints(self,self,Geyser)
 end
---- Moves the UserWindow
--- UserWindow is set to floating state if this function is used
+--- Moves the UserWindow:
+-- is set to floating state if this function is used
 --@param x x-coordinate
 --@param y y-coordinate
 function Geyser.UserWindow:move(x,y)
@@ -30,8 +30,8 @@ function Geyser.UserWindow:move(x,y)
   self:resetWindow()
 end
 
---- Resizes the UserWindow
--- UserWindow only works if UserWindow is in floating state
+--- Resizes the UserWindow:
+-- only works if your UserWindow is in floating state
 --@param width userwindow widh
 --@param height userwindow height
 function Geyser.UserWindow:resize(width,height)
@@ -58,7 +58,7 @@ function Geyser.UserWindow:show()
   self:resize(w,h)
 end
 
---- Sets the position the UserWindow will be docked at
+--- Your UserWindow will be docked at position (pos):
 -- works also if autoDock is disabled
 --@param pos possible positions are "top", "bottom","left", "right" and "floating"
 function Geyser.UserWindow:setDockPosition(pos)
@@ -72,7 +72,7 @@ function Geyser.UserWindow:enableAutoDock()
   return openUserWindow(self.name, self.restoreLayout, true)
 end
 
---- Change the title text of your UserWindow
+--- Changes the title text of your UserWindow
 --@param text title text of your UserWindow
 function Geyser.UserWindow:setTitle(text)
   self.titleText = text
@@ -93,8 +93,9 @@ end
 
 Geyser.UserWindow.Parent = Geyser.Window
 
+--- Geyser UserWindow constructor
 ---@param cons table of Geyser MiniConsole options such as name, width, and height.
--- UserWindow paramters are:
+-- UserWindow parameters are:
 -- @param[opt='false'] cons.restoreLayout restore previously saved Layout or not (is set to false if not set)
 -- @param[opt='nil'] cons.docked start the container in a docked state (if set to true x, y, width and height will be ignored)
 -- @param[opt='true'] cons.autoDock dock at the borders if the window is put at them (set to true if not set)
