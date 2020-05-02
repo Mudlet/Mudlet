@@ -1473,41 +1473,41 @@ rooms:</source>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13018"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12997"/>
       <source>Playing %1</source>
       <translation>%1 oynuyor</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15566"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15545"/>
       <source>ERROR</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15567"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15578"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15546"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15557"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15567"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15578"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15546"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15557"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17161"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17139"/>
       <source>no error message available from Lua</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17163"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17141"/>
       <source>Lua error:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16981"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16959"/>
       <source>Some functions may not be available.</source>
       <translation type="unfinished"/>
     </message>
@@ -1524,84 +1524,84 @@ Available encodings (and internal names):
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16471"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16450"/>
       <source>No error message available from Lua</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16473"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16452"/>
       <source>Lua error: %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16475"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16454"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16489"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16468"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16947"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16925"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16986"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16964"/>
       <source>Database support will not be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16993"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16971"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16999"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16977"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17166"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17144"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17236"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17214"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17241"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17219"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17250"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17228"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17268"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17246"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17274"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17252"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17282"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17260"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -3859,128 +3859,128 @@ error message was: &quot;%2&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2084"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2087"/>
       <source>Remove</source>
       <translation>Kaldır</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2103"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2106"/>
       <source>Copy</source>
       <translation>Kopyala</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2128"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2131"/>
       <source>New</source>
       <translation>Yeni</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2183"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2186"/>
       <source>welcome message</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2199"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2202"/>
       <source>Required</source>
       <translation>Zorunlu</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2205"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2208"/>
       <source>Profile name:</source>
       <translation>Profil adı:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2228"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2231"/>
       <source>Server address:</source>
       <translation>Sunucu adresi:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2254"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Port:</source>
       <translation>Bağlantı noktası:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2301"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2304"/>
       <source>Secure:</source>
       <translation>Güvenli:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2308"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2311"/>
       <source>Profile history:</source>
       <translation>Profil geçmişi:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2331"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2334"/>
       <source>load newest profile</source>
       <translation>en yeni profili yükle</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2336"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2339"/>
       <source>load oldest profile</source>
       <translation>en eski profili yükle</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2359"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2362"/>
       <source>Optional</source>
       <translation>İsteğe Bağlı</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2375"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2378"/>
       <source>Character name:</source>
       <translation>Karakter adı:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2385"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2388"/>
       <source>The characters name</source>
       <translation>Karakterin adı</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2437"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Enable Discord integration (not supported by game)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2552"/>
       <source>Game description or your notes</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2365"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2368"/>
       <source>Password:</source>
       <translation>Şifre:</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2424"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2427"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2401"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2404"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2407"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2410"/>
       <source>Open profile on Mudlet start</source>
       <translation>Mudlet başlatıldığında profili aç</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2417"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2420"/>
       <source>Reconnect automatically</source>
       <translation>Otomatik olarak yeniden bağlan</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2440"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2443"/>
       <source>Discord integration</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2475"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2478"/>
       <source>Informational</source>
       <translation>Bilgilendirici</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2502"/>
+      <location filename="../src/ui/connection_profiles.ui" line="2505"/>
       <source>Website:</source>
       <translation type="unfinished"/>
     </message>
@@ -4268,145 +4268,145 @@ Count</source>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17030"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17008"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17032"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17010"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>k</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17034"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17012"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17036"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17014"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>d</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17038"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17016"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17040"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17018"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>g</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17042"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17020"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>batı</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17044"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17022"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>b</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17046"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17024"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>kuzeydoğu</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17048"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17026"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>kd</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17050"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17028"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>güneydoğu</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17052"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17030"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>gd</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17054"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17032"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>güneybatı</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17056"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17034"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>gb</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17058"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17036"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>kuzeybatı</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17060"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17038"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>kb</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17062"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17040"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>i</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17064"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17042"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17066"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17044"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>d</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17068"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17046"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17070"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17048"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>y</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17072"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17050"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17074"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17052"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>a</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="17076"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="17054"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
@@ -9224,30 +9224,6 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="875"/>
-      <source>GBK (Chinese, 1 or 2 Bytes)</source>
-      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="876"/>
-      <source>GB18030 (Chinese, 1, 2 or 4 Bytes)</source>
-      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="877"/>
-      <source>Big5-ETen (Taiwan, 1 or 2 Bytes)</source>
-      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="878"/>
-      <source>Big5-HKSCS (Hong Kong, 1 or 2 Bytes)</source>
-      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
@@ -9469,6 +9445,30 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="415"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="875"/>
+      <source>GBK (Chinese)</source>
+      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="876"/>
+      <source>GB18030 (Chinese)</source>
+      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="877"/>
+      <source>Big5-ETen (Taiwan)</source>
+      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="878"/>
+      <source>Big5-HKSCS (Hong Kong)</source>
+      <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
