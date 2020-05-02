@@ -1334,11 +1334,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     auto pen = painter.pen();
     pen.setColor(mpHost->mFgColor_2);
     pen.setWidthF(exitWidth);
-    if (mMapperUseAntiAlias) {
-        painter.setRenderHint(QPainter::Antialiasing);
-    } else {
-        painter.setRenderHint(QPainter::NonCosmeticDefaultPen);
-    }
+    painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
 
     if (mpMap->mapLabels.contains(mAreaID)) {
@@ -2597,7 +2593,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                 tl2.setAngle(normal.angle());
                                 tl2.setLength(-0.1);
                                 QPointF pi;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                                if ((line.intersects(tl, &pi) == QLineF::BoundedIntersection) || (line.intersects(tl2, &pi) == QLineF::BoundedIntersection)) {
+#else
                                 if ((line.intersect(tl, &pi) == QLineF::BoundedIntersection) || (line.intersect(tl2, &pi) == QLineF::BoundedIntersection)) {
+#endif
                                     // Choose THIS line to edit as we have
                                     // clicked close enough to it...
                                     mCustomLineSelectedRoom = room->getId();
@@ -2674,7 +2674,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 break;
             case 1:
                 mMultiSelection = false; // OK, found one room so stop
-                mMultiSelectionHighlightRoomId = mMultiSelectionSet.toList().first();
+                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
                 mHelpMsg.clear();
                 break;
             default:
@@ -2764,7 +2764,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
                 mIsSelectionSortByNames = false;
             }
-            mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0);
+            mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
             mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
             resizeMultiSelectionWidget();
             mMultiSelectionListWidget.selectAll();
@@ -3633,7 +3633,11 @@ void T2DMap::slot_setSymbol()
                 itSymbolUsed.next();
                 symbolCountsSet.insert(itSymbolUsed.value());
             }
-            QList<unsigned int> symbolCountsList = symbolCountsSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            QList<unsigned int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
+#else
+            QList<unsigned int> symbolCountsList{symbolCountsSet.toList()};
+#endif
             if (symbolCountsList.size() > 1) {
                 std::sort(symbolCountsList.begin(), symbolCountsList.end());
             }
@@ -4085,7 +4089,11 @@ void T2DMap::slot_setRoomWeight()
                 weightCountsSet.insert(itWeightsUsed.value());
             }
             // Obtains a list of those weights sorted in ascending count of used
-            QList<uint> weightCountsList = weightCountsSet.toList();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            QList<uint> weightCountsList{weightCountsSet.begin(), weightCountsSet.end()};
+#else
+            QList<uint> weightCountsList{weightCountsSet.toList()};
+#endif
             if (weightCountsList.size() > 1) {
                 std::sort(weightCountsList.begin(), weightCountsList.end());
             }
@@ -4259,7 +4267,11 @@ void T2DMap::slot_setArea()
             if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
                 // Failed on the last of multiple room area move so do the missed
                 // out recalculations for the dirtied areas
-                QSetIterator<TArea*> itpArea = mpMap->mpRoomDB->getAreaPtrList().toSet();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                QSetIterator<TArea*> itpArea{QSet<TArea*>{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()}};
+#else
+                QSetIterator<TArea*> itpArea{mpMap->mpRoomDB->getAreaPtrList().toSet()};
+#endif
                 while (itpArea.hasNext()) {
                     TArea* pArea = itpArea.next();
                     if (pArea->mIsDirty) {
@@ -4406,7 +4418,11 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mMultiSelectionHighlightRoomId = 0;
                 break;
             case 1:
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+#else
                 mMultiSelectionHighlightRoomId = mMultiSelectionSet.toList().first();
+#endif
                 break;
             default:
                 getCenterSelection(); // Sets mMultiSelectionHighlightRoomId to (a) central room
@@ -4444,7 +4460,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
                     mIsSelectionSortByNames = false;
                 }
-                mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0);
+                mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
                 mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
                 resizeMultiSelectionWidget();
                 mMultiSelectionListWidget.selectAll();
