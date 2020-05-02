@@ -2270,19 +2270,27 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
     if (needsGenericPackagesInstall) {
         //install appropriate mapper script for the game
-        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
+            || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
             || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
             || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
+            // IRE MUD profiles:
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
-        } else if (not pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive) ) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-        }
-        if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
-        } else {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
+
+        } else if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
+            // Mudlet self-test profile ONLY:
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
+
+        } else {
+            // All OTHER profiles:
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
+
         }
 
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
