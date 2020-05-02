@@ -26,7 +26,11 @@
 #include "ui_connection_profiles.h"
 #include "QDir"
 #include <pugixml.hpp>
+#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
+#else
+#include <qt5keychain/keychain.h>
+#endif
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
