@@ -465,10 +465,11 @@ local function createMenus(self, menu, onClick)
     if not self[menu] then return end
     for i = self[menu.."Nr"], #self[menu] do
         local name = self[menu][i][1]
+        local menuTxt = self.Locale[name].message or name
         self[menu.."l"][i] = self[menu.."Label"]:addChild({
             width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
         })
-        self[menu.."l"][i].txt = [[<center>]]..name
+        self[menu.."l"][i].txt = [[<center>]]..menuTxt
         self[menu.."l"][i]:setClickCallback(onClick, self, i, name)
     end
     recursiveStyle(self, self[menu.."Label"].nestedLabels)
@@ -486,7 +487,7 @@ function Adjustable.Container:onEnterAtt()
             self.att[i]:changeContainer(Geyser)
         end
         self.att[i].flyDir = self.attLabel.flyDir
-        pEcho(self.att[i], "<center>"..attm[i])
+        pEcho(self.att[i], "<center>"..self.Locale[attm[i]].message)
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
@@ -778,6 +779,7 @@ end
 
 --- constructor for the Adjustable Container
 function Adjustable.Container:new(cons,container)
+    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
     local me = self.parent:new(cons, container)
     cons = cons or {}
     setmetatable(me, self)
@@ -813,15 +815,14 @@ function Adjustable.Container:new(cons,container)
     if me.locked then
         me:lockContainer()
     end
-
     me.adjLabelstyle = me.adjLabelstyle..[[ qproperty-alignment: 'AlignLeft | AlignTop';]]
-    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font> Lock/Unlock]]
-    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font> Min/Restore]]
-    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font> Save]]
-    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font> Load]]
-    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font> Attach to:]]
-    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font> Lockstyle:]]
-    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font> Custom:]]
+    me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale.lock.message
+    me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale.min_restore.message
+    me.saveLabel.txt = me.saveLabel.txt or [[<font size="5" face="Noto Emoji">💾</font>]].. self.Locale.save.message
+    me.loadLabel.txt = me.loadLabel.txt or [[<font size="5" face="Noto Emoji">📁</font>]].. self.Locale.load.message
+    me.attLabel.txt  = me.attLabel.txt or [[<font size="5" face="Noto Emoji">⚓</font>]]..self.Locale.attach.message
+    me.lockStylesLabel.txt = me.lockStylesLabel.txt or [[<font size="5" face="Noto Emoji">🖌</font>]]..self.Locale.lockstyle.message
+    me.customItemsLabel.txt = me.customItemsLabel.txt or [[<font size="5" face="Noto Emoji">🖇</font>]]..self.Locale.custom.message
 
     me.adjLabel:setStyleSheet(me.adjLabelstyle)
     me.exitLabel:setStyleSheet(me.buttonstyle)
