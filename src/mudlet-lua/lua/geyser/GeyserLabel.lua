@@ -320,8 +320,8 @@ function Geyser.Label:resetToolTip()
 end
 
 --- Set a predefined Mouse Cursor Shape for this label
--- @param cursorShape the predefined cursorshape as number from 1 to 21
--- see: https://doc.qt.io/qt-5/qt.html#CursorShape-enum
+-- @param cursorShape the predefined cursorshape as a string
+-- see: https://wiki.mudlet.org/w/CursorShapes
 function Geyser.Label:setCursor(cursorShape)
   setLabelCursor(self.name, cursorShape)
   -- Get cursorShape as string
