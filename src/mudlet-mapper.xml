@@ -3493,11 +3493,13 @@ mmp.echo("We're connected to Lithmeria.")</script>
 						<string>There is a door in the way, to the</string>
 						<string>There is a door in the way.</string>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
+						<string>There is an? (walnut|pine|oak|iron|reinforced) door in the way.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
 						<integer>3</integer>
 						<integer>2</integer>
+						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
@@ -5286,7 +5288,7 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "19.11.3"
+local newversion = "20.4.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(

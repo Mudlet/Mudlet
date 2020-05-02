@@ -872,10 +872,10 @@ void mudlet::loadMaps()
 
     mEncodingNameMap = {{"ASCII", tr("ASCII (Basic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"UTF-8", tr("UTF-8 (Recommended)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"GBK", tr("GBK (Chinese, 1 or 2 Bytes)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"GB18030", tr("GB18030 (Chinese, 1, 2 or 4 Bytes)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"BIG5", tr("Big5-ETen (Taiwan, 1 or 2 Bytes)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
-                        {"BIG5-HKSCS", tr("Big5-HKSCS (Hong Kong, 1 or 2 Bytes)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"GBK", tr("GBK (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"GB18030", tr("GB18030 (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"BIG5", tr("Big5-ETen (Taiwan)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"BIG5-HKSCS", tr("Big5-HKSCS (Hong Kong)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"ISO 8859-1", tr("ISO 8859-1 (Western European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"ISO 8859-2", tr("ISO 8859-2 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"ISO 8859-3", tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
@@ -2011,7 +2011,7 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     }
 
     auto fontMetrics = QFontMetrics(font);
-    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
 }
 
 std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -4511,10 +4511,15 @@ void mudlet::playSound(const QString& s, int soundVolume)
         if (state == QMediaPlayer::StoppedState) {
             TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().fileName());
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().path());
+#else
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+#endif
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             if (pHost) {
                 // The host may have gone away if the sound was a long one
@@ -4871,7 +4876,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.thTheme" that
+        // handles the special case of the default theme "mudlet.tmTheme" that
         // is carried internally in the resource file:
         if (extra1.compare(QStringLiteral("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
@@ -4920,15 +4925,28 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
         } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            // From debug or release subdirectory of a shadow build directory
+            // alongside the ./src one. {Typically QMake builds from Qtcreator
+            // with CONFIG containing both 'debug_and_release' and
+            // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
+            // From shadow build directory alongside the ./src one. {Typically
+            // QMake builds from Qtcreator with CONFIG NOT containing both
+            // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(QStringLiteral("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory above the ./src one. {Typically
+            // CMake builds from Qtcreator which are outside of the unpacked
+            // source code from a git repo or tarball - which has to have been
+            // unpacked/placed in a directory called 'mudlet'}:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return QStringLiteral("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
         } else {
-            // From build within ./src
+            // From build within ./src AND installer builds that bundle
+            // dictionaries in the same directory as the executable:
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
         }
@@ -5660,7 +5678,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to allow for persistant editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    wordSet = QSet<QString>(wordList.begin(), wordList.end());
+#else
     wordSet = wordList.toSet();
+#endif
 
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
@@ -5711,7 +5733,12 @@ Hunhandle* mudlet::prepareSharedDictionary()
         return nullptr;
     }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
+#else
     mWordSet_shared = wordList.toSet();
+#endif
+
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
@@ -5738,7 +5765,11 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
         return false;
     }
 
-    QStringList wordList(wordSet.toList());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList{wordList.begin(), wordList.end()};
+#else
+    QStringList wordList{wordSet.toList()};
+#endif
 
     // This also sorts wordList as a wanted side-effect:
     int wordCount = scanWordList(wordList, graphemeCounts);

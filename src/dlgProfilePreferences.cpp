@@ -2119,7 +2119,11 @@ void dlgProfilePreferences::copyMap()
     }
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
-    QSet<Host*> activeHosts(mudlet::self()->mConsoleMap.keys().toSet());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().begin(), mudlet::self()->mConsoleMap.keys().begin()};
+#else
+    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().toSet()};
+#endif
     QMap<QString, Host*> activeOtherHostMap;
     QSetIterator<Host*> itActiveHost(activeHosts);
     while (itActiveHost.hasNext()) {
