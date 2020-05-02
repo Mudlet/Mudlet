@@ -258,11 +258,7 @@ void dlgRoomExits::save()
             exitIterator.setValue(exitIterator.value().mid(1));
         }
     }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QSet<QString> originalExitCmds{oldSpecialExits.values().begin(), oldSpecialExits.values().end()};
-#else
-    QSet<QString> originalExitCmds{oldSpecialExits.values().toSet()};
-#endif
+    QSet<QString> originalExitCmds = oldSpecialExits.values().toSet();
 
     //    pR->clearSpecialExits(); // Previous code could not change the destination
     // room of an existing special exit
