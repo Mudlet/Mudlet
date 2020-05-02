@@ -1726,7 +1726,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="513"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[ ОК ] - карта загружена успешно (%1s).</translation>
+      <translation>[  ОК  ] - карта загружена успешно (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="995"/>
