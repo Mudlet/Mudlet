@@ -1436,10 +1436,8 @@ void dlgProfilePreferences::setColors2()
 
 void dlgProfilePreferences::setTab(QString tab)
 {
-    foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
-    {
-        if (child->objectName().contains(tab, Qt::CaseInsensitive))
-        {
+    for (auto child : tabWidget->findChildren<QWidget*>()) {
+        if (child->objectName().contains(tab, Qt::CaseInsensitive)) {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
         }

@@ -14191,7 +14191,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     }
 
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
-    foreach (const QVoice& voice, speechVoices) {
+    for (auto voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);
             lua_pushboolean(L, true);

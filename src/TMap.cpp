@@ -135,7 +135,7 @@ TMap::~TMap()
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
                    << "------------";
-        foreach (QString message, mStoredMessages) {
+        for (auto message : mStoredMessages) {
             qWarning() << message << "\n------------";
         }
     }
@@ -624,7 +624,7 @@ void TMap::initGraph()
     }
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
-    foreach (location l, locations) {
+    for (auto l : locations) {
         unsigned int source = l.id;
         TRoom* pSourceR = l.pR;
         QHash<unsigned int, route> bestRoutes;

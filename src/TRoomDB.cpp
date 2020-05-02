@@ -104,7 +104,7 @@ void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
     QList<int> keyList = entranceMap.keys();
     QList<int> valueList = entranceMap.values();
     QList<uint> deleteEntries;
-    foreach (int roomId, valueSet) {
+    for (auto roomId : valueSet) {
         int index = valueList.indexOf(roomId);
         while (index >= 0) {
             deleteEntries.append(index);
@@ -285,7 +285,7 @@ bool TRoomDB::removeRoom(int id)
             // Now we store mRoomId for each profile, we must remove any where
             // this room was used
             QList<QString> profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);
-            foreach (QString key, profilesWithUserInThisRoom) {
+            for (auto key : profilesWithUserInThisRoom) {
                 mpMap->mRoomIdHash[key] = 0;
             }
         }
@@ -321,7 +321,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
         }
         mpTempRoomDeletionSet->remove(deleteRoomId);
     }
-    foreach (int deleteRoomId, deletedRoomIds) {
+    for (auto deleteRoomId : deletedRoomIds) {
         entranceMap.remove(deleteRoomId); // This has been deferred from __removeRoom()
     }
     deleteValuesFromEntranceMap(deletedRoomIds);

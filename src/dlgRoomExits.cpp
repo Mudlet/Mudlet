@@ -301,7 +301,7 @@ void dlgRoomExits::save()
     }
 
     // Clean up after any deleted specialExits originally present but not now so
-    foreach (const QString& value, originalExitCmds) {
+    for (auto value : originalExitCmds) {
         pR->customLinesArrow.remove(value);
         pR->customLinesColor.remove(value);
         pR->customLinesStyle.remove(value);
