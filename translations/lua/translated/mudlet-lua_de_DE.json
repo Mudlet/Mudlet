@@ -1,0 +1,62 @@
+{
+  "AdjustableContainer.attach": {
+    "message": "Anhängen:",
+    "description": "Attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "unten",
+    "description": "is on of the possible borders to attach the containers"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Benutzerdefiniert:",
+    "description": "Is a menu item in the right click menu with user/package made custom items in it"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Sperren",
+    "description": "Locks the container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.lockstyle": {
+    "message": "Sperrstil:",
+    "description": "There are different modes/styles to choose which will be the lock behaviour of the container"
+  },
+  "AdjustableContainer.standard": {
+    "message": "standard",
+    "description": "Is one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "einfach",
+    "description": "Is one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stays intact"
+  },
+  "AdjustableContainer.full": {
+    "message": "voll",
+    "description": "Is one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "umrandung",
+    "description": "is one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.top": {
+    "message": "oben",
+    "description": "is one of the possible border the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "links",
+    "description": "is one of the possible borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "rechts",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.load": {
+    "message": "Laden",
+    "description": "Loads the previously settings of the container"
+  },
+  "AdjustableContainer.save": {
+    "message": "Speichern",
+    "description": "Saves settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Min/Wiederherstellen",
+    "description": "Label to minimize/restore the container"
+  }
+}
