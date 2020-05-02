@@ -1,13 +1,15 @@
 --------------------------------------
 --                                  --
 -- The Geyser Layout Manager by guy --
+-- UserWindow support by Edru       --
 --                                  --
 --------------------------------------
 
 --- Represents a UserWindow Class
+--Support of UserWindows in Geyser
+--UserWindows use also all the functions of MiniConsole as they contain one
 -- @class table
 -- @name Geyser.UserWindow
---UserWindow is just a MiniConsole
 Geyser.UserWindow = Geyser.MiniConsole:new({
   name = "UserWindowClass",
   color = "black"})
@@ -16,7 +18,10 @@ Geyser.UserWindow = Geyser.MiniConsole:new({
 function Geyser.UserWindow:set_uwconstr()
   Geyser.set_constraints(self,self,Geyser)
 end
-
+--- Moves the UserWindow:
+-- is set to floating state if this function is used
+--@param x x-coordinate
+--@param y y-coordinate
 function Geyser.UserWindow:move(x,y)
   self.x = x or self.x
   self.y = y or self.y
@@ -25,6 +30,10 @@ function Geyser.UserWindow:move(x,y)
   self:resetWindow()
 end
 
+--- Resizes the UserWindow:
+-- only works if your UserWindow is in floating state
+--@param width userwindow widh
+--@param height userwindow height
 function Geyser.UserWindow:resize(width,height)
   self.width = width or self.width
   self.height = height or self.height
@@ -49,27 +58,34 @@ function Geyser.UserWindow:show()
   self:resize(w,h)
 end
 
+--- Your UserWindow will be docked at position (pos):
+-- works also if autoDock is disabled
+--@param pos possible positions are "top", "bottom","left", "right" and "floating"
 function Geyser.UserWindow:setDockPosition(pos)
   self.dockPosition = pos
   return openUserWindow(self.name, false, self.autoDock, pos)
 end
 
+--- Enables the automatic docking at the borders if it was previously disabled
 function Geyser.UserWindow:enableAutoDock()
   self.autoDock = true
   return openUserWindow(self.name, self.restoreLayout, true)
 end
 
+--- Changes the title text of your UserWindow
+--@param text title text of your UserWindow
 function Geyser.UserWindow:setTitle(text)
   self.titleText = text
   return setUserWindowTitle(self.name, text)
 end
 
+--- Disables the automatic docking at the borders
 function Geyser.UserWindow:disableAutoDock()
   self.autoDock = false
   return openUserWindow(self.name, self.restoreLayout, false)
 end
 
-
+--- Resets the title of your UserWindow to default
 function Geyser.UserWindow:resetTitle()
   self.titleText = ""
   return resetUserWindowTitle(self.name)
@@ -77,6 +93,14 @@ end
 
 Geyser.UserWindow.Parent = Geyser.Window
 
+--- Geyser UserWindow constructor
+---@param cons table of Geyser MiniConsole options such as name, width, and height.
+-- UserWindow parameters are:
+-- @param[opt='false'] cons.restoreLayout restore previously saved Layout or not (is set to false if not set)
+-- @param[opt='nil'] cons.docked start the container in a docked state (if set to true x, y, width and height will be ignored)
+-- @param[opt='true'] cons.autoDock dock at the borders if the window is put at them (set to true if not set)
+-- @param[opt='right'] cons.dockPosition choose the dockPosition at creation. Possible values are: "top", "bottom", "right", "left" and "floating" (is set to "right" if not set)
+-- @param cons.titleText choose your UserWindows title (set to default title if not set)
 function Geyser.UserWindow:new(cons)
   cons = cons or {}
   cons.name = cons.name or Geyser.nameGen()
