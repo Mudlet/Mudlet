@@ -181,6 +181,8 @@ function Geyser.Container:show_impl()
 end
 
 --- Raises the window to the top of the z-order stack, displaying in front of all other windows
+--@param changeWindowIndex used internally
+--@see Geyser.Container:raiseAll
 function Geyser.Container:raise (changeWindowIndex)
   raiseWindow(self.name)
   if changeWindowIndex ~= false then
@@ -195,6 +197,8 @@ function Geyser.Container:raise (changeWindowIndex)
 end
 
 --- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
+--@param changeWindowIndex used internally
+--@see Geyser.Container:lowerAll
 function Geyser.Container:lower (changeWindowIndex)
   lowerWindow(self.name)
   if changeWindowIndex ~= false then
@@ -208,6 +212,10 @@ function Geyser.Container:lower (changeWindowIndex)
   end
 end
 
+--- Raises the window and all its containing elements to the top of the z-order stack, displaying in front of all other windows.
+--@param container used internally
+--@param me used internally
+--@see Geyser.Container:raise
 function Geyser.Container:raiseAll(container, me)
   container = container or self
   -- raise myself
@@ -232,6 +240,8 @@ local function createWindowTable(container)
   end
 end
 
+--- Lowers the window and all its containing elements to the bottom of the z-order stack, displaying behind all other windows
+--@see Geyser.Container:lower
 function Geyser.Container:lowerAll()
   createWindowTable(self)
   -- iterate in reverse order through all elements to keep the same z-axis inside the container
