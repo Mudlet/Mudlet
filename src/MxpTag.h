@@ -60,13 +60,13 @@ public:
 
     MxpNode::Type getType() const { return mType; }
 
-    MxpTag* asTag() const { return mType != MXP_NODE_TYPE_TEXT ? (MxpTag*) this : nullptr; }
+    MxpTag* asTag() { return mType != MXP_NODE_TYPE_TEXT ? reinterpret_cast<MxpTag*>(this) : nullptr; }
 
-    MxpStartTag* asStartTag() const { return mType == MXP_NODE_TYPE_START_TAG ? (MxpStartTag*)this : nullptr; }
+    MxpStartTag* asStartTag() { return mType == MXP_NODE_TYPE_START_TAG ? reinterpret_cast<MxpStartTag*>(this) : nullptr; }
 
-    MxpEndTag* asEndTag() const { return mType == MXP_NODE_TYPE_END_TAG ? (MxpEndTag*)this : nullptr; }
+    MxpEndTag* asEndTag() { return mType == MXP_NODE_TYPE_END_TAG ? reinterpret_cast<MxpEndTag*>(this) : nullptr; }
 
-    MxpTextNode* asText() const { return mType == MXP_NODE_TYPE_TEXT ? (MxpTextNode*)this : nullptr; }
+    MxpTextNode* asText() { return mType == MXP_NODE_TYPE_TEXT ? reinterpret_cast<MxpTextNode*>(this)  : nullptr; }
 
     virtual QString toString() const = 0;
 
