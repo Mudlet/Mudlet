@@ -517,14 +517,38 @@ SOURCES += \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
+    TEncodingTable.cpp \
+    TEntityHandler.cpp \
+    TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
+    TMxpElementDefinitionHandler.cpp \
+    TMxpElementRegistry.cpp \
+    TMxpEntityTagHandler.cpp \
+    TMxpFormattingTagsHandler.cpp \
+    TMxpBRTagHandler.cpp \
+    TMxpColorTagHandler.cpp \
+    TMxpCustomElementTagHandler.cpp \
+    TMxpFontTagHandler.cpp \
+    TMxpLinkTagHandler.cpp \
+    TMxpMudlet.cpp \
+    TMxpNodeBuilder.cpp \
+    TMxpProcessor.cpp \
+    TMxpSendTagHandler.cpp \
+    TMxpSupportTagHandler.cpp \
+    MxpTag.cpp \
+    TMxpTagHandler.cpp \
+    TMxpTagParser.cpp \
+    TMxpTagProcessor.cpp \
+    TMxpVarTagHandler.cpp \
+    TMxpVersionTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -540,7 +564,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    TStringUtils.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -592,6 +617,9 @@ HEADERS += \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
+    TEncodingTable.h \
+    TEntityHandler.h \
+    TEntityResolver.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \
@@ -599,10 +627,33 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TLinkStore.h \
     TLuaInterpreter.h \
     TMap.h \
-    TMedia.h \
     TMatchState.h \
+    TMedia.h \
+    TMxpBRTagHandler.h \
+    TMxpClient.h \
+    TMxpColorTagHandler.h \
+    TMxpCustomElementTagHandler.h \
+    TMxpFontTagHandler.h \
+    TMxpLinkTagHandler.h \
+    TMxpElementDefinitionHandler.h \
+    TMxpElementRegistry.h \
+    TMxpEntityTagHandler.h \
+    TMxpContext.h \
+    TMxpFormattingTagsHandler.h \
+    TMxpMudlet.h \
+    TMxpNodeBuilder.h \
+    TMxpProcessor.h \
+    TMxpSendTagHandler.h \
+    MxpTag.h \
+    TMxpTagHandler.h \
+    TMxpTagParser.h \
+    TMxpTagProcessor.h \
+    TMxpSupportTagHandler.cpp \
+    TMxpVarTagHandler.h \
+    TMxpVersionTagHandler.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \
@@ -622,7 +673,8 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
+    TStringUtils.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
