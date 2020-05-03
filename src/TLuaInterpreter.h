@@ -52,6 +52,7 @@ extern "C" {
 #include <list>
 #include <string>
 #include <memory>
+#include <optional>
 
 
 class Host;
