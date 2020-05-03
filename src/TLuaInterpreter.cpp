@@ -178,6 +178,11 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
         }
 
+        if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
+            event.mArgumentList << QString::number(registryKey.value());
+            event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
+        }
+
         reply->deleteLater();
         downloadMap.remove(reply);
         pHost->raiseEvent(event);
@@ -293,6 +298,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         localFile.close();
         break;
 
+    }
+
+    if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
+        event.mArgumentList << QString::number(registryKey.value());
+        event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
     }
 
 
@@ -18527,4 +18537,34 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         lua_settable(L, -3);
         lua_pop(L, 1);
     }
+}
+
+// Internal function - Looks for headers in an http response. If it finds them,
+// it creates a table on the lua stack for the headers, pops the table from the
+// stack, puts it in the lua registry, and returns the key to where it is in
+// registery wrapped in an optional. Otherwise it returns an empty optional.
+std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return {};
+    }
+    QList<QByteArray> headerList = reply->rawHeaderList();
+    if (headerList.size() <= 0) {
+        return {};
+    }
+
+    // Push table onto stack
+    lua_newtable(L);
+    for (QByteArray head : headerList) {
+        // Push header key onto stack
+        lua_pushstring(L, head.toStdString().c_str());
+        // Push header value onto stack
+        lua_pushstring(L, reply->rawHeader(head).toStdString().c_str());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+    // Pop table from stack, store it in registry, return key to it
+    return luaL_ref(L, LUA_REGISTRYINDEX);
 }
