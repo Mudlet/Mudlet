@@ -1,8 +1,8 @@
 local http_request = require "http.request"
 
--- don't load all of LuaGlobal, as that requires yajl installed
-loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
-loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
+local function trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
 
 -- credit: https://stackoverflow.com/a/326715/72944
 function os.capture(cmd, raw)
@@ -17,7 +17,7 @@ function os.capture(cmd, raw)
 end
 
 function find_latest_release()
-  local tagname = os.capture(string.format("git describe --tags $(git rev-list --tags --max-count=1)"), true):trim()
+  local tagname = trim(os.capture(string.format("git describe --tags $(git rev-list --tags --max-count=1)"), true))
   assert(tagname, "error: couldn't find any Git tags in the repository at all")
   return tagname:match("Mudlet%-(.+)")
 end
