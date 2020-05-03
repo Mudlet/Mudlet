@@ -558,6 +558,7 @@ public:
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
+    void freeAllInLuaRegistry(TEvent);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);

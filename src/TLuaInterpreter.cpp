@@ -542,14 +542,6 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
     host.raiseEvent(event);
 
-    // After the event has been raised but before 'event' goes out of scope,
-    // we need to safely dereference the members of 'event' that point to
-    // values in the Lua registry
-    for (int i = 0; i < event.mArgumentList.size(); i++) {
-        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-             host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
-    }
-
     return 0;
 }
 
@@ -17997,6 +17989,18 @@ int TLuaInterpreter::getRowCount(lua_State* L)
 // i.e. Unrefing tables passed into TLabel's event parameters.
 void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
+}
+
+// Internal function - Looks for argument types in an 'event' that have stored
+// data in the lua registry, and frees this data.
+void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
+{
+    for (int i = 0; i < event.mArgumentList.size(); i++) {
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
+        {
+             freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
+        }
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
