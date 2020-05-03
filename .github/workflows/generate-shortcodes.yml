@@ -24,5 +24,5 @@ jobs:
       run: |
         luarocks install http
 
-    - name: update autocompletion data
+    - name: Generate shortcodes
       run: lua CI/generate-download-shortcodes.lua
