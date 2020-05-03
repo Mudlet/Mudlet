@@ -1,4 +1,4 @@
-name: Generate code for Mudlet's downloads page
+name: Code for downloads page
 
 on:
   repository_dispatch:
