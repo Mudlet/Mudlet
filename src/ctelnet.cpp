@@ -206,7 +206,7 @@ cTelnet::~cTelnet()
 #else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
-        foreach (QString message, messageStack) {
+        for (auto message : messageStack) {
 #if defined (Q_OS_WIN32)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
