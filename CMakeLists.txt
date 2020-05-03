@@ -164,6 +164,7 @@ add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
+add_subdirectory(test)
 
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)

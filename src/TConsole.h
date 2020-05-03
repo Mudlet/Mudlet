@@ -122,6 +122,7 @@ public:
         buffer.setWrapIndent(count);
     }
 
+    TLinkStore &getLinkStore() { return buffer.mLinkStore; }
     void echo(const QString&);
     bool moveCursor(int x, int y);
     int select(const QString&, int numOfMatch = 1);

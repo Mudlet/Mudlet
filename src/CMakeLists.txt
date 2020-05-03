@@ -81,20 +81,45 @@ set(mudlet_SRCS
     TDebug.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
+    TEncodingTable.cpp
+    TEntityHandler.cpp
+    TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
     TMedia.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
+    TMxpFormattingTagsHandler.cpp
+    TMxpBRTagHandler.cpp
+    TMxpColorTagHandler.cpp
+    TMxpCustomElementTagHandler.cpp
+    TMxpEntityTagHandler.cpp
+    TMxpFontTagHandler.cpp
+    TMxpLinkTagHandler.cpp
+    TMxpNodeBuilder.cpp
+    TMxpMudlet.cpp
+    TMxpProcessor.cpp
+    TMxpSendTagHandler.cpp
+    TMxpSupportTagHandler.cpp
+    MxpTag.cpp
+    TMxpTagHandler.cpp
+    TMxpTagParser.cpp
+    TMxpTagProcessor.cpp
+    TMxpVarTagHandler.cpp
+    TMxpVersionTagHandler.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
+    TStringUtils.cpp
     TTabBar.cpp
     TTextCodec.cpp
     TTextEdit.cpp
@@ -183,6 +208,9 @@ set(mudlet_HDRS
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h
+    TEncodingTable.h
+    TEntityHandler.h
+    TEntityResolver.h
     testdbg.h
     TEvent.h
     TForkedProcess.h
@@ -190,10 +218,33 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TLinkStore.h
     TLuaInterpreter.h
     TMap.h
     TMatchState.h
     TMedia.h
+    TMxpBRTagHandler.h
+    TMxpClient.h
+    TMxpColorTagHandler.h
+    TMxpCustomElementTagHandler.h
+    TMxpEntityTagHandler.h
+    TMxpFontTagHandler.h
+    TMxpLinkTagHandler.h
+    TMxpElementDefinitionHandler.h
+    TMxpElementRegistry.h
+    TMxpContext.h
+    TMxpFormattingTagsHandler.h
+    TMxpMudlet.h
+    TMxpNodeBuilder.h
+    TMxpProcessor.h
+    TMxpSendTagHandler.h
+    MxpTag.h
+    TMxpTagHandler.h
+    TMxpTagParser.h
+    TMxpTagProcessor.h
+    TMxpSupportTagHandler.cpp
+    TMxpVarTagHandler.h
+    TMxpVersionTagHandler.h
     Tree.h
     TriggerUnit.h
     TRoom.h
@@ -201,6 +252,7 @@ set(mudlet_HDRS
     TScript.h
     TSplitter.h
     TSplitterHandle.h
+    TStringUtils.h
     TTabBar.h
     TTextCodec.h
     TTextEdit.h
