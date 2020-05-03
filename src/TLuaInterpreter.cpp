@@ -63,6 +63,7 @@
 #include "post_guard.h"
 
 #include <limits>
+#include <optional>
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
@@ -18542,7 +18543,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 // Internal function - Looks for headers in an http response. If it finds them,
 // it creates a table on the lua stack for the headers, pops the table from the
 // stack, puts it in the lua registry, and returns the key to where it is in
-// registery wrapped in an optional. Otherwise it returns an empty optional.
+// registery, wrapped in an optional. Otherwise it returns an empty optional.
 std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
@@ -18551,17 +18552,17 @@ std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
         return {};
     }
     QList<QByteArray> headerList = reply->rawHeaderList();
-    if (headerList.size() <= 0) {
+    if (headerList.isEmpty()) {
         return {};
     }
 
     // Push table onto stack
     lua_newtable(L);
-    for (QByteArray head : headerList) {
+    for (QByteArray header : qAsConst(headerList)) {
         // Push header key onto stack
-        lua_pushstring(L, head.toStdString().c_str());
+        lua_pushstring(L, header.toStdString().c_str());
         // Push header value onto stack
-        lua_pushstring(L, reply->rawHeader(head).toStdString().c_str());
+        lua_pushstring(L, reply->rawHeader(header).toStdString().c_str());
         // Put key-value pair into table (now 3 deep in stack), pop stack twice
         lua_settable(L, -3);
     }
