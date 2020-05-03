@@ -15,8 +15,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - run: git fetch --prune --unshallow
-      name: Fetch Git tags
+    - name: Fetch Git tags
+      run: git fetch --tags
 
     - uses: leafo/gh-actions-lua@v5
       with:
