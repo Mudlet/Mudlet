@@ -1,5 +1,4 @@
 local http_request = require "http.request"
-local lunajson = require "lunajson"
 
 local function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
