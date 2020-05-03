@@ -61,6 +61,8 @@ local data = {
 }
 
 local latest_version = find_latest_release()
+assert(latest_version, "Couldn't find what is the latest release of Mudlet")
+print("Latest Mudlet is: "..latest_version)
 
 for os, pattern in pairs(downloadpattern) do
   local url = pattern:gsub("$version", latest_version)
@@ -70,10 +72,12 @@ for os, pattern in pairs(downloadpattern) do
 end
 
 -- repetitive but safer to generate exactly the code wanted
-print("Shortcode for the download button:\n\n")
+print("Shortcode for the download button:\n")
 print(string.format([=[[sc name="dlbutton2020" version="%s" win_url="%s" win_size="%s MB" win_sha256="%s" mac_url="%s" mac_size="%s MB" mac_sha256="%s" nix_url="%s" nix_size="%s MB" nix_sha256="%s" src_url="%s" src_size="%s MB" src_sha256="%s" btn_text="Download Mudlet" note_base="Download" note_win="for Windows" note_nix="for Linux" note_mac="for Mac OS" note_src="Source Code"][/sc]]=], latest_version,
     data.win.url, data.win.sizemb, data.win.shasum,
     data.macos.url, data.macos.sizemb, data.macos.shasum,
     data.linux.url, data.linux.sizemb, data.linux.shasum,
     data.source.url, data.source.sizemb, data.source.shasum
 ))
+
+print("Shortcodes for the download tabs:\n<coming>")

@@ -14,10 +14,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - run: git fetch --prune --unshallow
+      name: Fetch Git tags
+
     - uses: leafo/gh-actions-lua@v5
       with:
         luaVersion: "5.1.5"
     - uses: actions/setup-node@v1.1.0
+
     - uses: leafo/gh-actions-luarocks@v2
 
     - name: install Lua dependencies
