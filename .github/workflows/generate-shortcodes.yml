@@ -1,0 +1,28 @@
+name: Generate code for Mudlet's downloads page
+
+on:
+  repository_dispatch:
+    types: generate-shortcodes
+
+  # remove this when done
+  push:
+
+jobs:
+  generate-shortcodes:
+    runs-on: ubuntu-latest
+    # if: github.repository == 'Mudlet/Mudlet'
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: leafo/gh-actions-lua@v5
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v1.1.0
+    - uses: leafo/gh-actions-luarocks@v2
+
+    - name: install Lua dependencies
+      run: |
+        luarocks install http
+
+    - name: update autocompletion data
+      run: lua CI/generate-download-shortcodes.lua
