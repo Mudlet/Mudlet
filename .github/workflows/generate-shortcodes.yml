@@ -4,13 +4,10 @@ on:
   repository_dispatch:
     types: generate-shortcodes
 
-  # remove this when done
-  push:
-
 jobs:
   generate-shortcodes:
     runs-on: ubuntu-latest
-    # if: github.repository == 'Mudlet/Mudlet'
+    if: github.repository == 'Mudlet/Mudlet'
 
     steps:
     - uses: actions/checkout@v2
