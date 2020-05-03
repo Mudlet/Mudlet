@@ -30,7 +30,7 @@ function get_stats_for(url)
   local headers, stream = assert(http_request.new_from_uri(url):go())
   local body = assert(stream:save_body_to_file(file))
   if headers:get ":status" ~= "200" then
-      error(body)
+    error("HTTP error "..headers:get ":status".." downloading "..url)
   end
 
   local sizebytes = file:seek("end")
