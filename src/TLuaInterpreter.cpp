@@ -3657,61 +3657,40 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QByteArrayList knownEncodings{"\"ASCII\""};
-    auto adjustEncoding = [](auto encodingName) {
-        auto originalEncoding = encodingName;
-        if (encodingName.startsWith("M_")) {
-            encodingName.remove(0, 2);
+    QStringList knownEncodings{"ASCII"};
+    QString currentEncoding{host.mTelnet.getEncoding()};
+    {
+        auto adjustEncoding = [](auto encodingName) {
+            auto originalEncoding = encodingName;
+            if (encodingName.startsWith("M_")) {
+                encodingName.remove(0, 2);
+            }
+
+            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
+        };
+        for (const auto& encoding : host.mTelnet.getEncodingsList()) {
+            knownEncodings.append(adjustEncoding(QString(encoding)));
         }
+        QCollator sorter;
+        sorter.setNumericMode(true);
+        sorter.setCaseSensitivity(Qt::CaseInsensitive);
+        std::sort(knownEncodings.begin(), knownEncodings.end(), sorter);
 
-        return (originalEncoding == encodingName) ? "\"" + originalEncoding + "\""
-                                                  : ("\"" + encodingName + "\" (\"" + originalEncoding + "\")");
-    };
-    for (const auto& encoding : host.mTelnet.getEncodingsList()) {
-        knownEncodings.append(adjustEncoding(encoding));
+        if (currentEncoding.isEmpty()) {
+            currentEncoding = "\"ASCII\"";
+        } else {
+            currentEncoding = adjustEncoding(currentEncoding);
+        }
     }
 
-    QString encodingNames{QLatin1String(knownEncodings.join(", "))};
-    encodingNames.append(QLatin1Char('.'));
-    // Have to wrap the above message as it is going to be too wide to fit on
-    // the screen. Split it at comma+space, keeping comma and
-    // replacing space with linefeed:
-    int startLineIndex = 0;
-    const QString needle = QStringLiteral(", ");
-    const int maxLineLength = 79;
-    int endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), maxLineLength);
-    // encodingNames.at(endLineIndex) should be on the last comma position in
-    // what will become the first line
-    encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
-    while (encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength) >= 0) {
-        // There is still a "needle" in the considered part of the haystack!
-        startLineIndex = endLineIndex + 2;
-        endLineIndex = std::min(encodingNames.lastIndexOf(needle,startLineIndex + maxLineLength), startLineIndex + maxLineLength);
 
-        encodingNames.replace(endLineIndex, 2, QStringLiteral(",\n"));
-    }
 
-    QByteArray currentEncoding{host.mTelnet.getEncoding()};
-    if (currentEncoding.isEmpty()) {
-        currentEncoding = "\"ASCII\"";
-    } else {
-        currentEncoding = adjustEncoding(currentEncoding);
-    }
-    QString rawMessage{tr("============================== Mudlet Information ==============================\n"
-                          "--------------------------- Server Codec Information ---------------------------\n"
-                          "Current encoding (with internal name if different): %1\n"
-                          "Available encodings (and internal names):\n"
-                          "%2\n"
-                          "===================================== End ======================================\n",
-                          // Intentional comment to separate arguments
-                          "%1 is the current codec in use; %2 is a comma separated list of encoding names "
-                          "(which are always in Engineering English)")
-                       .arg(QLatin1String(currentEncoding),
-                            encodingNames)};
-    host.mpConsole->print(rawMessage, Qt::white, Qt::black);
+    host.postMessage(QStringLiteral("[ INFO ]  - Current encoding: %1").arg(currentEncoding));
 
-    lua_pushboolean(L, true);
-    return 1;
+    host.postMessage(QStringLiteral("[ INFO ]  - Available encodings:"));
+    host.postMessage(QStringLiteral("  %1").arg(knownEncodings.join(QStringLiteral(", "))));
+
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
