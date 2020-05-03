@@ -14,9 +14,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      fetch-depth: 0
 
-    - name: Fetch Git tags
-      run: git fetch --tags
+    # - name: Fetch Git tags
+    #   run: git fetch --tags
 
     - uses: leafo/gh-actions-lua@v5
       with:
