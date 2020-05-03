@@ -1,5 +1,4 @@
 local http_request = require "http.request"
-local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
 loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
