@@ -83,6 +83,7 @@ public:
     , mIsQuotedSequence(false)
     , mIsText(false)
     , mIsInsideText(false)
+    , mSequenceHasSpaces(false)
     {
     }
 

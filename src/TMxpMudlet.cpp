@@ -23,26 +23,30 @@
 #include "TLinkStore.h"
 
 
-TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false) {}
+TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false), isBold(false), isUnderline(false), isItalic(false) {}
 
 QString TMxpMudlet::getVersion()
 {
     return scmVersion;
 }
+
 void TMxpMudlet::sendToServer(QString& str)
 {
     mpHost->mTelnet.sendData(str);
 }
+
 void TMxpMudlet::pushColor(const QString& fgColor, const QString& bgColor)
 {
     pushColor(fgColors, fgColor);
     pushColor(bgColors, bgColor);
 }
+
 void TMxpMudlet::popColor()
 {
     popColor(fgColors);
     popColor(bgColors);
 }
+
 void TMxpMudlet::pushColor(QList<QColor>& stack, const QString& color)
 {
     if (color.isEmpty()) {
@@ -59,10 +63,12 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
         stack.pop_back();
     }
 }
+
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
     return getLinkStore().addLinks(links, hints);
 }
+
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
 {
     *links = &getLinkStore().getLinks(id);
@@ -70,6 +76,7 @@ bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
 
     return true;
 }
+
 TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult result)
 {
     if (tag->isStartTag()) {
@@ -82,6 +89,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 
     return result;
 }
+
 void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
 {
     TMxpEvent ev;
@@ -92,6 +100,7 @@ void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
     ev.actions = getLinkStore().getCurrentLinks();
     mMxpEvents.enqueue(ev);
 }
+
 TLinkStore& TMxpMudlet::getLinkStore()
 {
     return mpHost->mpConsole->getLinkStore();
