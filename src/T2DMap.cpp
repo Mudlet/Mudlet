@@ -4264,7 +4264,8 @@ void T2DMap::slot_setArea()
                 // Failed on the last of multiple room area move so do the missed
                 // out recalculations for the dirtied areas
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                QSetIterator<TArea*> itpArea{QSet<TArea*>{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()}};
+                QSet<TArea*> areaPtrsSet{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()};
+                QSetIterator<TArea*> itpArea{areaPtrsSet};
 #else
                 QSetIterator<TArea*> itpArea{mpMap->mpRoomDB->getAreaPtrList().toSet()};
 #endif
