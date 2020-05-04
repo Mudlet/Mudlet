@@ -259,7 +259,8 @@ void dlgRoomExits::save()
         }
     }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QSet<QString> originalExitCmds{oldSpecialExits.values().begin(), oldSpecialExits.values().end()};
+    QList<QString> originalExitCmdsList{oldSpecialExits.values()};
+    QSet<QString> originalExitCmds{originalExitCmdsList.begin(), originalExitCmdsList.end()};
 #else
     QSet<QString> originalExitCmds{oldSpecialExits.values().toSet()};
 #endif
