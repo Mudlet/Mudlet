@@ -63,6 +63,7 @@
 #include "post_guard.h"
 
 #include <limits>
+#include <optional>
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
