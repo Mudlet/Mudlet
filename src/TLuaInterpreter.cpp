@@ -18554,14 +18554,14 @@ std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
         return {};
     }
-    QList<QByteArray> headerList = reply->rawHeaderList();
+    const QList<QByteArray> headerList = reply->rawHeaderList();
     if (headerList.isEmpty()) {
         return {};
     }
 
     // Push table onto stack
     lua_newtable(L);
-    for (QByteArray header : qAsConst(headerList)) {
+    for (QByteArray header : headerList) {
         // Push header key onto stack
         lua_pushstring(L, header.toStdString().c_str());
         // Push header value onto stack
