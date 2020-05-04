@@ -5766,7 +5766,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     }
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QStringList wordList{wordList.begin(), wordList.end()};
+    QStringList wordList{wordSet.begin(), wordSet.end()};
 #else
     QStringList wordList{wordSet.toList()};
 #endif

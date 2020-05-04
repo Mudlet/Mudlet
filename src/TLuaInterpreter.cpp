@@ -5912,7 +5912,12 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         while (itRoom.hasNext()) {
             itRoom.next();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            keysSet.unite(QSet<QString>{itRoom.value()->userData.keys().begin(), itRoom.value()->userData.keys().end()});
+            // In the brave new world of range based initializers one must use
+            // a pair of iterators that point to the SAME thing that lasts
+            // long enough - using the output of a Qt method that returns a
+            // QList twice is not good enough and causes seg. faults...
+            QList<QString> roomDataKeysList{itRoom.value()->userData.keys()};
+            keysSet.unite(QSet<QString>{roomDataKeysList.begin(), roomDataKeysList.end()});
 #else
             keysSet.unite(itRoom.value()->userData.keys().toSet());
 #endif
@@ -6034,7 +6039,8 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         while (itArea.hasNext()) {
             itArea.next();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            keysSet.unite(QSet<QString>{itArea.value()->mUserData.keys().begin(), itArea.value()->mUserData.keys().end()});
+            QList<QString> areaDataKeysList{itArea.value()->mUserData.keys()};
+            keysSet.unite(QSet<QString>{areaDataKeysList.begin(), areaDataKeysList.end()});
 #else
             keysSet.unite(itArea.value()->mUserData.keys().toSet());
 #endif
@@ -18178,7 +18184,12 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QStringList wordList{host.mpConsole->getWordSet().begin(), host.mpConsole->getWordSet().end()};
+    // We must keep a local reference/copy of the value returned because the
+    // returned item is a deep-copy in the case of a shared dictionary and two
+    // calls to TConsole::getWordSet() can return two different instances which
+    // is fatally dangerous if used in a range based initialiser:
+    QSet<QString> wordSet{host.mpConsole->getWordSet()};
+    QStringList wordList{wordSet.begin(), wordSet.end()};
 #else
     QStringList wordList{host.mpConsole->getWordSet().toList()};
 #endif
