@@ -180,7 +180,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         }
 
         if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
-            event.mArgumentList << QString::number(registryKey.value());
+            event.mArgumentList << QString::number(*registryKey);
             event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
         }
 
@@ -302,7 +302,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     }
 
     if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
-        event.mArgumentList << QString::number(registryKey.value());
+        event.mArgumentList << QString::number(*registryKey);
         event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
     }
 
