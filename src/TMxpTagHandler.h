@@ -49,6 +49,8 @@ public:
     virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) { return MXP_TAG_NOT_HANDLED; }
 
     virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) { return MXP_TAG_NOT_HANDLED; }
+
+    virtual ~TMxpTagHandler() = default;
 };
 
 class TMxpSingleTagHandler : public TMxpTagHandler
