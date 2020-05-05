@@ -1,8 +1,10 @@
 
 #include <QTest>
-#include <TMxpTagParser.h>
-#include "TMxpStubClient.h"
 #include "TMxpSendTagHandler.h"
+#include "TMxpStubClient.h"
+#include <TMxpTagParser.h>
+#include <TMxpTagProcessor.h>
+
 
 class TMxpSendTagHandlerTest : public QObject {
 Q_OBJECT
@@ -80,9 +82,29 @@ private slots:
         QCOMPARE(stub.mHints[0], "north");
     }
 
+    void testSendHrefTextEntity() {
+        // Example from Age of Elements
+        QString input = "<send 'push &text;' HINT='push button'>button</send>";
+
+        TMxpTagParser parser;
+        TMxpTagProcessor processor;
+        TMxpStubClient stub;
+
+
+        auto nodes = parser.parseToMxpNodeList(input, false);
+        for (const auto& node : nodes) {
+            processor.handleNode(processor, stub, node.get());
+        }
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[push button]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "push button");
+    }
+
     void testResolvingEntity()
     {
-        // <SEND href="&text;" PROMPT>north</SEND>
         TMxpStubContext ctx;
         TMxpStubClient stub;
 

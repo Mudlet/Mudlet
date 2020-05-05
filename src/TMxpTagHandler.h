@@ -44,6 +44,19 @@ public:
         }
     }
 
+    virtual void handleTextNode(TMxpContext& ctx, TMxpClient& client, MxpTextNode* tag) {
+        handleContent(tag->getContent());
+    }
+
+    virtual TMxpTagHandlerResult handleNode(TMxpContext& ctx, TMxpClient& client, MxpNode* node) {
+        if (node->isTag()) {
+            return handleTag(ctx, client, node->asTag());
+        } else {
+            handleTextNode(ctx, client, node->asText());
+            return MXP_TAG_HANDLED;
+        }
+    }
+
     virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return true; }
 
     virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) { return MXP_TAG_NOT_HANDLED; }
