@@ -78,8 +78,31 @@ function Geyser:add (window, cons)
   if not self.defer_updates then
     window:reposition()
   end
-  if not (window.hidden or window.auto_hidden) then
-    window:show()
+  window:show()
+  --reset special variables (relevant for Adjustable.Container)
+  window.special_hidden , window.special_auto_hidden = "novalue", "novalue"
+end
+
+--- Add a window to the list that this container manages. 
+-- This one prevents an element to be shown if it was hidden and hides an element if the 
+-- container is hidden already
+-- used by Adjustable.Container and changeContainer
+-- @param window The window to add this container
+function Geyser:special_add (window, cons)
+  cons = cons or window -- 'cons' is optional
+  local hidden, auto_hidden = window.special_hidden , window.special_auto_hidden --special variables only for initialization/reinitialization
+  if hidden == "novalue" then -- if special_hidden is "novalue" there is no initialitation
+    hidden, auto_hidden = window.hidden, window.auto_hidden
+  end
+  Geyser.add(self, window, cons)
+  if hidden then
+    window:hide()
+   end
+  if auto_hidden then
+    window:hide(true)
+  end
+  if self.hidden or self.auto_hidden then
+    window:hide(true)
   end
 end
 
@@ -167,5 +190,5 @@ function Geyser:changeContainer (container)
     setMyWindow(self, windowname)
     setContainerWindow(self, windowname)
   end
-  container:add(self)
+  container:special_add(self)
 end

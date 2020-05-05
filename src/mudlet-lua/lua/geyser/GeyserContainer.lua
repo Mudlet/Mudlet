@@ -328,6 +328,9 @@ function Geyser.Container:new(cons, container)
   me.name = me.name or Geyser.nameGen()
   me.windowList = {}
   me.windows = {}
+  --special hidden/auto_hidden workaround for Adjustable.Container
+  me.special_hidden = me.hidden or false
+  me.special_auto_hidden = me.auto_hidden or false
   me.hidden = false
   me.auto_hidden = false
   -- Set the metatable.

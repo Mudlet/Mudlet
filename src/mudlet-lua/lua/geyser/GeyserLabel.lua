@@ -664,7 +664,10 @@ function Geyser.Label:new (cons, container)
     createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
-
+-- This only affects Adjustable Containers as for standard containers me.hidden and me.auto_hidden will always be false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
   -- parse any given format string and set sensible defaults
   me:processFormatString(cons.format)
 

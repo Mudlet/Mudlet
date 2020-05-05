@@ -580,10 +580,11 @@ end
 -- @param cons derives from the original Geyser.Container:add function
 function Adjustable.Container:add(window,cons)
     if self.goInside then
-        self.Inside:add(window, cons)
+        self.Inside:special_add(window, cons)
     else
-        Geyser.Container.add(self, window, cons)
+        Geyser.Container.special_add(self, window, cons)
     end
+    window.add = Geyser.special_add
 end
 
 -- overriden show function to prevent to show the right click menu on show

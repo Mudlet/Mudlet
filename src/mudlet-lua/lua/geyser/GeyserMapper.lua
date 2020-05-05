@@ -132,7 +132,10 @@ function Geyser.Mapper:new (cons, container)
       me:resetTitle()
     end
   end
-
+-- This only affects Adjustable Containers as for standard containers me.hidden and me.auto_hidden will always be false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    me:hide_impl()
+  end
   -- Set any defined colors
   Geyser.Color.applyColors(me)
 
