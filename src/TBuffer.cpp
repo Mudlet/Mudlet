@@ -2975,7 +2975,6 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
-    bool incLinkID = false;
     int linkID = 0;
 
     // clang-format off
@@ -3002,9 +3001,8 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                         return true;
                     }
                 }
-                if (!incLinkID) {
-                    incLinkID = true;
-                    mLinkStore.addLinks(linkFunction, linkHint);
+                if (linkID == 0) {
+                    linkID = mLinkStore.addLinks(linkFunction, linkHint);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }
