@@ -18563,9 +18563,9 @@ std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
     lua_newtable(L);
     for (QByteArray header : headerList) {
         // Push header key onto stack
-        lua_pushstring(L, header.toStdString().c_str());
+        lua_pushstring(L, header.constData());
         // Push header value onto stack
-        lua_pushstring(L, reply->rawHeader(header).toStdString().c_str());
+        lua_pushstring(L,  reply->rawHeader(header).constData());
         // Put key-value pair into table (now 3 deep in stack), pop stack twice
         lua_settable(L, -3);
     }
