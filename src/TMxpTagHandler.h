@@ -50,7 +50,7 @@ public:
 
     virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) { return MXP_TAG_NOT_HANDLED; }
 
-    virtual ~TMxpTagHandler() = default;;
+    virtual ~TMxpTagHandler() = default;
 };
 
 class TMxpSingleTagHandler : public TMxpTagHandler
