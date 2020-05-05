@@ -46,6 +46,7 @@ public:
     inline bool isNamed(const QString& name) const { return name.compare(first, Qt::CaseInsensitive) == 0; }
 };
 
+class MxpTag;
 class MxpStartTag;
 class MxpEndTag;
 class MxpTextNode;
@@ -59,11 +60,13 @@ public:
 
     MxpNode::Type getType() const { return mType; }
 
-    MxpStartTag* asStartTag() const { return mType == MXP_NODE_TYPE_START_TAG ? (MxpStartTag*)this : nullptr; }
+    MxpTag* asTag() { return mType != MXP_NODE_TYPE_TEXT ? reinterpret_cast<MxpTag*>(this) : nullptr; }
 
-    MxpEndTag* asEndTag() const { return mType == MXP_NODE_TYPE_END_TAG ? (MxpEndTag*)this : nullptr; }
+    MxpStartTag* asStartTag() { return mType == MXP_NODE_TYPE_START_TAG ? reinterpret_cast<MxpStartTag*>(this) : nullptr; }
 
-    MxpTextNode* asText() const { return mType == MXP_NODE_TYPE_TEXT ? (MxpTextNode*)this : nullptr; }
+    MxpEndTag* asEndTag() { return mType == MXP_NODE_TYPE_END_TAG ? reinterpret_cast<MxpEndTag*>(this) : nullptr; }
+
+    MxpTextNode* asText() { return mType == MXP_NODE_TYPE_TEXT ? reinterpret_cast<MxpTextNode*>(this)  : nullptr; }
 
     virtual QString toString() const = 0;
 
