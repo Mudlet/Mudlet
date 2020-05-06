@@ -22,10 +22,11 @@
 #ifndef MUDLET_SRC_TBUFFER_CPP_TCHAR_H
 #define MUDLET_SRC_TBUFFER_CPP_TCHAR_H
 
-#include "TColorSettings.h"
 #include "pre_guard.h"
 #include <QColor>
 #include "post_guard.h"
+
+class TColorSettings;
 
 class TChar
 {

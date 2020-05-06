@@ -26,6 +26,7 @@
 
 #include "TTextCodec.h"
 
+#include "TBufferStyle.h"
 #include "TChar.h"
 #include "TColorScheme.h"
 #include "TColorSettings.h"
@@ -141,8 +142,6 @@ private:
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     void decodeSGR(const QString&);
-    void decodeSGR38(const QStringList&, bool isColonSeparated = true);
-    void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
 
@@ -156,19 +155,10 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC;
-    bool mIsDefaultColor;
 
 
-    TColorSettings mColorSettings;
+    TBufferStyle mColorSettings;
     QPointer<Host> mpHost;
-
-    bool mBold;
-    bool mItalics;
-    bool mOverline;
-    bool mReverse;
-    bool mStrikeOut;
-    bool mUnderline;
-    bool mItalicBeforeBlink;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
