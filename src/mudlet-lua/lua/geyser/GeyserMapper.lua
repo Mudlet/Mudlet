@@ -132,7 +132,7 @@ function Geyser.Mapper:new (cons, container)
       me:resetTitle()
     end
   end
--- This only affects Adjustable Containers as for standard containers me.hidden and me.auto_hidden will always be false at creation/initialisation
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
   if me.hidden or me.auto_hidden then
     me:hide_impl()
   end

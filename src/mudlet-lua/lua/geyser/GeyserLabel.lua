@@ -664,7 +664,7 @@ function Geyser.Label:new (cons, container)
     createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
--- This only affects Adjustable Containers as for standard containers me.hidden and me.auto_hidden will always be false at creation/initialisation
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end

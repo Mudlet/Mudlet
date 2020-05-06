@@ -578,13 +578,14 @@ end
 -- overriden add function to put every new window to the Inside container
 -- @param window derives from the original Geyser.Container:add function
 -- @param cons derives from the original Geyser.Container:add function
-function Adjustable.Container:add(window,cons)
+function Adjustable.Container:add(window, cons)
     if self.goInside then
-        self.Inside:special_add(window, cons)
+        --add2 inheritance set to true
+        self.Inside:add2(window, cons, true)
     else
-        Geyser.Container.special_add(self, window, cons)
+        --add2 inheritance set to true
+        self:add2(window, cons, true)
     end
-    window.add = Geyser.special_add
 end
 
 -- overriden show function to prevent to show the right click menu on show
