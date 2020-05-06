@@ -206,7 +206,7 @@ cTelnet::~cTelnet()
 #else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
-        for (auto message : messageStack) {
+        foreach (QString message, messageStack) {
 #if defined (Q_OS_WIN32)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
@@ -1122,7 +1122,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
                 mpHost->mServerMXPenabled = true;
-                mpHost->mMxpProcessor.enable();
+                mpHost->mpConsole->buffer.mMXP = true;
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }

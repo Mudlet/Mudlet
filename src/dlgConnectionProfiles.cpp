@@ -1,8 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020 by Stephen Lyons                        *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,15 +33,16 @@
 #include <QtUiTools>
 #include <QSettings>
 #include <sstream>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
-: QDialog(parent)
-, mProfileList(QStringList())
-, offline_button(nullptr)
-, connect_button(nullptr)
-, delete_profile_lineedit(nullptr)
-, delete_button(nullptr)
+: QDialog( parent )
+, mProfileList( QStringList() )
+, offline_button( Q_NULLPTR )
+, connect_button( Q_NULLPTR )
+, delete_profile_lineedit( Q_NULLPTR )
+, delete_button( Q_NULLPTR )
 , validName()
 , validUrl()
 , validPort()
@@ -199,7 +199,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
 
     // website_entry atm is only a label
-    //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
+    //connect( website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -545,10 +545,8 @@ void dlgConnectionProfiles::slot_save_name()
                 _pt.setPen(QColor(Qt::black));
             }
             _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-            /*
-             * if (QFontMetrics(_font).boundingRect(s).width() <= 80
-             *     && QFontMetrics(_font).boundingRect( s ).height() <= 30)
-             */
+            /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
+                   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
             if (_r.width() <= 90 && _r.height() <= 30) {
                 break;
             }
@@ -1545,6 +1543,24 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Carrion Fields");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/carrionfields.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
+        description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     mudServer = QStringLiteral("Aetolia");
     if (!deletedDefaultMuds.contains(mudServer)) {
         pM = new QListWidgetItem(mudServer);
@@ -1712,24 +1728,6 @@ void dlgConnectionProfiles::fillout_form()
             setCustomIcon(mudServer, pM);
         }
         description = getDescription(QStringLiteral("fierymud.org"), 0, mudServer);
-        if (!description.isEmpty()) {
-            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
-        }
-    }
-
-    mudServer = QStringLiteral("Carrion Fields");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pM = new QListWidgetItem(mudServer);
-        pM->setFont(font);
-        pM->setForeground(QColor(Qt::white));
-        profiles_tree_widget->addItem(pM);
-        if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QStringLiteral(":/icons/carrionfields.png"));
-            pM->setIcon(mi);
-        } else {
-            setCustomIcon(mudServer, pM);
-        }
-        description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
@@ -2300,38 +2298,24 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     if (needsGenericPackagesInstall) {
-        // Install appropriate mapper and other scripts for the game
-        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+        //install appropriate mapper script for the game
+        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
             || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
             || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-            // IRE MUD profiles:
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-
         } else if (pHost->getUrl().contains(QStringLiteral("carrionfields.net"), Qt::CaseInsensitive)) {
-            // Carrion Fields loader - downloads and installs latest GUI from GitHub site
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/CF-loader.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-
-        } else if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
-            // Mudlet self-test profile ONLY:
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
-
-        } else {
-            // All OTHER profiles:
+        } else if (!pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+        }
+        if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
+        } else {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-
         }
 
-        // ALL profiles should have this one:
         mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
     }
 
