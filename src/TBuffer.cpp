@@ -1492,7 +1492,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 _t_ref_list << _t_ref;
                                 mLinkStore[mLinkID] = _t_ref_list;
                             } else {
-                                mLinkStore[mLinkID].replaceInStrings("&TEXT", mAssembleRef.c_str());
+                                mLinkStore[mLinkID].replaceInStrings("&TEXT", mAssembleRef.c_str(), Qt::CaseInsensitive);
+                                mHintStore[mLinkID].replaceInStrings("&TEXT", mAssembleRef.c_str(), Qt::CaseInsensitive);
                             }
                             mAssembleRef.clear();
                         }
@@ -1585,7 +1586,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
 
                         mMXP_LINK_MODE = true;
-                        if (_t2.isEmpty() || _t2.contains("&TEXT")) {
+
+                        _t2 = _t2.replace("&text;", "&TEXT", Qt::CaseInsensitive);
+                        _t3 = _t3.replace("&text;", "&TEXT", Qt::CaseInsensitive);
+                        if (_t2.isEmpty() || _t2.contains("&TEXT", Qt::CaseInsensitive)) {
                             mMXP_SEND_NO_REF_MODE = true;
                         }
                         mLinkID++;
