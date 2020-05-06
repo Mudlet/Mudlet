@@ -67,10 +67,7 @@ TBuffer::TBuffer(Host* pH)
 , mGotOSC(false)
 , mIsDefaultColor(true)
 , mpHost(pH)
-, mColorScheme(pH->mColorScheme)
-, mForeGroundColor(pH->mFgColor)
-, mForeGroundColorLight(pH->mFgColor)
-, mBackGroundColor(pH->mBgColor)
+, mColorSettings(pH->mColorSettings)
 , mBold(false)
 , mItalics(false)
 , mOverline(false)
@@ -144,10 +141,7 @@ void TBuffer::updateColors()
         return;
     }
 
-    mColorScheme = pH->mColorScheme;
-    mForeGroundColor = pH->mFgColor;
-    mForeGroundColorLight = pH->mFgColor;
-    mBackGroundColor = pH->mBgColor;
+    mColorSettings = pH->mColorSettings;
 }
 
 QPoint TBuffer::getEndPos()
@@ -488,7 +482,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
-                        TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                        TChar c = TChar::createTransparent(mColorSettings.mBgColor, attributeFlags);
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
                             mMudBuffer.push_back(c);
@@ -745,7 +739,7 @@ COMMIT_LINE:
                 | (mStrikeOut ? TChar::StrikeOut : TChar::None)
                 | (mUnderline ? TChar::Underline : TChar::None);
 
-        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+        TChar c((!mIsDefaultColor && mBold) ? mColorSettings.mFgColorLight : mColorSettings.mFgColor, mColorSettings.mBgColor, attributeFlags);
 
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
@@ -811,7 +805,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             }
             mIsDefaultColor = false;
 
-            mColorScheme.getColorPair(tag, mForeGroundColor, mForeGroundColorLight);
+            mColorSettings.updateForeGroundFromTag(tag);
 
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
@@ -826,8 +820,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
             // Instead we use 51:
             // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mForeGroundColor = QColor(r * 51, g * 51, b * 51);
-            mForeGroundColorLight = mForeGroundColor;
+            mColorSettings.updateForeGround(QColor (r * 51, g * 51, b * 51));
 
         } else {
             // black + 23 tone grayscale from dark to light
@@ -877,31 +870,31 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             }
 
              // clang-format on
-            mForeGroundColor = QColor(value, value, value);
-            mForeGroundColorLight = mForeGroundColor;
+            QColor color(value, value, value);
+            mColorSettings.updateForeGround(color, color);
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
+            mColorSettings.updateForeGround(QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255)));
         } else if (parameters.count() >= 5) {
             // Have enough for two colour
             // components, but blue component is
             // zero
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
+            mColorSettings.updateForeGround(QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0));
         } else if (parameters.count() >= 4) {
             // Have enough for one colour component,
             // but green and blue components are
             // zero
-            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
+            mColorSettings.updateForeGround(QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0));
         } else  {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
             // components are zero
-            mForeGroundColor = Qt::black;
+            mColorSettings.updateForeGround(Qt::black);
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
@@ -915,7 +908,6 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 #endif
             }
         }
-        mForeGroundColorLight = mForeGroundColor;
 
     } else if (parameters.at(1) == QLatin1String("4")
             || parameters.at(1) == QLatin1String("3")
@@ -976,21 +968,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         }
 
         if (tag < 16) {
-            if (tag >= 8) {
-                tag -= 8;
-                useLightColor = true;
-            } else {
-                useLightColor = false;
-            }
-            mIsDefaultColor = false;
-            QColor bgColorLight;
-
-            mColorScheme.getColorPair(tag, mBackGroundColor, bgColorLight);
-
-            if (useLightColor) {
-                mBackGroundColor = bgColorLight;
-            }
-
+            mColorSettings.updateBackGround(tag);
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
             tag -= 16;
@@ -1004,7 +982,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
             // Instead we use 51:
             // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mBackGroundColor = QColor(r * 51, g * 51, b * 51);
+            mColorSettings.updateBackGround(QColor(r * 51, g * 51, b * 51));
 
         } else {
             // black + 23 tone grayscale from dark to light
@@ -1053,33 +1031,33 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 #endif
             }
              // clang-format on
-            mBackGroundColor = QColor(value, value, value);
+            mColorSettings.updateBackGround(QColor(value, value, value));
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
+            mColorSettings.updateBackGround(QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255)));
 
         } else if (parameters.count() >= 5) {
             // Have enough for two colour
             // components, but blue component is
             // zero
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
+            mColorSettings.updateBackGround(QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0));
 
         } else if (parameters.count() >= 4) {
             // Have enough for one colour component,
             // but green and blue components are
             // zero
-            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
+            mColorSettings.updateBackGround(QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0));
 
         } else  {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
             // components are zero
-            mBackGroundColor = Qt::black;
+            mColorSettings.updateBackGround(Qt::black);
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
@@ -1404,8 +1382,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                 switch (tag) {
                 case 0:
                     mIsDefaultColor = true;
-                    mForeGroundColor = pHost->mFgColor;
-                    mBackGroundColor = pHost->mBgColor;
+                    mColorSettings.updateColors(pHost->mColorSettings.mFgColor, pHost->mColorSettings.mBgColor);
                     mBold = false;
                     mItalics = false;
                     mOverline = false;
@@ -1489,35 +1466,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mStrikeOut = false;
                     break;
                 case 30:
-                    mColorScheme.getColorPair(0, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 31:
-                    mColorScheme.getColorPair(1, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 32:
-                    mColorScheme.getColorPair(2, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 33:
-                    mColorScheme.getColorPair(3, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 34:
-                    mColorScheme.getColorPair(4, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 35:
-                    mColorScheme.getColorPair(5, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 36:
-                    mColorScheme.getColorPair(6, mForeGroundColor, mForeGroundColorLight);
-                    mIsDefaultColor = false;
-                    break;
                 case 37:
-                    mColorScheme.getColorPair(7, mForeGroundColor, mForeGroundColorLight);
+                    mColorSettings.updateForeGroundFromTag(tag - 30);
                     mIsDefaultColor = false;
                     break;
                 case 38: {
@@ -1613,31 +1569,17 @@ void TBuffer::decodeSGR(const QString& sequence)
                 }
                     break;
                 case 39: //default foreground color
-                    mForeGroundColor = pHost->mFgColor;
+                    mColorSettings.updateForeGround(pHost->mColorSettings.mFgColor);
                     break;
                 case 40:
-                    mBackGroundColor = mColorScheme.mBlack;
-                    break;
                 case 41:
-                    mBackGroundColor = mColorScheme.mRed;
-                    break;
                 case 42:
-                    mBackGroundColor = mColorScheme.mGreen;
-                    break;
                 case 43:
-                    mBackGroundColor = mColorScheme.mYellow;
-                    break;
                 case 44:
-                    mBackGroundColor = mColorScheme.mBlue;
-                    break;
                 case 45:
-                    mBackGroundColor = mColorScheme.mMagenta;
-                    break;
                 case 46:
-                    mBackGroundColor = mColorScheme.mCyan;
-                    break;
                 case 47:
-                    mBackGroundColor = mColorScheme.mWhite;
+                    mColorSettings.updateBackGround(tag - 47);
                     break;
                 case 48: {
                     // We only have single elements so we will need to steal the
@@ -1730,7 +1672,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                 }
                     break;
                 case 49: // default background color
-                    mBackGroundColor = pHost->mBgColor;
+                    mColorSettings.updateBackGround(pHost->mColorSettings.mBgColor);
                     break;
                 // case 51: // Framed
                 //    break;
@@ -1758,68 +1700,25 @@ void TBuffer::decodeSGR(const QString& sequence)
                 // case 65: // cancels the effects of 60 to 64
                 //    break;
                 case 90:
-                    mForeGroundColor = mColorScheme.mLightBlack;
-                    mForeGroundColorLight = mColorScheme.mLightBlack;
-                    mIsDefaultColor = false;
-                    break;
                 case 91:
-                    mForeGroundColor = mColorScheme.mLightRed;
-                    mForeGroundColorLight = mColorScheme.mLightRed;
-                    mIsDefaultColor = false;
-                    break;
                 case 92:
-                    mForeGroundColor = mColorScheme.mLightGreen;
-                    mForeGroundColorLight = mColorScheme.mLightGreen;
-                    mIsDefaultColor = false;
-                    break;
                 case 93:
-                    mForeGroundColor = mColorScheme.mLightYellow;
-                    mForeGroundColorLight = mColorScheme.mLightYellow;
-                    mIsDefaultColor = false;
-                    break;
                 case 94:
-                    mForeGroundColor = mColorScheme.mLightBlue;
-                    mForeGroundColorLight = mColorScheme.mLightBlue;
-                    mIsDefaultColor = false;
-                    break;
                 case 95:
-                    mForeGroundColor = mColorScheme.mLightMagenta;
-                    mForeGroundColorLight = mColorScheme.mLightMagenta;
-                    mIsDefaultColor = false;
-                    break;
                 case 96:
-                    mForeGroundColor = mColorScheme.mLightCyan;
-                    mForeGroundColorLight = mColorScheme.mLightCyan;
-                    mIsDefaultColor = false;
-                    break;
                 case 97:
-                    mForeGroundColor = mColorScheme.mLightWhite;
-                    mForeGroundColorLight = mColorScheme.mLightWhite;
+                    mColorSettings.updateForeGroundFromTag(tag - 90);
                     mIsDefaultColor = false;
                     break;
                 case 100:
-                    mBackGroundColor = mColorScheme.mLightBlack;
-                    break;
                 case 101:
-                    mBackGroundColor = mColorScheme.mLightRed;
-                    break;
                 case 102:
-                    mBackGroundColor = mColorScheme.mLightGreen;
-                    break;
                 case 103:
-                    mBackGroundColor = mColorScheme.mLightYellow;
-                    break;
                 case 104:
-                    mBackGroundColor = mColorScheme.mLightBlue;
-                    break;
                 case 105:
-                    mBackGroundColor = mColorScheme.mLightMagenta;
-                    break;
                 case 106:
-                    mBackGroundColor = mColorScheme.mLightCyan;
-                    break;
                 case 107:
-                    mBackGroundColor = mColorScheme.mLightWhite;
+                    mColorSettings.updateBackGround(8 + tag - 100);
                     break;
                 default:
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
@@ -1866,7 +1765,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
                 if (isOk) {
                     bool isValid = true;
-                    isValid = pHost->mColorScheme.setColor(colorNumber, QColor(rr, gg, bb));
+                    isValid = pHost->mColorSettings.setColor(colorNumber, QColor(rr, gg, bb));
 
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
@@ -1911,7 +1810,7 @@ void TBuffer::resetColors()
 
     // These should match the corresponding settings in
     // dlgProfilePreferences::resetColors() :
-    pHost->mColorScheme.reset();
+    pHost->mColorSettings.reset();
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the

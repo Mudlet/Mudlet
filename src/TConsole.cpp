@@ -141,7 +141,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
-        mStandardFormat.setTextFormat(mpHost->mFgColor, mpHost->mBgColor, TChar::None);
+        mStandardFormat.setTextFormat(mpHost->mColorSettings.mFgColor, mpHost->mColorSettings.mBgColor, TChar::None);
     }
     setContentsMargins(0, 0, 0, 0);
     mFormatSystemMessage.setBackground(mBgColor);
@@ -1000,9 +1000,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             // Web-page title
             logStream << "  <style type='text/css'>\n";
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb("
-                      << mpHost->mFgColor.red() << "," << mpHost->mFgColor.green() << "," << mpHost->mFgColor.blue()
+                      << mpHost->mColorSettings.mFgColor.red() << "," << mpHost->mColorSettings.mFgColor.green() << "," << mpHost->mColorSettings.mFgColor.blue()
                       << "); background-color:rgb("
-                      << mpHost->mBgColor.red() << "," << mpHost->mBgColor.green() << "," << mpHost->mBgColor.blue() << ");}\n";
+                      << mpHost->mColorSettings.mBgColor.red() << "," << mpHost->mColorSettings.mBgColor.green() << "," << mpHost->mColorSettings.mBgColor.blue() << ");}\n";
             logStream << "        span { white-space: pre-wrap; } -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
@@ -1172,9 +1172,9 @@ void TConsole::changeColors()
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;
-        palette.setColor(QPalette::Text, mpHost->mFgColor);
+        palette.setColor(QPalette::Text, mpHost->mColorSettings.mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-        palette.setColor(QPalette::Base, mpHost->mBgColor);
+        palette.setColor(QPalette::Base, mpHost->mColorSettings.mBgColor);
         setPalette(palette);
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
@@ -1184,7 +1184,7 @@ void TConsole::changeColors()
         if (mpCommandLine) {
             mpCommandLine->setFont(mpHost->getDisplayFont());
         }
-        mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
+        mFormatCurrent.setColors(mpHost->mColorSettings.mFgColor, mpHost->mColorSettings.mBgColor);
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
@@ -1892,7 +1892,7 @@ void TConsole::_luaWrapLine(int line)
     if (!mpHost) {
         return;
     }
-    TChar ch(mpHost);
+    TChar ch(mpHost->mColorSettings);
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
@@ -2153,7 +2153,7 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     if (customFormat) {
         buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
     } else {
-        TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
+        TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mColorSettings.mBgColor : mBgColor), TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f);
     }
     mUpperPane->showNewLines();

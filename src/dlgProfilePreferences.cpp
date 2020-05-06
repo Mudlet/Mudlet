@@ -1340,28 +1340,28 @@ void dlgProfilePreferences::setColors()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setButtonColor(pushButton_foreground_color, pHost->mFgColor);
-        setButtonColor(pushButton_background_color, pHost->mBgColor);
+        setButtonColor(pushButton_foreground_color, pHost->mColorSettings.mFgColor);
+        setButtonColor(pushButton_background_color, pHost->mColorSettings.mBgColor);
         setButtonColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
         setButtonColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
         setButtonColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
         setButtonColor(pushButton_command_background_color, pHost->mCommandBgColor);
-        setButtonColor(pushButton_black, pHost->mColorScheme.mBlack);
-        setButtonColor(pushButton_lBlack, pHost->mColorScheme.mLightBlack);
-        setButtonColor(pushButton_red, pHost->mColorScheme.mRed);
-        setButtonColor(pushButton_lRed, pHost->mColorScheme.mLightRed);
-        setButtonColor(pushButton_green, pHost->mColorScheme.mGreen);
-        setButtonColor(pushButton_lGreen, pHost->mColorScheme.mLightGreen);
-        setButtonColor(pushButton_blue, pHost->mColorScheme.mBlue);
-        setButtonColor(pushButton_lBlue, pHost->mColorScheme.mLightBlue);
-        setButtonColor(pushButton_yellow, pHost->mColorScheme.mYellow);
-        setButtonColor(pushButton_lYellow, pHost->mColorScheme.mLightYellow);
-        setButtonColor(pushButton_cyan, pHost->mColorScheme.mCyan);
-        setButtonColor(pushButton_lCyan, pHost->mColorScheme.mLightCyan);
-        setButtonColor(pushButton_magenta, pHost->mColorScheme.mMagenta);
-        setButtonColor(pushButton_lMagenta, pHost->mColorScheme.mLightMagenta);
-        setButtonColor(pushButton_white, pHost->mColorScheme.mWhite);
-        setButtonColor(pushButton_lWhite, pHost->mColorScheme.mLightWhite);
+        setButtonColor(pushButton_black, pHost->mColorSettings.mBlack);
+        setButtonColor(pushButton_lBlack, pHost->mColorSettings.mLightBlack);
+        setButtonColor(pushButton_red, pHost->mColorSettings.mRed);
+        setButtonColor(pushButton_lRed, pHost->mColorSettings.mLightRed);
+        setButtonColor(pushButton_green, pHost->mColorSettings.mGreen);
+        setButtonColor(pushButton_lGreen, pHost->mColorSettings.mLightGreen);
+        setButtonColor(pushButton_blue, pHost->mColorSettings.mBlue);
+        setButtonColor(pushButton_lBlue, pHost->mColorSettings.mLightBlue);
+        setButtonColor(pushButton_yellow, pHost->mColorSettings.mYellow);
+        setButtonColor(pushButton_lYellow, pHost->mColorSettings.mLightYellow);
+        setButtonColor(pushButton_cyan, pHost->mColorSettings.mCyan);
+        setButtonColor(pushButton_lCyan, pHost->mColorSettings.mLightCyan);
+        setButtonColor(pushButton_magenta, pHost->mColorSettings.mMagenta);
+        setButtonColor(pushButton_lMagenta, pHost->mColorSettings.mLightMagenta);
+        setButtonColor(pushButton_white, pHost->mColorSettings.mWhite);
+        setButtonColor(pushButton_lWhite, pHost->mColorSettings.mLightWhite);
     } else {
         pushButton_foreground_color->setStyleSheet(QString());
         pushButton_background_color->setStyleSheet(QString());
@@ -1392,25 +1392,25 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mBlack.name()));
-        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightBlack.name()));
-        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mGreen.name()));
-        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightGreen.name()));
-        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mRed.name()));
-        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightRed.name()));
-        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mBlue.name()));
-        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightBlue.name()));
-        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mYellow.name()));
-        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightYellow.name()));
-        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mCyan.name()));
-        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightCyan.name()));
-        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mMagenta.name()));
-        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightMagenta.name()));
-        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mWhite.name()));
-        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorScheme2.mLightWhite.name()));
+        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBlack.name()));
+        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightBlack.name()));
+        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mGreen.name()));
+        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightGreen.name()));
+        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mRed.name()));
+        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightRed.name()));
+        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBlue.name()));
+        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightBlue.name()));
+        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mYellow.name()));
+        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightYellow.name()));
+        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mCyan.name()));
+        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightCyan.name()));
+        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mMagenta.name()));
+        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightMagenta.name()));
+        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mWhite.name()));
+        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightWhite.name()));
 
-        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
-        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
+        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mFgColor.name()));
+        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBgColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1456,10 +1456,10 @@ void dlgProfilePreferences::resetColors()
     pHost->mCommandLineBgColor = Qt::black;
     pHost->mCommandFgColor = QColor(113, 113, 0);
     pHost->mCommandBgColor = Qt::black;
-    pHost->mFgColor = Qt::lightGray;
-    pHost->mBgColor = Qt::black;
+    pHost->mColorSettings.mFgColor = Qt::lightGray;
+    pHost->mColorSettings.mBgColor = Qt::black;
     // If these get changed, ensure TBuffer::resetColors() is updated to match
-    pHost->mColorScheme.reset();
+    pHost->mColorSettings.reset();
 
     setColors();
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
@@ -1478,9 +1478,9 @@ void dlgProfilePreferences::resetColors2()
         return;
     }
 
-    pHost->mFgColor_2 = Qt::lightGray;
-    pHost->mBgColor_2 = Qt::black;
-    pHost->mColorScheme2.reset();
+    pHost->mColorSettings2.mFgColor = Qt::lightGray;
+    pHost->mColorSettings2.mBgColor = Qt::black;
+    pHost->mColorSettings2.reset();
 
     setColors2();
 }
@@ -1530,7 +1530,7 @@ void dlgProfilePreferences::setFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_foreground_color, pHost->mFgColor);
+        setColor(pushButton_foreground_color, pHost->mColorSettings.mFgColor);
     }
 }
 
@@ -1538,7 +1538,7 @@ void dlgProfilePreferences::setBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_background_color, pHost->mBgColor);
+        setColor(pushButton_background_color, pHost->mColorSettings.mBgColor);
     }
 }
 
@@ -1647,7 +1647,7 @@ void dlgProfilePreferences::setColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_black, pHost->mColorScheme.mBlack);
+        setColor(pushButton_black, pHost->mColorSettings.mBlack);
     }
 }
 
@@ -1655,7 +1655,7 @@ void dlgProfilePreferences::setColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lBlack, pHost->mColorScheme.mLightBlack);
+        setColor(pushButton_lBlack, pHost->mColorSettings.mLightBlack);
     }
 }
 
@@ -1663,7 +1663,7 @@ void dlgProfilePreferences::setColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_red, pHost->mColorScheme.mRed);
+        setColor(pushButton_red, pHost->mColorSettings.mRed);
     }
 }
 
@@ -1671,7 +1671,7 @@ void dlgProfilePreferences::setColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lRed, pHost->mColorScheme.mLightRed);
+        setColor(pushButton_lRed, pHost->mColorSettings.mLightRed);
     }
 }
 
@@ -1679,7 +1679,7 @@ void dlgProfilePreferences::setColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_green, pHost->mColorScheme.mGreen);
+        setColor(pushButton_green, pHost->mColorSettings.mGreen);
     }
 }
 
@@ -1687,7 +1687,7 @@ void dlgProfilePreferences::setColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lGreen, pHost->mColorScheme.mLightGreen);
+        setColor(pushButton_lGreen, pHost->mColorSettings.mLightGreen);
     }
 }
 
@@ -1696,7 +1696,7 @@ void dlgProfilePreferences::setColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_yellow, pHost->mColorScheme.mYellow);
+        setColor(pushButton_yellow, pHost->mColorSettings.mYellow);
     }
 }
 
@@ -1704,7 +1704,7 @@ void dlgProfilePreferences::setColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lYellow, pHost->mColorScheme.mLightYellow);
+        setColor(pushButton_lYellow, pHost->mColorSettings.mLightYellow);
     }
 }
 
@@ -1713,7 +1713,7 @@ void dlgProfilePreferences::setColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_blue, pHost->mColorScheme.mBlue);
+        setColor(pushButton_blue, pHost->mColorSettings.mBlue);
     }
 }
 
@@ -1721,7 +1721,7 @@ void dlgProfilePreferences::setColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lBlue, pHost->mColorScheme.mLightBlue);
+        setColor(pushButton_lBlue, pHost->mColorSettings.mLightBlue);
     }
 }
 
@@ -1730,7 +1730,7 @@ void dlgProfilePreferences::setColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_magenta, pHost->mColorScheme.mMagenta);
+        setColor(pushButton_magenta, pHost->mColorSettings.mMagenta);
     }
 }
 
@@ -1738,7 +1738,7 @@ void dlgProfilePreferences::setColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lMagenta, pHost->mColorScheme.mLightMagenta);
+        setColor(pushButton_lMagenta, pHost->mColorSettings.mLightMagenta);
     }
 }
 
@@ -1746,7 +1746,7 @@ void dlgProfilePreferences::setColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_cyan, pHost->mColorScheme.mCyan);
+        setColor(pushButton_cyan, pHost->mColorSettings.mCyan);
     }
 }
 
@@ -1754,7 +1754,7 @@ void dlgProfilePreferences::setColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lCyan, pHost->mColorScheme.mLightCyan);
+        setColor(pushButton_lCyan, pHost->mColorSettings.mLightCyan);
     }
 }
 
@@ -1762,7 +1762,7 @@ void dlgProfilePreferences::setColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_white, pHost->mColorScheme.mWhite);
+        setColor(pushButton_white, pHost->mColorSettings.mWhite);
     }
 }
 
@@ -1770,7 +1770,7 @@ void dlgProfilePreferences::setColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lWhite, pHost->mColorScheme.mLightWhite);
+        setColor(pushButton_lWhite, pHost->mColorSettings.mLightWhite);
     }
 }
 
@@ -1778,7 +1778,7 @@ void dlgProfilePreferences::setFgColor2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_foreground_color_2, pHost->mFgColor_2);
+        setColor(pushButton_foreground_color_2, pHost->mColorSettings2.mFgColor);
     }
 }
 
@@ -1786,7 +1786,7 @@ void dlgProfilePreferences::setBgColor2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setColor(pushButton_background_color_2, pHost->mColorSettings2.mBgColor);
     }
 }
 
@@ -1794,7 +1794,7 @@ void dlgProfilePreferences::setColorBlack2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_black_2, pHost->mColorScheme2.mBlack);
+        setColor(pushButton_black_2, pHost->mColorSettings2.mBlack);
     }
 }
 
@@ -1802,7 +1802,7 @@ void dlgProfilePreferences::setColorLightBlack2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblack_2, pHost->mColorScheme2.mLightBlack);
+        setColor(pushButton_Lblack_2, pHost->mColorSettings2.mLightBlack);
     }
 }
 
@@ -1810,7 +1810,7 @@ void dlgProfilePreferences::setColorRed2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_red_2, pHost->mColorScheme2.mRed);
+        setColor(pushButton_red_2, pHost->mColorSettings2.mRed);
     }
 }
 
@@ -1818,7 +1818,7 @@ void dlgProfilePreferences::setColorLightRed2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lred_2, pHost->mColorScheme2.mLightRed);
+        setColor(pushButton_Lred_2, pHost->mColorSettings2.mLightRed);
     }
 }
 
@@ -1826,7 +1826,7 @@ void dlgProfilePreferences::setColorGreen2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_green_2, pHost->mColorScheme2.mGreen);
+        setColor(pushButton_green_2, pHost->mColorSettings2.mGreen);
     }
 }
 
@@ -1834,7 +1834,7 @@ void dlgProfilePreferences::setColorLightGreen2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lgreen_2, pHost->mColorScheme2.mLightGreen);
+        setColor(pushButton_Lgreen_2, pHost->mColorSettings2.mLightGreen);
     }
 }
 
@@ -1842,7 +1842,7 @@ void dlgProfilePreferences::setColorBlue2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_blue_2, pHost->mColorScheme2.mBlue);
+        setColor(pushButton_blue_2, pHost->mColorSettings2.mBlue);
     }
 }
 
@@ -1850,7 +1850,7 @@ void dlgProfilePreferences::setColorLightBlue2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblue_2, pHost->mColorScheme2.mLightBlue);
+        setColor(pushButton_Lblue_2, pHost->mColorSettings2.mLightBlue);
     }
 }
 
@@ -1858,7 +1858,7 @@ void dlgProfilePreferences::setColorYellow2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_yellow_2, pHost->mColorScheme2.mYellow);
+        setColor(pushButton_yellow_2, pHost->mColorSettings2.mYellow);
     }
 }
 
@@ -1866,7 +1866,7 @@ void dlgProfilePreferences::setColorLightYellow2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lyellow_2, pHost->mColorScheme2.mLightYellow);
+        setColor(pushButton_Lyellow_2, pHost->mColorSettings2.mLightYellow);
     }
 }
 
@@ -1874,7 +1874,7 @@ void dlgProfilePreferences::setColorCyan2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_cyan_2, pHost->mColorScheme2.mCyan);
+        setColor(pushButton_cyan_2, pHost->mColorSettings2.mCyan);
     }
 }
 
@@ -1882,7 +1882,7 @@ void dlgProfilePreferences::setColorLightCyan2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lcyan_2, pHost->mColorScheme2.mLightCyan);
+        setColor(pushButton_Lcyan_2, pHost->mColorSettings2.mLightCyan);
     }
 }
 
@@ -1890,7 +1890,7 @@ void dlgProfilePreferences::setColorMagenta2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_magenta_2, pHost->mColorScheme2.mMagenta);
+        setColor(pushButton_magenta_2, pHost->mColorSettings2.mMagenta);
     }
 }
 
@@ -1898,7 +1898,7 @@ void dlgProfilePreferences::setColorLightMagenta2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lmagenta_2, pHost->mColorScheme2.mLightMagenta);
+        setColor(pushButton_Lmagenta_2, pHost->mColorSettings2.mLightMagenta);
     }
 }
 
@@ -1906,7 +1906,7 @@ void dlgProfilePreferences::setColorWhite2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_white_2, pHost->mColorScheme2.mWhite);
+        setColor(pushButton_white_2, pHost->mColorSettings2.mWhite);
     }
 }
 
@@ -1914,7 +1914,7 @@ void dlgProfilePreferences::setColorLightWhite2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lwhite_2, pHost->mColorScheme2.mLightWhite);
+        setColor(pushButton_Lwhite_2, pHost->mColorSettings2.mLightWhite);
     }
 }
 

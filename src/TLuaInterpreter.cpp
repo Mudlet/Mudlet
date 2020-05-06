@@ -721,7 +721,8 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     }
 
 
-    QColor c = ansiFg == 0 ? host.mFgColor : getColorFromCode(host.mColorScheme, ansiFg);
+    TColorSettings &colors = host.mColorSettings;
+    QColor c = ansiFg == 0 ? colors.mFgColor : getColorFromCode(colors, ansiFg);
 
     int val = *it;
     if (val == c.red()) {
@@ -769,8 +770,8 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
         return 0;
     }
 
-
-    QColor c = ansiBg == 0 ? host.mBgColor : getColorFromCode(host.mColorScheme, ansiBg);
+    TColorSettings &colors = host.mColorSettings;
+    QColor c = ansiBg == 0 ? colors.mFgColor : getColorFromCode(colors, ansiBg);
 
     int val = *it;
     if (val == c.red()) {
@@ -826,6 +827,8 @@ QColor TLuaInterpreter::getColorFromCode(const TColorScheme& colors, int ansiCod
     case 16:
         return colors.mWhite;
     }
+
+    return QColor();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor
@@ -4616,7 +4619,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            pHost->mBgColor.setRgb(r, g, b);
+            pHost->mColorSettings.mBgColor.setRgb(r, g, b);
             pHost->mpConsole->setConsoleBgColor(r, g, b);
         } else {
             lua_pushnil(L);
@@ -18195,82 +18198,82 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
     lua_setfield(L, LUA_GLOBALSINDEX, "color_table");
 
     // Now we can add/update the items we need to, though it is a bit repetative:
-    QColor color = mpHost->mColorScheme.mBlack;
+    QColor color = mpHost->mColorSettings.mBlack;
     insertColorTableEntry(L, color, QStringLiteral("ansi_000"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_black"));
     insertColorTableEntry(L, color, QStringLiteral("ansiBlack"));
 
-    color = mpHost->mColorScheme.mRed;
+    color = mpHost->mColorSettings.mRed;
     insertColorTableEntry(L, color, QStringLiteral("ansi_001"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_red"));
     insertColorTableEntry(L, color, QStringLiteral("ansiRed"));
 
-    color = mpHost->mColorScheme.mGreen;
+    color = mpHost->mColorSettings.mGreen;
     insertColorTableEntry(L, color, QStringLiteral("ansi_002"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_green"));
     insertColorTableEntry(L, color, QStringLiteral("ansiGreen"));
 
-    color = mpHost->mColorScheme.mYellow;
+    color = mpHost->mColorSettings.mYellow;
     insertColorTableEntry(L, color, QStringLiteral("ansi_003"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_yellow"));
     insertColorTableEntry(L, color, QStringLiteral("ansiYellow"));
 
-    color = mpHost->mColorScheme.mBlue;
+    color = mpHost->mColorSettings.mBlue;
     insertColorTableEntry(L, color, QStringLiteral("ansi_004"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_blue"));
     insertColorTableEntry(L, color, QStringLiteral("ansiBlue"));
 
-    color = mpHost->mColorScheme.mMagenta;
+    color = mpHost->mColorSettings.mMagenta;
     insertColorTableEntry(L, color, QStringLiteral("ansi_005"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_magenta"));
     insertColorTableEntry(L, color, QStringLiteral("ansiMagenta"));
 
-    color = mpHost->mColorScheme.mCyan;
+    color = mpHost->mColorSettings.mCyan;
     insertColorTableEntry(L, color, QStringLiteral("ansi_006"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_cyan"));
     insertColorTableEntry(L, color, QStringLiteral("ansiCyan"));
 
-    color = mpHost->mColorScheme.mWhite;
+    color = mpHost->mColorSettings.mWhite;
     insertColorTableEntry(L, color, QStringLiteral("ansi_007"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_white"));
     insertColorTableEntry(L, color, QStringLiteral("ansiWhite"));
 
-    color = mpHost->mColorScheme.mLightBlack;
+    color = mpHost->mColorSettings.mLightBlack;
     insertColorTableEntry(L, color, QStringLiteral("ansi_008"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_black"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightBlack"));
 
-    color = mpHost->mColorScheme.mLightRed;
+    color = mpHost->mColorSettings.mLightRed;
     insertColorTableEntry(L, color, QStringLiteral("ansi_009"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_red"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightRed"));
 
-    color = mpHost->mColorScheme.mLightGreen;
+    color = mpHost->mColorSettings.mLightGreen;
     insertColorTableEntry(L, color, QStringLiteral("ansi_010"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_green"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightGreen"));
 
-    color = mpHost->mColorScheme.mLightYellow;
+    color = mpHost->mColorSettings.mLightYellow;
     insertColorTableEntry(L, color, QStringLiteral("ansi_011"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_yellow"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightYellow"));
 
-    color = mpHost->mColorScheme.mLightBlue;
+    color = mpHost->mColorSettings.mLightBlue;
     insertColorTableEntry(L, color, QStringLiteral("ansi_012"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_blue"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightBlue"));
 
-    color = mpHost->mColorScheme.mLightMagenta;
+    color = mpHost->mColorSettings.mLightMagenta;
     insertColorTableEntry(L, color, QStringLiteral("ansi_013"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_magenta"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightMagenta"));
 
-    color = mpHost->mColorScheme.mLightCyan;
+    color = mpHost->mColorSettings.mLightCyan;
     insertColorTableEntry(L, color, QStringLiteral("ansi_014"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_cyan"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightCyan"));
 
-    color = mpHost->mColorScheme.mLightWhite;
+    color = mpHost->mColorSettings.mLightWhite;
     insertColorTableEntry(L, color, QStringLiteral("ansi_015"));
     insertColorTableEntry(L, color, QStringLiteral("ansi_light_white"));
     insertColorTableEntry(L, color, QStringLiteral("ansiLightWhite"));

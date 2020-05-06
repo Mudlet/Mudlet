@@ -1001,45 +1001,45 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mCommandLineBgColor") {
                 pHost->mCommandLineBgColor.setNamedColor(readElementText());
             } else if (name() == "mFgColor") {
-                pHost->mFgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mFgColor.setNamedColor(readElementText());
             } else if (name() == "mBgColor") {
-                pHost->mBgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mBgColor.setNamedColor(readElementText());
             } else if (name() == "mCommandFgColor") {
                 pHost->mCommandFgColor.setNamedColor(readElementText());
             } else if (name() == "mCommandBgColor") {
                 pHost->mCommandBgColor.setNamedColor(readElementText());
             } else if (name() == "mBlack") {
-                pHost->mColorScheme.mBlack.setNamedColor(readElementText());
+                pHost->mColorSettings.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack") {
-                pHost->mColorScheme.mLightBlack.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightBlack.setNamedColor(readElementText());
             } else if (name() == "mRed") {
-                pHost->mColorScheme.mRed.setNamedColor(readElementText());
+                pHost->mColorSettings.mRed.setNamedColor(readElementText());
             } else if (name() == "mLightRed") {
-                pHost->mColorScheme.mLightRed.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightRed.setNamedColor(readElementText());
             } else if (name() == "mBlue") {
-                pHost->mColorScheme.mBlue.setNamedColor(readElementText());
+                pHost->mColorSettings.mBlue.setNamedColor(readElementText());
             } else if (name() == "mLightBlue") {
-                pHost->mColorScheme.mLightBlue.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightBlue.setNamedColor(readElementText());
             } else if (name() == "mGreen") {
-                pHost->mColorScheme.mGreen.setNamedColor(readElementText());
+                pHost->mColorSettings.mGreen.setNamedColor(readElementText());
             } else if (name() == "mLightGreen") {
-                pHost->mColorScheme.mLightGreen.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightGreen.setNamedColor(readElementText());
             } else if (name() == "mYellow") {
-                pHost->mColorScheme.mYellow.setNamedColor(readElementText());
+                pHost->mColorSettings.mYellow.setNamedColor(readElementText());
             } else if (name() == "mLightYellow") {
-                pHost->mColorScheme.mLightYellow.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightYellow.setNamedColor(readElementText());
             } else if (name() == "mCyan") {
-                pHost->mColorScheme.mCyan.setNamedColor(readElementText());
+                pHost->mColorSettings.mCyan.setNamedColor(readElementText());
             } else if (name() == "mLightCyan") {
-                pHost->mColorScheme.mLightCyan.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightCyan.setNamedColor(readElementText());
             } else if (name() == "mMagenta") {
-                pHost->mColorScheme.mMagenta.setNamedColor(readElementText());
+                pHost->mColorSettings.mMagenta.setNamedColor(readElementText());
             } else if (name() == "mLightMagenta") {
-                pHost->mColorScheme.mLightMagenta.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightMagenta.setNamedColor(readElementText());
             } else if (name() == "mWhite") {
-                pHost->mColorScheme.mWhite.setNamedColor(readElementText());
+                pHost->mColorSettings.mWhite.setNamedColor(readElementText());
             } else if (name() == "mLightWhite") {
-                pHost->mColorScheme.mLightWhite.setNamedColor(readElementText());
+                pHost->mColorSettings.mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX)
@@ -1057,41 +1057,41 @@ void XMLimport::readHostPackage(Host* pHost)
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mFgColor2") {
-                pHost->mFgColor_2.setNamedColor(readElementText());
+                pHost->mColorSettings2.mFgColor.setNamedColor(readElementText());
             } else if (name() == "mBgColor2") {
-                pHost->mBgColor_2.setNamedColor(readElementText());
+                pHost->mColorSettings2.mBgColor.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
-                pHost->mColorScheme2.mBlack.setNamedColor(readElementText());
+                pHost->mColorSettings2.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
-                pHost->mColorScheme2.mLightBlack.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightBlack.setNamedColor(readElementText());
             } else if (name() == "mRed2") {
-                pHost->mColorScheme2.mRed.setNamedColor(readElementText());
+                pHost->mColorSettings2.mRed.setNamedColor(readElementText());
             } else if (name() == "mLightRed2") {
-                pHost->mColorScheme2.mLightRed.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightRed.setNamedColor(readElementText());
             } else if (name() == "mBlue2") {
-                pHost->mColorScheme2.mBlue.setNamedColor(readElementText());
+                pHost->mColorSettings2.mBlue.setNamedColor(readElementText());
             } else if (name() == "mLightBlue2") {
-                pHost->mColorScheme2.mLightBlue.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightBlue.setNamedColor(readElementText());
             } else if (name() == "mGreen2") {
-                pHost->mColorScheme2.mGreen.setNamedColor(readElementText());
+                pHost->mColorSettings2.mGreen.setNamedColor(readElementText());
             } else if (name() == "mLightGreen2") {
-                pHost->mColorScheme2.mLightGreen.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightGreen.setNamedColor(readElementText());
             } else if (name() == "mYellow2") {
-                pHost->mColorScheme2.mYellow.setNamedColor(readElementText());
+                pHost->mColorSettings2.mYellow.setNamedColor(readElementText());
             } else if (name() == "mLightYellow2") {
-                pHost->mColorScheme2.mLightYellow.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightYellow.setNamedColor(readElementText());
             } else if (name() == "mCyan2") {
-                pHost->mColorScheme2.mCyan.setNamedColor(readElementText());
+                pHost->mColorSettings2.mCyan.setNamedColor(readElementText());
             } else if (name() == "mLightCyan2") {
-                pHost->mColorScheme2.mLightCyan.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightCyan.setNamedColor(readElementText());
             } else if (name() == "mMagenta2") {
-                pHost->mColorScheme2.mMagenta.setNamedColor(readElementText());
+                pHost->mColorSettings2.mMagenta.setNamedColor(readElementText());
             } else if (name() == "mLightMagenta2") {
-                pHost->mColorScheme2.mLightMagenta.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightMagenta.setNamedColor(readElementText());
             } else if (name() == "mWhite2") {
-                pHost->mColorScheme2.mWhite.setNamedColor(readElementText());
+                pHost->mColorSettings2.mWhite.setNamedColor(readElementText());
             } else if (name() == "mLightWhite2") {
-                pHost->mColorScheme2.mLightWhite.setNamedColor(readElementText());
+                pHost->mColorSettings2.mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
                 pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {

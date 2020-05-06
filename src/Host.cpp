@@ -251,19 +251,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-, mFgColor(QColorConstants::LightGray)
-, mBgColor(QColorConstants::Black)
 , mCommandBgColor(QColorConstants::Black)
 , mCommandFgColor(QColor(113, 113, 0))
-, mFgColor_2(QColorConstants::LightGray)
-, mBgColor_2(QColorConstants::Black)
 #else
-, mFgColor(Qt::lightGray)
-, mBgColor(Qt::black)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(113, 113, 0))
-, mFgColor_2(Qt::lightGray)
-, mBgColor_2(Qt::black)
 #endif
 , mMapStrongHighlight(false)
 , mLogStatus(false)
@@ -1931,7 +1923,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 {
     if (ansiCode < 16) {
-        return mColorScheme.getColorFromAnsi(ansiCode);
+        return mColorSettings.getColorFromAnsi(ansiCode);
     }
 
     // clang-format off
@@ -1966,7 +1958,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             // No-op - corresponds to no setting or ignoring this aspect
             return QColor();
         } else if (ansiCode == TTrigger::scmDefault) {
-            return isBackground ? mBgColor : mFgColor;
+            return isBackground ? mColorSettings.mBgColor : mColorSettings.mFgColor;
         } else if (ansiCode >= 16 && ansiCode <= 231) {
             // because color 1-15 behave like normal ANSI colors we need to subtract 16
             // 6x6 RGB color space

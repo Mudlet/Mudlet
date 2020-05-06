@@ -23,37 +23,11 @@
 #include "Host.h"
 
 // Default constructor:
-TChar::TChar()
-: mFgColor(Qt::white)
-, mBgColor(Qt::black)
-, mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
-{
-}
+TChar::TChar() : mFgColor(Qt::white), mBgColor(Qt::black), mFlags(None), mIsSelected(false), mLinkIndex(0) {}
 
-TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(fg)
-, mBgColor(bg)
-, mFlags(flags)
-, mIsSelected(false)
-, mLinkIndex(linkIndex)
-{
-}
+TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex) : mFgColor(fg), mBgColor(bg), mFlags(flags), mIsSelected(false), mLinkIndex(linkIndex) {}
 
-TChar::TChar(Host* pH)
-: mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
-{
-    if (pH) {
-        mFgColor = pH->mFgColor;
-        mBgColor = pH->mBgColor;
-    } else {
-        mFgColor = Qt::white;
-        mBgColor = Qt::black;
-    }
-}
+TChar::TChar(TColorSettings& colors, AttributeFlags attributeFlags) : mFlags(attributeFlags), mIsSelected(false), mLinkIndex(0), mFgColor(colors.mFgColor), mBgColor(colors.mBgColor) {}
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
 // not be wanted in every case:
@@ -78,11 +52,10 @@ bool TChar::operator==(const TChar& other)
 }
 
 // Copy constructor:
-TChar::TChar(const TChar& copy)
-: mFgColor(copy.mFgColor)
-, mBgColor(copy.mBgColor)
-, mFlags(copy.mFlags)
-, mIsSelected(false)
-, mLinkIndex(copy.mLinkIndex)
+TChar::TChar(const TChar& copy) : mFgColor(copy.mFgColor), mBgColor(copy.mBgColor), mFlags(copy.mFlags), mIsSelected(false), mLinkIndex(copy.mLinkIndex) {}
+TChar TChar::createTransparent(const QColor& bgColor, const TChar::AttributeFlags attributeFlags)
 {
+    // Note: we are using the background color for the
+    // foreground color as well so that we are transparent:
+    return TChar(bgColor, bgColor, attributeFlags);
 }

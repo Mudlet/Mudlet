@@ -198,7 +198,7 @@ QColor T2DMap::getColor(int id)
     }
 
     if (env <= 16) {
-        color = mpHost->mColorScheme2.getColorFromEnv(env);
+        color = mpHost->mColorSettings2.getColorFromEnv(env);
     } else { //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
             if (16 < env && env < 232) {
@@ -676,7 +676,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
     }
 
     if (roomEnvironment <= 16) {
-        roomColor = mpHost->mColorScheme2.getColorFromEnv(roomEnvironment);
+        roomColor = mpHost->mColorSettings2.getColorFromEnv(roomEnvironment);
     } else { //user defined room color
         if (mpMap->customEnvColors.contains(roomEnvironment)) {
             roomColor = mpMap->customEnvColors[roomEnvironment];
@@ -1260,10 +1260,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     float exitWidth = 1 / eSize * mRoomWidth * rSize;
 
-    painter.fillRect(0, 0, width(), height(), mpHost->mBgColor_2);
+    painter.fillRect(0, 0, width(), height(), mpHost->mColorSettings2.mBgColor);
 
     auto pen = painter.pen();
-    pen.setColor(mpHost->mFgColor_2);
+    pen.setColor(mpHost->mColorSettings2.mFgColor);
     pen.setWidthF(exitWidth);
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
@@ -1469,7 +1469,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     QColor infoColor;
-    if (mpHost->mBgColor_2.lightness() > 127) {
+    if (mpHost->mColorSettings2.mBgColor.lightness() > 127) {
         infoColor = QColor(Qt::black);
     } else {
         infoColor = QColor(Qt::white);
@@ -3665,7 +3665,7 @@ void T2DMap::slot_selectRoomColor(QListWidgetItem* pI)
 
 void T2DMap::slot_defineNewColor()
 {
-    auto color = QColorDialog::getColor(mpHost->mColorScheme.mRed, this);
+    auto color = QColorDialog::getColor(mpHost->mColorSettings.mRed, this);
     if (color.isValid()) {
         auto environmentId = mpMap->customEnvColors.size() + 257 + 16;
         if (mpMap->customEnvColors.contains(environmentId)) {
@@ -4832,7 +4832,7 @@ void T2DMap::slot_customLineColor()
     if (mCurrentLineColor.isValid()) {
         color = QColorDialog::getColor(mCurrentLineColor, this);
     } else {
-        color = QColorDialog::getColor(mpHost->mFgColor_2, this);
+        color = QColorDialog::getColor(mpHost->mColorSettings2.mFgColor, this);
     }
 
     if (color.isValid()) {

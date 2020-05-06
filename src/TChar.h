@@ -22,11 +22,10 @@
 #ifndef MUDLET_SRC_TBUFFER_CPP_TCHAR_H
 #define MUDLET_SRC_TBUFFER_CPP_TCHAR_H
 
+#include "TColorSettings.h"
 #include "pre_guard.h"
 #include <QColor>
 #include "post_guard.h"
-
-class Host;
 
 class TChar
 {
@@ -59,9 +58,11 @@ public:
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
     TChar();
-    TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    TChar(Host*);
+    TChar(const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     TChar(const TChar&);
+    TChar(TColorSettings &colors, AttributeFlags attributeFlags = TChar::None);
+
+    static TChar createTransparent(const QColor& bgColor, AttributeFlags attributeFlags);
 
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {

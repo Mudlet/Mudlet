@@ -74,7 +74,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     connect(pushButton_setUsingRgbValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_rgbColorClicked);
     connect(pushButton_setUsingGrayValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_grayColorClicked);
 
-    setupColors(mpTrigger->mpHost->mColorScheme);
+    setupColors(mpTrigger->mpHost->mColorSettings);
 
     // These will correctly set the colours on the value label in their area:
     if (mIsBackground) {
@@ -305,7 +305,7 @@ void dlgColorTrigger::slot_basicColorClicked(int ansiColor)
         return;
     }
 
-    QColor choosenColor = mpTrigger->mpHost->mColorScheme.getColorFromAnsi(ansiColor);
+    QColor choosenColor = mpTrigger->mpHost->mColorSettings.getColorFromAnsi(ansiColor);
 
     mpTrigger->mColorTrigger = true;
     if (mIsBackground) {

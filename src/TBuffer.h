@@ -28,6 +28,7 @@
 
 #include "TChar.h"
 #include "TColorScheme.h"
+#include "TColorSettings.h"
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
 #include "TMxpMudlet.h"
@@ -158,17 +159,7 @@ private:
     bool mIsDefaultColor;
 
 
-    TColorScheme mColorScheme;
-    // These three replace three sets of three integers that were used to hold
-    // colour components during the parsing of SGR sequences, they were called:
-    // fgColor{R|G|B}, fgColorLight{R|G|B} and bgColor{R|G|B} apart from
-    // anything else, the first and last sets had the same names as arguments
-    // to several of the methods which meant the latter shadowed and masked
-    // them off!
-    QColor mForeGroundColor;
-    QColor mForeGroundColorLight;
-    QColor mBackGroundColor;
-
+    TColorSettings mColorSettings;
     QPointer<Host> mpHost;
 
     bool mBold;

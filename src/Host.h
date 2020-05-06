@@ -45,6 +45,7 @@
 #include "post_guard.h"
 
 #include "TColorScheme.h"
+#include "TColorSettings.h"
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
 
@@ -475,15 +476,13 @@ public:
     // the type of item (a trigger, an alias, etc) that's previewed
     QString mThemePreviewType;
 
-    TColorScheme mColorScheme;
-    QColor mFgColor;
-    QColor mBgColor;
+    TColorSettings mColorSettings;
+
     QColor mCommandBgColor;
     QColor mCommandFgColor;
 
-    TColorScheme mColorScheme2;
-    QColor mFgColor_2;
-    QColor mBgColor_2;
+    TColorSettings mColorSettings2;
+
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;

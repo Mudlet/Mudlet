@@ -2147,8 +2147,8 @@ void cTelnet::postMessage(QString msg)
             QString firstLineTail = body.at(0).mid(prefixLength);
             body.removeFirst();
             if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
-                mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
+                mpHost->mpConsole->print(prefix, Qt::red, mpHost->mColorSettings.mBgColor);                                  // Bright Red
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mColorSettings.mBgColor); // Bright Yellow
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
@@ -2156,77 +2156,77 @@ void cTelnet::postMessage(QString msg)
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mColorSettings.mBgColor); // Bright Yellow
                 }
             } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
-                mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
+                mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mColorSettings.mBgColor);                    // Light blue
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mColorSettings.mBgColor); // Light green
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mColorSettings.mBgColor); // Red
                 }
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
+                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mColorSettings.mBgColor);
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mColorSettings.mBgColor); // Orange
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mColorSettings.mBgColor);
                 }
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
-                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orangish
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
+                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mColorSettings.mBgColor);                     // Orangish
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mColorSettings.mBgColor); // Yellow
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mColorSettings.mBgColor); // Yellow
                 }
             } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mColorSettings.mBgColor);                   // Cyan
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mColorSettings.mBgColor); // Light Green
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mColorSettings.mBgColor); // Light Green
                 }
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mColorSettings.mBgColor);                        // Light Green
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mColorSettings.mBgColor); // Orangish
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mColorSettings.mBgColor); // Orangish
                 }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
-                mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
+                mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mColorSettings.mBgColor);                    // Foreground red, background bright grey
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mColorSettings.mBgColor); //Foreground dark grey, background bright grey
                 for (quint8 _i = 0; _i < body.size(); _i++) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(50, 50, 50), mpHost->mColorSettings.mBgColor); //Foreground dark grey, background bright grey
                 }
             }
         } else {                                                                                             // No prefix found
-            mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mBgColor); //Foreground bright grey
+            mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 190), mpHost->mColorSettings.mBgColor); //Foreground bright grey
         }
         messageStack.removeFirst();
     }

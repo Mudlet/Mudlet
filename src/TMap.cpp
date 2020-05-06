@@ -80,22 +80,22 @@ TMap::TMap(Host* pH, const QString& profileName)
                                     // preference dialog.
     mVersion = mDefaultVersion;     // This is overwritten during a map restore and
                                     // is the loaded file version
-    customEnvColors[257] = mpHost->mColorScheme2.mRed;
-    customEnvColors[258] = mpHost->mColorScheme2.mGreen;
-    customEnvColors[259] = mpHost->mColorScheme2.mYellow;
-    customEnvColors[260] = mpHost->mColorScheme2.mBlue;
-    customEnvColors[261] = mpHost->mColorScheme2.mMagenta;
-    customEnvColors[262] = mpHost->mColorScheme2.mCyan;
-    customEnvColors[263] = mpHost->mColorScheme2.mWhite;
-    customEnvColors[264] = mpHost->mColorScheme2.mBlack;
-    customEnvColors[265] = mpHost->mColorScheme2.mLightRed;
-    customEnvColors[266] = mpHost->mColorScheme2.mLightGreen;
-    customEnvColors[267] = mpHost->mColorScheme2.mLightYellow;
-    customEnvColors[268] = mpHost->mColorScheme2.mLightBlue;
-    customEnvColors[269] = mpHost->mColorScheme2.mLightMagenta;
-    customEnvColors[270] = mpHost->mColorScheme2.mLightCyan;
-    customEnvColors[271] = mpHost->mColorScheme2.mLightWhite;
-    customEnvColors[272] = mpHost->mColorScheme2.mLightBlack;
+    customEnvColors[257] = mpHost->mColorSettings2.mRed;
+    customEnvColors[258] = mpHost->mColorSettings2.mGreen;
+    customEnvColors[259] = mpHost->mColorSettings2.mYellow;
+    customEnvColors[260] = mpHost->mColorSettings2.mBlue;
+    customEnvColors[261] = mpHost->mColorSettings2.mMagenta;
+    customEnvColors[262] = mpHost->mColorSettings2.mCyan;
+    customEnvColors[263] = mpHost->mColorSettings2.mWhite;
+    customEnvColors[264] = mpHost->mColorSettings2.mBlack;
+    customEnvColors[265] = mpHost->mColorSettings2.mLightRed;
+    customEnvColors[266] = mpHost->mColorSettings2.mLightGreen;
+    customEnvColors[267] = mpHost->mColorSettings2.mLightYellow;
+    customEnvColors[268] = mpHost->mColorSettings2.mLightBlue;
+    customEnvColors[269] = mpHost->mColorSettings2.mLightMagenta;
+    customEnvColors[270] = mpHost->mColorSettings2.mLightCyan;
+    customEnvColors[271] = mpHost->mColorSettings2.mLightWhite;
+    customEnvColors[272] = mpHost->mColorSettings2.mLightBlack;
     unitVectors[1] = QVector3D(0, -1, 0);
     unitVectors[2] = QVector3D(1, -1, 0);
     unitVectors[3] = QVector3D(-1, -1, 0);
@@ -152,22 +152,22 @@ void TMap::mapClear()
     mWeightList.clear();
     customEnvColors.clear();
     // Need to restore the default colours:
-    customEnvColors[257] = mpHost->mColorScheme2.mRed;
-    customEnvColors[258] = mpHost->mColorScheme2.mGreen;
-    customEnvColors[259] = mpHost->mColorScheme2.mYellow;
-    customEnvColors[260] = mpHost->mColorScheme2.mBlue;
-    customEnvColors[261] = mpHost->mColorScheme2.mMagenta;
-    customEnvColors[262] = mpHost->mColorScheme2.mCyan;
-    customEnvColors[263] = mpHost->mColorScheme2.mWhite;
-    customEnvColors[264] = mpHost->mColorScheme2.mBlack;
-    customEnvColors[265] = mpHost->mColorScheme2.mLightRed;
-    customEnvColors[266] = mpHost->mColorScheme2.mLightGreen;
-    customEnvColors[267] = mpHost->mColorScheme2.mLightYellow;
-    customEnvColors[268] = mpHost->mColorScheme2.mLightBlue;
-    customEnvColors[269] = mpHost->mColorScheme2.mLightMagenta;
-    customEnvColors[270] = mpHost->mColorScheme2.mLightCyan;
-    customEnvColors[271] = mpHost->mColorScheme2.mLightWhite;
-    customEnvColors[272] = mpHost->mColorScheme2.mLightBlack;
+    customEnvColors[257] = mpHost->mColorSettings2.mRed;
+    customEnvColors[258] = mpHost->mColorSettings2.mGreen;
+    customEnvColors[259] = mpHost->mColorSettings2.mYellow;
+    customEnvColors[260] = mpHost->mColorSettings2.mBlue;
+    customEnvColors[261] = mpHost->mColorSettings2.mMagenta;
+    customEnvColors[262] = mpHost->mColorSettings2.mCyan;
+    customEnvColors[263] = mpHost->mColorSettings2.mWhite;
+    customEnvColors[264] = mpHost->mColorSettings2.mBlack;
+    customEnvColors[265] = mpHost->mColorSettings2.mLightRed;
+    customEnvColors[266] = mpHost->mColorSettings2.mLightGreen;
+    customEnvColors[267] = mpHost->mColorSettings2.mLightYellow;
+    customEnvColors[268] = mpHost->mColorSettings2.mLightBlue;
+    customEnvColors[269] = mpHost->mColorSettings2.mLightMagenta;
+    customEnvColors[270] = mpHost->mColorSettings2.mLightCyan;
+    customEnvColors[271] = mpHost->mColorSettings2.mLightWhite;
+    customEnvColors[272] = mpHost->mColorSettings2.mLightBlack;
     roomidToIndex.clear();
     // Not used:    pixNameTable.clear();
     // Not used:    pixTable.clear();
@@ -1575,22 +1575,22 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             mpRoomDB->restoreSingleRoom(i, pT);
         }
 
-        customEnvColors[257] = mpHost->mColorScheme2.mRed;
-        customEnvColors[258] = mpHost->mColorScheme2.mGreen;
-        customEnvColors[259] = mpHost->mColorScheme2.mYellow;
-        customEnvColors[260] = mpHost->mColorScheme2.mBlue;
-        customEnvColors[261] = mpHost->mColorScheme2.mMagenta;
-        customEnvColors[262] = mpHost->mColorScheme2.mCyan;
-        customEnvColors[263] = mpHost->mColorScheme2.mWhite;
-        customEnvColors[264] = mpHost->mColorScheme2.mBlack;
-        customEnvColors[265] = mpHost->mColorScheme2.mLightRed;
-        customEnvColors[266] = mpHost->mColorScheme2.mLightGreen;
-        customEnvColors[267] = mpHost->mColorScheme2.mLightYellow;
-        customEnvColors[268] = mpHost->mColorScheme2.mLightBlue;
-        customEnvColors[269] = mpHost->mColorScheme2.mLightMagenta;
-        customEnvColors[270] = mpHost->mColorScheme2.mLightCyan;
-        customEnvColors[271] = mpHost->mColorScheme2.mLightWhite;
-        customEnvColors[272] = mpHost->mColorScheme2.mLightBlack;
+        customEnvColors[257] = mpHost->mColorSettings2.mRed;
+        customEnvColors[258] = mpHost->mColorSettings2.mGreen;
+        customEnvColors[259] = mpHost->mColorSettings2.mYellow;
+        customEnvColors[260] = mpHost->mColorSettings2.mBlue;
+        customEnvColors[261] = mpHost->mColorSettings2.mMagenta;
+        customEnvColors[262] = mpHost->mColorSettings2.mCyan;
+        customEnvColors[263] = mpHost->mColorSettings2.mWhite;
+        customEnvColors[264] = mpHost->mColorSettings2.mBlack;
+        customEnvColors[265] = mpHost->mColorSettings2.mLightRed;
+        customEnvColors[266] = mpHost->mColorSettings2.mLightGreen;
+        customEnvColors[267] = mpHost->mColorSettings2.mLightYellow;
+        customEnvColors[268] = mpHost->mColorSettings2.mLightBlue;
+        customEnvColors[269] = mpHost->mColorSettings2.mLightMagenta;
+        customEnvColors[270] = mpHost->mColorSettings2.mLightCyan;
+        customEnvColors[271] = mpHost->mColorSettings2.mLightWhite;
+        customEnvColors[272] = mpHost->mColorSettings2.mLightBlack;
 
         QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                                         "consistency details..." )

@@ -107,22 +107,22 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    mpMap->customEnvColors[257] = mpHost->mColorScheme2.mRed;
-    mpMap->customEnvColors[258] = mpHost->mColorScheme2.mGreen;
-    mpMap->customEnvColors[259] = mpHost->mColorScheme2.mYellow;
-    mpMap->customEnvColors[260] = mpHost->mColorScheme2.mBlue;
-    mpMap->customEnvColors[261] = mpHost->mColorScheme2.mMagenta;
-    mpMap->customEnvColors[262] = mpHost->mColorScheme2.mCyan;
-    mpMap->customEnvColors[263] = mpHost->mColorScheme2.mWhite;
-    mpMap->customEnvColors[264] = mpHost->mColorScheme2.mBlack;
-    mpMap->customEnvColors[265] = mpHost->mColorScheme2.mLightRed;
-    mpMap->customEnvColors[266] = mpHost->mColorScheme2.mLightGreen;
-    mpMap->customEnvColors[267] = mpHost->mColorScheme2.mLightYellow;
-    mpMap->customEnvColors[268] = mpHost->mColorScheme2.mLightBlue;
-    mpMap->customEnvColors[269] = mpHost->mColorScheme2.mLightMagenta;
-    mpMap->customEnvColors[270] = mpHost->mColorScheme2.mLightCyan;
-    mpMap->customEnvColors[271] = mpHost->mColorScheme2.mLightWhite;
-    mpMap->customEnvColors[272] = mpHost->mColorScheme2.mLightBlack;
+    mpMap->customEnvColors[257] = mpHost->mColorSettings2.mRed;
+    mpMap->customEnvColors[258] = mpHost->mColorSettings2.mGreen;
+    mpMap->customEnvColors[259] = mpHost->mColorSettings2.mYellow;
+    mpMap->customEnvColors[260] = mpHost->mColorSettings2.mBlue;
+    mpMap->customEnvColors[261] = mpHost->mColorSettings2.mMagenta;
+    mpMap->customEnvColors[262] = mpHost->mColorSettings2.mCyan;
+    mpMap->customEnvColors[263] = mpHost->mColorSettings2.mWhite;
+    mpMap->customEnvColors[264] = mpHost->mColorSettings2.mBlack;
+    mpMap->customEnvColors[265] = mpHost->mColorSettings2.mLightRed;
+    mpMap->customEnvColors[266] = mpHost->mColorSettings2.mLightGreen;
+    mpMap->customEnvColors[267] = mpHost->mColorSettings2.mLightYellow;
+    mpMap->customEnvColors[268] = mpHost->mColorSettings2.mLightBlue;
+    mpMap->customEnvColors[269] = mpHost->mColorSettings2.mLightMagenta;
+    mpMap->customEnvColors[270] = mpHost->mColorSettings2.mLightCyan;
+    mpMap->customEnvColors[271] = mpHost->mColorSettings2.mLightWhite;
+    mpMap->customEnvColors[272] = mpHost->mColorSettings2.mLightBlack;
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();

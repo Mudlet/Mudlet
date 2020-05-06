@@ -203,8 +203,8 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mpHost->getDisplayFont()).descent();
         mFontAscent = QFontMetrics(mpHost->getDisplayFont()).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-        mBgColor = mpHost->mBgColor;
-        mFgColor = mpHost->mFgColor;
+        mBgColor = mpHost->mColorSettings.mBgColor;
+        mFgColor = mpHost->mColorSettings.mFgColor;
     } else {
         mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mDisplayFont).descent();
@@ -1272,11 +1272,11 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // Use a "%age" for a IE compatible font size, 16 point is the default for
     // web-pages, but 14 seems to produce a more reasonable size but that could
     // just be the browsers I tested it on! - Slysven
-    text.append(QString::number(mpHost->mBgColor.red()));
+    text.append(QString::number(mpHost->mColorSettings.mBgColor.red()));
     text.append(",");
-    text.append(QString::number(mpHost->mBgColor.green()));
+    text.append(QString::number(mpHost->mColorSettings.mBgColor.green()));
     text.append(",");
-    text.append(QString::number(mpHost->mBgColor.blue()));
+    text.append(QString::number(mpHost->mColorSettings.mBgColor.blue()));
     text.append(");}\n");
     text.append("        span { white-space: pre-wrap; } -->\n");
     text.append("  </style>\n");
