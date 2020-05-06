@@ -497,10 +497,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toUtf8().constData());
         host.append_child("mFgColor").text().set(pHost->mColorSettings.mFgColor.name().toUtf8().constData());
         host.append_child("mBgColor").text().set(pHost->mColorSettings.mBgColor.name().toUtf8().constData());
-        host.append_child("mCommandFgColor").text().set(pHost->mCommandFgColor.name().toUtf8().constData());
-        host.append_child("mCommandBgColor").text().set(pHost->mCommandBgColor.name().toUtf8().constData());
-        host.append_child("mCommandLineFgColor").text().set(pHost->mCommandLineFgColor.name().toUtf8().constData());
-        host.append_child("mCommandLineBgColor").text().set(pHost->mCommandLineBgColor.name().toUtf8().constData());
+        host.append_child("mCommandFgColor").text().set(pHost->mColorSettings.mCommandFgColor.name().toUtf8().constData());
+        host.append_child("mCommandBgColor").text().set(pHost->mColorSettings.mCommandBgColor.name().toUtf8().constData());
+        host.append_child("mCommandLineFgColor").text().set(pHost->mColorSettings.mCommandLineFgColor.name().toUtf8().constData());
+        host.append_child("mCommandLineBgColor").text().set(pHost->mColorSettings.mCommandLineBgColor.name().toUtf8().constData());
         host.append_child("mBlack").text().set(pHost->mColorSettings.mBlack.name().toUtf8().constData());
         host.append_child("mLightBlack").text().set(pHost->mColorSettings.mLightBlack.name().toUtf8().constData());
         host.append_child("mRed").text().set(pHost->mColorSettings.mRed.name().toUtf8().constData());

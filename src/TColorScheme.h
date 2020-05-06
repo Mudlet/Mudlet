@@ -2,8 +2,8 @@
 // Created by gustavo on 05/05/2020.
 //
 
-#ifndef MUDLET_SRC_TCOLORSCHEME_H
-#define MUDLET_SRC_TCOLORSCHEME_H
+#ifndef MUDLET_TCOLORSCHEME_H
+#define MUDLET_TCOLORSCHEME_H
 
 #include "pre_guard.h"
 #include <QColor>
@@ -38,8 +38,8 @@ public:
     bool getColorPair(int tag, QColor& color, QColor& lightColor) const;
 
     bool setColor(quint8 colorNumber, const QColor& Color);
-    void reset();
+    virtual void reset();
 };
 
 
-#endif //MUDLET_SRC_TCOLORSCHEME_H
+#endif //MUDLET_TCOLORSCHEME_H

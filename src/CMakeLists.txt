@@ -64,6 +64,7 @@ set(mudlet_SRCS
     exitstreewidget.cpp
     FontManager.cpp
     Host.cpp
+    HostColorSettings.cpp
     HostManager.cpp
     ircmessageformatter.cpp
     KeyUnit.cpp
@@ -193,6 +194,7 @@ set(mudlet_HDRS
     exitstreewidget.h
     FontManager.h
     Host.h
+    HostColorSettings.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h

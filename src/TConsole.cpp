@@ -136,8 +136,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
             mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
-            mCommandBgColor = mpHost->mCommandBgColor;
-            mCommandFgColor = mpHost->mCommandFgColor;
+            mCommandBgColor = mpHost->mColorSettings.mCommandBgColor;
+            mCommandFgColor = mpHost->mColorSettings.mCommandFgColor;
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
@@ -447,11 +447,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     mpBufferSearchBox->setPlaceholderText("Search ...");
     QPalette __pal;
-    __pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
+    __pal.setColor(QPalette::Text, mpHost->mColorSettings.mCommandLineFgColor);
     __pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
     __pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    __pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
-    __pal.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
+    __pal.setColor(QPalette::Base, mpHost->mColorSettings.mCommandLineBgColor);
+    __pal.setColor(QPalette::Window, mpHost->mColorSettings.mCommandLineBgColor);
     mpBufferSearchBox->setPalette(__pal);
     mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Search buffer.")));
@@ -1155,10 +1155,10 @@ void TConsole::changeColors()
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
             QPalette pal;
-            pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+            pal.setColor(QPalette::Text, mpHost->mColorSettings.mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
             pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
-            pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+            pal.setColor(QPalette::Base, mpHost->mColorSettings.mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
         }
@@ -1179,8 +1179,8 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
-        mCommandFgColor = mpHost->mCommandFgColor;
-        mCommandBgColor = mpHost->mCommandBgColor;
+        mCommandFgColor = mpHost->mColorSettings.mCommandFgColor;
+        mCommandBgColor = mpHost->mColorSettings.mCommandBgColor;
         if (mpCommandLine) {
             mpCommandLine->setFont(mpHost->getDisplayFont());
         }

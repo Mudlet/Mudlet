@@ -42,8 +42,15 @@ void TColorSettings::updateBackGround(const QColor& color)
 {
     mBgColor = color;
 }
+
 void TColorSettings::updateColors(QColor fg, QColor bg)
 {
     mFgColor = fg;
     mBgColor = bg;
+}
+
+void TColorSettings::reset()
+{
+    mFgColor = Qt::lightGray;
+    mBgColor = Qt::black;
 }

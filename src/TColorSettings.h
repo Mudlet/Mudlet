@@ -31,6 +31,8 @@ public:
     void updateForeGround(const QColor& fg, const QColor& fgLight);
     void updateForeGround(const QColor& fg);
     void updateColors(QColor fg, QColor bg);
+
+    virtual void reset();
 };
 
 #endif //MUDLET__TBUFFERCOLORSETTINGS_H

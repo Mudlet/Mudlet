@@ -19,8 +19,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_SRC_TBUFFER_CPP_TCHAR_H
-#define MUDLET_SRC_TBUFFER_CPP_TCHAR_H
+#ifndef MUDLET_TBUFFER_CPP_TCHAR_H
+#define MUDLET_TBUFFER_CPP_TCHAR_H
 
 #include "pre_guard.h"
 #include <QDebug>
@@ -137,4 +137,4 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
 }
 #endif // QT_NO_DEBUG_STREAM
 
-#endif //MUDLET_SRC_TBUFFER_CPP_TCHAR_H
+#endif //MUDLET_TBUFFER_CPP_TCHAR_H

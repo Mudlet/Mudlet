@@ -1342,10 +1342,10 @@ void dlgProfilePreferences::setColors()
     if (pHost) {
         setButtonColor(pushButton_foreground_color, pHost->mColorSettings.mFgColor);
         setButtonColor(pushButton_background_color, pHost->mColorSettings.mBgColor);
-        setButtonColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
-        setButtonColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
-        setButtonColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
-        setButtonColor(pushButton_command_background_color, pHost->mCommandBgColor);
+        setButtonColor(pushButton_command_line_foreground_color, pHost->mColorSettings.mCommandLineFgColor);
+        setButtonColor(pushButton_command_line_background_color, pHost->mColorSettings.mCommandLineBgColor);
+        setButtonColor(pushButton_command_foreground_color, pHost->mColorSettings.mCommandFgColor);
+        setButtonColor(pushButton_command_background_color, pHost->mColorSettings.mCommandBgColor);
         setButtonColor(pushButton_black, pHost->mColorSettings.mBlack);
         setButtonColor(pushButton_lBlack, pHost->mColorSettings.mLightBlack);
         setButtonColor(pushButton_red, pHost->mColorSettings.mRed);
@@ -1452,12 +1452,6 @@ void dlgProfilePreferences::resetColors()
         return;
     }
 
-    pHost->mCommandLineFgColor = Qt::darkGray;
-    pHost->mCommandLineBgColor = Qt::black;
-    pHost->mCommandFgColor = QColor(113, 113, 0);
-    pHost->mCommandBgColor = Qt::black;
-    pHost->mColorSettings.mFgColor = Qt::lightGray;
-    pHost->mColorSettings.mBgColor = Qt::black;
     // If these get changed, ensure TBuffer::resetColors() is updated to match
     pHost->mColorSettings.reset();
 
@@ -1478,8 +1472,6 @@ void dlgProfilePreferences::resetColors2()
         return;
     }
 
-    pHost->mColorSettings2.mFgColor = Qt::lightGray;
-    pHost->mColorSettings2.mBgColor = Qt::black;
     pHost->mColorSettings2.reset();
 
     setColors2();
@@ -1546,7 +1538,7 @@ void dlgProfilePreferences::setCommandFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
+        setColor(pushButton_command_foreground_color, pHost->mColorSettings.mCommandFgColor);
     }
 }
 
@@ -1554,7 +1546,7 @@ void dlgProfilePreferences::setCommandLineFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
+        setColor(pushButton_command_line_foreground_color, pHost->mColorSettings.mCommandLineFgColor);
     }
 }
 
@@ -1562,7 +1554,7 @@ void dlgProfilePreferences::setCommandLineBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
+        setColor(pushButton_command_line_background_color, pHost->mColorSettings.mCommandLineBgColor);
     }
 }
 
@@ -1570,7 +1562,7 @@ void dlgProfilePreferences::setCommandBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_background_color, pHost->mCommandBgColor);
+        setColor(pushButton_command_background_color, pHost->mColorSettings.mCommandBgColor);
     }
 }
 

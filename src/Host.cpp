@@ -250,13 +250,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-, mCommandBgColor(QColorConstants::Black)
-, mCommandFgColor(QColor(113, 113, 0))
-#else
-, mCommandBgColor(Qt::black)
-, mCommandFgColor(QColor(113, 113, 0))
-#endif
 , mMapStrongHighlight(false)
 , mLogStatus(false)
 , mEnableSpellCheck(true)
@@ -272,8 +265,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
 , mAcceptServerMedia(true)
-, mCommandLineFgColor(Qt::darkGray)
-, mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()

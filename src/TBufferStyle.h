@@ -2,8 +2,8 @@
 // Created by gustavo on 06/05/2020.
 //
 
-#ifndef MUDLET_SRC_TBUFFERSTYLE_H
-#define MUDLET_SRC_TBUFFERSTYLE_H
+#ifndef MUDLET_TBUFFERSTYLE_H
+#define MUDLET_TBUFFERSTYLE_H
 
 #include "TChar.h"
 #include "TColorSettings.h"
@@ -38,4 +38,4 @@ private:
 };
 
 
-#endif //MUDLET_SRC_TBUFFERSTYLE_H
+#endif //MUDLET_TBUFFERSTYLE_H

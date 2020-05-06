@@ -994,17 +994,17 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mCommandSeparator") {
                 pHost->mCommandSeparator = readElementText();
             } else if (name() == "mCommandLineFgColor") {
-                pHost->mCommandLineFgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mCommandLineFgColor.setNamedColor(readElementText());
             } else if (name() == "mCommandLineBgColor") {
-                pHost->mCommandLineBgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mCommandLineBgColor.setNamedColor(readElementText());
             } else if (name() == "mFgColor") {
                 pHost->mColorSettings.mFgColor.setNamedColor(readElementText());
             } else if (name() == "mBgColor") {
                 pHost->mColorSettings.mBgColor.setNamedColor(readElementText());
             } else if (name() == "mCommandFgColor") {
-                pHost->mCommandFgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mCommandFgColor.setNamedColor(readElementText());
             } else if (name() == "mCommandBgColor") {
-                pHost->mCommandBgColor.setNamedColor(readElementText());
+                pHost->mColorSettings.mCommandBgColor.setNamedColor(readElementText());
             } else if (name() == "mBlack") {
                 pHost->mColorSettings.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack") {

@@ -44,6 +44,7 @@
 #include <QTextStream>
 #include "post_guard.h"
 
+#include "HostColorSettings.h"
 #include "TColorScheme.h"
 #include "TColorSettings.h"
 #include "TMxpMudlet.h"
@@ -476,10 +477,7 @@ public:
     // the type of item (a trigger, an alias, etc) that's previewed
     QString mThemePreviewType;
 
-    TColorSettings mColorSettings;
-
-    QColor mCommandBgColor;
-    QColor mCommandFgColor;
+    HostColorSettings mColorSettings;
 
     TColorSettings mColorSettings2;
 
@@ -510,8 +508,6 @@ public:
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
     bool mAcceptServerMedia;
-    QColor mCommandLineFgColor;
-    QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
