@@ -25,11 +25,12 @@
 
 
 #include "Host.h"
-#include <QRegularExpression>
+#include "TChar.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TMatchState.h"
 #include "mudlet.h"
+#include <QRegularExpression>
 
 #include <cassert>
 #include <sstream>

@@ -512,6 +512,7 @@ SOURCES += \
     TAlias.cpp \
     TArea.cpp \
     TBuffer.cpp \
+    TChar.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
@@ -612,6 +613,7 @@ HEADERS += \
     TArea.h \
     TAstar.h \
     TBuffer.h \
+    TChar.h \
     TCommandLine.h \
     TConsole.h \
     TDebug.h \

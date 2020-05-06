@@ -32,7 +32,10 @@
 #include "mudlet.h"
 #include "widechar_width.h"
 
+#include "TChar.h"
 #include "pre_guard.h"
+#include <QTextBoundaryFinder>
+#include <QToolTip>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QApplication>
@@ -41,8 +44,6 @@
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScrollBar>
-#include <QTextBoundaryFinder>
-#include <QToolTip>
 #include <QVersionNumber>
 #include "post_guard.h"
 #include <chrono>

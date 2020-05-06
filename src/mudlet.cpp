@@ -50,7 +50,11 @@
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
 
+#include "TChar.h"
 #include "pre_guard.h"
+#include <QTableWidget>
+#include <QTextStream>
+#include <QToolBar>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -59,17 +63,13 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
-#include <QNetworkDiskCache>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
-#include <QScrollBar>
-#include <QTableWidget>
-#include <QTextStream>
-#include <QToolBar>
-#include <QVariantHash>
 #include <QRandomGenerator>
-#include <zip.h>
+#include <QScrollBar>
+#include <QVariantHash>
 #include "post_guard.h"
+#include <zip.h>
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {

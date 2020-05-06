@@ -66,11 +66,12 @@
 #include <qt5keychain/keychain.h>
 #endif
 
-#include <optional>
+#include "TChar.h"
 #include "post_guard.h"
+#include <optional>
 
-#include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
+#include <hunspell/hunspell.hxx>
 
 // for system physical memory info
 #ifdef WIN32

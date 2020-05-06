@@ -45,84 +45,13 @@
 #include "TLinkStore.h"
 #include "TMxpMudlet.h"
 #include "TMxpProcessor.h"
+#include "TChar.h"
 
 #include <deque>
 #include <string>
 
 class Host;
 class QTextCodec;
-
-class TChar
-{
-    friend class TBuffer;
-
-public:
-    enum AttributeFlag {
-        None = 0x0,
-        // Replaces TCHAR_BOLD 2
-        Bold = 0x1,
-        // Replaces TCHAR_ITALICS 1
-        Italic = 0x2,
-        // Replaces TCHAR_UNDERLINE 4
-        Underline = 0x4,
-        // New, TCHAR_OVERLINE had not been previous done, is
-        // ANSI CSI SGR Overline (53 on, 55 off)
-        Overline = 0x8,
-        // Replaces TCHAR_STRIKEOUT 32
-        StrikeOut = 0x10,
-        // NOT a replacement for TCHAR_INVERSE, that is now covered by the
-        // separate isSelected bool but they must be EX-ORed at the point of
-        // painting the Character
-        Reverse = 0x20,
-        // The attributes that are currently user settable and what should be
-        // consider in HTML generation:
-        TestMask = 0x3f,
-        // Replaces TCHAR_ECHO 16
-        Echo = 0x100
-    };
-    Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
-
-    TChar();
-    TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    TChar(Host*);
-    TChar(const TChar&);
-
-    bool operator==(const TChar&);
-    void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
-        mFgColor = newForeGroundColor;
-        mBgColor = newBackGroundColor;
-    }
-    // Only considers the following flags: Bold, Italic, Overline, Reverse,
-    // Strikeout, Underline, does not consider Echo:
-    void setAllDisplayAttributes(const AttributeFlags newDisplayAttributes) { mFlags = (mFlags & ~TestMask) | (newDisplayAttributes & TestMask); }
-    void setForeground(const QColor& newColor) { mFgColor = newColor; }
-    void setBackground(const QColor& newColor) { mBgColor = newColor; }
-    void setTextFormat(const QColor& newFgColor, const QColor& newBgColor, const AttributeFlags newDisplayAttributes) {
-        setColors(newFgColor, newBgColor);
-        setAllDisplayAttributes(newDisplayAttributes);
-    }
-
-    const QColor& foreground() const { return mFgColor; }
-    const QColor& background() const { return mBgColor; }
-    AttributeFlags allDisplayAttributes() const { return mFlags & TestMask; }
-    void select() { mIsSelected = true; }
-    void deselect() { mIsSelected = false; }
-    bool isSelected() const { return mIsSelected; }
-    int linkIndex () const { return mLinkIndex; }
-
-private:
-    QColor mFgColor;
-    QColor mBgColor;
-    AttributeFlags mFlags;
-    // Kept as a separate flag because it must often be handled separately
-    bool mIsSelected;
-    int mLinkIndex;
-
-};
-Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
-
-
-
 
 class TBuffer
 {

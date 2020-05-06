@@ -60,6 +60,7 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
+#include "TChar.h"
 #include "post_guard.h"
 
 #include <limits>
