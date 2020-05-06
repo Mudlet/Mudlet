@@ -1545,24 +1545,6 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
-    mudServer = QStringLiteral("Carrion Fields");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pM = new QListWidgetItem(mudServer);
-        pM->setFont(font);
-        pM->setForeground(QColor(Qt::white));
-        profiles_tree_widget->addItem(pM);
-        if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QStringLiteral(":/icons/carrionfields.png"));
-            pM->setIcon(mi);
-        } else {
-            setCustomIcon(mudServer, pM);
-        }
-        description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
-        if (!description.isEmpty()) {
-            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
-        }
-    }
-
     mudServer = QStringLiteral("Aetolia");
     if (!deletedDefaultMuds.contains(mudServer)) {
         pM = new QListWidgetItem(mudServer);
@@ -1730,6 +1712,24 @@ void dlgConnectionProfiles::fillout_form()
             setCustomIcon(mudServer, pM);
         }
         description = getDescription(QStringLiteral("fierymud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
+    mudServer = QStringLiteral("Carrion Fields");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/carrionfields.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
+        description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
