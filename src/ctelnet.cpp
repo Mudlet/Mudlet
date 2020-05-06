@@ -2645,7 +2645,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                 if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
                                     qDebug() << "MCCP version 2 starting sequence";
                                     _compress = true;
-                                }                            }
+                                }
+                            }
                             if (_compress) {
                                 mNeedDecompression = true;
                                 // from this position in stream onwards, data will be compressed by zlib
