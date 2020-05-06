@@ -39,15 +39,15 @@
 
 #include "TChar.h"
 #include "pre_guard.h"
-#include <QTextBoundaryFinder>
-#include <QTextCodec>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QPainter>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTextBoundaryFinder>
+#include <QTextCodec>
+#include <QPainter>
 #include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");

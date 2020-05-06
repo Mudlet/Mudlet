@@ -196,10 +196,63 @@ QColor T2DMap::getColor(int id)
             env = 1;
         }
     }
+    switch (env) {
+    case 1:
+        color = mpHost->mColorSettings2.mRed;
+        break;
 
-    if (env <= 16) {
-        color = mpHost->mColorSettings2.getColorFromEnv(env);
-    } else { //user defined room color
+    case 2:
+        color = mpHost->mColorSettings2.mGreen;
+        break;
+    case 3:
+        color = mpHost->mColorSettings2.mYellow;
+        break;
+
+    case 4:
+        color = mpHost->mColorSettings2.mBlue;
+        break;
+
+    case 5:
+        color = mpHost->mColorSettings2.mMagenta;
+        break;
+    case 6:
+        color = mpHost->mColorSettings2.mCyan;
+        break;
+    case 7:
+        color = mpHost->mColorSettings2.mWhite;
+        break;
+    case 8:
+        color = mpHost->mColorSettings2.mBlack;
+        break;
+
+    case 9:
+        color = mpHost->mColorSettings2.mLightRed;
+        break;
+
+    case 10:
+        color = mpHost->mColorSettings2.mLightGreen;
+        break;
+    case 11:
+        color = mpHost->mColorSettings2.mLightYellow;
+        break;
+
+    case 12:
+        color = mpHost->mColorSettings2.mLightBlue;
+        break;
+
+    case 13:
+        color = mpHost->mColorSettings2.mLightMagenta;
+        break;
+    case 14:
+        color = mpHost->mColorSettings2.mLightCyan;
+        break;
+    case 15:
+        color = mpHost->mColorSettings2.mLightWhite;
+        break;
+    case 16:
+        color = mpHost->mColorSettings2.mLightBlack;
+        break;
+    default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
             if (16 < env && env < 232) {
                 quint8 base = env - 16;
@@ -215,9 +268,9 @@ QColor T2DMap::getColor(int id)
                 quint8 k = ((env - 232) * 10) + 8;
                 color = QColor(k, k, k, 255);
             }
-        } else {
-            color = mpMap->customEnvColors[env];
+            break;
         }
+        color = mpMap->customEnvColors[env];
     }
     return color;
 }
@@ -674,10 +727,26 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
             roomEnvironment = 1;
         }
     }
-
-    if (roomEnvironment <= 16) {
-        roomColor = mpHost->mColorSettings2.getColorFromEnv(roomEnvironment);
-    } else { //user defined room color
+    // clang-format off
+    switch (roomEnvironment) {
+    case 1:     roomColor = mpHost->mColorSettings2.mRed;             break;
+    case 2:     roomColor = mpHost->mColorSettings2.mGreen;           break;
+    case 3:     roomColor = mpHost->mColorSettings2.mYellow;          break;
+    case 4:     roomColor = mpHost->mColorSettings2.mBlue;            break;
+    case 5:     roomColor = mpHost->mColorSettings2.mMagenta;         break;
+    case 6:     roomColor = mpHost->mColorSettings2.mCyan;            break;
+    case 7:     roomColor = mpHost->mColorSettings2.mWhite;           break;
+    case 8:     roomColor = mpHost->mColorSettings2.mBlack;           break;
+    case 9:     roomColor = mpHost->mColorSettings2.mLightRed;        break;
+    case 10:    roomColor = mpHost->mColorSettings2.mLightGreen;      break;
+    case 11:    roomColor = mpHost->mColorSettings2.mLightYellow;     break;
+    case 12:    roomColor = mpHost->mColorSettings2.mLightBlue;       break;
+    case 13:    roomColor = mpHost->mColorSettings2.mLightMagenta;    break;
+    case 14:    roomColor = mpHost->mColorSettings2.mLightCyan;       break;
+    case 15:    roomColor = mpHost->mColorSettings2.mLightWhite;      break;
+    case 16:    roomColor = mpHost->mColorSettings2.mLightBlack;      break;
+    // clang-format on
+    default: //user defined room color
         if (mpMap->customEnvColors.contains(roomEnvironment)) {
             roomColor = mpMap->customEnvColors[roomEnvironment];
         } else {

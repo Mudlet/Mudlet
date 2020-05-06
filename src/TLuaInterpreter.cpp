@@ -60,7 +60,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "TChar.h"
 #include "post_guard.h"
 
 #include <limits>
@@ -721,8 +720,60 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     }
 
 
-    TColorSettings &colors = host.mColorSettings;
-    QColor c = ansiFg == 0 ? colors.mFgColor : getColorFromCode(colors, ansiFg);
+    QColor c;
+    switch (ansiFg) {
+    case 0:
+        c = host.mColorSettings.mFgColor;
+        break;
+    case 1:
+        c = host.mColorSettings.mLightBlack;
+        break;
+    case 2:
+        c = host.mColorSettings.mBlack;
+        break;
+    case 3:
+        c = host.mColorSettings.mLightRed;
+        break;
+    case 4:
+        c = host.mColorSettings.mRed;
+        break;
+    case 5:
+        c = host.mColorSettings.mLightGreen;
+        break;
+    case 6:
+        c = host.mColorSettings.mGreen;
+        break;
+    case 7:
+        c = host.mColorSettings.mLightYellow;
+        break;
+    case 8:
+        c = host.mColorSettings.mYellow;
+        break;
+    case 9:
+        c = host.mColorSettings.mLightBlue;
+        break;
+    case 10:
+        c = host.mColorSettings.mBlue;
+        break;
+    case 11:
+        c = host.mColorSettings.mLightMagenta;
+        break;
+    case 12:
+        c = host.mColorSettings.mMagenta;
+        break;
+    case 13:
+        c = host.mColorSettings.mLightCyan;
+        break;
+    case 14:
+        c = host.mColorSettings.mCyan;
+        break;
+    case 15:
+        c = host.mColorSettings.mLightWhite;
+        break;
+    case 16:
+        c = host.mColorSettings.mWhite;
+        break;
+    }
 
     int val = *it;
     if (val == c.red()) {
@@ -770,8 +821,61 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
         return 0;
     }
 
-    TColorSettings &colors = host.mColorSettings;
-    QColor c = ansiBg == 0 ? colors.mFgColor : getColorFromCode(colors, ansiBg);
+
+    QColor c;
+    switch (ansiBg) {
+    case 0:
+        c = host.mColorSettings.mBgColor;
+        break;
+    case 1:
+        c = host.mColorSettings.mLightBlack;
+        break;
+    case 2:
+        c = host.mColorSettings.mBlack;
+        break;
+    case 3:
+        c = host.mColorSettings.mLightRed;
+        break;
+    case 4:
+        c = host.mColorSettings.mRed;
+        break;
+    case 5:
+        c = host.mColorSettings.mLightGreen;
+        break;
+    case 6:
+        c = host.mColorSettings.mGreen;
+        break;
+    case 7:
+        c = host.mColorSettings.mLightYellow;
+        break;
+    case 8:
+        c = host.mColorSettings.mYellow;
+        break;
+    case 9:
+        c = host.mColorSettings.mLightBlue;
+        break;
+    case 10:
+        c = host.mColorSettings.mBlue;
+        break;
+    case 11:
+        c = host.mColorSettings.mLightMagenta;
+        break;
+    case 12:
+        c = host.mColorSettings.mMagenta;
+        break;
+    case 13:
+        c = host.mColorSettings.mLightCyan;
+        break;
+    case 14:
+        c = host.mColorSettings.mCyan;
+        break;
+    case 15:
+        c = host.mColorSettings.mLightWhite;
+        break;
+    case 16:
+        c = host.mColorSettings.mWhite;
+        break;
+    }
 
     int val = *it;
     if (val == c.red()) {
@@ -789,46 +893,6 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 
     lua_pushboolean(L, false);
     return 1;
-}
-
-QColor TLuaInterpreter::getColorFromCode(const TColorScheme& colors, int ansiCode)
-{
-    switch (ansiCode) {
-    case 1:
-        return colors.mLightBlack;
-    case 2:
-        return colors.mBlack;
-    case 3:
-        return colors.mLightRed;
-    case 4:
-        return colors.mRed;
-    case 5:
-        return colors.mLightGreen;
-    case 6:
-        return colors.mGreen;
-    case 7:
-        return colors.mLightYellow;
-    case 8:
-        return colors.mYellow;
-    case 9:
-        return colors.mLightBlue;
-    case 10:
-        return colors.mBlue;
-    case 11:
-        return colors.mLightMagenta;
-    case 12:
-        return colors.mMagenta;
-    case 13:
-        return colors.mLightCyan;
-    case 14:
-        return colors.mCyan;
-    case 15:
-        return colors.mLightWhite;
-    case 16:
-        return colors.mWhite;
-    }
-
-    return QColor();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor

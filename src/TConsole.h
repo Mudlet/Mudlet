@@ -32,10 +32,10 @@
 
 #include "TChar.h"
 #include "pre_guard.h"
-#include <QTextStream>
 #include <QDataStream>
 #include <QFile>
 #include <QPointer>
+#include <QTextStream>
 #include <QWidget>
 #include "post_guard.h"
 

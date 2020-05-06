@@ -28,8 +28,6 @@
 
 #include "TBufferStyle.h"
 #include "TChar.h"
-#include "TColorScheme.h"
-#include "TColorSettings.h"
 #include "TEncodingTable.h"
 #include "TLinkStore.h"
 #include "TMxpMudlet.h"
@@ -41,12 +39,13 @@
 #include <QColor>
 #include <QDebug>
 #include <QMap>
+#include <QQueue>
 #include <QPoint>
 #include <QPointer>
-#include <QQueue>
 #include <QString>
 #include <QStringBuilder>
 #include <QStringList>
+#include <QTime>
 #include <QVector>
 #include "post_guard.h"
 
@@ -137,7 +136,6 @@ public:
 private:
     void shrinkBuffer();
     int calculateWrapPosition(int lineNumber, int begin, int end);
-    void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -179,41 +177,5 @@ private:
     QTextCodec* mMainIncomingCodec;
 };
 
-#ifndef QT_NO_DEBUG_STREAM
-// Dumper for the TChar::AttributeFlags - so that qDebug gives a detailed broken
-// down results when presented with the value rather than just a hex value.
-// Note "inline" is REQUIRED:
-inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes)
-{
-    QDebugStateSaver saver(debug);
-    QString result = QLatin1String("TChar::AttributeFlags(");
-    QStringList presentAttributes;
-    if (attributes & TChar::Bold) {
-        presentAttributes << QLatin1String("Bold (0x01)");
-    }
-    if (attributes & TChar::Italic) {
-        presentAttributes << QLatin1String("Italic (0x02)");
-    }
-    if (attributes & TChar::Underline) {
-        presentAttributes << QLatin1String("Underline (0x04)");
-    }
-    if (attributes & TChar::Overline) {
-        presentAttributes << QLatin1String("Overline (0x08)");
-    }
-    if (attributes & TChar::StrikeOut) {
-        presentAttributes << QLatin1String("StrikeOut (0x10)");
-    }
-    if (attributes & TChar::Reverse) {
-        presentAttributes << QLatin1String("Reverse (0x20)");
-    }
-    if (attributes & TChar::Echo) {
-        presentAttributes << QLatin1String("Echo (0x100)");
-    }
-    result.append(presentAttributes.join(", "));
-    result.append(QLatin1String(")"));
-    debug.nospace() << result;
-    return debug;
-}
-#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TBUFFER_H

@@ -447,8 +447,6 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
     }
 }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "performance-no-automatic-move"
 // This is a CPU/Time hog without the non-default (true) third argument to
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
@@ -530,7 +528,6 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
         delete pT;
     }
 }
-#pragma clang diagnostic pop
 
 void XMLimport::readUnknownMapElement()
 {

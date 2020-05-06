@@ -41,7 +41,6 @@
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
-#include "TColorScheme.h"
 #include "post_guard.h"
 
 extern "C" {
@@ -392,7 +391,6 @@ public:
     static int tempColorTrigger(lua_State*);
     static int isAnsiFgColor(lua_State*);
     static int isAnsiBgColor(lua_State*);
-    static QColor getColorFromCode(const TColorScheme& colors, int ansiCode);
     static int stopSounds(lua_State*);
     static int playSoundFile(lua_State*);
     static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);

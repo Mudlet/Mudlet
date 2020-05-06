@@ -30,7 +30,6 @@
 #include "TDebug.h"
 #include "TMatchState.h"
 #include "mudlet.h"
-#include <QRegularExpression>
 
 #include <cassert>
 #include <sstream>

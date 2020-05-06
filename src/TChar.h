@@ -23,6 +23,7 @@
 #define MUDLET_SRC_TBUFFER_CPP_TCHAR_H
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QColor>
 #include "post_guard.h"
 
@@ -98,5 +99,42 @@ private:
 
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
+
+#ifndef QT_NO_DEBUG_STREAM
+// Dumper for the TChar::AttributeFlags - so that qDebug gives a detailed broken
+// down results when presented with the value rather than just a hex value.
+// Note "inline" is REQUIRED:
+inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes)
+{
+    QDebugStateSaver saver(debug);
+    QString result = QLatin1String("TChar::AttributeFlags(");
+    QStringList presentAttributes;
+    if (attributes & TChar::Bold) {
+        presentAttributes << QLatin1String("Bold (0x01)");
+    }
+    if (attributes & TChar::Italic) {
+        presentAttributes << QLatin1String("Italic (0x02)");
+    }
+    if (attributes & TChar::Underline) {
+        presentAttributes << QLatin1String("Underline (0x04)");
+    }
+    if (attributes & TChar::Overline) {
+        presentAttributes << QLatin1String("Overline (0x08)");
+    }
+    if (attributes & TChar::StrikeOut) {
+        presentAttributes << QLatin1String("StrikeOut (0x10)");
+    }
+    if (attributes & TChar::Reverse) {
+        presentAttributes << QLatin1String("Reverse (0x20)");
+    }
+    if (attributes & TChar::Echo) {
+        presentAttributes << QLatin1String("Echo (0x100)");
+    }
+    result.append(presentAttributes.join(", "));
+    result.append(QLatin1String(")"));
+    debug.nospace() << result;
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif //MUDLET_SRC_TBUFFER_CPP_TCHAR_H

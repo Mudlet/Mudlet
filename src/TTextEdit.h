@@ -30,12 +30,12 @@
 
 #include "TChar.h"
 #include "pre_guard.h"
-#include <QTime>
 #include <QMap>
 #include <QPointer>
+#include <QTime>
 #include <QWidget>
-#include "post_guard.h"
 #include <chrono>
+#include "post_guard.h"
 
 #include <string>
 

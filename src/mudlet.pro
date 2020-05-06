@@ -512,8 +512,10 @@ SOURCES += \
     TAlias.cpp \
     TArea.cpp \
     TBuffer.cpp \
+    TBufferStyle.cpp \
     TChar.cpp \
     TColorScheme.cpp \
+    TColorSettings.cpp \
     TCommandLine.cpp \
     TConsole.cpp \
     TDebug.cpp \
@@ -614,8 +616,10 @@ HEADERS += \
     TArea.h \
     TAstar.h \
     TBuffer.h \
+    TBufferStyle.h \
     TChar.h \
     TColorScheme.h
+    TColorSettings.h
     TCommandLine.h \
     TConsole.h \
     TDebug.h \

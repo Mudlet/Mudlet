@@ -28,7 +28,7 @@
 
 #include "HostManager.h"
 #include "FontManager.h"
-#include "TBuffer.h" // Needed for TChar details
+#include "TChar.h"
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -66,12 +66,11 @@
 #include <qt5keychain/keychain.h>
 #endif
 
-#include "TChar.h"
-#include "post_guard.h"
 #include <optional>
+#include "post_guard.h"
 
-#include <hunspell/hunspell.h>
 #include <hunspell/hunspell.hxx>
+#include <hunspell/hunspell.h>
 
 // for system physical memory info
 #ifdef WIN32

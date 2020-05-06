@@ -52,9 +52,6 @@
 
 #include "TChar.h"
 #include "pre_guard.h"
-#include <QTableWidget>
-#include <QTextStream>
-#include <QToolBar>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -63,13 +60,17 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QNetworkDiskCache>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
-#include <QRandomGenerator>
 #include <QScrollBar>
+#include <QTableWidget>
+#include <QTextStream>
+#include <QToolBar>
 #include <QVariantHash>
-#include "post_guard.h"
+#include <QRandomGenerator>
 #include <zip.h>
+#include "post_guard.h"
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
