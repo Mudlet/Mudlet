@@ -2363,11 +2363,11 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
         // are in place when the 2D mapper is created:
-        mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
-                                          mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
-                                          mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
-                                          mpHost->mpMap->mPlayerRoomOuterColor,
-                                          mpHost->mpMap->mPlayerRoomInnerColor);
+        mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle,
+                                          mpHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage,
+                                          mpHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage,
+                                          mpHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor,
+                                          mpHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
         if (!pW) {
             mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
         } else {

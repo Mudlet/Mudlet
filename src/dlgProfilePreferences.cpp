@@ -855,16 +855,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
 
         widget_playerRoomStyle->show();
-        comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
+        comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle);
         // Custom colours only available in style '3' (of '0' to '3'):
-        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
-        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
-        spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
-        spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
+        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle == 3);
+        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle == 3);
+        spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage);
+        spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage);
         // Adjustable inner diameter not available for style '0' (original):
-        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
-        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle != 0);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
@@ -1392,25 +1392,25 @@ void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBlack.name()));
-        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightBlack.name()));
-        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mGreen.name()));
-        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightGreen.name()));
-        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mRed.name()));
-        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightRed.name()));
-        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBlue.name()));
-        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightBlue.name()));
-        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mYellow.name()));
-        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightYellow.name()));
-        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mCyan.name()));
-        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightCyan.name()));
-        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mMagenta.name()));
-        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightMagenta.name()));
-        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mWhite.name()));
-        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mLightWhite.name()));
+        pushButton_black_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mBlack.name()));
+        pushButton_Lblack_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightBlack.name()));
+        pushButton_green_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mGreen.name()));
+        pushButton_Lgreen_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightGreen.name()));
+        pushButton_red_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mRed.name()));
+        pushButton_Lred_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightRed.name()));
+        pushButton_blue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mBlue.name()));
+        pushButton_Lblue_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightBlue.name()));
+        pushButton_yellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mYellow.name()));
+        pushButton_Lyellow_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightYellow.name()));
+        pushButton_cyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mCyan.name()));
+        pushButton_Lcyan_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightCyan.name()));
+        pushButton_magenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mMagenta.name()));
+        pushButton_Lmagenta_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightMagenta.name()));
+        pushButton_white_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mWhite.name()));
+        pushButton_Lwhite_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mLightWhite.name()));
 
-        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mFgColor.name()));
-        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mColorSettings2.mBgColor.name()));
+        pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mFgColor.name()));
+        pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mMapDisplaySettings.mBgColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1472,7 +1472,7 @@ void dlgProfilePreferences::resetColors2()
         return;
     }
 
-    pHost->mColorSettings2.reset();
+    pHost->mMapDisplaySettings.reset();
 
     setColors2();
 }
@@ -1770,7 +1770,7 @@ void dlgProfilePreferences::setFgColor2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_foreground_color_2, pHost->mColorSettings2.mFgColor);
+        setColor(pushButton_foreground_color_2, pHost->mMapDisplaySettings.mFgColor);
     }
 }
 
@@ -1778,7 +1778,7 @@ void dlgProfilePreferences::setBgColor2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_background_color_2, pHost->mColorSettings2.mBgColor);
+        setColor(pushButton_background_color_2, pHost->mMapDisplaySettings.mBgColor);
     }
 }
 
@@ -1786,7 +1786,7 @@ void dlgProfilePreferences::setColorBlack2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_black_2, pHost->mColorSettings2.mBlack);
+        setColor(pushButton_black_2, pHost->mMapDisplaySettings.mBlack);
     }
 }
 
@@ -1794,7 +1794,7 @@ void dlgProfilePreferences::setColorLightBlack2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblack_2, pHost->mColorSettings2.mLightBlack);
+        setColor(pushButton_Lblack_2, pHost->mMapDisplaySettings.mLightBlack);
     }
 }
 
@@ -1802,7 +1802,7 @@ void dlgProfilePreferences::setColorRed2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_red_2, pHost->mColorSettings2.mRed);
+        setColor(pushButton_red_2, pHost->mMapDisplaySettings.mRed);
     }
 }
 
@@ -1810,7 +1810,7 @@ void dlgProfilePreferences::setColorLightRed2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lred_2, pHost->mColorSettings2.mLightRed);
+        setColor(pushButton_Lred_2, pHost->mMapDisplaySettings.mLightRed);
     }
 }
 
@@ -1818,7 +1818,7 @@ void dlgProfilePreferences::setColorGreen2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_green_2, pHost->mColorSettings2.mGreen);
+        setColor(pushButton_green_2, pHost->mMapDisplaySettings.mGreen);
     }
 }
 
@@ -1826,7 +1826,7 @@ void dlgProfilePreferences::setColorLightGreen2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lgreen_2, pHost->mColorSettings2.mLightGreen);
+        setColor(pushButton_Lgreen_2, pHost->mMapDisplaySettings.mLightGreen);
     }
 }
 
@@ -1834,7 +1834,7 @@ void dlgProfilePreferences::setColorBlue2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_blue_2, pHost->mColorSettings2.mBlue);
+        setColor(pushButton_blue_2, pHost->mMapDisplaySettings.mBlue);
     }
 }
 
@@ -1842,7 +1842,7 @@ void dlgProfilePreferences::setColorLightBlue2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblue_2, pHost->mColorSettings2.mLightBlue);
+        setColor(pushButton_Lblue_2, pHost->mMapDisplaySettings.mLightBlue);
     }
 }
 
@@ -1850,7 +1850,7 @@ void dlgProfilePreferences::setColorYellow2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_yellow_2, pHost->mColorSettings2.mYellow);
+        setColor(pushButton_yellow_2, pHost->mMapDisplaySettings.mYellow);
     }
 }
 
@@ -1858,7 +1858,7 @@ void dlgProfilePreferences::setColorLightYellow2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lyellow_2, pHost->mColorSettings2.mLightYellow);
+        setColor(pushButton_Lyellow_2, pHost->mMapDisplaySettings.mLightYellow);
     }
 }
 
@@ -1866,7 +1866,7 @@ void dlgProfilePreferences::setColorCyan2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_cyan_2, pHost->mColorSettings2.mCyan);
+        setColor(pushButton_cyan_2, pHost->mMapDisplaySettings.mCyan);
     }
 }
 
@@ -1874,7 +1874,7 @@ void dlgProfilePreferences::setColorLightCyan2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lcyan_2, pHost->mColorSettings2.mLightCyan);
+        setColor(pushButton_Lcyan_2, pHost->mMapDisplaySettings.mLightCyan);
     }
 }
 
@@ -1882,7 +1882,7 @@ void dlgProfilePreferences::setColorMagenta2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_magenta_2, pHost->mColorSettings2.mMagenta);
+        setColor(pushButton_magenta_2, pHost->mMapDisplaySettings.mMagenta);
     }
 }
 
@@ -1890,7 +1890,7 @@ void dlgProfilePreferences::setColorLightMagenta2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lmagenta_2, pHost->mColorSettings2.mLightMagenta);
+        setColor(pushButton_Lmagenta_2, pHost->mMapDisplaySettings.mLightMagenta);
     }
 }
 
@@ -1898,7 +1898,7 @@ void dlgProfilePreferences::setColorWhite2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_white_2, pHost->mColorSettings2.mWhite);
+        setColor(pushButton_white_2, pHost->mMapDisplaySettings.mWhite);
     }
 }
 
@@ -1906,7 +1906,7 @@ void dlgProfilePreferences::setColorLightWhite2()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lwhite_2, pHost->mColorSettings2.mLightWhite);
+        setColor(pushButton_Lwhite_2, pHost->mMapDisplaySettings.mLightWhite);
     }
 }
 
@@ -2586,8 +2586,8 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setPlayerRoomStyleDetails(static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()),
                                              static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()),
                                              static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()),
-                                             pHost->mpMap->mPlayerRoomOuterColor,
-                                             pHost->mpMap->mPlayerRoomInnerColor);
+                                             pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor,
+                                             pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
         }
     }
 
@@ -3731,9 +3731,9 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
         pushButton_playerRoomSecondaryColor->setEnabled(false);
         spinBox_playerRoomInnerDiameter->setEnabled(false);
     }
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
-    pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
+    pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle = static_cast<quint8>(style);
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -3749,7 +3749,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         return;
     }
 
-    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
+    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -3767,7 +3767,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         return;
     }
 
-    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
+    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -3785,9 +3785,9 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
         return;
     }
 
-    if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
-        mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        mpHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+    if (value < 256 && mpHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage != value) {
+        mpHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
         // And update the displayed map:
         mpHost->mpMap->mpMapper->mp2dMap->update();
     }
@@ -3800,9 +3800,9 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
         return;
     }
 
-    if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
-        mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        mpHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+    if (value < 256 && mpHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage != value) {
+        mpHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
         // Redefine the QGradientStops
         mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
         // And update the displayed map:

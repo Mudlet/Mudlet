@@ -897,11 +897,11 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
         if (pHost->mpMap) {
             // And the TMap instance:
-            pHost->mpMap->mPlayerRoomStyle = styleCode;
-            pHost->mpMap->mPlayerRoomOuterDiameterPercentage = outerDiameterPercentage;
-            pHost->mpMap->mPlayerRoomInnerDiameterPercentage = innerDiameterPercentage;
-            pHost->mpMap->mPlayerRoomOuterColor = outerColor;
-            pHost->mpMap->mPlayerRoomInnerColor = innerColor;
+            pHost->mpMap->mMapDisplaySettings.mPlayerRoomStyle = styleCode;
+            pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage = outerDiameterPercentage;
+            pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage = innerDiameterPercentage;
+            pHost->mpMap->mMapDisplaySettings.mPlayerRoomOuterColor = outerColor;
+            pHost->mpMap->mMapDisplaySettings.mPlayerRoomInnerColor = innerColor;
         }
     }
 
@@ -1054,41 +1054,41 @@ void XMLimport::readHostPackage(Host* pHost)
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mFgColor2") {
-                pHost->mColorSettings2.mFgColor.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mFgColor.setNamedColor(readElementText());
             } else if (name() == "mBgColor2") {
-                pHost->mColorSettings2.mBgColor.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mBgColor.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
-                pHost->mColorSettings2.mBlack.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
-                pHost->mColorSettings2.mLightBlack.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightBlack.setNamedColor(readElementText());
             } else if (name() == "mRed2") {
-                pHost->mColorSettings2.mRed.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mRed.setNamedColor(readElementText());
             } else if (name() == "mLightRed2") {
-                pHost->mColorSettings2.mLightRed.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightRed.setNamedColor(readElementText());
             } else if (name() == "mBlue2") {
-                pHost->mColorSettings2.mBlue.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mBlue.setNamedColor(readElementText());
             } else if (name() == "mLightBlue2") {
-                pHost->mColorSettings2.mLightBlue.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightBlue.setNamedColor(readElementText());
             } else if (name() == "mGreen2") {
-                pHost->mColorSettings2.mGreen.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mGreen.setNamedColor(readElementText());
             } else if (name() == "mLightGreen2") {
-                pHost->mColorSettings2.mLightGreen.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightGreen.setNamedColor(readElementText());
             } else if (name() == "mYellow2") {
-                pHost->mColorSettings2.mYellow.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mYellow.setNamedColor(readElementText());
             } else if (name() == "mLightYellow2") {
-                pHost->mColorSettings2.mLightYellow.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightYellow.setNamedColor(readElementText());
             } else if (name() == "mCyan2") {
-                pHost->mColorSettings2.mCyan.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mCyan.setNamedColor(readElementText());
             } else if (name() == "mLightCyan2") {
-                pHost->mColorSettings2.mLightCyan.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightCyan.setNamedColor(readElementText());
             } else if (name() == "mMagenta2") {
-                pHost->mColorSettings2.mMagenta.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mMagenta.setNamedColor(readElementText());
             } else if (name() == "mLightMagenta2") {
-                pHost->mColorSettings2.mLightMagenta.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightMagenta.setNamedColor(readElementText());
             } else if (name() == "mWhite2") {
-                pHost->mColorSettings2.mWhite.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mWhite.setNamedColor(readElementText());
             } else if (name() == "mLightWhite2") {
-                pHost->mColorSettings2.mLightWhite.setNamedColor(readElementText());
+                pHost->mMapDisplaySettings.mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
                 pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {

@@ -69,6 +69,7 @@ set(mudlet_SRCS
     ircmessageformatter.cpp
     KeyUnit.cpp
     LuaInterface.cpp
+    TMapDisplaySettings.cpp
     main.cpp
     mudlet.cpp
     ScriptUnit.cpp
@@ -199,6 +200,7 @@ set(mudlet_HDRS
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
+    TMapDisplaySettings.h
     mudlet.h
     post_guard.h
     pre_guard.h

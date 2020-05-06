@@ -525,22 +525,22 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("mFgColor2").text().set(pHost->mColorSettings.mFgColor.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mColorSettings.mBgColor.name().toUtf8().constData());
-        host.append_child("mBlack2").text().set(pHost->mColorSettings2.mBlack.name().toUtf8().constData());
-        host.append_child("mLightBlack2").text().set(pHost->mColorSettings2.mLightBlack.name().toUtf8().constData());
-        host.append_child("mRed2").text().set(pHost->mColorSettings2.mRed.name().toUtf8().constData());
-        host.append_child("mLightRed2").text().set(pHost->mColorSettings2.mLightRed.name().toUtf8().constData());
-        host.append_child("mBlue2").text().set(pHost->mColorSettings2.mBlue.name().toUtf8().constData());
-        host.append_child("mLightBlue2").text().set(pHost->mColorSettings2.mLightBlue.name().toUtf8().constData());
-        host.append_child("mGreen2").text().set(pHost->mColorSettings2.mGreen.name().toUtf8().constData());
-        host.append_child("mLightGreen2").text().set(pHost->mColorSettings2.mLightGreen.name().toUtf8().constData());
-        host.append_child("mYellow2").text().set(pHost->mColorSettings2.mYellow.name().toUtf8().constData());
-        host.append_child("mLightYellow2").text().set(pHost->mColorSettings2.mLightYellow.name().toUtf8().constData());
-        host.append_child("mCyan2").text().set(pHost->mColorSettings2.mCyan.name().toUtf8().constData());
-        host.append_child("mLightCyan2").text().set(pHost->mColorSettings2.mLightCyan.name().toUtf8().constData());
-        host.append_child("mMagenta2").text().set(pHost->mColorSettings2.mMagenta.name().toUtf8().constData());
-        host.append_child("mLightMagenta2").text().set(pHost->mColorSettings2.mLightMagenta.name().toUtf8().constData());
-        host.append_child("mWhite2").text().set(pHost->mColorSettings2.mWhite.name().toUtf8().constData());
-        host.append_child("mLightWhite2").text().set(pHost->mColorSettings2.mLightWhite.name().toUtf8().constData());
+        host.append_child("mBlack2").text().set(pHost->mMapDisplaySettings.mBlack.name().toUtf8().constData());
+        host.append_child("mLightBlack2").text().set(pHost->mMapDisplaySettings.mLightBlack.name().toUtf8().constData());
+        host.append_child("mRed2").text().set(pHost->mMapDisplaySettings.mRed.name().toUtf8().constData());
+        host.append_child("mLightRed2").text().set(pHost->mMapDisplaySettings.mLightRed.name().toUtf8().constData());
+        host.append_child("mBlue2").text().set(pHost->mMapDisplaySettings.mBlue.name().toUtf8().constData());
+        host.append_child("mLightBlue2").text().set(pHost->mMapDisplaySettings.mLightBlue.name().toUtf8().constData());
+        host.append_child("mGreen2").text().set(pHost->mMapDisplaySettings.mGreen.name().toUtf8().constData());
+        host.append_child("mLightGreen2").text().set(pHost->mMapDisplaySettings.mLightGreen.name().toUtf8().constData());
+        host.append_child("mYellow2").text().set(pHost->mMapDisplaySettings.mYellow.name().toUtf8().constData());
+        host.append_child("mLightYellow2").text().set(pHost->mMapDisplaySettings.mLightYellow.name().toUtf8().constData());
+        host.append_child("mCyan2").text().set(pHost->mMapDisplaySettings.mCyan.name().toUtf8().constData());
+        host.append_child("mLightCyan2").text().set(pHost->mMapDisplaySettings.mLightCyan.name().toUtf8().constData());
+        host.append_child("mMagenta2").text().set(pHost->mMapDisplaySettings.mMagenta.name().toUtf8().constData());
+        host.append_child("mLightMagenta2").text().set(pHost->mMapDisplaySettings.mLightMagenta.name().toUtf8().constData());
+        host.append_child("mWhite2").text().set(pHost->mMapDisplaySettings.mWhite.name().toUtf8().constData());
+        host.append_child("mLightWhite2").text().set(pHost->mMapDisplaySettings.mLightWhite.name().toUtf8().constData());
         host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave

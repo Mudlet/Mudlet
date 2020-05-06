@@ -293,11 +293,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 // DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
 , mEnableUserDictionary(true)
 , mUseSharedDictionary(false)
-, mPlayerRoomStyle(0)
-, mPlayerRoomOuterColor(Qt::red)
-, mPlayerRoomInnerColor(Qt::white)
-, mPlayerRoomOuterDiameterPercentage(120)
-, mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 {
@@ -2410,11 +2405,11 @@ void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerD
     QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
 
-    mPlayerRoomStyle = styleCode;
-    mPlayerRoomOuterDiameterPercentage = outerDiameter;
-    mPlayerRoomInnerDiameterPercentage = innerDiameter;
-    mPlayerRoomOuterColor = outerColor;
-    mPlayerRoomInnerColor = innerColor;
+    mMapDisplaySettings.mPlayerRoomStyle = styleCode;
+    mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage = outerDiameter;
+    mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage = innerDiameter;
+    mMapDisplaySettings.mPlayerRoomOuterColor = outerColor;
+    mMapDisplaySettings.mPlayerRoomInnerColor = innerColor;
     // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 }
@@ -2424,11 +2419,11 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
 
-    styleCode = mPlayerRoomStyle;
-    outerDiameter = mPlayerRoomOuterDiameterPercentage;
-    innerDiameter = mPlayerRoomInnerDiameterPercentage;
-    primaryColor = mPlayerRoomOuterColor;
-    secondaryColor = mPlayerRoomInnerColor;
+    styleCode = mMapDisplaySettings.mPlayerRoomStyle;
+    outerDiameter = mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage;
+    innerDiameter = mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage;
+    primaryColor = mMapDisplaySettings.mPlayerRoomOuterColor;
+    secondaryColor = mMapDisplaySettings.mPlayerRoomInnerColor;
     // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 }

@@ -3714,11 +3714,11 @@ void mudlet::createMapper(bool loadDefaultMap)
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:
-    pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
-                                     pMap->mPlayerRoomOuterDiameterPercentage,
-                                     pMap->mPlayerRoomInnerDiameterPercentage,
-                                     pMap->mPlayerRoomOuterColor,
-                                     pMap->mPlayerRoomInnerColor);
+    pHost->getPlayerRoomStyleDetails(pMap->mMapDisplaySettings.mPlayerRoomStyle,
+                                     pMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage,
+                                     pMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage,
+                                     pMap->mMapDisplaySettings.mPlayerRoomOuterColor,
+                                     pMap->mMapDisplaySettings.mPlayerRoomInnerColor);
 
     pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
     pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);

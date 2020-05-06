@@ -198,59 +198,59 @@ QColor T2DMap::getColor(int id)
     }
     switch (env) {
     case 1:
-        color = mpHost->mColorSettings2.mRed;
+        color = mpHost->mMapDisplaySettings.mRed;
         break;
 
     case 2:
-        color = mpHost->mColorSettings2.mGreen;
+        color = mpHost->mMapDisplaySettings.mGreen;
         break;
     case 3:
-        color = mpHost->mColorSettings2.mYellow;
+        color = mpHost->mMapDisplaySettings.mYellow;
         break;
 
     case 4:
-        color = mpHost->mColorSettings2.mBlue;
+        color = mpHost->mMapDisplaySettings.mBlue;
         break;
 
     case 5:
-        color = mpHost->mColorSettings2.mMagenta;
+        color = mpHost->mMapDisplaySettings.mMagenta;
         break;
     case 6:
-        color = mpHost->mColorSettings2.mCyan;
+        color = mpHost->mMapDisplaySettings.mCyan;
         break;
     case 7:
-        color = mpHost->mColorSettings2.mWhite;
+        color = mpHost->mMapDisplaySettings.mWhite;
         break;
     case 8:
-        color = mpHost->mColorSettings2.mBlack;
+        color = mpHost->mMapDisplaySettings.mBlack;
         break;
 
     case 9:
-        color = mpHost->mColorSettings2.mLightRed;
+        color = mpHost->mMapDisplaySettings.mLightRed;
         break;
 
     case 10:
-        color = mpHost->mColorSettings2.mLightGreen;
+        color = mpHost->mMapDisplaySettings.mLightGreen;
         break;
     case 11:
-        color = mpHost->mColorSettings2.mLightYellow;
+        color = mpHost->mMapDisplaySettings.mLightYellow;
         break;
 
     case 12:
-        color = mpHost->mColorSettings2.mLightBlue;
+        color = mpHost->mMapDisplaySettings.mLightBlue;
         break;
 
     case 13:
-        color = mpHost->mColorSettings2.mLightMagenta;
+        color = mpHost->mMapDisplaySettings.mLightMagenta;
         break;
     case 14:
-        color = mpHost->mColorSettings2.mLightCyan;
+        color = mpHost->mMapDisplaySettings.mLightCyan;
         break;
     case 15:
-        color = mpHost->mColorSettings2.mLightWhite;
+        color = mpHost->mMapDisplaySettings.mLightWhite;
         break;
     case 16:
-        color = mpHost->mColorSettings2.mLightBlack;
+        color = mpHost->mMapDisplaySettings.mLightBlack;
         break;
     default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
@@ -729,22 +729,22 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
     }
     // clang-format off
     switch (roomEnvironment) {
-    case 1:     roomColor = mpHost->mColorSettings2.mRed;             break;
-    case 2:     roomColor = mpHost->mColorSettings2.mGreen;           break;
-    case 3:     roomColor = mpHost->mColorSettings2.mYellow;          break;
-    case 4:     roomColor = mpHost->mColorSettings2.mBlue;            break;
-    case 5:     roomColor = mpHost->mColorSettings2.mMagenta;         break;
-    case 6:     roomColor = mpHost->mColorSettings2.mCyan;            break;
-    case 7:     roomColor = mpHost->mColorSettings2.mWhite;           break;
-    case 8:     roomColor = mpHost->mColorSettings2.mBlack;           break;
-    case 9:     roomColor = mpHost->mColorSettings2.mLightRed;        break;
-    case 10:    roomColor = mpHost->mColorSettings2.mLightGreen;      break;
-    case 11:    roomColor = mpHost->mColorSettings2.mLightYellow;     break;
-    case 12:    roomColor = mpHost->mColorSettings2.mLightBlue;       break;
-    case 13:    roomColor = mpHost->mColorSettings2.mLightMagenta;    break;
-    case 14:    roomColor = mpHost->mColorSettings2.mLightCyan;       break;
-    case 15:    roomColor = mpHost->mColorSettings2.mLightWhite;      break;
-    case 16:    roomColor = mpHost->mColorSettings2.mLightBlack;      break;
+    case 1:     roomColor = mpHost->mMapDisplaySettings.mRed;             break;
+    case 2:     roomColor = mpHost->mMapDisplaySettings.mGreen;           break;
+    case 3:     roomColor = mpHost->mMapDisplaySettings.mYellow;          break;
+    case 4:     roomColor = mpHost->mMapDisplaySettings.mBlue;            break;
+    case 5:     roomColor = mpHost->mMapDisplaySettings.mMagenta;         break;
+    case 6:     roomColor = mpHost->mMapDisplaySettings.mCyan;            break;
+    case 7:     roomColor = mpHost->mMapDisplaySettings.mWhite;           break;
+    case 8:     roomColor = mpHost->mMapDisplaySettings.mBlack;           break;
+    case 9:     roomColor = mpHost->mMapDisplaySettings.mLightRed;        break;
+    case 10:    roomColor = mpHost->mMapDisplaySettings.mLightGreen;      break;
+    case 11:    roomColor = mpHost->mMapDisplaySettings.mLightYellow;     break;
+    case 12:    roomColor = mpHost->mMapDisplaySettings.mLightBlue;       break;
+    case 13:    roomColor = mpHost->mMapDisplaySettings.mLightMagenta;    break;
+    case 14:    roomColor = mpHost->mMapDisplaySettings.mLightCyan;       break;
+    case 15:    roomColor = mpHost->mMapDisplaySettings.mLightWhite;      break;
+    case 16:    roomColor = mpHost->mMapDisplaySettings.mLightBlack;      break;
     // clang-format on
     default: //user defined room color
         if (mpMap->customEnvColors.contains(roomEnvironment)) {
@@ -1329,10 +1329,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     float exitWidth = 1 / eSize * mRoomWidth * rSize;
 
-    painter.fillRect(0, 0, width(), height(), mpHost->mColorSettings2.mBgColor);
+    painter.fillRect(0, 0, width(), height(), mpHost->mMapDisplaySettings.mBgColor);
 
     auto pen = painter.pen();
-    pen.setColor(mpHost->mColorSettings2.mFgColor);
+    pen.setColor(mpHost->mMapDisplaySettings.mFgColor);
     pen.setWidthF(exitWidth);
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
@@ -1429,7 +1429,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
-        double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * static_cast<double>(mRoomWidth);
+        double roomRadius = (mpMap->mMapDisplaySettings.mPlayerRoomOuterDiameterPercentage / 200.0) * static_cast<double>(mRoomWidth);
         QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
         if (mpHost->mMapStrongHighlight) {
             // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -1538,7 +1538,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     QColor infoColor;
-    if (mpHost->mColorSettings2.mBgColor.lightness() > 127) {
+    if (mpHost->mMapDisplaySettings.mBgColor.lightness() > 127) {
         infoColor = QColor(Qt::black);
     } else {
         infoColor = QColor(Qt::white);
@@ -4901,7 +4901,7 @@ void T2DMap::slot_customLineColor()
     if (mCurrentLineColor.isValid()) {
         color = QColorDialog::getColor(mCurrentLineColor, this);
     } else {
-        color = QColorDialog::getColor(mpHost->mColorSettings2.mFgColor, this);
+        color = QColorDialog::getColor(mpHost->mMapDisplaySettings.mFgColor, this);
     }
 
     if (color.isValid()) {
@@ -5150,8 +5150,8 @@ void T2DMap::setPlayerRoomStyle(const int type)
     // Indicate the LARGEST size we will need
     mPlayerRoomColorGradentStops.reserve(5);
 
-    double factor = mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
-    bool solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
+    double factor = mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage / 100.0;
+    bool solid = (mpMap->mMapDisplaySettings.mPlayerRoomInnerDiameterPercentage == 0);
     switch (type) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {
@@ -5190,20 +5190,20 @@ void T2DMap::setPlayerRoomStyle(const int type)
     case 3: { // User set ring:
         if (solid) {
             mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomOuterColor);
-            QColor transparentColor(mpMap->mPlayerRoomOuterColor);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
+            QColor transparentColor(mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, transparentColor);
         } else  {
             mPlayerRoomColorGradentStops.resize(5);
-            QColor transparentColor(mpMap->mPlayerRoomInnerColor);
+            QColor transparentColor(mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[0] = QGradientStop(1.000, transparentColor);
             mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, transparentColor);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomInnerColor);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomOuterColor);
-            transparentColor = mpMap->mPlayerRoomOuterColor;
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mMapDisplaySettings.mPlayerRoomInnerColor);
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mMapDisplaySettings.mPlayerRoomOuterColor);
+            transparentColor = mpMap->mMapDisplaySettings.mPlayerRoomOuterColor;
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, transparentColor);
         }
