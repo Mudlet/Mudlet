@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 
+#include "TColorScheme.h"
 #include "pre_guard.h"
 #include "ui_color_trigger.h"
 #include <QSignalMapper>
@@ -56,6 +57,7 @@ public slots:
 
 private:
     void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
+    void setupColors(const TColorScheme& colors);
 
     QSignalMapper* mSignalMapper;
     TTrigger* mpTrigger;

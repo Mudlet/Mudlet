@@ -26,26 +26,27 @@
 
 #include "TTextCodec.h"
 
+#include "TChar.h"
+#include "TColorScheme.h"
+#include "TEncodingTable.h"
+#include "TLinkStore.h"
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
 #include "pre_guard.h"
+#include <QTime>
 #include <QApplication>
 #include <QChar>
 #include <QColor>
 #include <QDebug>
 #include <QMap>
-#include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include <QQueue>
 #include <QString>
 #include <QStringBuilder>
 #include <QStringList>
-#include <QTime>
 #include <QVector>
 #include "post_guard.h"
-#include "TEncodingTable.h"
-#include "TLinkStore.h"
-#include "TMxpMudlet.h"
-#include "TMxpProcessor.h"
-#include "TChar.h"
 
 #include <deque>
 #include <string>
@@ -157,22 +158,7 @@ private:
     bool mIsDefaultColor;
 
 
-    QColor mBlack;
-    QColor mLightBlack;
-    QColor mRed;
-    QColor mLightRed;
-    QColor mLightGreen;
-    QColor mGreen;
-    QColor mLightBlue;
-    QColor mBlue;
-    QColor mLightYellow;
-    QColor mYellow;
-    QColor mLightCyan;
-    QColor mCyan;
-    QColor mLightMagenta;
-    QColor mMagenta;
-    QColor mLightWhite;
-    QColor mWhite;
+    TColorScheme mColorScheme;
     // These three replace three sets of three integers that were used to hold
     // colour components during the parsing of SGR sequences, they were called:
     // fgColor{R|G|B}, fgColorLight{R|G|B} and bgColor{R|G|B} apart from

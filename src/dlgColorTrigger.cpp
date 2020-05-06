@@ -74,23 +74,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     connect(pushButton_setUsingRgbValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_rgbColorClicked);
     connect(pushButton_setUsingGrayValue, &QAbstractButton::clicked, this, &dlgColorTrigger::slot_grayColorClicked);
 
-    setupBasicButton(pushButton_black, 0, mpTrigger->mpHost->mBlack, tr("Black"));
-    setupBasicButton(pushButton_red, 1, mpTrigger->mpHost->mRed, tr("Red"));
-    setupBasicButton(pushButton_green, 2, mpTrigger->mpHost->mGreen, tr("Green"));
-    setupBasicButton(pushButton_yellow, 3, mpTrigger->mpHost->mYellow, tr("Yellow"));
-    setupBasicButton(pushButton_blue, 4, mpTrigger->mpHost->mBlue, tr("Blue"));
-    setupBasicButton(pushButton_magenta, 5, mpTrigger->mpHost->mMagenta, tr("Magenta"));
-    setupBasicButton(pushButton_cyan, 6, mpTrigger->mpHost->mCyan, tr("Cyan"));
-    setupBasicButton(pushButton_white, 7, mpTrigger->mpHost->mWhite, tr("White (Light gray)"));
-
-    setupBasicButton(pushButton_Lblack, 8, mpTrigger->mpHost->mLightBlack, tr("Light black (Dark gray)"));
-    setupBasicButton(pushButton_Lred, 9, mpTrigger->mpHost->mLightRed, tr("Light red"));
-    setupBasicButton(pushButton_Lgreen, 10, mpTrigger->mpHost->mLightGreen, tr("Light green"));
-    setupBasicButton(pushButton_Lyellow, 11, mpTrigger->mpHost->mLightYellow, tr("Light yellow"));
-    setupBasicButton(pushButton_Lblue, 12, mpTrigger->mpHost->mLightBlue, tr("Light blue"));
-    setupBasicButton(pushButton_Lmagenta, 13, mpTrigger->mpHost->mLightMagenta, tr("Light magenta"));
-    setupBasicButton(pushButton_Lcyan, 14, mpTrigger->mpHost->mLightCyan, tr("Light cyan"));
-    setupBasicButton(pushButton_Lwhite, 15, mpTrigger->mpHost->mLightWhite, tr("Light white"));
+    setupColors(mpTrigger->mpHost->mColorScheme);
 
     // These will correctly set the colours on the value label in their area:
     if (mIsBackground) {
@@ -202,6 +186,26 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
 
     }
 }
+void dlgColorTrigger::setupColors(const TColorScheme& colors)
+{
+    setupBasicButton(pushButton_black, 0, colors.mBlack, tr("Black"));
+    setupBasicButton(pushButton_red, 1, colors.mRed, tr("Red"));
+    setupBasicButton(pushButton_green, 2, colors.mGreen, tr("Green"));
+    setupBasicButton(pushButton_yellow, 3, colors.mYellow, tr("Yellow"));
+    setupBasicButton(pushButton_blue, 4, colors.mBlue, tr("Blue"));
+    setupBasicButton(pushButton_magenta, 5, colors.mMagenta, tr("Magenta"));
+    setupBasicButton(pushButton_cyan, 6, colors.mCyan, tr("Cyan"));
+    setupBasicButton(pushButton_white, 7, colors.mWhite, tr("White (Light gray)"));
+
+    setupBasicButton(pushButton_Lblack, 8, colors.mLightBlack, tr("Light black (Dark gray)"));
+    setupBasicButton(pushButton_Lred, 9, colors.mLightRed, tr("Light red"));
+    setupBasicButton(pushButton_Lgreen, 10, colors.mLightGreen, tr("Light green"));
+    setupBasicButton(pushButton_Lyellow, 11, colors.mLightYellow, tr("Light yellow"));
+    setupBasicButton(pushButton_Lblue, 12, colors.mLightBlue, tr("Light blue"));
+    setupBasicButton(pushButton_Lmagenta, 13, colors.mLightMagenta, tr("Light magenta"));
+    setupBasicButton(pushButton_Lcyan, 14, colors.mLightCyan, tr("Light cyan"));
+    setupBasicButton(pushButton_Lwhite, 15, colors.mLightWhite, tr("Light white"));
+}
 
 void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor, const QColor& color, const QString& colorText)
 {
@@ -301,29 +305,7 @@ void dlgColorTrigger::slot_basicColorClicked(int ansiColor)
         return;
     }
 
-    QColor choosenColor;
-    // clang-format off
-    switch (ansiColor) {
-    case 0:     choosenColor = mpTrigger->mpHost->mBlack;           break;
-    case 1:     choosenColor = mpTrigger->mpHost->mRed;             break;
-    case 2:     choosenColor = mpTrigger->mpHost->mGreen;           break;
-    case 3:     choosenColor = mpTrigger->mpHost->mYellow;          break;
-    case 4:     choosenColor = mpTrigger->mpHost->mBlue;            break;
-    case 5:     choosenColor = mpTrigger->mpHost->mMagenta;         break;
-    case 6:     choosenColor = mpTrigger->mpHost->mCyan;            break;
-    case 7:     choosenColor = mpTrigger->mpHost->mWhite;           break;
-    case 8:     choosenColor = mpTrigger->mpHost->mLightBlack;      break;
-    case 9:     choosenColor = mpTrigger->mpHost->mLightRed;        break;
-    case 10:    choosenColor = mpTrigger->mpHost->mLightGreen;      break;
-    case 11:    choosenColor = mpTrigger->mpHost->mLightYellow;     break;
-    case 12:    choosenColor = mpTrigger->mpHost->mLightBlue;       break;
-    case 13:    choosenColor = mpTrigger->mpHost->mLightMagenta;    break;
-    case 14:    choosenColor = mpTrigger->mpHost->mLightCyan;       break;
-    case 15:    choosenColor = mpTrigger->mpHost->mLightWhite;      break;
-    default:
-        Q_UNREACHABLE();
-    }
-    // clang-format on
+    QColor choosenColor = mpTrigger->mpHost->mColorScheme.getColorFromAnsi(ansiColor);
 
     mpTrigger->mColorTrigger = true;
     if (mIsBackground) {

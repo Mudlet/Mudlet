@@ -77,6 +77,7 @@ set(mudlet_SRCS
     TArea.cpp
     TBuffer.cpp
     TChar.cpp
+    TColorScheme.cpp
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
@@ -205,6 +206,7 @@ set(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TChar.h
+    TColorScheme.h
     TCommandLine.h
     TConsole.h
     TDebug.h

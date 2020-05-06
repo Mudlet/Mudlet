@@ -447,6 +447,8 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
     }
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "performance-no-automatic-move"
 // This is a CPU/Time hog without the non-default (true) third argument to
 // TRoomDB::addRoom(...)
 void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int* roomCount)
@@ -528,6 +530,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
         delete pT;
     }
 }
+#pragma clang diagnostic pop
 
 void XMLimport::readUnknownMapElement()
 {
@@ -1006,37 +1009,37 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mCommandBgColor") {
                 pHost->mCommandBgColor.setNamedColor(readElementText());
             } else if (name() == "mBlack") {
-                pHost->mBlack.setNamedColor(readElementText());
+                pHost->mColorScheme.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack") {
-                pHost->mLightBlack.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightBlack.setNamedColor(readElementText());
             } else if (name() == "mRed") {
-                pHost->mRed.setNamedColor(readElementText());
+                pHost->mColorScheme.mRed.setNamedColor(readElementText());
             } else if (name() == "mLightRed") {
-                pHost->mLightRed.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightRed.setNamedColor(readElementText());
             } else if (name() == "mBlue") {
-                pHost->mBlue.setNamedColor(readElementText());
+                pHost->mColorScheme.mBlue.setNamedColor(readElementText());
             } else if (name() == "mLightBlue") {
-                pHost->mLightBlue.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightBlue.setNamedColor(readElementText());
             } else if (name() == "mGreen") {
-                pHost->mGreen.setNamedColor(readElementText());
+                pHost->mColorScheme.mGreen.setNamedColor(readElementText());
             } else if (name() == "mLightGreen") {
-                pHost->mLightGreen.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightGreen.setNamedColor(readElementText());
             } else if (name() == "mYellow") {
-                pHost->mYellow.setNamedColor(readElementText());
+                pHost->mColorScheme.mYellow.setNamedColor(readElementText());
             } else if (name() == "mLightYellow") {
-                pHost->mLightYellow.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightYellow.setNamedColor(readElementText());
             } else if (name() == "mCyan") {
-                pHost->mCyan.setNamedColor(readElementText());
+                pHost->mColorScheme.mCyan.setNamedColor(readElementText());
             } else if (name() == "mLightCyan") {
-                pHost->mLightCyan.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightCyan.setNamedColor(readElementText());
             } else if (name() == "mMagenta") {
-                pHost->mMagenta.setNamedColor(readElementText());
+                pHost->mColorScheme.mMagenta.setNamedColor(readElementText());
             } else if (name() == "mLightMagenta") {
-                pHost->mLightMagenta.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightMagenta.setNamedColor(readElementText());
             } else if (name() == "mWhite") {
-                pHost->mWhite.setNamedColor(readElementText());
+                pHost->mColorScheme.mWhite.setNamedColor(readElementText());
             } else if (name() == "mLightWhite") {
-                pHost->mLightWhite.setNamedColor(readElementText());
+                pHost->mColorScheme.mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
                 pHost->setDisplayFontFromString(readElementText());
 #if defined(Q_OS_LINUX)
@@ -1058,37 +1061,37 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mBgColor2") {
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
-                pHost->mBlack_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mBlack.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
-                pHost->mLightBlack_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightBlack.setNamedColor(readElementText());
             } else if (name() == "mRed2") {
-                pHost->mRed_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mRed.setNamedColor(readElementText());
             } else if (name() == "mLightRed2") {
-                pHost->mLightRed_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightRed.setNamedColor(readElementText());
             } else if (name() == "mBlue2") {
-                pHost->mBlue_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mBlue.setNamedColor(readElementText());
             } else if (name() == "mLightBlue2") {
-                pHost->mLightBlue_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightBlue.setNamedColor(readElementText());
             } else if (name() == "mGreen2") {
-                pHost->mGreen_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mGreen.setNamedColor(readElementText());
             } else if (name() == "mLightGreen2") {
-                pHost->mLightGreen_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightGreen.setNamedColor(readElementText());
             } else if (name() == "mYellow2") {
-                pHost->mYellow_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mYellow.setNamedColor(readElementText());
             } else if (name() == "mLightYellow2") {
-                pHost->mLightYellow_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightYellow.setNamedColor(readElementText());
             } else if (name() == "mCyan2") {
-                pHost->mCyan_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mCyan.setNamedColor(readElementText());
             } else if (name() == "mLightCyan2") {
-                pHost->mLightCyan_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightCyan.setNamedColor(readElementText());
             } else if (name() == "mMagenta2") {
-                pHost->mMagenta_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mMagenta.setNamedColor(readElementText());
             } else if (name() == "mLightMagenta2") {
-                pHost->mLightMagenta_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightMagenta.setNamedColor(readElementText());
             } else if (name() == "mWhite2") {
-                pHost->mWhite_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mWhite.setNamedColor(readElementText());
             } else if (name() == "mLightWhite2") {
-                pHost->mLightWhite_2.setNamedColor(readElementText());
+                pHost->mColorScheme2.mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
                 pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {

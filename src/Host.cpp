@@ -251,81 +251,17 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-, mBlack(QColorConstants::Black)
-, mLightBlack(QColorConstants::DarkGray)
-, mRed(QColorConstants::DarkRed)
-, mLightRed(QColorConstants::Red)
-, mLightGreen(QColorConstants::Green)
-, mGreen(QColorConstants::DarkGreen)
-, mLightBlue(QColorConstants::Blue)
-, mBlue(QColorConstants::DarkBlue)
-, mLightYellow(QColorConstants::Yellow)
-, mYellow(QColorConstants::DarkYellow)
-, mLightCyan(QColorConstants::Cyan)
-, mCyan(QColorConstants::DarkCyan)
-, mLightMagenta(QColorConstants::Magenta)
-, mMagenta(QColorConstants::DarkMagenta)
-, mLightWhite(QColorConstants::White)
-, mWhite(QColorConstants::LightGray)
 , mFgColor(QColorConstants::LightGray)
 , mBgColor(QColorConstants::Black)
 , mCommandBgColor(QColorConstants::Black)
 , mCommandFgColor(QColor(113, 113, 0))
-, mBlack_2(QColorConstants::Black)
-, mLightBlack_2(QColorConstants::DarkGray)
-, mRed_2(QColorConstants::DarkRed)
-, mLightRed_2(QColorConstants::Red)
-, mLightGreen_2(QColorConstants::Green)
-, mGreen_2(QColorConstants::DarkGreen)
-, mLightBlue_2(QColorConstants::Blue)
-, mBlue_2(QColorConstants::DarkBlue)
-, mLightYellow_2(QColorConstants::Yellow)
-, mYellow_2(QColorConstants::DarkYellow)
-, mLightCyan_2(QColorConstants::Cyan)
-, mCyan_2(QColorConstants::DarkCyan)
-, mLightMagenta_2(QColorConstants::Magenta)
-, mMagenta_2(QColorConstants::DarkMagenta)
-, mLightWhite_2(QColorConstants::White)
-, mWhite_2(QColorConstants::LightGray)
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
 #else
-, mBlack(Qt::black)
-, mLightBlack(Qt::darkGray)
-, mRed(Qt::darkRed)
-, mLightRed(Qt::red)
-, mLightGreen(Qt::green)
-, mGreen(Qt::darkGreen)
-, mLightBlue(Qt::blue)
-, mBlue(Qt::darkBlue)
-, mLightYellow(Qt::yellow)
-, mYellow(Qt::darkYellow)
-, mLightCyan(Qt::cyan)
-, mCyan(Qt::darkCyan)
-, mLightMagenta(Qt::magenta)
-, mMagenta(Qt::darkMagenta)
-, mLightWhite(Qt::white)
-, mWhite(Qt::lightGray)
 , mFgColor(Qt::lightGray)
 , mBgColor(Qt::black)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(113, 113, 0))
-, mBlack_2(Qt::black)
-, mLightBlack_2(Qt::darkGray)
-, mRed_2(Qt::darkRed)
-, mLightRed_2(Qt::red)
-, mLightGreen_2(Qt::green)
-, mGreen_2(Qt::darkGreen)
-, mLightBlue_2(Qt::blue)
-, mBlue_2(Qt::darkBlue)
-, mLightYellow_2(Qt::yellow)
-, mYellow_2(Qt::darkYellow)
-, mLightCyan_2(Qt::cyan)
-, mCyan_2(Qt::darkCyan)
-, mLightMagenta_2(Qt::magenta)
-, mMagenta_2(Qt::darkMagenta)
-, mLightWhite_2(Qt::white)
-, mWhite_2(Qt::lightGray)
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
 #endif
@@ -1994,24 +1930,12 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 
 QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 {
+    if (ansiCode < 16) {
+        return mColorScheme.getColorFromAnsi(ansiCode);
+    }
+
     // clang-format off
     switch (ansiCode) {
-    case 0:         return mBlack;
-    case 1:         return mRed;
-    case 2:         return mGreen;
-    case 3:         return mYellow;
-    case 4:         return mBlue;
-    case 5:         return mMagenta;
-    case 6:         return mCyan;
-    case 7:         return mWhite;
-    case 8:         return mLightBlack;
-    case 9:         return mLightRed;
-    case 10:        return mLightGreen;
-    case 11:        return mLightYellow;
-    case 12:        return mLightBlue;
-    case 13:        return mLightMagenta;
-    case 14:        return mLightCyan;
-    case 15:        return mLightWhite;
     // Grey scale divided into 24 values:
     case 232:       return QColor(  0,   0,   0); //   0.000
     case 233:       return QColor( 11,  11,  11); //  11.087

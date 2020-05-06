@@ -66,23 +66,8 @@ TBuffer::TBuffer(Host* pH)
 , mGotCSI(false)
 , mGotOSC(false)
 , mIsDefaultColor(true)
-, mBlack(pH->mBlack)
-, mLightBlack(pH->mLightBlack)
-, mRed(pH->mRed)
-, mLightRed(pH->mLightRed)
-, mLightGreen(pH->mLightGreen)
-, mGreen(pH->mGreen)
-, mLightBlue(pH->mLightBlue)
-, mBlue(pH->mBlue)
-, mLightYellow(pH->mLightYellow)
-, mYellow(pH->mYellow)
-, mLightCyan(pH->mLightCyan)
-, mCyan(pH->mCyan)
-, mLightMagenta(pH->mLightMagenta)
-, mMagenta(pH->mMagenta)
-, mLightWhite(pH->mLightWhite)
-, mWhite(pH->mWhite)
 , mpHost(pH)
+, mColorScheme(pH->mColorScheme)
 , mForeGroundColor(pH->mFgColor)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
@@ -159,22 +144,7 @@ void TBuffer::updateColors()
         return;
     }
 
-    mBlack = pH->mBlack;
-    mLightBlack = pH->mLightBlack;
-    mRed = pH->mRed;
-    mLightRed = pH->mLightRed;
-    mLightGreen = pH->mLightGreen;
-    mGreen = pH->mGreen;
-    mLightBlue = pH->mLightBlue;
-    mBlue = pH->mBlue;
-    mLightYellow = pH->mLightYellow;
-    mYellow = pH->mYellow;
-    mLightCyan = pH->mLightCyan;
-    mCyan = pH->mCyan;
-    mLightMagenta = pH->mLightMagenta;
-    mMagenta = pH->mMagenta;
-    mLightWhite = pH->mLightWhite;
-    mWhite = pH->mWhite;
+    mColorScheme = pH->mColorScheme;
     mForeGroundColor = pH->mFgColor;
     mForeGroundColorLight = pH->mFgColor;
     mBackGroundColor = pH->mBgColor;
@@ -841,40 +811,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             }
             mIsDefaultColor = false;
 
-            switch (tag) {
-            case 0:
-                mForeGroundColor = mBlack;
-                mForeGroundColorLight = mLightBlack;
-                break;
-            case 1:
-                mForeGroundColor = mRed;
-                mForeGroundColorLight = mLightRed;
-                break;
-            case 2:
-                mForeGroundColor = mGreen;
-                mForeGroundColorLight = mLightGreen;
-                break;
-            case 3:
-                mForeGroundColor = mYellow;
-                mForeGroundColorLight = mLightYellow;
-                break;
-            case 4:
-                mForeGroundColor = mBlue;
-                mForeGroundColorLight = mLightBlue;
-                break;
-            case 5:
-                mForeGroundColor = mMagenta;
-                mForeGroundColorLight = mLightMagenta;
-                break;
-            case 6:
-                mForeGroundColor = mCyan;
-                mForeGroundColorLight = mLightCyan;
-                break;
-            case 7:
-                mForeGroundColor = mWhite;
-                mForeGroundColorLight = mLightWhite;
-                break;
-            }
+            mColorScheme.getColorPair(tag, mForeGroundColor, mForeGroundColorLight);
 
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
@@ -1048,40 +985,8 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
             mIsDefaultColor = false;
             QColor bgColorLight;
 
-            switch (tag) {
-            case 0:
-                mBackGroundColor = mBlack;
-                bgColorLight = mLightBlack;
-                break;
-            case 1:
-                mBackGroundColor = mRed;
-                bgColorLight = mLightRed;
-                break;
-            case 2:
-                mBackGroundColor = mGreen;
-                bgColorLight = mLightGreen;
-                break;
-            case 3:
-                mBackGroundColor = mYellow;
-                bgColorLight = mLightYellow;
-                break;
-            case 4:
-                mBackGroundColor = mBlue;
-                bgColorLight = mLightBlue;
-                break;
-            case 5:
-                mBackGroundColor = mMagenta;
-                bgColorLight = mLightMagenta;
-                break;
-            case 6:
-                mBackGroundColor = mCyan;
-                bgColorLight = mLightCyan;
-                break;
-            case 7:
-                mBackGroundColor = mWhite;
-                bgColorLight = mLightWhite;
-                break;
-            }
+            mColorScheme.getColorPair(tag, mBackGroundColor, bgColorLight);
+
             if (useLightColor) {
                 mBackGroundColor = bgColorLight;
             }
@@ -1584,43 +1489,35 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mStrikeOut = false;
                     break;
                 case 30:
-                    mForeGroundColor = mBlack;
-                    mForeGroundColorLight = mLightBlack;
+                    mColorScheme.getColorPair(0, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 31:
-                    mForeGroundColor = mRed;
-                    mForeGroundColorLight = mLightRed;
+                    mColorScheme.getColorPair(1, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 32:
-                    mForeGroundColor = mGreen;
-                    mForeGroundColorLight = mLightGreen;
+                    mColorScheme.getColorPair(2, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 33:
-                    mForeGroundColor = mYellow;
-                    mForeGroundColorLight = mLightYellow;
+                    mColorScheme.getColorPair(3, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 34:
-                    mForeGroundColor = mBlue;
-                    mForeGroundColorLight = mLightBlue;
+                    mColorScheme.getColorPair(4, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 35:
-                    mForeGroundColor = mMagenta;
-                    mForeGroundColorLight = mLightMagenta;
+                    mColorScheme.getColorPair(5, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 36:
-                    mForeGroundColor = mCyan;
-                    mForeGroundColorLight = mLightCyan;
+                    mColorScheme.getColorPair(6, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 37:
-                    mForeGroundColor = mWhite;
-                    mForeGroundColorLight = mLightWhite;
+                    mColorScheme.getColorPair(7, mForeGroundColor, mForeGroundColorLight);
                     mIsDefaultColor = false;
                     break;
                 case 38: {
@@ -1719,28 +1616,28 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mForeGroundColor = pHost->mFgColor;
                     break;
                 case 40:
-                    mBackGroundColor = mBlack;
+                    mBackGroundColor = mColorScheme.mBlack;
                     break;
                 case 41:
-                    mBackGroundColor = mRed;
+                    mBackGroundColor = mColorScheme.mRed;
                     break;
                 case 42:
-                    mBackGroundColor = mGreen;
+                    mBackGroundColor = mColorScheme.mGreen;
                     break;
                 case 43:
-                    mBackGroundColor = mYellow;
+                    mBackGroundColor = mColorScheme.mYellow;
                     break;
                 case 44:
-                    mBackGroundColor = mBlue;
+                    mBackGroundColor = mColorScheme.mBlue;
                     break;
                 case 45:
-                    mBackGroundColor = mMagenta;
+                    mBackGroundColor = mColorScheme.mMagenta;
                     break;
                 case 46:
-                    mBackGroundColor = mCyan;
+                    mBackGroundColor = mColorScheme.mCyan;
                     break;
                 case 47:
-                    mBackGroundColor = mWhite;
+                    mBackGroundColor = mColorScheme.mWhite;
                     break;
                 case 48: {
                     // We only have single elements so we will need to steal the
@@ -1861,68 +1758,68 @@ void TBuffer::decodeSGR(const QString& sequence)
                 // case 65: // cancels the effects of 60 to 64
                 //    break;
                 case 90:
-                    mForeGroundColor = mLightBlack;
-                    mForeGroundColorLight = mLightBlack;
+                    mForeGroundColor = mColorScheme.mLightBlack;
+                    mForeGroundColorLight = mColorScheme.mLightBlack;
                     mIsDefaultColor = false;
                     break;
                 case 91:
-                    mForeGroundColor = mLightRed;
-                    mForeGroundColorLight = mLightRed;
+                    mForeGroundColor = mColorScheme.mLightRed;
+                    mForeGroundColorLight = mColorScheme.mLightRed;
                     mIsDefaultColor = false;
                     break;
                 case 92:
-                    mForeGroundColor = mLightGreen;
-                    mForeGroundColorLight = mLightGreen;
+                    mForeGroundColor = mColorScheme.mLightGreen;
+                    mForeGroundColorLight = mColorScheme.mLightGreen;
                     mIsDefaultColor = false;
                     break;
                 case 93:
-                    mForeGroundColor = mLightYellow;
-                    mForeGroundColorLight = mLightYellow;
+                    mForeGroundColor = mColorScheme.mLightYellow;
+                    mForeGroundColorLight = mColorScheme.mLightYellow;
                     mIsDefaultColor = false;
                     break;
                 case 94:
-                    mForeGroundColor = mLightBlue;
-                    mForeGroundColorLight = mLightBlue;
+                    mForeGroundColor = mColorScheme.mLightBlue;
+                    mForeGroundColorLight = mColorScheme.mLightBlue;
                     mIsDefaultColor = false;
                     break;
                 case 95:
-                    mForeGroundColor = mLightMagenta;
-                    mForeGroundColorLight = mLightMagenta;
+                    mForeGroundColor = mColorScheme.mLightMagenta;
+                    mForeGroundColorLight = mColorScheme.mLightMagenta;
                     mIsDefaultColor = false;
                     break;
                 case 96:
-                    mForeGroundColor = mLightCyan;
-                    mForeGroundColorLight = mLightCyan;
+                    mForeGroundColor = mColorScheme.mLightCyan;
+                    mForeGroundColorLight = mColorScheme.mLightCyan;
                     mIsDefaultColor = false;
                     break;
                 case 97:
-                    mForeGroundColor = mLightWhite;
-                    mForeGroundColorLight = mLightWhite;
+                    mForeGroundColor = mColorScheme.mLightWhite;
+                    mForeGroundColorLight = mColorScheme.mLightWhite;
                     mIsDefaultColor = false;
                     break;
                 case 100:
-                    mBackGroundColor = mLightBlack;
+                    mBackGroundColor = mColorScheme.mLightBlack;
                     break;
                 case 101:
-                    mBackGroundColor = mLightRed;
+                    mBackGroundColor = mColorScheme.mLightRed;
                     break;
                 case 102:
-                    mBackGroundColor = mLightGreen;
+                    mBackGroundColor = mColorScheme.mLightGreen;
                     break;
                 case 103:
-                    mBackGroundColor = mLightYellow;
+                    mBackGroundColor = mColorScheme.mLightYellow;
                     break;
                 case 104:
-                    mBackGroundColor = mLightBlue;
+                    mBackGroundColor = mColorScheme.mLightBlue;
                     break;
                 case 105:
-                    mBackGroundColor = mLightMagenta;
+                    mBackGroundColor = mColorScheme.mLightMagenta;
                     break;
                 case 106:
-                    mBackGroundColor = mLightCyan;
+                    mBackGroundColor = mColorScheme.mLightCyan;
                     break;
                 case 107:
-                    mBackGroundColor = mLightWhite;
+                    mBackGroundColor = mColorScheme.mLightWhite;
                     break;
                 default:
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
@@ -1969,58 +1866,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
                 if (isOk) {
                     bool isValid = true;
-                    switch (colorNumber) {
-                    case 0: // Black
-                        pHost->mBlack = QColor(rr, gg, bb);
-                        break;
-                    case 1: // Red
-                        pHost->mRed = QColor(rr, gg, bb);
-                        break;
-                    case 2: // Green
-                        pHost->mGreen = QColor(rr, gg, bb);
-                        break;
-                    case 3: // Yellow
-                        pHost->mYellow = QColor(rr, gg, bb);
-                        break;
-                    case 4: // Blue
-                        pHost->mBlue = QColor(rr, gg, bb);
-                        break;
-                    case 5: // Magenta
-                        pHost->mMagenta = QColor(rr, gg, bb);
-                        break;
-                    case 6: // Cyan
-                        pHost->mCyan = QColor(rr, gg, bb);
-                        break;
-                    case 7: // Light gray
-                        pHost->mWhite = QColor(rr, gg, bb);
-                        break;
-                    case 8: // Dark gray
-                        pHost->mLightBlack = QColor(rr, gg, bb);
-                        break;
-                    case 9: // Light Red
-                        pHost->mLightRed = QColor(rr, gg, bb);
-                        break;
-                    case 10: // Light Green
-                        pHost->mLightGreen = QColor(rr, gg, bb);
-                        break;
-                    case 11: // Light Yellow
-                        pHost->mLightYellow = QColor(rr, gg, bb);
-                        break;
-                    case 12: // Light Blue
-                        pHost->mLightBlue = QColor(rr, gg, bb);
-                        break;
-                    case 13: // Light Magenta
-                        pHost->mLightMagenta = QColor(rr, gg, bb);
-                        break;
-                    case 14: // Light Cyan
-                        pHost->mLightCyan = QColor(rr, gg, bb);
-                        break;
-                    case 15: // Light gray
-                        pHost->mLightWhite = QColor(rr, gg, bb);
-                        break;
-                    default:
-                        isValid = false;
-                    }
+                    isValid = pHost->mColorScheme.setColor(colorNumber, QColor(rr, gg, bb));
+
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
@@ -2064,22 +1911,7 @@ void TBuffer::resetColors()
 
     // These should match the corresponding settings in
     // dlgProfilePreferences::resetColors() :
-    pHost->mBlack = Qt::black;
-    pHost->mLightBlack = Qt::darkGray;
-    pHost->mRed = Qt::darkRed;
-    pHost->mLightRed = Qt::red;
-    pHost->mGreen = Qt::darkGreen;
-    pHost->mLightGreen = Qt::green;
-    pHost->mBlue = Qt::darkBlue;
-    pHost->mLightBlue = Qt::blue;
-    pHost->mYellow = Qt::darkYellow;
-    pHost->mLightYellow = Qt::yellow;
-    pHost->mCyan = Qt::darkCyan;
-    pHost->mLightCyan = Qt::cyan;
-    pHost->mMagenta = Qt::darkMagenta;
-    pHost->mLightMagenta = Qt::magenta;
-    pHost->mWhite = Qt::lightGray;
-    pHost->mLightWhite = Qt::white;
+    pHost->mColorScheme.reset();
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
