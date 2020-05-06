@@ -13,7 +13,6 @@
 class TColorScheme
 {
 public:
-
     TColorScheme();
 
     QColor mBlack;
@@ -33,9 +32,7 @@ public:
     QColor mLightWhite;
     QColor mWhite;
 
-    QColor getColorFromAnsi(int ansiColor) const;
-    QColor getColorFromEnv(int env) const;
-    bool getColorPair(int tag, QColor& color, QColor& lightColor) const;
+    const QColor& getColorFromAnsi(int ansiColor) const;
 
     bool setColor(quint8 colorNumber, const QColor& Color);
     virtual void reset();

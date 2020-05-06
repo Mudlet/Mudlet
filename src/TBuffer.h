@@ -66,7 +66,7 @@ class TBuffer
     inline static const int MAX_CHARACTERS_PER_ECHO = 10000;
 
 public:
-    TBuffer(Host* pH);
+    TBuffer(Host* pHost);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, TChar& format);
     void expandLine(int y, int count, TChar&);

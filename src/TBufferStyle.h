@@ -10,6 +10,7 @@
 class TBufferStyle : public TColorSettings
 {
 public:
+    TBufferStyle();
     explicit TBufferStyle(const TColorSettings& colorSettings);
 
     bool mBold;
@@ -29,12 +30,7 @@ public:
     void updateColorSettings(const TColorSettings &colors);
     void decodeSGR38(const QStringList& parameters, bool isColonSeparated);
     void decodeSGR48(const QStringList& parameters, bool isColonSeparated);
-    void decodeSGR(const QString& sequence, bool haveColorSpaceId, const TColorSettings& colors);
-
-
-
-private:
-    void resetFontStyle();
+    void decodeSGR(const QString& sequence, bool haveColorSpaceId, const TColorSettings& hostColorSettings);
 };
 
 

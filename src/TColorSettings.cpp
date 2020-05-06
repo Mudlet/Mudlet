@@ -15,35 +15,7 @@ TColorSettings::TColorSettings()
 TColorSettings::TColorSettings(const TColorSettings& other) : TColorScheme(other), mFgColor(other.mFgColor), mBgColor(other.mBgColor) {}
 
 
-TColorSettings::TColorSettings(const TColorScheme& scheme, const QColor& fg, const QColor& bg) : TColorScheme(scheme), mFgColor(fg), mFgColorLight(fg), mBgColor(bg) {}
-
-void TColorSettings::updateForeGroundFromTag(int tag)
-{
-    getColorPair(tag, mFgColor, mFgColorLight);
-}
-
-void TColorSettings::updateForeGround(const QColor& fg)
-{
-    updateForeGround(fg, fg);
-}
-void TColorSettings::updateForeGround(const QColor& fg, const QColor& fgLight)
-{
-    mFgColor = fg;
-    mFgColorLight = fgLight;
-}
-
-
-void TColorSettings::updateBackGround(int tag)
-{
-    mBgColor = getColorFromAnsi(tag);
-}
-
-void TColorSettings::updateBackGround(const QColor& color)
-{
-    mBgColor = color;
-}
-
-void TColorSettings::updateColors(QColor fg, QColor bg)
+void TColorSettings::updateColors(const QColor& fg, const QColor& bg)
 {
     mFgColor = fg;
     mBgColor = bg;

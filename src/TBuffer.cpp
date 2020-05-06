@@ -55,7 +55,7 @@
 const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = QStringLiteral("------------ ");
 
-TBuffer::TBuffer(Host* pH)
+TBuffer::TBuffer(Host* pHost)
 : mLinesLimit(10000)
 , mBatchDeleteSize(1000)
 , mWrapAt(99999999)
@@ -65,8 +65,8 @@ TBuffer::TBuffer(Host* pH)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
-, mpHost(pH)
-, mColorSettings(pH->mColorSettings)
+, mpHost(pHost)
+, mColorSettings(pHost ? pHost->mColorSettings : TColorSettings())
 , lastLoggedFromLine(0)
 , lastloggedToLine(0)
 , mEncoding()

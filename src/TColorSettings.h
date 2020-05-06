@@ -2,8 +2,8 @@
 // Created by gustavo on 05/05/2020.
 //
 
-#ifndef MUDLET__TBUFFERCOLORSETTINGS_H
-#define MUDLET__TBUFFERCOLORSETTINGS_H
+#ifndef MUDLET_COLORSETTINGS_H
+#define MUDLET_COLORSETTINGS_H
 
 #include "TColorScheme.h"
 
@@ -21,18 +21,11 @@ public:
     QColor mBgColor;
 
     TColorSettings();
-    TColorSettings(const TColorSettings &other);
-    TColorSettings(const TColorScheme& scheme, const QColor& fg, const QColor& bg);
+    TColorSettings(const TColorSettings& other);
 
-    void updateForeGroundFromTag(int tag);
-    void updateBackGround(int tag);
-
-    void updateBackGround(const QColor &color);
-    void updateForeGround(const QColor& fg, const QColor& fgLight);
-    void updateForeGround(const QColor& fg);
-    void updateColors(QColor fg, QColor bg);
+    void updateColors(const QColor& fg, const QColor& bg);
 
     virtual void reset();
 };
 
-#endif //MUDLET__TBUFFERCOLORSETTINGS_H
+#endif //MUDLET_COLORSETTINGS_H
