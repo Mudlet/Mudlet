@@ -89,14 +89,9 @@ end
 -- @param window The window to add this container
 -- @param cons
 -- @param passOn manages the inheritance of this add function
-function Geyser:add (window, cons, passOn)
-  inheritance = inheritance or false
+function Geyser:add (window, cons)
   self:base_add(window, cons)
   window:show()
-    -- if passOn is true Geyser.add will be inheritated by all the children added to this container. If set to true this add function will be inherited by all children.
-  if window.add == Geyser.add2 and passOn then
-    window.add = Geyser.add
-  end
 end
 
 --- Add a window to the list that this container manages. 
@@ -106,8 +101,10 @@ end
 -- @param window The window to add this container
 -- @param cons
 -- @param passOn manages the inheritance of this add function. If set to true this add function will be inherited by all children.
-function Geyser:add2 (window, cons, passOn)
-  passOn = passOn or false
+-- @param exclude manages types which have to be excluded from overwriting their add function as they have their own
+function Geyser:add2 (window, cons, passOn, exclude)
+  passOn = passOn or self.passAdd2 or false
+  exclude = exclude or {"hbox", "VBox", "adjustablecontainer"}
   cons = cons or window -- 'cons' is optional
   local hidden, auto_hidden = window.special_hidden , window.special_auto_hidden --special variables only for creation/initialization
   if hidden == "novalue" then -- if special_hidden is "novalue" there is no initialitation
@@ -125,9 +122,12 @@ function Geyser:add2 (window, cons, passOn)
   if not(window.hidden or window.auto_hidden) then
     window:show()
   end
-  -- if passOn is true Geyser.add2 will be inheritated by all the children added to this container
-  if window.add == Geyser.add and passOn then
-    window.add = window.add2
+  if passOn then
+    window.passAdd2 = true
+    -- Don't overwrite hbox/vbox add functions as they have their own
+    if window.add == Geyser.add and not (table.contains(exclude, window.type)) then
+      window.add = window.add2
+    end
   end
 end
 

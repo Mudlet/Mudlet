@@ -830,11 +830,11 @@ end
 
 function Adjustable.Container:new(cons,container)
     Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
-    local me = self.parent:new(cons, container)
     cons = cons or {}
+    cons.type = cons.type or "adjustablecontainer"
+    local me = self.parent:new(cons, container)
     setmetatable(me, self)
     self.__index = self
-    me.type = "adjustablecontainer"
     me.ParentMenuWidth = me.ParentMenuWidth or "102"
     me.ChildMenuWidth = me.ChildMenuWidth or "82"
     me.MenuHeight = me.MenuHeight or "22"

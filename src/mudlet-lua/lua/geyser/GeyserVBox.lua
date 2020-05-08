@@ -10,7 +10,14 @@ Geyser.VBox = Geyser.Container:new({
 })
 
 function Geyser.VBox:add (window, cons)
-  Geyser.add(self, window, cons)
+  -- VBox/HBox have their own add function therefore passing off add2 should be possible without
+  -- overwriting their add functions
+  if self.container and (self.container.add == Geyser.add2 or self.container.passAdd2) then
+    Geyser.add2(self, window, cons)
+  else
+    Geyser.add(self, window, cons)
+  end
+  
   if not self.defer_updates then
     self:reposition()
   end
