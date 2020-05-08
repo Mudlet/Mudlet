@@ -574,47 +574,55 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Cannot find a path from %1 to %2 using known exits.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2204"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2241"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2258"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2276"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1centre of %n selected rooms
+</numerusform>
+        <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1centre of %n selected rooms
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2302"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation type="unfinished"/>
+      <translation>render time: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2366"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Text label or image label?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2367"/>
@@ -632,7 +640,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Enter label text.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2379"/>
@@ -680,7 +688,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2787"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Undo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
@@ -692,13 +700,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Properties</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>properties...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2798"/>
@@ -710,7 +718,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Finish</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
@@ -722,19 +730,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Create new map</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Load map</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2839"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Create room</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2845"/>
@@ -878,13 +886,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Set room&apos;s area number</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Custom exit line</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2895"/>
@@ -902,7 +910,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Create Label</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2904"/>
@@ -926,7 +934,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Can only set location when exactly one room is selected</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2940"/>
@@ -974,74 +982,75 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2974"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Remove point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2981"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Merge pair of segments by removing this point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2985"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Remove last segment by removing this point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2990"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>use &quot;delete line&quot; to remove the only segment ending in an editable point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2996"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>Select a point first, then remove it</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3000"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Properties</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3004"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>properties...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3008"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Delete line</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Delete all of this custom line</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3466"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Move the selection, centred on
+the highlighted room (%1) to:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3490"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3495"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>Cancel</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3584"/>
@@ -1126,7 +1135,11 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Increase the spacing of
+the selected rooms,
+centred on the
+highlighted room by a
+factor of:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3920"/>
@@ -1140,7 +1153,11 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Decrease the spacing of
+the selected rooms,
+centred on the
+highlighted room by a
+factor of:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4051"/>
@@ -4642,7 +4659,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="590"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="832"/>
