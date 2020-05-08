@@ -5401,32 +5401,32 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="725"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="727"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="728"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="731"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="732"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Named file (concatenate logs in one file)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="765"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>Other profiles to map to:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
@@ -5478,7 +5478,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1989"/>
       <source>Importing map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Importing map - please wait...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1993"/>
@@ -5508,7 +5508,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2022"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Save Mudlet map</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2022"/>
@@ -5539,7 +5539,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2073"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Migrating passwords to profiles...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2105"/>
@@ -5592,7 +5592,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2309"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Where should Mudlet save log files?</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2686"/>
@@ -5714,7 +5714,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>System dictionaries:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
@@ -5724,7 +5724,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="593"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - not recognised</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="594"/>
@@ -5734,7 +5734,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="619"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>No Hunspell dictionary files found, spell-checking will not be available.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1976"/>
@@ -5765,7 +5765,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3246"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>more - not shown...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3253"/>
@@ -5791,37 +5791,37 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3371"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Large icon</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3372"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Detail</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3374"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Small icon</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3375"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>State</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3377"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Party size</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3378"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
-      <translation type="unfinished"/>
+      <translation>Party max</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3379"/>
@@ -5832,7 +5832,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3414"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>Map symbol usage - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3491"/>
@@ -5934,7 +5934,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
@@ -6011,12 +6011,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1798"/>
       <location filename="../src/dlgRoomExits.cpp" line="1916"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Exit to &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="761"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="772"/>
@@ -6027,7 +6027,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="815"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="825"/>
@@ -6038,7 +6038,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="867"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="877"/>
@@ -6049,7 +6049,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="919"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="929"/>
@@ -6060,7 +6060,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="971"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="981"/>
@@ -6071,7 +6071,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1023"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1033"/>
@@ -6082,7 +6082,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1075"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1085"/>
@@ -6093,7 +6093,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1127"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1137"/>
@@ -6104,7 +6104,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1179"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1189"/>
@@ -6282,12 +6282,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="426"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Show Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="430"/>
@@ -6383,25 +6383,26 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="8324"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8343"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="476"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
+It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="478"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="481"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8795"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8801"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="485"/>
@@ -6468,7 +6469,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="537"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Generates a statistics summary display on the main profile console.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
@@ -6516,7 +6517,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="676"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Case sensitive</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="729"/>
@@ -6545,7 +6546,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="779"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>start of line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2774"/>
@@ -6721,7 +6722,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4919"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>match on the prompt line</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4922"/>
@@ -6918,13 +6919,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8127"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Import Mudlet Package</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8134"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8148"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Import Mudlet Package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8134"/>
@@ -7006,7 +7007,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8632"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Saving…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8791"/>
@@ -7074,12 +7075,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="679"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Match case precisely</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="683"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>Include variables</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="686"/>
