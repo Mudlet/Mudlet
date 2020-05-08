@@ -1058,7 +1058,7 @@ the highlighted room (%1) to:</translation>
       <location filename="../src/T2DMap.cpp" line="3659"/>
       <source>Enter room symbol</source>
       <comment>Title for room symbol selection/entry dialog (used in three places)</comment>
-      <translation type="unfinished"/>
+      <translation>Enter room symbol</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3586"/>
@@ -1126,7 +1126,7 @@ for the selected room:</numerusform>
     <message>
       <location filename="../src/T2DMap.cpp" line="3858"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Spread out rooms</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3859"/>
@@ -1144,7 +1144,7 @@ factor of:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="3920"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Shrink in rooms</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3921"/>
@@ -1164,7 +1164,7 @@ factor of:</translation>
       <location filename="../src/T2DMap.cpp" line="4065"/>
       <location filename="../src/T2DMap.cpp" line="4115"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Enter room weight</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4052"/>
@@ -1172,7 +1172,9 @@ factor of:</translation>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Enter new roomweight
+(= travel time), minimum
+(and default) is 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4066"/>
@@ -1183,7 +1185,12 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Enter new roomweight
+(= travel time) for all
+selected rooms, minimum
+(and default) is 1 and
+the only current value
+used is:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4104"/>
@@ -1254,42 +1261,42 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="651"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Add to user dictionary</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="653"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Remove from user dictionary</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="657"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼System▼ │ dictionary suggestions │ ▲User▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="735"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no suggestions (system)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="761"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no suggestions (shared)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="765"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>no suggestions (profile)</translation>
     </message>
   </context>
   <context>
@@ -1352,12 +1359,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2578"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>System Message: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="368"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Show Time Stamps.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
@@ -1382,17 +1389,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="456"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Search buffer.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="464"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Earlier search result.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="475"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Later search result.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1034"/>
@@ -1404,13 +1411,13 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1061"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1065"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1078"/>
@@ -1420,7 +1427,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1579"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Pre-Map loading(1) report</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1597"/>
@@ -1441,13 +1448,15 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1664"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ]  - Map file not found, path and name used was:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1670"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (filename used: 
+&quot;%1&quot; was not found).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1679"/>
@@ -1494,12 +1503,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2805"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - ... System Map reload request completed.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2807"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - ... System Map reload request failed.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="3035"/>
@@ -1532,7 +1541,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15575"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>object</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15564"/>
@@ -1544,7 +1553,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17155"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>no error message available from Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17157"/>
@@ -1586,7 +1595,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16982"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Database support will not be available.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16989"/>
@@ -1857,17 +1866,17 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1610"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>No map found. Would you like to download the map or start your own?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1611"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Download the map</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1612"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Start my own</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1670"/>
@@ -1877,7 +1886,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2083"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Map issues</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2090"/>
@@ -1951,24 +1960,24 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2233"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Map download</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2293"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>Map import</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2232"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Abort</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2230"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Downloading map file for use in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2260"/>
@@ -2074,57 +2083,57 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="113"/>
       <location filename="../src/TRoom.cpp" line="1063"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>East</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1077"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>West</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
       <location filename="../src/TRoom.cpp" line="1091"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Up</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
       <location filename="../src/TRoom.cpp" line="1105"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Down</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
       <location filename="../src/TRoom.cpp" line="1119"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>In</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
       <location filename="../src/TRoom.cpp" line="1133"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Out</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Other</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Unknown</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="274"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="993"/>
@@ -2582,7 +2591,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1212"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1216"/>
@@ -2677,22 +2686,22 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1111"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copy</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1122"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Copy HTML</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1126"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Copy as image</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1129"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Select All</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1134"/>
@@ -2702,7 +2711,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1152"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Analyse characters</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1161"/>
@@ -2712,7 +2721,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1170"/>
       <source>restore Main menu</source>
-      <translation type="unfinished"/>
+      <translation>restore Main menu</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1172"/>
@@ -2753,13 +2762,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1705"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1706"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1707"/>
@@ -3011,7 +3020,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1748"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1749"/>
@@ -3222,7 +3231,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2145"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2086"/>
@@ -3243,21 +3252,21 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2155"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2098"/>
       <location filename="../src/TTextEdit.cpp" line="2159"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Byte</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2102"/>
       <location filename="../src/TTextEdit.cpp" line="2163"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua character or code</translation>
     </message>
   </context>
   <context>
@@ -3265,7 +3274,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="74"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Toolbar - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3339,52 +3348,52 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="152"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>You are using version %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="180"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>There are currently no updates available.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="196"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>You are using %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="306"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Automatically download future updates</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="353"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancel</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="373"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Install update now</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="380"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="390"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Remind me later</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Skip this version</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>Could not open downloaded file %1</translation>
     </message>
   </context>
   <context>
@@ -3394,12 +3403,12 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="188"/>
       <location filename="../src/updater.cpp" line="254"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Update</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="345"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Restart to apply update</translation>
     </message>
   </context>
   <context>
@@ -3410,7 +3419,10 @@ Would you like to update now?</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Sorry, the file being read:
+&quot;%1&quot;
+reports it has a version (%2) it must have come from a later Mudlet version,
+and this one cannot read it, you need a newer Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
@@ -3443,27 +3455,27 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>About Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Supporters</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>License</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Third Party</translation>
     </message>
   </context>
   <context>
@@ -3476,22 +3488,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
       <source>Button Bar Properties</source>
-      <translation type="unfinished"/>
+      <translation>Button Bar Properties</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Number of columns/rows (depending on orientation):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
       <source>Orientation Horizontal</source>
-      <translation type="unfinished"/>
+      <translation>Orientation Horizontal</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="155"/>
       <source>Orientation Vertical</source>
-      <translation type="unfinished"/>
+      <translation>Orientation Vertical</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
@@ -3657,18 +3669,20 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="508"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Connection time: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="545"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="590"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Trying secure connection to %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1485"/>
@@ -3681,38 +3695,39 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1496"/>
       <location filename="../src/ctelnet.cpp" line="1863"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Package is already installed.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1505"/>
       <location filename="../src/ctelnet.cpp" line="1872"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>downloading game GUI from server</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1505"/>
       <location filename="../src/ctelnet.cpp" line="1872"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Cancel</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1494"/>
       <location filename="../src/ctelnet.cpp" line="1861"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="412"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="535"/>
       <location filename="../src/ctelnet.cpp" line="547"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Socket got disconnected.
+Reason: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="599"/>
