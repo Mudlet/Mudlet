@@ -12,7 +12,7 @@ Geyser.VBox = Geyser.Container:new({
 function Geyser.VBox:add (window, cons)
   -- VBox/HBox have their own add function therefore passing off add2 should be possible without
   -- overwriting their add functions
-  if self.container and (self.container.add == Geyser.add2 or self.container.passAdd2) then
+  if self.useAdd2 then
     Geyser.add2(self, window, cons)
   else
     Geyser.add(self, window, cons)
@@ -57,5 +57,13 @@ function Geyser.VBox:new(cons, container)
   local me = self.parent:new(cons, container)
   setmetatable(me, self)
   self.__index = self
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.VBox:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end
