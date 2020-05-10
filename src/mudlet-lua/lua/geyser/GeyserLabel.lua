@@ -300,7 +300,9 @@ end
 --- Sets the style sheet of the label
 -- @param css The style sheet string
 function Geyser.Label:setStyleSheet(css)
+  css = css or self.stylesheet
   setLabelStyleSheet(self.name, css)
+  self.stylesheet = css
 end
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
@@ -758,6 +760,8 @@ function Geyser.Label:new (cons, container)
 
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
+
+  if me.stylesheet then me:setStyleSheet() end
 
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
