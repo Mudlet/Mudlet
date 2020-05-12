@@ -291,7 +291,7 @@ void dlgMapper::goRoom()
     //        while (it.hasNext()) {
     //            it.next();
     //            int i = it.key();
-    //            if (mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive)) {
+    //            if (mpMap->rooms[i]->name.contains(txt, Qt::CaseInsensitive)) {
     //                qDebug() << "inserting match:" << i;
     //                searchList->addItem(mpMap->rooms[i]->name);
     //            }

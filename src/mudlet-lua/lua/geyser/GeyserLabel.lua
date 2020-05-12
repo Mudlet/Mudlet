@@ -300,7 +300,9 @@ end
 --- Sets the style sheet of the label
 -- @param css The style sheet string
 function Geyser.Label:setStyleSheet(css)
+  css = css or self.stylesheet
   setLabelStyleSheet(self.name, css)
+  self.stylesheet = css
 end
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
@@ -319,9 +321,9 @@ function Geyser.Label:resetToolTip()
   self.toolTipDuration = nil
 end
 
---- Set a predefined Mouse Cursor Shape for this label
--- @param cursorShape the predefined cursorshape as number from 1 to 21
--- see: https://doc.qt.io/qt-5/qt.html#CursorShape-enum
+--- Set a predefined mouse cursor shape for this label
+-- @param cursorShape the predefined cursorshape as a string
+-- see: https://wiki.mudlet.org/w/CursorShapes
 function Geyser.Label:setCursor(cursorShape)
   setLabelCursor(self.name, cursorShape)
   -- Get cursorShape as string
@@ -334,7 +336,7 @@ function Geyser.Label:setCursor(cursorShape)
   self.cursorShape = cursorShape
 end
 
---- Set a custom Mouse Cursor Shape for this label
+--- Set a custom mouse cursor shape for this label
 -- @param customCursor location of your custom cursor. It's suggested to use a png with size of 32x32 which is supported on all platforms
 -- see https://doc.qt.io/qt-5/qcursor.html#shape
 function Geyser.Label:setCustomCursor(customCursor, hotX, hotY)
@@ -758,6 +760,8 @@ function Geyser.Label:new (cons, container)
 
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
+
+  if me.stylesheet then me:setStyleSheet() end
 
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

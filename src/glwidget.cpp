@@ -2115,25 +2115,20 @@ void GLWidget::paintGL()
             }
             glEnd();
 
-//            if( mpMap->rooms[pArea->rooms[i]]->out > -1 )
-//            {
+//            if (mpMap->rooms[pArea->rooms[i]]->out > -1) {
 //                glBegin( GL_LINE_LOOP );
-//                for( int angle=0; angle<360; angle += 1 )
-//                {
-//                    glVertex3f( (0.5 + sin((float)angle) * 0.25)/dehnung, ( cos((float)angle) * 0.25)/dehnung, 0.0);
+//                for (int angle=0; angle<360; angle += 1 ) {
+//                    glVertex3f((0.5 + sin((float)angle) * 0.25)/dehnung, ( cos((float)angle) * 0.25)/dehnung, 0.0);
 //                }
 //                glEnd();
 //            }
 
-
-//            glTranslatef( -0.1, 0.0, 0.0 );
-//            if( mpMap->rooms[pArea->rooms[i]]->in > -1 )
-//            {
-//                glBegin( GL_TRIANGLE_FAN );
-//                glVertex3f( 0.0, 0.0, 0.0);
-//                for( int angle=0; angle<=360; angle += 5 )
-//                {
-//                    glVertex3f( (sin((float)angle)*0.25)/dehnung, (cos((float)angle)*0.25)/dehnung, 0.0);
+//            glTranslatef(-0.1, 0.0, 0.0);
+//            if (mpMap->rooms[pArea->rooms[i]]->in > -1) {
+//                glBegin(GL_TRIANGLE_FAN);
+//                glVertex3f(0.0, 0.0, 0.0);
+//                for (int angle=0; angle<=360; angle += 5) {
+//                    glVertex3f((sin((float)angle)*0.25)/dehnung, (cos((float)angle)*0.25)/dehnung, 0.0);
 //                }
 //                glEnd();
 //            }

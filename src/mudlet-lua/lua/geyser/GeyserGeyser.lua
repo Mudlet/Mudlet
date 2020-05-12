@@ -11,7 +11,7 @@
 --- Create the Geyser namespace.
 -- Geyser is considered to be a "container window" for the purposes
 -- of default limits for new windows, in fact, it is the root container
--- window, and is the metatable for Geyser.Container. It has the 
+-- window, and is the metatable for Geyser.Container. It has the
 -- minimum number of functions needed to behave as a Container.
 Geyser = Geyser or { i = 0, x = 0, y = 0 }
 
@@ -67,12 +67,11 @@ function Geyser:add (window, cons)
 
   -- Assume control of this window
   window.container = self
-  
   -- Don't allow duplication of same name in container
   if not self.windowList[window.name] then
-    self.windowList[window.name] = window
     self.windows[#self.windows+1] = window.name
   end
+  self.windowList[window.name] = window
 
   window.windowname = window.windowname or window.container.windowname or "main"
   Geyser.set_constraints(window, cons, self)
@@ -108,7 +107,7 @@ end
 
 --- Removes a window from the parent it is in and puts it in a new one
 -- This is only used internally.
--- @param window The new parents windowname 
+-- @param window The new parents windowname
 local function setMyWindow(self, windowname)
   windowname = windowname or "main"
   local name
@@ -122,11 +121,11 @@ local function setMyWindow(self, windowname)
     changeNestContainer(windowname, self)
     closeAllLevels(self)
   end
-  
-  -- Prevent hidden children to get visible  
+
+  -- Prevent hidden children to get visible
   if self.hidden or self.auto_hidden then
     setWindow(windowname, name, 0, 0, false)
-  else 
+  else
     setWindow(windowname, name, 0, 0, true)
   end
 end
@@ -134,7 +133,7 @@ end
 
 --- Removes all containers windows from the parent they are in and puts them in a new one
 -- This is only used internally
--- @param window The new parents windowname 
+-- @param window The new parents windowname
 local function setContainerWindow(self, windowname)
   self.windowname = windowname
   --Iterate through windows has a given order and prevents problems with z-coordinate
@@ -144,7 +143,7 @@ local function setContainerWindow(self, windowname)
   end
 end
 
---- Removes a window from the container that it manages
+--- Change the container a window should be in
 -- @param container The new container the window will be set in
 function Geyser:changeContainer (container)
   --Change container to Geyser if "main" is given
@@ -158,7 +157,7 @@ function Geyser:changeContainer (container)
   --Nothing to change
   if self.container == container then
     return nil, "nothing to change. "..self.name.." is already in this container"
-  end 
+  end
   --If there is no windowname then windowname is "main"
   local windowname = container.windowname
   windowname = windowname or "main"
