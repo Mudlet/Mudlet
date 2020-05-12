@@ -1,0 +1,18 @@
+{
+  "AdjustableContainer.bottom": {
+    "message": "unten",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "oben",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Sperren",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.save": {
+    "message": "Speichern",
+    "description": "saves the containers settings"
+  }
+}
