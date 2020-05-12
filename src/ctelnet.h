@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2020 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -210,6 +210,10 @@ signals:
     void signal_connected(Host*);
     void signal_disconnected(Host*);
 
+private slots:
+#if !defined(QT_NO_SSL)
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
+#endif
 
 private:
     cTelnet() = default;
@@ -219,7 +223,12 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
 
-    void processTelnetCommand(const std::string& command);
+    void processTelnetCommand(const std::string&);
+    void processTelnetWill(const std::string&);
+    void processTelnetWont(const std::string&);
+    void processTelnetDo(const std::string&);
+    void processTelnetDont(const std::string&);
+    void processTelnetSuboption(const std::string&);
     void sendTelnetOption(char type, char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
@@ -227,7 +236,6 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
-
 
     QPointer<Host> mpHost;
 #if defined(QT_NO_SSL)
@@ -251,7 +259,7 @@ private:
     z_stream mZstream;
 
     bool mNeedDecompression;
-    std::string command;
+    std::string mCommand;
     bool iac, iac2, insb;
     // Set if we have negotiated the use of the option by us:
     bool myOptionState[256];
@@ -308,12 +316,6 @@ private:
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
-
-private slots:
-#if !defined(QT_NO_SSL)
-    void handle_socket_signal_sslError(const QList<QSslError> &errors);
-#endif
-
 };
 
 #endif // MUDLET_CTELNET_H

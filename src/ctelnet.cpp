@@ -85,6 +85,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , networkLatencyMax()
 , mWaitingForResponse()
 , mZstream()
+, mNeedDecompression(false)
 , recvdGA()
 , lastTimeOffset()
 , enableATCP(false)
@@ -100,7 +101,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mConnectViaProxy(false)
 {
     mIsTimerPosting = false;
-    mNeedDecompression = false;
     mDontReconnect = false;
 
     // initialize encoding to a sensible default - needs to be a different value
@@ -114,7 +114,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     iac = iac2 = insb = false;
 
-    command = "";
+    mCommand = "";
     curX = 80;
     curY = 25;
 
@@ -180,7 +180,7 @@ void cTelnet::reset()
     // Ensure we do not think that the game server is echoing for us:
     mpHost->mIsRemoteEchoingActive = false;
     mGA_Driver = false;
-    command = "";
+    mCommand = "";
     mMudData = "";
 }
 
@@ -929,6 +929,188 @@ std::pair<QString, int> cTelnet::getConnectionInfo() const
     }
 }
 
+void cTelnet::processTelnetDo(const std::string& command)
+{
+    //server wants us to enable some option
+    const char option = command[2];
+    const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+    qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option) << ".";
+#endif
+    if (!myOptionState[idxOption]) {
+        // only if the option is currently disabled - but perhaps this should be
+        // combined with the inverse of our triedToEnable[idxOption] for any
+        // option that the user has developed a handler for themselves?
+
+        switch (option) {
+        case OPT_NAWS:
+            [[fallthrough]];
+        case OPT_STATUS:
+            [[fallthrough]];
+        case OPT_TIMING_MARK:
+            [[fallthrough]];
+        case OPT_TERMINAL_TYPE:
+            qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WILL, option);
+            myOptionState[idxOption] = true;
+            announcedState[idxOption] = true;
+            return;
+
+        case OPT_102:
+            enableChannel102 = true;
+            qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WILL, option);
+            myOptionState[idxOption] = true;
+            announcedState[idxOption] = true;
+            raiseProtocolEvent("sysProtocolEnabled", "channel102");
+            return;
+
+        case OPT_MSDP:
+            if (mpHost->mEnableMSDP) {
+                qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+                sendTelnetOption(TN_WILL, option);
+                myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+                return;
+            }
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            return;
+
+        case OPT_ATCP:
+            if (!mpHost->mEnableGMCP) {
+                // ATCP support, enable only if GMCP is off as GMCP is better
+                qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << " as we've disabled GMCP.";
+                sendTelnetOption(TN_WILL, option);
+                enableATCP = true;
+                myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "ATCP");
+                return;
+            }
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << " as we'd prefer GMCP instead.";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            return;
+
+        case OPT_GMCP:
+            if (mpHost->mEnableGMCP) {
+                qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+                sendTelnetOption(TN_WILL, option);
+                enableGMCP = true;
+                myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+                return;
+            }
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            return;
+
+        case OPT_MSSP:
+            if (mpHost->mEnableMSSP) {
+                qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+                sendTelnetOption(TN_WILL, option);
+                enableMSSP = true;
+                myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+                return;
+            }
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            return;
+
+        case OPT_MXP:
+            if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                qDebug().noquote().nospace() << "We ARE willing to enable telnet option " << decodeOption(option) << ".";
+                sendTelnetOption(TN_WILL, option);
+                mpHost->mServerMXPenabled = true;
+                myOptionState[idxOption] = true;
+                announcedState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "MXP");
+                return;
+            }
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+            return;
+
+        default:
+            qDebug().noquote().nospace() << "We are NOT willing to enable telnet option " << decodeOption(option) << ".";
+            sendTelnetOption(TN_WONT, option);
+            myOptionState[idxOption] = false;
+            announcedState[idxOption] = true;
+        }
+    }
+}
+
+void cTelnet::processTelnetDont(const std::string& command)
+{
+    const char option = command[2];
+    const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+    qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option) << ".";
+#endif
+    switch (option) {
+    case OPT_MSDP:
+        // MSDP got turned off
+        raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+        break;
+
+    case OPT_ATCP:
+        // ATCP got turned off
+        enableATCP = false;
+        raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+        break;
+
+    case OPT_GMCP:
+        // GMCP got turned off
+        enableGMCP = false;
+        raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+        break;
+
+    case OPT_MSSP:
+        // MSSP got turned off
+        enableMSSP = false;
+        raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+        break;
+
+    case OPT_MSP:
+        // MSP got turned off
+        enableMSP = false;
+        raiseProtocolEvent("sysProtocolDisabled", "MSP");
+        break;
+
+    case OPT_MXP:
+        // MXP got turned off
+        mpHost->mServerMXPenabled = false;
+        raiseProtocolEvent("sysProtocolDisabled", "MXP");
+        break;
+
+    case OPT_102:
+        // channel 102 support
+        enableChannel102 = false;
+        raiseProtocolEvent("sysProtocolDisabled", "channel102");
+        break;
+    }
+
+    if (myOptionState[idxOption] || (!announcedState[idxOption])) {
+        sendTelnetOption(TN_WONT, option);
+        announcedState[idxOption] = true;
+    }
+    myOptionState[idxOption] = false;
+}
+
 void cTelnet::processTelnetCommand(const std::string& command)
 {
     char ch = command[1];
@@ -936,10 +1118,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
     QString _type;
     switch ((quint8)ch) {
     case 239:
-        _type = "TN_EOR";
+        _type = "EOR";
         break;
     case 249:
-        _type = "TN_GA";
+        _type = "GA";
         break;
     case 250:
         _type = "SB";
@@ -969,692 +1151,43 @@ void cTelnet::processTelnetCommand(const std::string& command)
     }
 #endif
 
-    char option;
     switch (ch) {
     case TN_GA:
-    case TN_EOR: {
+        [[fallthrough]];
+    case TN_EOR:
         recvdGA = true;
         break;
-    }
-    case TN_WILL: {
+
+    case TN_WILL:
         //server wants to enable some option (or he sends a timing-mark)...
-        option = command[2];
-        const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
-        qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
-#endif
-
-        if (option == OPT_EOR) {
-            //EOR support (END OF RECORD=TN_GA
-            qDebug() << "EOR enabled";
-            sendTelnetOption(TN_DO, OPT_EOR);
-            break;
-        }
-
-        if (option == OPT_MSDP) {
-            //MSDP support
-            std::string output;
-            if (!mpHost->mEnableMSDP) {
-                output += TN_IAC;
-                output += TN_DONT;
-                output += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-#ifdef DEBUG_TELNET
-                qDebug() << "WE send telnet IAC DONT MSDP";
-#endif
-                break;
-            } else {
-                sendTelnetOption(TN_DO, OPT_MSDP);
-                //need to send MSDP start sequence: IAC   SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
-                //NOTE: MSDP does not need quotes for string/vals
-                output += TN_IAC;
-                output += TN_SB;
-                output += OPT_MSDP;
-                output += MSDP_VAR;
-                output += "LIST";
-                output += MSDP_VAL;
-                output += "COMMANDS";
-                output += TN_IAC;
-                output += TN_SE;
-                // This will be unaffected by Mud Server encoding:
-                socketOutRaw(output);
-#ifdef DEBUG_TELNET
-                qDebug() << "WE send telnet IAC DO MSDP";
-#endif
-                raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-                break;
-            }
-        }
-
-        if (option == OPT_ATCP) {
-            // ATCP support
-            //FIXME: this is a bug, some muds offer both atcp + gmcp
-            if (mpHost->mEnableGMCP) {
-                break;
-            }
-
-            qDebug() << "ATCP enabled";
-            enableATCP = true;
-            sendTelnetOption(TN_DO, OPT_ATCP);
-
-            std::string output;
-            output += TN_IAC;
-            output += TN_SB;
-            output += OPT_ATCP;
-            // APP_BUILD could, conceivably contain a non ASCII character:
-            output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD  "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
-            output += TN_IAC;
-            output += TN_SE;
-            socketOutRaw(output);
-
-            raiseProtocolEvent("sysProtocolEnabled", "ATCP");
-            break;
-        }
-
-        if (option == OPT_GMCP) {
-            if (!mpHost->mEnableGMCP) {
-                break;
-            }
-
-            enableGMCP = true;
-            sendTelnetOption(TN_DO, OPT_GMCP);
-            qDebug() << "GMCP enabled";
-
-            std::string output;
-            output = TN_IAC;
-            output += TN_SB;
-            output += OPT_GMCP;
-            // APP_BUILD could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": ")" APP_VERSION APP_BUILD R"("})");
-            output += TN_IAC;
-            output += TN_SE;
-            socketOutRaw(output);
-
-            output = TN_IAC;
-            output += TN_SB;
-            output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])";
-            output += TN_IAC;
-            output += TN_SE;
-            socketOutRaw(output);
-
-            if (mudlet::self()->mDiscord.libraryLoaded()) {
-                output = TN_IAC;
-                output += TN_SB;
-                output += OPT_GMCP;
-                output += "External.Discord.Hello";
-                output += TN_IAC;
-                output += TN_SE;
-
-                socketOutRaw(output);
-            }
-
-            raiseProtocolEvent("sysProtocolEnabled", "GMCP");
-            break;
-        }
-
-        if (option == OPT_MSSP) {
-            if (!mpHost->mEnableMSSP) {
-                break;
-            }
-
-            enableMSSP = true;
-            sendTelnetOption(TN_DO, OPT_MSSP);
-            qDebug() << "MSSP enabled";
-            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
-            break;
-        }
-
-        if (option == OPT_MSP) {
-            if (!mpHost->mEnableMSP) {
-                break;
-            }
-
-            enableMSP = true;
-            sendTelnetOption(TN_DO, OPT_MSP);
-            qDebug() << "MSP enabled";
-            raiseProtocolEvent("sysProtocolEnabled", "MSP");
-            break;
-        }
-
-        if (option == OPT_MXP) {
-            if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
-                sendTelnetOption(TN_DO, OPT_MXP);
-                mpHost->mServerMXPenabled = true;
-                mpHost->mMxpProcessor.enable();
-                raiseProtocolEvent("sysProtocolEnabled", "MXP");
-                break;
-            }
-        }
-
-        if (option == OPT_102) {
-            // Aardwulf channel 102 support
-            qDebug() << "Aardwulf channel 102 support enabled";
-            enableChannel102 = true;
-            sendTelnetOption(TN_DO, OPT_102);
-            raiseProtocolEvent("sysProtocolEnabled", "channel102");
-            break;
-        }
-
-        heAnnouncedState[idxOption] = true;
-        if (triedToEnable[idxOption]) {
-            hisOptionState[idxOption] = true;
-            triedToEnable[idxOption] = false;
-        } else {
-            if (!hisOptionState[idxOption]) {
-                //only if this is not set; if it's set, something's wrong wth the server
-                //(according to telnet specification, option announcement may not be
-                //unless explicitly requested)
-
-                if (option == OPT_ECHO) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                    mpHost->mIsRemoteEchoingActive = true;
-                    qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
-                } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
-                    //these are handled separately, as they're a bit special
-                    if (mpHost->mFORCE_NO_COMPRESSION || ((option == OPT_COMPRESS) && (hisOptionState[static_cast<int>(OPT_COMPRESS2)]))) {
-                        //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
-                        sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
-                        qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE COMPRESSION OFF is set to ON.";
-                    } else {
-                        sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
-                        //inform MCCP object about the change
-                        if (option == OPT_COMPRESS) {
-                            mMCCP_version_1 = true;
-                            qDebug() << "MCCP v1 negotiated.";
-                        } else {
-                            mMCCP_version_2 = true;
-                            qDebug() << "MCCP v2 negotiated!";
-                        }
-                    }
-                } else if (supportedTelnetOptions.contains(option)) {
-                    sendTelnetOption(TN_DO, option);
-                    hisOptionState[idxOption] = true;
-                } else {
-                    sendTelnetOption(TN_DONT, option);
-                    hisOptionState[idxOption] = false;
-                }
-            }
-        }
+        processTelnetWill(command);
         break;
-    }
 
-    case TN_WONT: {
+    case TN_WONT:
         //server refuses to enable some option
-        option = command[2];
-        const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
-        qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
-#endif
-        if (triedToEnable[idxOption]) {
-            hisOptionState[idxOption] = false;
-            triedToEnable[idxOption] = false;
-            heAnnouncedState[idxOption] = true;
-        } else {
-
-            if (option == OPT_MSDP) {
-                // MSDP got turned off
-                raiseProtocolEvent("sysProtocolDisabled", "MSDP");
-            }
-
-            if (option == OPT_ATCP) {
-                // ATCP got turned off
-                enableATCP = false;
-                raiseProtocolEvent("sysProtocolDisabled", "ATCP");
-            }
-
-            if (option == OPT_GMCP) {
-                // GMCP got turned off
-                enableGMCP = false;
-                raiseProtocolEvent("sysProtocolDisabled", "GMCP");
-            }
-
-            if (option == OPT_MSSP) {
-                // MSSP got turned off
-                enableMSSP = false;
-                raiseProtocolEvent("sysProtocolDisabled", "MSSP");
-            }
-
-            if (option == OPT_MSP) {
-                // MSP got turned off
-                enableMSP = false;
-                raiseProtocolEvent("sysProtocolDisabled", "MSP");
-            }
-
-            if (option == OPT_MXP) {
-                // MXP got turned off
-                mpHost->mServerMXPenabled = false;
-                raiseProtocolEvent("sysProtocolDisabled", "MXP");
-            }
-
-            if (option == OPT_102) {
-                // channel 102 support
-                enableChannel102 = false;
-                raiseProtocolEvent("sysProtocolDisabled", "channel102");
-            }
-
-            //send DONT if needed (see RFC 854 for details)
-            if (hisOptionState[idxOption] || (heAnnouncedState[idxOption])) {
-                sendTelnetOption(TN_DONT, option);
-                hisOptionState[idxOption] = false;
-
-                if (option == OPT_ECHO) {
-                    mpHost->mIsRemoteEchoingActive = false;
-                    qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
-                }
-
-                if (option == OPT_COMPRESS) {
-                    mMCCP_version_1 = false;
-                    qDebug() << "MCCP v1 disabled !";
-                }
-                if (option == OPT_COMPRESS2) {
-                    mMCCP_version_2 = false;
-                    qDebug() << "MCCP v2 disabled !";
-                }
-            }
-            heAnnouncedState[idxOption] = true;
-        }
+        processTelnetWont(command);
         break;
-    }
 
-    case TN_DO: {
+    case TN_DO:
         //server wants us to enable some option
-        option = command[2];
-        const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
-        qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
-#endif
-        if (option == OPT_MSDP && mpHost->mEnableMSDP) {
-            // MSDP support
-            sendTelnetOption(TN_WILL, OPT_MSDP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSDP");
-            break;
-        }
-
-        if (option == OPT_ATCP && !mpHost->mEnableGMCP) {
-            // ATCP support, enable only if GMCP is off as GMCP is better
-            enableATCP = true;
-            sendTelnetOption(TN_WILL, OPT_ATCP);
-            raiseProtocolEvent("sysProtocolEnabled", "ATCP");
-            break;
-        }
-
-        if (option == OPT_GMCP && mpHost->mEnableGMCP) {
-            // GMCP support
-            enableGMCP = true;
-            sendTelnetOption(TN_WILL, OPT_GMCP);
-            raiseProtocolEvent("sysProtocolEnabled", "GMCP");
-            break;
-        }
-
-        if (option == OPT_MSSP && mpHost->mEnableMSSP) {
-            // MSSP support
-            enableMSSP = true;
-            sendTelnetOption(TN_WILL, OPT_MSSP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
-            break;
-        }
-
-        if (option == OPT_MSP && mpHost->mEnableMSP) {
-            // MSP support
-            enableMSP = true;
-            sendTelnetOption(TN_WILL, OPT_MSP);
-            raiseProtocolEvent("sysProtocolEnabled", "MSP");
-            break;
-        }
-
-        if (option == OPT_MXP && !mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
-            // MXP support
-            sendTelnetOption(TN_WILL, OPT_MXP);
-            mpHost->mpConsole->print("\n<MXP support enabled>\n");
-            raiseProtocolEvent("sysProtocolEnabled", "MXP");
-            break;
-        }
-
-        if (option == OPT_102) {
-            // channel 102 support
-            enableChannel102 = true;
-            sendTelnetOption(TN_WILL, OPT_102);
-            raiseProtocolEvent("sysProtocolEnabled", "channel102");
-            break;
-        }
-
-        if (option == OPT_TIMING_MARK) {
-            qDebug() << "We ARE willing to enable TIMING_MARK";
-            // send WILL TIMING_MARK
-            sendTelnetOption(TN_WILL, option);
-        } else if (!myOptionState[idxOption]) {
-            // only if the option is currently disabled
-
-            if ((option == OPT_STATUS) || (option == OPT_NAWS) || (option == OPT_TERMINAL_TYPE)) {
-                if (option == OPT_STATUS) {
-                    qDebug() << "We ARE willing to enable telnet option STATUS";
-                }
-                if (option == OPT_TERMINAL_TYPE) {
-                    qDebug() << "We ARE willing to enable telnet option TERMINAL_TYPE";
-                }
-                if (option == OPT_NAWS) {
-                    qDebug() << "We ARE willing to enable telnet option NAWS";
-                }
-                sendTelnetOption(TN_WILL, option);
-                myOptionState[idxOption] = true;
-                announcedState[idxOption] = true;
-            } else {
-                qDebug() << "We are NOT WILLING to enable this telnet option.";
-                sendTelnetOption(TN_WONT, option);
-                myOptionState[idxOption] = false;
-                announcedState[idxOption] = true;
-            }
-        }
-        if (option == OPT_NAWS) {
-            //NAWS
-            setDisplayDimensions();
-        }
+        processTelnetDo(command);
         break;
-    }
-    case TN_DONT: {
+
+    case TN_DONT:
         //only respond if value changed or if this option has not been announced yet
-        option = command[2];
-        const auto idxOption = static_cast<size_t>(option);
-#ifdef DEBUG_TELNET
-        qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
-#endif
-        if (option == OPT_MSDP) {
-            // MSDP got turned off
-            raiseProtocolEvent("sysProtocolDisabled", "MSDP");
-        }
+        processTelnetDont(command);
+        break;
 
-        if (option == OPT_ATCP) {
-            // ATCP got turned off
-            enableATCP = false;
-            raiseProtocolEvent("sysProtocolDisabled", "ATCP");
-        }
-
-        if (option == OPT_GMCP) {
-            // GMCP got turned off
-            enableGMCP = false;
-            raiseProtocolEvent("sysProtocolDisabled", "GMCP");
-        }
-
-        if (option == OPT_MSSP) {
-            // MSSP got turned off
-            enableMSSP = false;
-            raiseProtocolEvent("sysProtocolDisabled", "MSSP");
-        }
-
-        if (option == OPT_MSP) {
-            // MSP got turned off
-            enableMSP = false;
-            raiseProtocolEvent("sysProtocolDisabled", "MSP");
-        }
-
-        if (option == OPT_MXP) {
-            // MXP got turned off
-            raiseProtocolEvent("sysProtocolDisabled", "MXP");
-        }
-
-        if (option == OPT_102) {
-            // channel 102 support
-            enableChannel102 = false;
-            raiseProtocolEvent("sysProtocolDisabled", "channel102");
-        }
-
-        if (myOptionState[idxOption] || (!announcedState[idxOption])) {
-            sendTelnetOption(TN_WONT, option);
-            announcedState[idxOption] = true;
-        }
-        myOptionState[idxOption] = false;
+    case TN_SB:
+        processTelnetSuboption(command);
         break;
     }
 
-    case TN_SB: {
-        option = command[2];
-
-        // MSDP
-        if (option == OPT_MSDP) {
-            // Using a QByteArray means there is no consideration of encoding
-            // used - it is just bytes...
-            QByteArray _m = command.c_str();
-            if (command.size() < 6) {
-                return;
-            }
-            // _m is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            _m = _m.mid(3, static_cast<int>(command.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.constData());
-            return;
-        }
-
-        // ATCP
-        if (option == OPT_ATCP) {
-            QByteArray payload = command.c_str();
-            if (payload.size() < 6) {
-                return;
-            }
-            // payload is in the Mud Server's encoding, trim off the Telnet
-            // suboption bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-            setATCPVariables(payload);
-
-            if (payload.startsWith(QByteArray("Auth.Request"))) {
-                std::string output;
-                output += TN_IAC;
-                output += TN_SB;
-                output += OPT_ATCP;
-                // APP_BUILD *could* be a non-ASCII UTF-8 string:
-                output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
-                output += TN_IAC;
-                output += TN_SE;
-                socketOutRaw(output);
-            } else if (payload.startsWith(QByteArray("Client.GUI"))) {
-                if (!mpHost->mAcceptServerGUI) {
-                    return;
-                }
-
-                // payload is still in MUD server encoding at this point, this
-                // will not be a problem for the previous string tests as those
-                // both use ASCII characters that will not change if the
-                // encoding is wrong.
-                QString msg = decodeBytes(payload);
-                QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QStringLiteral("Client.GUI "));
-                version.replace(QChar::LineFeed, QChar::Space);
-                version = version.section(QChar::Space, 0, 0);
-
-                QString url = msg.section(QChar::LineFeed, 1);
-                QString packageName = url.section(QLatin1Char('/'), -1);
-                QString fileName = packageName;
-                // As this is a file name it must be handled case insensitively to allow
-                // for platforms which may not be case sensitive (MacOs!):
-                packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
-                packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
-                packageName.remove(QLatin1Char('/'));
-                packageName.remove(QLatin1Char('\\'));
-                packageName.remove(QLatin1Char('.'));
-
-                if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
-                    // uninstall by previous known package name or current if we don't
-                    // know it (in case of manual installation)
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
-                    mpHost->mServerGUI_Package_version = version;
-                }
-
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
-                if (mpHost->mInstalledPackages.contains(packageName)) {
-                    postMessage(tr("[  OK  ]  - Package is already installed."));
-                    return;
-                }
-
-                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-                mpHost->updateProxySettings(mpDownloader);
-                auto request = QNetworkRequest(QUrl(url));
-                mudlet::self()->setNetworkRequestDefaults(url, request);
-                QNetworkReply* reply = mpDownloader->get(request);
-                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
-                mpProgressDialog->show();
-            }
-            return;
-        }
-
-        // Original fix by CR, second revision by MH - To take out normal MCCP version 1 option and 2, no need for this. -MH
-        // TODO: Remove these comments. Old boolean taken out for MCCP, and other options which were un-needed code. Rev.3 -MH //
-
-        // GMCP
-        if (option == OPT_GMCP) {
-            QByteArray payload = command.c_str();
-            if (payload.size() < 6) {
-                return;
-            }
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            // strip first 3 characters to get rid of <IAC><SB><201>
-            // and strip the last 2 characters to get rid of <IAC><TN_SE>
-            setGMCPVariables(payload);
-            return;
-        }
-
-        // MSSP
-        if (option == OPT_MSSP) {
-            QByteArray payload = command.c_str();
-            if (payload.size() < 6) {
-                return;
-            }
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            // strip first 3 characters to get rid of <IAC><SB><70>
-            // and strip the last 2 characters to get rid of <IAC><TN_SE>
-            setMSSPVariables(payload);
-            return;
-        }
-
-        // MSP
-        if (option == OPT_MSP) {
-            QByteArray payload = command.c_str();
-            if (payload.size() < 6) {
-                return;
-            }
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            // strip first 3 characters to get rid of <IAC><SB><90>
-            // and strip the last 2 characters to get rid of <IAC><TN_SE>
-            setMSPVariables(payload);
-            return;
-        }
-
-        if (option == OPT_102) {
-            QByteArray payload = command.c_str();
-            if (payload.size() < 6) {
-                return;
-            }
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
-            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            setChannel102Variables(payload);
-            return;
-        }
-
-        switch (option) { //switch 2
-        case OPT_STATUS: {
-            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
-                //request to send all enabled commands; if server sends his
-                //own list of commands, we just ignore it (well, he shouldn't
-                //send anything, as we do not request anything, but there are
-                //so many servers out there, that you can never be sure...)
-                // FIXME: This is damaged at the moment as we do not properly take care of the bits for the protocols that we manage ourselves e.g. ATCP/GMCP/MSDP/MXP etc...
-                std::string cmd;
-                cmd += TN_IAC;
-                cmd += TN_SB;
-                cmd += OPT_STATUS;
-                cmd += TNSB_IS;
-                for (size_t i = 0; i < 256; ++i) {
-                    if (myOptionState[i]) {
-                        cmd += TN_WILL;
-                        cmd += i;
-                        if (i == static_cast<unsigned char>(TN_SE)) {
-                            // Handle corner case where sub-option value is the same as TN_SE (240)
-                            cmd += i;
-                        }
-                    }
-                    if (hisOptionState[i]) {
-                        cmd += TN_DO;
-                        cmd += i;
-                        if (i == static_cast<unsigned char>(TN_SE)) {
-                            // Handle corner case where byte value is TN_SE
-                            cmd += i;
-                        }
-                    }
-                }
-                cmd += TN_IAC;
-                cmd += TN_SE;
-                // This works as handling the status is exempt from the need to
-                // escape values that would themselves be interpreted as Telnet
-                // protocol bytes themselves - except for the corner case when
-                // the sub-option is 240 as described in: RFC 859
-                // https://tools.ietf.org/html/rfc859 :
-                socketOutRaw(cmd);
-            }
-            break;
-        }
-
-        case OPT_TERMINAL_TYPE: {
-            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
-                if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
-                    //server wants us to send terminal type; he can send his own type
-                    //too, but we just ignore it, as we have no use for it...
-                    std::string cmd;
-                    cmd += TN_IAC;
-                    cmd += TN_SB;
-                    cmd += OPT_TERMINAL_TYPE;
-                    cmd += TNSB_IS;
-                    /*
-                     * The valid characters for termTerm are more restricted
-                     * than being ASCII - from:
-                     * https://tools.ietf.org/html/rfc1010 (page 29):
-                     * "A terminal names may be up to 40 characters taken from
-                     * the set of uppercase letters, digits, and the two
-                     * punctuation characters hyphen and slash.  It must start
-                     * with a letter, and end with a letter or digit."
-                     * Once we comply with that we can be certain that Mud
-                     * Server encoding will NOT be an issue!
-                     */
-                    cmd += termType.toLatin1().data();
-                    cmd += TN_IAC;
-                    cmd += TN_SE;
-                    socketOutRaw(cmd);
-                }
-            }
-        }
-        //other cmds should not arrive, as they were not negotiated.
-        //if they do, they are merely ignored
-        } //end switch 2
-        //other commands are simply ignored (NOP and such, see .h file for list)
-    }
-    } //end switch 1
-
-    // raise sysTelnetEvent for all unhandled protocols
-    // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
-    if (command[1] != TN_GA && command[1] != TN_EOR) {
-        auto type = static_cast<unsigned char>(command[1]);
+    // raise sysTelnetEvent for all protocols EXCEPT TN_GA / TN_EOR, which can
+    // come at the end of every transmission for many MUDs that use one of them
+    // to indicated the end of a prompt - we skip this for them for performance
+    // reaons:
+    if (ch != TN_GA && ch != TN_EOR) {
         auto telnetOption = static_cast<unsigned char>(command[2]);
         QString msg = command.c_str();
         if (command.size() >= 6) {
@@ -1664,7 +1197,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         TEvent event {};
         event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(QString::number(type));
+        event.mArgumentList.append(QString::number(ch));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         event.mArgumentList.append(QString::number(telnetOption));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1672,6 +1205,527 @@ void cTelnet::processTelnetCommand(const std::string& command)
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
     }
+}
+
+void cTelnet::processTelnetWill(const std::string& command)
+{
+    const char option = command[2];
+    const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+    qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option) << ".";
+#endif
+
+    heAnnouncedState[idxOption] = true;
+    if (Q_UNLIKELY(triedToEnable[idxOption])) {
+        // Not just unlikely - impossible right now as we never set any members of this array
+        hisOptionState[idxOption] = true;
+        triedToEnable[idxOption] = false;
+    } else {
+        if (!hisOptionState[idxOption]) {
+            // Only if this is not set; if it's set, something's wrong wth the
+            // server (according to telnet specification, option request
+            // may not be repeated if it is already set)
+
+            switch (option) {
+            case OPT_COMPRESS:
+                [[fallthrough]];
+            case OPT_COMPRESS2:
+                // these are handled separately, as they're a bit special
+                if (mpHost->mFORCE_NO_COMPRESSION
+                    || ((option == OPT_COMPRESS) && (hisOptionState[static_cast<size_t>(OPT_COMPRESS2)]))) {
+                    //protocol says: reject MCCP v1 if you have previously accepted MCCP v2...
+                    sendTelnetOption(TN_DONT, option);
+                    hisOptionState[idxOption] = false;
+                    qDebug() << "Rejecting MCCP v1, because v2 has already been negotiated or FORCE NO COMPRESSION is set.";
+                } else {
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    // inform MCCP object about the change
+                    if (option == OPT_COMPRESS) {
+                        mMCCP_version_1 = true;
+                        qDebug() << "MCCP v1 negotiated.";
+                    } else {
+                        mMCCP_version_2 = true;
+                        qDebug() << "MCCP v2 negotiated!";
+                    }
+                }
+                return;
+
+            case OPT_EOR:
+                qDebug() << "EOR enabled";
+                sendTelnetOption(TN_DO, option);
+                hisOptionState[idxOption] = true;
+                return;
+
+            case OPT_MSDP:
+                if (!mpHost->mEnableMSDP) {
+                    sendTelnetOption(TN_DONT, option);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+#ifdef DEBUG_TELNET
+                    qDebug() << "WE send telnet IAC DONT MSDP";
+#endif
+                } else {
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    // need to send MSDP start sequence: IAC SB MSDP MSDP_VAR "LIST" MSDP_VAL "COMMANDS" IAC SE
+                    //NOTE: MSDP does not need quotes for string/vals
+                    std::string output{TN_IAC, TN_SB, OPT_MSDP, MSDP_VAR};
+                    output.append("LIST");
+                    output.append({MSDP_VAL});
+                    output.append("COMMANDS");
+                    output.append({TN_IAC, TN_SE});
+                    socketOutRaw(output);
+#ifdef DEBUG_TELNET
+                    qDebug() << "WE send telnet IAC DO MSDP";
+#endif
+                    raiseProtocolEvent("sysProtocolEnabled", "MSDP");
+                }
+                return;
+
+            case OPT_ATCP:
+                // ATCP support
+                //FIXME: this is a bug, some muds offer both atcp + gmcp
+                if (mpHost->mEnableGMCP) {
+                    // ADDED: explicitly reject ATCP if we are expecting GMCP
+                    sendTelnetOption(TN_DONT, OPT_ATCP);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+                } else {
+                    qDebug() << "ATCP enabled";
+                    enableATCP = true;
+                    sendTelnetOption(TN_DO, OPT_ATCP);
+                    hisOptionState[idxOption] = true;
+
+                    std::string output{TN_IAC, TN_SB, OPT_ATCP};
+                    // APP_BUILD could, conceivably contain a non ASCII character:
+                    output.append(encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n"));
+                    output.append({TN_IAC, TN_SE});
+                    socketOutRaw(output);
+
+                    raiseProtocolEvent("sysProtocolEnabled", "ATCP");
+                }
+                return;
+
+            case OPT_GMCP:
+                if (!mpHost->mEnableGMCP) {
+                    // ADDED: explicitly reject GMCP if we have it disabled:
+                    sendTelnetOption(TN_DONT, OPT_GMCP);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+                } else {
+                    qDebug() << "GMCP enabled";
+                    enableGMCP = true;
+                    sendTelnetOption(TN_DO, OPT_GMCP);
+                    hisOptionState[idxOption] = true;
+
+                    std::string output{TN_IAC, TN_SB, OPT_GMCP};
+                    // APP_BUILD could, conceivably contain a non-ASCII character:
+                    output.append(encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": ")" APP_VERSION APP_BUILD R"("})"));
+                    output.append({TN_IAC, TN_SE});
+                    socketOutRaw(output);
+
+                    output = {TN_IAC, TN_SB, OPT_GMCP};
+                    // CHECK: "IRE.Rift" and "IRE.Composer" are specific to IRE
+                    // MUDs so surely they should only be mentioned on those MUDS?
+                    output.append(R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])");
+                    output.append({TN_IAC, TN_SE});
+                    socketOutRaw(output);
+
+                    if (mudlet::self()->mDiscord.libraryLoaded()) {
+                        output = {TN_IAC, TN_SB, OPT_GMCP};
+                        output.append("External.Discord.Hello");
+                        output.append({TN_IAC, TN_SE});
+                        socketOutRaw(output);
+                    }
+                    raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+                }
+                return;
+
+            case OPT_MSSP:
+                if (!mpHost->mEnableMSSP) {
+                    // ADDED: explicitly reject MSSP if we have it disabled:
+                    sendTelnetOption(TN_DONT, OPT_MSSP);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+                } else {
+                    qDebug() << "MSSP enabled";
+                    enableMSSP = true;
+                    sendTelnetOption(TN_DO, OPT_MSSP);
+                    hisOptionState[idxOption] = true;
+                    raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+                }
+                return;
+
+            case OPT_MSP:
+                if (!mpHost->mEnableMSP) {
+                    // ADDED: explicitly reject MSSP if we have it disabled:
+                    sendTelnetOption(TN_DONT, OPT_MSP);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+                } else {
+                    qDebug() << "MSP enabled";
+                    enableMSP = true;
+                    sendTelnetOption(TN_DO, OPT_MSP);
+                    hisOptionState[idxOption] = true;
+                    raiseProtocolEvent("sysProtocolEnabled", "MSP");
+                }
+                return;
+
+            case OPT_MXP:
+                if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                    // ADDED: explicitly reject MSSP if we have it disabled:
+                    sendTelnetOption(TN_DONT, OPT_MXP);
+                    // We do not need a:
+                    // hisOptionState[idxOption] = false;
+                    // as it is already the case...!
+                } else {
+                    qDebug() << "MXP enabled";
+                    mpHost->mServerMXPenabled = true;
+                    sendTelnetOption(TN_DO, OPT_MXP);
+                    hisOptionState[idxOption] = true;
+                    mpHost->mMxpProcessor.enable();
+                    raiseProtocolEvent("sysProtocolEnabled", "MXP");
+                }
+                return;
+
+            case OPT_102:
+                // Aardwulf channel 102 support
+                qDebug() << "Aardwulf channel 102 support enabled";
+                enableChannel102 = true;
+                sendTelnetOption(TN_DO, OPT_102);
+                hisOptionState[idxOption] = true;
+                raiseProtocolEvent("sysProtocolEnabled", "channel102");
+                return;
+
+            case OPT_ECHO:
+                sendTelnetOption(TN_DO, option);
+                hisOptionState[idxOption] = true;
+                mpHost->mIsRemoteEchoingActive = true;
+                qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
+                return;
+
+            case OPT_STATUS:
+                [[fallthrough]];
+            case OPT_TERMINAL_TYPE:
+                [[fallthrough]];
+            case OPT_NAWS:
+                sendTelnetOption(TN_DO, option);
+                hisOptionState[idxOption] = true;
+                return;
+
+            default:
+                if (supportedTelnetOptions.contains(option)) {
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    return;
+                }
+
+                sendTelnetOption(TN_DONT, option);
+                hisOptionState[idxOption] = false;
+            } // End of switch(..._
+        } // End of NOT hisOptionState[idxOption]
+    } // End of if ... else .. Q_UNLIKELY(triedToEnable[idxOption])
+}
+
+void cTelnet::processTelnetWont(const std::string& command)
+{
+    const char option = command[2];
+    const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+    qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option) << ".";
+#endif
+
+    if (Q_UNLIKELY(triedToEnable[idxOption])) {
+        // Not just unlikely - impossible right now as we never set any members of this array
+        hisOptionState[idxOption] = false;
+        triedToEnable[idxOption] = false;
+        heAnnouncedState[idxOption] = true;
+    } else {
+        // send DONT if needed (see RFC 854 for details)
+        if (hisOptionState[idxOption] || (heAnnouncedState[idxOption])) {
+            sendTelnetOption(TN_DONT, option);
+            hisOptionState[idxOption] = false;
+
+            // Handling compression option specially - note that hisOptionState
+            // will have already been reset if we have found the end of stream:
+            if (option == OPT_COMPRESS) {
+                mMCCP_version_1 = false;
+                qDebug() << "MCCP v1 disabled !";
+            }
+            if (option == OPT_COMPRESS2) {
+                mMCCP_version_2 = false;
+                qDebug() << "MCCP v2 disabled !";
+            }
+        }
+        heAnnouncedState[idxOption] = true;
+
+        switch (option) {
+        case OPT_MSDP: // MSDP got turned off
+            raiseProtocolEvent("sysProtocolDisabled", "MSDP");
+            return;
+
+        case OPT_ATCP:
+            // ATCP got turned off
+            enableATCP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "ATCP");
+            return;
+
+        case OPT_GMCP:
+            // GMCP got turned off
+            enableGMCP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+            return;
+
+        case OPT_MSSP:
+            // MSSP got turned off
+            enableMSSP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+            return;
+
+        case OPT_MSP:
+            // MSP got turned off
+            enableMSP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MSP");
+            return;
+
+        case OPT_MXP:
+            // MXP got turned off
+            mpHost->mServerMXPenabled = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MXP");
+            return;
+
+        case OPT_102:
+            // channel 102 support
+            enableChannel102 = false;
+            raiseProtocolEvent("sysProtocolDisabled", "channel102");
+            return;
+
+        case OPT_ECHO:
+            mpHost->mIsRemoteEchoingActive = false;
+            qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
+            return;
+
+        }
+    }
+}
+
+void cTelnet::processTelnetSuboption(const std::string& command)
+{
+    const char option = command[2];
+    switch (option) { //switch 2
+    case OPT_MSDP: {
+        // Using a QByteArray means there is no consideration of encoding
+        // used - it is just bytes...
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet
+        // suboption bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+        mpHost->mLuaInterpreter.msdp2Lua(payload.constData());
+        return;
+    }
+
+    case OPT_ATCP: {
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet
+        // suboption bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+        setATCPVariables(payload);
+
+        if (payload.startsWith(QByteArray("Auth.Request"))) {
+            std::string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_ATCP;
+            // APP_BUILD *could* be a non-ASCII UTF-8 string:
+            output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+        } else if (payload.startsWith(QByteArray("Client.GUI"))) {
+            if (!mpHost->mAcceptServerGUI) {
+                return;
+            }
+
+            // payload is still in MUD server encoding at this point, this
+            // will not be a problem for the previous string tests as those
+            // both use ASCII characters that will not change if the
+            // encoding is wrong.
+            QString msg = decodeBytes(payload);
+            QString version = msg.section(QChar::LineFeed, 0);
+            version.remove(QStringLiteral("Client.GUI "));
+            version.replace(QChar::LineFeed, QChar::Space);
+            version = version.section(QChar::Space, 0, 0);
+
+            QString url = msg.section(QChar::LineFeed, 1);
+            QString packageName = url.section(QLatin1Char('/'), -1);
+            QString fileName = packageName;
+            // As this is a file name it must be handled case insensitively to allow
+            // for platforms which may not be case sensitive (MacOs!):
+            packageName.remove(QStringLiteral(".zip"), Qt::CaseInsensitive);
+            packageName.remove(QStringLiteral(".trigger"), Qt::CaseInsensitive);
+            packageName.remove(QStringLiteral(".xml"), Qt::CaseInsensitive);
+            packageName.remove(QStringLiteral(".mpackage"), Qt::CaseInsensitive);
+            packageName.remove(QLatin1Char('/'));
+            packageName.remove(QLatin1Char('\\'));
+            packageName.remove(QLatin1Char('.'));
+
+            if (mpHost->mServerGUI_Package_version != version) {
+                postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                               "Uninstalling old version '%2'.")
+                                    .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                // uninstall by previous known package name or current if we don't
+                // know it (in case of manual installation)
+                mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                mpHost->mServerGUI_Package_version = version;
+            }
+
+            postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
+            if (mpHost->mInstalledPackages.contains(packageName)) {
+                postMessage(tr("[  OK  ]  - Package is already installed."));
+                return;
+            }
+
+            mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+            mpHost->updateProxySettings(mpDownloader);
+            auto request = QNetworkRequest(QUrl(url));
+            mudlet::self()->setNetworkRequestDefaults(url, request);
+            QNetworkReply* reply = mpDownloader->get(request);
+            mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
+            connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+            mpProgressDialog->show();
+        }
+        return;
+    }
+
+    case OPT_GMCP: {
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet suboption
+        // bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+        // strip first 3 characters to get rid of <IAC><SB><201>
+        // and strip the last 2 characters to get rid of <IAC><TN_SE>
+        setGMCPVariables(payload);
+        return;
+    }
+
+    case OPT_MSSP: {
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet suboption
+        // bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+        // strip first 3 characters to get rid of <IAC><SB><70>
+        // and strip the last 2 characters to get rid of <IAC><TN_SE>
+        setMSSPVariables(payload);
+        return;
+    }
+
+    case OPT_MSP: {
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet suboption
+        // bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+        // strip first 3 characters to get rid of <IAC><SB><90>
+        // and strip the last 2 characters to get rid of <IAC><TN_SE>
+        setMSPVariables(payload);
+        return;
+    }
+
+    case OPT_102: {
+        QByteArray payload = command.c_str();
+        if (payload.size() < 6) {
+            return;
+        }
+        // payload is in the Mud Server's encoding, trim off the Telnet suboption
+        // bytes from beginning (3) and end (2):
+        payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+        setChannel102Variables(payload);
+        return;
+    }
+
+    case OPT_STATUS:
+        if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+            // Request to send all enabled commands; if server sends his
+            // own list of commands, we just ignore it (well, he shouldn't
+            // send anything, as we do not request anything, but there are
+            // so many servers out there, that you can never be sure...)
+            std::string cmd{TN_IAC, TN_SB, OPT_STATUS, TNSB_IS};
+            for (size_t i = 0; i < 256; ++i) {
+                if (myOptionState[i]) {
+                    cmd.append({TN_WILL, i});
+                    if (i == static_cast<unsigned char>(TN_SE)) {
+                        // Handle corner case where sub-option value is the same as TN_SE (240)
+                        cmd += i;
+                    }
+                }
+                if (hisOptionState[i]) {
+                    cmd.append({TN_DO, i});
+                    if (i == static_cast<unsigned char>(TN_SE)) {
+                        // Handle corner case where byte value is TN_SE
+                        cmd += i;
+                    }
+                }
+            }
+            cmd.append({TN_IAC, TN_SE});
+            // This works as handling the status is exempt from the need to
+            // escape values that would themselves be interpreted as Telnet
+            // protocol bytes themselves - except for the corner case when
+            // the sub-option is 240 as described in: RFC 859
+            // https://tools.ietf.org/html/rfc859 :
+            socketOutRaw(cmd);
+        }
+        return;
+
+    case OPT_TERMINAL_TYPE:
+        if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)] && command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+            //server wants us to send terminal type; he can send his own type
+            //too, but we just ignore it, as we have no use for it...
+            /*
+             * The valid characters for termTerm are more restricted than being
+             * ASCII - from:
+             * https://tools.ietf.org/html/rfc1010 (page 29):
+             * "A terminal names may be up to 40 characters taken from the set
+             * of uppercase letters, digits, and the two punctuation characters
+             * hyphen and slash.  It must start with a letter, and end with a
+             * letter or digit."
+             * Once we comply with that we can be certain that Mud Server
+             * encoding will NOT be an issue!
+             */
+            std::string cmd{TN_IAC, TN_SB, OPT_TERMINAL_TYPE, TNSB_IS};
+            cmd.append(termType.toLatin1().data());
+            cmd.append({TN_IAC, TN_SE});
+            socketOutRaw(cmd);
+        }
+        return;
+
+        //other cmds should not arrive, as they were not negotiated.
+        //if they do, they are merely ignored
+    } //end switch
+    //other commands are simply ignored (NOP and such, see .h file for list)
 }
 
 // msg is in the Mud Server encoding
@@ -2365,7 +2419,7 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     if (zval == Z_STREAM_END) {
         inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
-        this->mNeedDecompression = false;
+        mNeedDecompression = false;
 
         hisOptionState[static_cast<int>(OPT_COMPRESS)] = false;
         hisOptionState[static_cast<int>(OPT_COMPRESS2)] = false;
@@ -2468,39 +2522,38 @@ void cTelnet::slot_processReplayChunk()
         if (iac || iac2 || insb || (ch == TN_IAC)) {
             if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
                 iac = true;
-                command += ch;
+                mCommand += ch;
             } else if (iac && (ch == TN_IAC) && (!insb)) {
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
-                command = "";
+                mCommand = "";
             } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
                 //3. IAC DO/DONT/WILL/WONT
                 iac = false;
                 iac2 = true;
-                command += ch;
+                mCommand += ch;
             } else if (iac2) {
                 //4. IAC DO/DONT/WILL/WONT <command code>
                 iac2 = false;
-                command += ch;
-                processTelnetCommand(command);
-                command = "";
+                mCommand += ch;
+                processTelnetCommand(mCommand);
+                mCommand = "";
             } else if (iac && (!insb) && (ch == TN_SB)) {
                 //5. IAC SB
                 iac = false;
                 insb = true;
-                command += ch;
+                mCommand += ch;
             } else if (iac && (!insb) && (ch == TN_SE)) {
                 //6. IAC SE without IAC SB - error - ignored
-                command = "";
+                mCommand = "";
                 iac = false;
             } else if (insb) {
                 //7. inside IAC SB
-                command += ch;
-                if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
-                {
-                    processTelnetCommand(command);
-                    command = "";
+                mCommand += ch;
+                if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
+                    processTelnetCommand(mCommand);
+                    mCommand = "";
                     iac = false;
                     insb = false;
                 }
@@ -2513,10 +2566,10 @@ void cTelnet::slot_processReplayChunk()
             //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
             {
                 iac = false;
-                command += ch;
-                processTelnetCommand(command);
+                mCommand += ch;
+                processTelnetCommand(mCommand);
                 //this could have set receivedGA to true; we'll handle that later
-                command = "";
+                mCommand = "";
             }
         } else {
             if (ch != '\r') {
@@ -2604,31 +2657,31 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             if (iac || iac2 || insb || (ch == TN_IAC)) {
                 if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
                     iac = true;
-                    command += ch;
+                    mCommand += ch;
                 } else if (iac && (ch == TN_IAC) && (!insb)) {
                     //2. seq. of two IACs
                     iac = false;
                     cleandata += ch;
-                    command = "";
+                    mCommand = "";
                 } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
                     //3. IAC DO/DONT/WILL/WONT
                     iac = false;
                     iac2 = true;
-                    command += ch;
+                    mCommand += ch;
                 } else if (iac2) {
                     //4. IAC DO/DONT/WILL/WONT <command code>
                     iac2 = false;
-                    command += ch;
-                    processTelnetCommand(command);
-                    command = "";
+                    mCommand += ch;
+                    processTelnetCommand(mCommand);
+                    mCommand = "";
                 } else if (iac && (!insb) && (ch == TN_SB)) {
                     //5. IAC SB
                     iac = false;
                     insb = true;
-                    command += ch;
+                    mCommand += ch;
                 } else if (iac && (!insb) && (ch == TN_SE)) {
                     //6. IAC SE without IAC SB - error - ignored
-                    command = "";
+                    mCommand = "";
                     iac = false;
                 } else if (insb) {
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
@@ -2647,7 +2700,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                     qDebug() << "MCCP version 2 starting sequence";
                                     _compress = true;
                                 }
-                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                                qDebug() << static_cast<int>(buffer[i - 2]) << ","
+                                         << static_cast<int>(buffer[i - 1]) << ","
+                                         << static_cast<int>(buffer[i]) << ","
+                                         << static_cast<int>(buffer[i + 1]) << ","
+                                         << static_cast<int>(buffer[i + 2]);
                             }
                             if (_compress) {
                                 mNeedDecompression = true;
@@ -2668,7 +2725,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                 //bugfix: BenH
                                 iac = false;
                                 insb = false;
-                                command = "";
+                                mCommand = "";
                                 ////////////////
                                 goto MAIN_LOOP_END;
                             }
@@ -2676,11 +2733,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     }
                     //7. inside IAC SB
 
-                    command += ch;
+                    mCommand += ch;
                     if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
                     {
-                        processTelnetCommand(command);
-                        command = "";
+                        processTelnetCommand(mCommand);
+                        mCommand = "";
                         iac = false;
                         insb = false;
                     }
@@ -2693,10 +2750,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                 //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
                 {
                     iac = false;
-                    command += ch;
-                    processTelnetCommand(command);
+                    mCommand += ch;
+                    processTelnetCommand(mCommand);
                     //this could have set receivedGA to true; we'll handle that later
-                    command = "";
+                    mCommand = "";
                 }
             } else {
                 if (ch == TN_BELL) {
