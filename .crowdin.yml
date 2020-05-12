@@ -3,4 +3,4 @@ files:
     translation: /translations/translated/mudlet_%locale_with_underscore%.%file_extension%
 
   - source: /translations/lua/mudlet-lua.json
-    translation: translations/lua/translated/mudlet-lua_%locale_with_underscore%.%file_extension%
+    translation: /translations/lua/translated/mudlet-lua_%locale_with_underscore%.%file_extension%
