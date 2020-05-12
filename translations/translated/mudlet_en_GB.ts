@@ -10021,7 +10021,7 @@ try again when it has finished.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation type="unfinished">Toolbar notification if Mudlet is minimized and new data arrives</translation>
+      <translation>Toolbar notification if Mudlet is minimised and new data arrives</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="236"/>
