@@ -1,6 +1,0 @@
-{
-  "AdjustableContainer.lock": {
-    "message": "Travar",
-    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
-  }
-}
