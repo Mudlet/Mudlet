@@ -666,7 +666,10 @@ function Geyser.Label:new (cons, container)
     createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
-
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
   -- parse any given format string and set sensible defaults
   me:processFormatString(cons.format)
 
@@ -764,6 +767,14 @@ function Geyser.Label:new (cons, container)
   if me.stylesheet then me:setStyleSheet() end
 
   --print("  New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.Label:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end
 

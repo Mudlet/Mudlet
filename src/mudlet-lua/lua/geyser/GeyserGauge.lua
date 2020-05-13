@@ -256,3 +256,11 @@ function Geyser.Gauge:new (cons, container)
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
+
+-- Overridden constructor to use add2
+function Geyser.Gauge:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
+  return me
+end

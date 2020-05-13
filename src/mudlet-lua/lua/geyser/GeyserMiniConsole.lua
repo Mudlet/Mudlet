@@ -319,6 +319,11 @@ function Geyser.MiniConsole:new (cons, container)
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
 
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+    if me.hidden or me.auto_hidden then
+      hideWindow(me.name)
+    end
+
     -- Set any defined colors
     Geyser.Color.applyColors(me)
 
@@ -346,5 +351,13 @@ function Geyser.MiniConsole:new (cons, container)
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.MiniConsole:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end
