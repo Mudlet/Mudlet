@@ -45,10 +45,10 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
-# after for some warnings that we wish to ignore:
+# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
 !msvc:CONFIG += warn_off
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
+# ignore unused parameters, because boost has a ton of them and that is not something we need to know.
+!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated -Wno-unused-local-typedefs -Wno-unused-parameter
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.6.2
+VERSION = 4.8.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -105,7 +105,7 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD = ""
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -188,20 +188,6 @@ linux|macx|win32 {
 3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
 isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
-}
-
-######################## System QtKeyChain library ###############
-# To use a system provided QtKeyChain library set the environmental variable
-# WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
-# useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
-# any other value than "NO" then the build process will download and link to a
-# locally built copy of the library. This is designed to help Linux and other
-# distribution package builders integrate Mudlet into their system - if a system
-# provided one is specified and the library is NOT available then the
-# build will fail both at the compilation and the linking stages.
-OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
-isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
-  DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -303,7 +289,6 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
-        LUA_TRANSLATIONS.path = $${LUA.path}/translations
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -383,11 +368,9 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-            system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
-        }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -398,11 +381,9 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
-    contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-        !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
-            message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
-            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
-        }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
     }
 }
 
@@ -442,12 +423,10 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
-        include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
-    } else {
-        error("Cannot locate QtKeychain submodule source code, build abandoned!")
-    }
+exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
+    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+} else {
+    error("Cannot locate QtKeychain submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -517,38 +496,14 @@ SOURCES += \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
-    TEncodingTable.cpp \
-    TEntityHandler.cpp \
-    TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
-    TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
-    TMxpElementDefinitionHandler.cpp \
-    TMxpElementRegistry.cpp \
-    TMxpEntityTagHandler.cpp \
-    TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
-    TMxpColorTagHandler.cpp \
-    TMxpCustomElementTagHandler.cpp \
-    TMxpFontTagHandler.cpp \
-    TMxpLinkTagHandler.cpp \
-    TMxpMudlet.cpp \
-    TMxpNodeBuilder.cpp \
-    TMxpProcessor.cpp \
-    TMxpSendTagHandler.cpp \
-    TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
-    TMxpTagHandler.cpp \
-    TMxpTagParser.cpp \
-    TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
-    TMxpVersionTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -564,8 +519,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -617,9 +571,6 @@ HEADERS += \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
-    TEncodingTable.h \
-    TEntityHandler.h \
-    TEntityResolver.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \
@@ -627,33 +578,10 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
-    TLinkStore.h \
     TLuaInterpreter.h \
     TMap.h \
-    TMatchState.h \
     TMedia.h \
-    TMxpBRTagHandler.h \
-    TMxpClient.h \
-    TMxpColorTagHandler.h \
-    TMxpCustomElementTagHandler.h \
-    TMxpFontTagHandler.h \
-    TMxpLinkTagHandler.h \
-    TMxpElementDefinitionHandler.h \
-    TMxpElementRegistry.h \
-    TMxpEntityTagHandler.h \
-    TMxpContext.h \
-    TMxpFormattingTagsHandler.h \
-    TMxpMudlet.h \
-    TMxpNodeBuilder.h \
-    TMxpProcessor.h \
-    TMxpSendTagHandler.h \
-    MxpTag.h \
-    TMxpTagHandler.h \
-    TMxpTagParser.h \
-    TMxpTagProcessor.h \
-    TMxpSupportTagHandler.cpp \
-    TMxpVarTagHandler.h \
-    TMxpVersionTagHandler.h \
+    TMatchState.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \
@@ -673,8 +601,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -767,17 +694,6 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     }
 }
 
-contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
-    !build_pass{
-        message("Including own copy of QtKeyChain library code in this configuration")
-    }
-} else {
-    LIBS += -lqt5keychain
-    !build_pass{
-        message("Linking with system QtKeyChain library code in this configuration")
-    }
-}
-
 TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
@@ -844,10 +760,6 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
-
-LUA_TRANSLATIONS.files = \
-    $${PWD}/../translations/lua/*
-LUA_TRANSLATIONS.depends = mudlet
 
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
 # makefile constructor to reproduce the exact directory structure we have to
@@ -1337,12 +1249,6 @@ macx {
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
-    APP_MUDLET_LUA_TRANSLATION.files = \
-        ../translations/lua
-
-    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
-    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-
     # Set the .app's icns file
     ICON = icons/osx.icns
 
@@ -1403,7 +1309,6 @@ win32 {
 OTHER_FILES += \
     $${LUA.files} \
     $${LUA_GEYSER.files} \
-    $${LUA_TRANSLATIONS.files} \
     $${LUA_TESTS.files} \
     $${DISTFILES} \
     ../README \
@@ -1422,7 +1327,6 @@ unix:!macx {
         target \
         LUA \
         LUA_GEYSER \
-        LUA_TRANSLATIONS \
         LUA_LCF \
         LUA_LCF_L1_GET__AST \
         LUA_LCF_L1_GET__FORMATTER__AST \
