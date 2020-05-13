@@ -12,30 +12,30 @@ Geyser.VBox = Geyser.Container:new({
 function Geyser.VBox:add (window, cons)
   Geyser.add(self, window, cons)
   if not self.defer_updates then
-    self:reposition()
+    self:organize()
   end
 end
 
---- Responsible for placing/moving/resizing this window to the correct place/size.
--- Called on window resize events.
-function Geyser.VBox:reposition()
+--- Responsible for organizing the elements inside the VBox
+-- Called when a new element is added
+function Geyser.VBox:organize()
   self.parent:reposition()
 
-  local window_height = self:calculate_dynamic_window_size().height
+  local window_height = (self:calculate_dynamic_window_size().height / self.get_height()) * 100
   local start_y = 0
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
-    window:move(0, start_y)
-    local width = window.width
-    local height = window.height
+    window:move("0%", start_y.."%")
+    local width = (window:get_width() / self:get_width()) * 100
+    local height = (window:get_height() / self:get_height()) * 100
     if window.h_policy == Geyser.Dynamic then
-      width = self:get_width()
+      width = 100
     end
     if window.v_policy == Geyser.Dynamic then
       height = window_height * window.v_stretch_factor
     end
-    window:resize(width, height)
-    start_y = start_y + window:get_height()
+    window:resize(width.."%", height.."%")
+    start_y = start_y + (window:get_height() / self:get_height()) * 100
   end
 end
 
