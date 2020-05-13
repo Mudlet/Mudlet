@@ -854,11 +854,13 @@ end
 --- Sets label to no longer intercept mouse events
 function Geyser.Label:enableClickthrough()
   enableClickthrough(self.name)
+  self.clickthrough = true
 end
 
 --- Sets label to once again intercept mouse events
 function Geyser.Label:disableClickthrough()
   disableClickthrough(self.name)
+  self.clickthrough = false
 end
 
 ---
