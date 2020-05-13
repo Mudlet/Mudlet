@@ -40,8 +40,8 @@ void ExitsTreeWidget::keyPressEvent(QKeyEvent* event)
     }
     if (event->key() == Qt::Key_Delete && hasFocus()) {
         QList<QTreeWidgetItem*> selection = selectedItems();
-        for (auto pItem : selection) {
-            takeTopLevelItem(indexOfTopLevelItem(pItem));
+        foreach (QTreeWidgetItem* item, selection) {
+            takeTopLevelItem(indexOfTopLevelItem(item));
         }
     }
 }
