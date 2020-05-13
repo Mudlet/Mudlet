@@ -330,6 +330,7 @@ void Discord::UpdatePresence()
     if (!pHost) {
         localDiscordPresence tempPresence;
         tempPresence.setLargeImageKey(QStringLiteral("mudlet"));
+        tempPresence.setDetailText(QStringLiteral("www.mudlet.org"));
 #if defined(DEBUG_DISCORD)
         qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
 #endif
