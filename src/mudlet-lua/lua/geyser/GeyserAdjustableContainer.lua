@@ -857,12 +857,7 @@ function Adjustable.Container:new(cons,container)
     me:createLabels()
     me.minimized =  me.minimized or false
     me.locked =  me.locked or false
-    if me.minimized then
-        me:minimize()
-    end
-    if me.locked then
-        me:lockContainer()
-    end
+
     me.adjLabelstyle = me.adjLabelstyle..[[ qproperty-alignment: 'AlignLeft | AlignTop';]]
     me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale.lock.message
     me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale.min_restore.message
@@ -914,6 +909,15 @@ function Adjustable.Container:new(cons,container)
             me:hide(true)
         end
     end
+
+    if me.minimized then
+        me:minimize()
+    end
+
+    if me.locked then
+        me:lockContainer()
+    end
+
     -- hide/show on creation
     if cons.hidden == true then
         me:hide()
