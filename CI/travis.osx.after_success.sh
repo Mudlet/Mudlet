@@ -70,7 +70,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      bash make-installer.sh -p "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
     else
       bash make-installer.sh -r "${VERSION}" "$app"
     fi

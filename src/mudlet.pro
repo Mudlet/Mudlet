@@ -105,7 +105,7 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD = "-ptb"
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -1390,7 +1390,7 @@ win32 {
     } else {
         RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
     }
-    
+
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
