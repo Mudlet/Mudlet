@@ -25,6 +25,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QEvent>
 #include <QMutex>
@@ -92,6 +94,7 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -381,7 +384,6 @@ public:
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
-    static int getMudletLuaDefaultPaths(lua_State*);
     static int setTriggerStayOpen(lua_State*);
     static int wrapLine(lua_State*);
     static int getFgColor(lua_State*);
@@ -552,7 +554,6 @@ public:
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-    void encodingChanged(const QString&);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);

@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
+        <file>CF-loader.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
@@ -30,6 +31,7 @@
         <file>icons/batmud_mud.png</file>
         <file>icons/black_white_transparent_check_1x3_ratio.png</file>
         <file>icons/bookmarks.png</file>
+        <file>icons/carrionfields.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/clessidra.jpg</file>
         <file>icons/configure.png</file>
@@ -46,9 +48,9 @@
         <file>icons/Discord-Logo+Wordmark-Color.png</file>
         <file>icons/Discord-Logo+Wordmark-Color_400x136px.png</file>
         <file>icons/Discord-Logo-Color.png</file>
-        <file>icons/discord-rich-presence.png</file>
         <file>icons/discord-rich-presence-large-icon.png</file>
         <file>icons/discord-rich-presence-small-icon.png</file>
+        <file>icons/discord-rich-presence.png</file>
         <file>icons/document-decrypt.png</file>
         <file>icons/document-encrypt.png</file>
         <file>icons/document-new.png</file>
@@ -138,8 +140,8 @@
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
-        <file>icons/package-manager.png</file>
         <file>icons/package-exporter.png</file>
+        <file>icons/package-manager.png</file>
         <file>icons/password-show-off.png</file>
         <file>icons/password-show-on.png</file>
         <file>icons/Patreon_Mark_Primary.png</file>
@@ -150,8 +152,8 @@
         <file>icons/red-bomb.png</file>
         <file>icons/reinosdeleyenda_mud.png</file>
         <file>icons/run-build-clean.png</file>
-        <file>icons/searchOptions-caseSensitive.png</file>
         <file>icons/searchOptions-caseSensitive+withVariables.png</file>
+        <file>icons/searchOptions-caseSensitive.png</file>
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>
         <file>icons/searchOptions-withVariables.png</file>
