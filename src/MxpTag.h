@@ -56,8 +56,6 @@ class MxpNode
 public:
     enum Type { MXP_NODE_TYPE_TEXT, MXP_NODE_TYPE_START_TAG, MXP_NODE_TYPE_END_TAG };
 
-    explicit MxpNode(MxpNode::Type type) : mType(type) {}
-
     MxpNode::Type getType() const { return mType; }
 
     MxpTag* asTag() { return mType != MXP_NODE_TYPE_TEXT ? reinterpret_cast<MxpTag*>(this) : nullptr; }
@@ -76,7 +74,10 @@ public:
 
     bool isStartTag() { return mType == MXP_NODE_TYPE_START_TAG; }
 
+    virtual ~MxpNode() = default;
+
 protected:
+    explicit MxpNode(MxpNode::Type type) : mType(type) {}
     MxpNode::Type mType;
 };
 
@@ -96,12 +97,9 @@ class MxpTag : public MxpNode
 {
     friend class TMxpTagParser;
 
-protected:
-    QString name;
-
-    explicit MxpTag(MxpNode::Type type, const QString& name) : MxpNode(type), name(name) {}
-
 public:
+    virtual ~MxpTag() = default;
+
     inline const QString& getName() const { return name; }
 
     inline bool isStartTag() const { return mType == MXP_NODE_TYPE_START_TAG; }
@@ -109,6 +107,11 @@ public:
     inline bool isEndTag() const { return mType == MXP_NODE_TYPE_END_TAG; }
 
     bool isNamed(const QString& tagName) const;
+
+protected:
+    QString name;
+
+    explicit MxpTag(MxpNode::Type type, const QString& name) : MxpNode(type), name(name) {}
 };
 
 class MxpEndTag : public MxpTag
