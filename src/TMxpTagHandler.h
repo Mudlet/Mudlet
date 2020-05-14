@@ -64,6 +64,9 @@ public:
     virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) { return MXP_TAG_NOT_HANDLED; }
 
     virtual ~TMxpTagHandler() = default;
+
+protected:
+    TMxpTagHandler() = default;
 };
 
 class TMxpSingleTagHandler : public TMxpTagHandler
@@ -71,9 +74,12 @@ class TMxpSingleTagHandler : public TMxpTagHandler
     QString tagName;
 
 public:
-    explicit TMxpSingleTagHandler(QString tagName) : tagName(std::move(tagName)) {}
+    virtual ~TMxpSingleTagHandler() = default;
 
     virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return tag->isNamed(tagName); }
+
+protected:
+    explicit TMxpSingleTagHandler(QString tagName) : tagName(std::move(tagName)) {}
 };
 
 #endif //MUDLET_TMXPTAGHANDLER_H
