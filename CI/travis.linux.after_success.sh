@@ -10,7 +10,7 @@ fi
 if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
    { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
 
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
