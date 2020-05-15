@@ -41,6 +41,10 @@
 #include <QTime>
 #include <QVector>
 #include "post_guard.h"
+#include "TEncodingTable.h"
+#include "TLinkStore.h"
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
 
 #include <deque>
 #include <string>
@@ -117,38 +121,12 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 
-struct TMxpElement
+
+
+
+class TBuffer
 {
-    QString name;
-    QString href;
-    QString hint;
-};
-
-enum TMXPMode
-{
-    MXP_MODE_OPEN,
-    MXP_MODE_SECURE,
-    MXP_MODE_LOCKED,
-    MXP_MODE_TEMP_SECURE
-};
-
-struct MxpEvent {
-    QString name;
-    QMap<QString, QString> attrs;
-    QStringList actions;
-
-    MxpEvent(QString name, QMap<QString, QString> attrs, QStringList actions)
-            : name(name), attrs(attrs), actions(actions)
-    {}
-};
-
-class TBuffer {
-    // private - a map of computer-friendly encoding names as keys,
-    // value is the encoding data.
-    // Look to mudlet::mEncodingNameTable for the GUI "human" names for the keys:
-    static const QMap<QByteArray, QVector<QChar>> csmEncodingTable;
-
-    static const QMap<QString, QVector<QString>> mSupportedMxpElements;
+    inline static const TEncodingTable &csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
@@ -205,16 +183,13 @@ public:
     void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
 
-    QQueue<MxpEvent> mMxpEvents;
 
     std::deque<TChar> bufferLine;
     std::deque<std::deque<TChar>> buffer;
     QStringList timeBuffer;
     QStringList lineBuffer;
     QList<bool> promptBuffer;
-    QMap<int, QStringList> mLinkStore;
-    QMap<int, QStringList> mHintStore;
-    int mLinkID;
+    TLinkStore mLinkStore;
     int mLinesLimit;
     int mBatchDeleteSize;
     int mWrapAt;
@@ -222,54 +197,8 @@ public:
 
     int mCursorY;
 
-    /*
-     * The documentation at https://www.zuggsoft.com/zmud/mxp.htm says: "
-     * * 0 - OPEN LINE - initial default mode: only MXP commands in the 'open'
-     *     category are allowed.  When a newline is received from the MUD, the
-     *     mode reverts back to the Default mode.  OPEN mode starts as the
-     *     default mode until changes with one of the 'lock mode' tags listed
-     *     below.
-     * * 1 - SECURE LINE (until next newline) all tags and commands in MXP are
-     *     allowed within the line.  When a newline is received from the MUD,
-     *     the mode reverts back to the Default mode.
-     * * 2 - LOCKED LINE (until next newline) no MXP or HTML commands are
-     *     allowed in the line.  The line is not parsed for any tags at all.
-     *     This is useful for "verbatim" text output from the MUD.  When a
-     *     newline is received from the MUD, the mode reverts back to the
-     *     Default mode.
-     * The following additional modes were added to the v0.4 MXP spec:
-     * * 3 - RESET close all open tags.  Set mode to Open.  Set text color and
-     *     properties to default.
-     * * 4 - TEMP SECURE MODE set secure mode for the next tag only.  Must be
-     *     immediately followed by a < character to start a tag.  Remember to
-     *     set secure mode when closing the tag also.
-     * * 5 - LOCK OPEN MODE set open mode.  Mode remains in effect until
-     *     changed.  OPEN mode becomes the new default mode.
-     * * 6 - LOCK SECURE MODE set secure mode.  Mode remains in effect until
-     *     changed.  Secure mode becomes the new default mode.
-     * * 7 - LOCK LOCKED MODE set locked mode.  Mode remains in effect until
-     *     changed.  Locked mode becomes the new default mode."
-     */
 
     // State of MXP systen:
-    bool mMXP;
-    TMXPMode mMXP_MODE;
-    TMXPMode mMXP_DEFAULT;
-
-    bool mAssemblingToken;
-    std::string currentToken;
-    int openT;
-    int closeT;
-
-    QMap<QString, TMxpElement> mMXP_Elements;
-
-    bool mMXP_LINK_MODE;
-    bool mIgnoreTag;
-    std::string mSkip;
-    bool mParsingVar;
-    char mOpenMainQuote;
-    bool mMXP_SEND_NO_REF_MODE;
-    std::string mAssembleRef;
     bool mEchoingText;
 
 
@@ -280,14 +209,12 @@ private:
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
-    QString processSupportsRequest(const QString& attributes);
     void decodeSGR(const QString&);
     void decodeSGR38(const QStringList&, bool isColonSeparated = true);
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
 
-    static const int scmMaxLinks = 2000;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:

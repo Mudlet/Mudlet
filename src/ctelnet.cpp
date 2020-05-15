@@ -206,7 +206,7 @@ cTelnet::~cTelnet()
 #else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
-        foreach (QString message, messageStack) {
+        for (auto message : messageStack) {
 #if defined (Q_OS_WIN32)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
@@ -1122,7 +1122,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
                 mpHost->mServerMXPenabled = true;
-                mpHost->mpConsole->buffer.mMXP = true;
+                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }
@@ -2638,7 +2638,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
                             bool _compress = false;
                             if ((i > 1) && (i + 2 < datalen)) {
-                                qDebug() << "checking mccp start seq...";
                                 if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
                                     qDebug() << "MCCP version 1 starting sequence";
                                     _compress = true;
@@ -2647,7 +2646,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                     qDebug() << "MCCP version 2 starting sequence";
                                     _compress = true;
                                 }
-                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
                             }
                             if (_compress) {
                                 mNeedDecompression = true;

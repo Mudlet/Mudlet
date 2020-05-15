@@ -41,7 +41,7 @@ void FontManager::addFonts()
     loadFonts(dir.absolutePath());
 
     // load all fonts in subfolders (of the 'font' folder)
-    foreach (QString fontfolder, dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
+    for (auto fontfolder : dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
         loadFonts(QStringLiteral("%1/%2").arg(dir.absolutePath(), fontfolder));
     }
 }
@@ -55,7 +55,7 @@ void FontManager::loadFonts(const QString& folder)
     QDir dir = folder;
     dir.setNameFilters(filters);
 
-    foreach (QString fontFile, dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
+    for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         QString fontFilePathName = QStringLiteral("%1/%2").arg(dir.absolutePath(), fontFile);
         loadFont(fontFilePathName);
     }
