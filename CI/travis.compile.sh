@@ -8,7 +8,7 @@ if { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "osx" ] && [
    { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
   export CCACHE_DISABLE=1
 
-  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+  if [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; then
     compile_line+=(cov-build --dir cov-int)
   fi
 elif [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
