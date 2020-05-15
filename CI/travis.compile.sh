@@ -1,12 +1,15 @@
 #!/bin/bash
 compile_line=()
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  if [ "${DEPLOY}" != "deploy" ] || [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+  if [ "${DEPLOY}" != "deploy" ]; then
     echo Job not executed under cron run
     exit 0
   fi
   export CCACHE_DISABLE=1
-  compile_line+=(cov-build --dir cov-int)
+
+  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+    compile_line+=(cov-build --dir cov-int)
+  fi
 fi
 
 cd build
@@ -27,12 +30,12 @@ fi
 "${Q_OR_C_MAKE}" --version
 echo "Compiling using ${PROCS} cores."
 if [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-  qmake ${SPEC} ../src/mudlet.pro
+  qmake "${SPEC}" ../src/mudlet.pro
 else
   cmake ..
 fi
 
-compile_line+=(make -j ${PROCS})
+compile_line+=(make -j "${PROCS}")
 
 set -x
 "${compile_line[@]}"
