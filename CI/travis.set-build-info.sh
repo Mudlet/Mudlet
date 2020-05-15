@@ -3,8 +3,7 @@
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ]; then
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-    # The only scheduled macos builds are public test builds
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
     MUDLET_VERSION_BUILD="-ptb"
   else
     MUDLET_VERSION_BUILD="-testing"
@@ -17,7 +16,7 @@ if [ -z "${TRAVIS_TAG}" ]; then
 
     if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
       DATE=$(date +'%Y-%m-%d')
-      # add a short commit to version for changelog generation know  what was last released
+      # add a short commit to version for changelog generation know what was last released
       SHORT_COMMIT=$(echo "${COMMIT}" | cut -c1-5)
       MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${SHORT_COMMIT}"
     else
