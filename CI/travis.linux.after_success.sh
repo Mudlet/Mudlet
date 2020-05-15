@@ -54,8 +54,6 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
       echo "== Creating a public test build =="
-      mv "$app" "source/build/Mudlet PTB.app"
-      app="source/build/Mudlet PTB.app"
     else
       echo "== Creating a release build =="
     fi
