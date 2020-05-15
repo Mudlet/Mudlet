@@ -41,7 +41,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
   export LD_LIBRARY_PATH=
 
-  if [ -z "${TRAVIS_TAG}" ]; then
+  if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     bash make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
 
