@@ -1425,6 +1425,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
             if (command.size() < 6) {
                 return;
             }
+
+            _m = _m.replace(TN_BELL, QLatin1String("\\\\7"));
+
             // _m is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
             _m = _m.mid(3, static_cast<int>(command.size()) - 5);
