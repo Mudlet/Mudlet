@@ -209,7 +209,7 @@ mudlet::mudlet()
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    if (scmIsReleaseVersion) {
+    if (scmIsReleaseVersion || scmIsDevelopmentVersion) {
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet.png")));
     } else if (scmIsPublicTestVersion) {
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
