@@ -76,7 +76,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ ! -z "$CERT_PW" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      if [ "${public_test_build}" == "true" ]; then
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+      else
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      fi
       echo "Signed final .dmg"
     fi
 
