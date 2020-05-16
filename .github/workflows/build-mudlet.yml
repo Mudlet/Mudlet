@@ -94,6 +94,8 @@ jobs:
 #       if: runner.os == 'Linux'
       if: always()
       uses: GabrielBB/xvfb-action@v1.0
+      env:
+        QT_DEBUG_PLUGINS: true
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet -profile Achaea
      
