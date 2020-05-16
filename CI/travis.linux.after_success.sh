@@ -109,7 +109,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Downloading release feed ==="
       downloadedfeed=$(mktemp)
-      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86" --output-document="$downloadedfeed"
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
       pushd "${TRAVIS_BUILD_DIR}/CI/"
       changelog=$(lua "${TRAVIS_BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
