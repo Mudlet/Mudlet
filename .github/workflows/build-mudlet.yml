@@ -86,7 +86,9 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
     
-    - name: Run tests C++ tests
+    # Linux requires tests to be run under xvfb
+    - name: Run C++ tests (Linux)
+      if: runner.os == 'Linux'
       uses: GabrielBB/xvfb-action@v1.0
       env:
         QT_DEBUG_PLUGINS: true
@@ -94,4 +96,8 @@ jobs:
         working-directory: '${{runner.workspace}}/b/ninja'
         run: ctest --output-on-failure
      
+    - name: Run C++ tests (macOS)
+      if: runner.os == 'macOS'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
      
