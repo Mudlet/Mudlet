@@ -117,16 +117,18 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
     fi
 
-    # generate and deploy source tarball
-    cd "${HOME}"
-    # get the archive script
-    wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
+    if [ "${public_test_build}" != "true" ]; then
+      # generate and deploy source tarball
+      cd "${HOME}"
+      # get the archive script
+      wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
 
-    cd "${TRAVIS_BUILD_DIR}"
-    # generate and upload the tarball
-    bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
-    xz "Mudlet-${VERSION}.tar"
-    scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
+      cd "${TRAVIS_BUILD_DIR}"
+      # generate and upload the tarball
+      bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
+      xz "Mudlet-${VERSION}.tar"
+      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    fi
   fi
   export DEPLOY_URL
 fi
