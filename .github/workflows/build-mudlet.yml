@@ -85,9 +85,8 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
-    
+
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-     
