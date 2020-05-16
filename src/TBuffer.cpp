@@ -186,7 +186,7 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     if (batch >= requestedLinesLimit) {
         batch = requestedLinesLimit / 10;
     }
-    // clip the maximum to something reasonable, else users will abuse this, and then complain
+    // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
         qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit <<
