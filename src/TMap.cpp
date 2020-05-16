@@ -135,7 +135,7 @@ TMap::~TMap()
         qWarning() << "TMap::~TMap() Instance being destroyed before it could display some messages,\n"
                    << "messages are:\n"
                    << "------------";
-        foreach (QString message, mStoredMessages) {
+        for (auto message : mStoredMessages) {
             qWarning() << message << "\n------------";
         }
     }
@@ -617,14 +617,14 @@ void TMap::initGraph()
         location l;
         l.pR = pR;
         l.id = itRoom.key();
-        // locations is std::vector<location> and (locations.at( k )).id will give room ID value
+        // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
         // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
-    foreach (location l, locations) {
+    for (auto l : locations) {
         unsigned int source = l.id;
         TRoom* pSourceR = l.pR;
         QHash<unsigned int, route> bestRoutes;
@@ -990,8 +990,8 @@ bool TMap::findPath(int from, int to)
             // the "previousVertex = p[currentVertex]" operation at the start of
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
-            mWeightList.prepend( r.cost );
-            switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
+            mWeightList.prepend(r.cost);
+            switch (r.direction) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
             case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
             case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
             case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
@@ -1442,9 +1442,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             }
         }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(( mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
-                                                                          | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                          | QFont::PreferNoShaping
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                          |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+                                                                          |QFont::PreferNoShaping
                                                                           ));
 
         if (mVersion >= 14) {
@@ -1462,7 +1462,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 } else {
                     QList<int> oldRoomsList;
                     ifs >> oldRoomsList;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                    pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
+#else
                     pA->rooms = oldRoomsList.toSet();
+#endif
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;

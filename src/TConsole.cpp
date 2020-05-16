@@ -1245,6 +1245,14 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
+    // dequeues MXP events and raise them through the LuaInterpreter
+    // TODO: move this somewhere else more appropriate
+    auto &mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
+        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
+    }
+
     double processT = mProcessingTime.elapsed();
     if (mpHost->mTelnet.mGA_Driver) {
         networkLatency->setText(QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency, 0, 'f', 3).arg(processT / 1000, 0, 'f', 3));
@@ -2147,6 +2155,8 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
         TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f);
     }
+    mUpperPane->showNewLines();
+    mLowerPane->showNewLines();
 }
 
 TConsole* TConsole::createBuffer(const QString& name)

@@ -12,7 +12,7 @@ addons:
   apt:
     sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt-5.11.3-xenial'
-    - sourceline: 'ppa:beineri/opt-qt-5.12.7-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.8-xenial'
     - sourceline: 'ppa:ondrej/php' # more-or-less up to date libzip
     - sourceline: 'ppa:ubuntu-toolchain-r/test' # gcc 7
     packages: &common-packages

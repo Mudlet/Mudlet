@@ -5,7 +5,9 @@ on:
       - 'release-**'
 
   schedule:
-    - cron:  '0 0 * * fri'
+    - cron: '0 0 * * fri'
+  repository_dispatch:
+    types: update-translations
 
 jobs:
   update-and-commit-text:
@@ -42,7 +44,7 @@ jobs:
           #### Brief overview of PR changes/additions
           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
           #### Motivation for adding to Mudlet
-          So translators can translate the new text before the upcoming release.:
+          So translators can translate the new text before the upcoming release.
         branch: update-texts-for-translators-${{ github.sha }}
         path: translations/
         commit-message: (autocommit) Updated text for translation

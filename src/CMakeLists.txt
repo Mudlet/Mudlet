@@ -81,21 +81,47 @@ set(mudlet_SRCS
     TDebug.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
+    TEncodingTable.cpp
+    TEntityHandler.cpp
+    TEntityResolver.cpp
     TFlipButton.cpp
     TForkedProcess.cpp
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
     TMedia.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
+    TMxpFormattingTagsHandler.cpp
+    TMxpBRTagHandler.cpp
+    TMxpColorTagHandler.cpp
+    TMxpCustomElementTagHandler.cpp
+    TMxpEntityTagHandler.cpp
+    TMxpFontTagHandler.cpp
+    TMxpLinkTagHandler.cpp
+    TMxpNodeBuilder.cpp
+    TMxpMudlet.cpp
+    TMxpProcessor.cpp
+    TMxpSendTagHandler.cpp
+    TMxpSupportTagHandler.cpp
+    MxpTag.cpp
+    TMxpTagHandler.cpp
+    TMxpTagParser.cpp
+    TMxpTagProcessor.cpp
+    TMxpVarTagHandler.cpp
+    TMxpVersionTagHandler.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
+    TStringUtils.cpp
     TTabBar.cpp
+    TTextCodec.cpp
     TTextEdit.cpp
     TTimer.cpp
     TToolBar.cpp
@@ -182,6 +208,9 @@ set(mudlet_HDRS
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h
+    TEncodingTable.h
+    TEntityHandler.h
+    TEntityResolver.h
     testdbg.h
     TEvent.h
     TForkedProcess.h
@@ -189,10 +218,33 @@ set(mudlet_HDRS
     TimerUnit.h
     TKey.h
     TLabel.h
+    TLinkStore.h
     TLuaInterpreter.h
     TMap.h
     TMatchState.h
     TMedia.h
+    TMxpBRTagHandler.h
+    TMxpClient.h
+    TMxpColorTagHandler.h
+    TMxpCustomElementTagHandler.h
+    TMxpEntityTagHandler.h
+    TMxpFontTagHandler.h
+    TMxpLinkTagHandler.h
+    TMxpElementDefinitionHandler.h
+    TMxpElementRegistry.h
+    TMxpContext.h
+    TMxpFormattingTagsHandler.h
+    TMxpMudlet.h
+    TMxpNodeBuilder.h
+    TMxpProcessor.h
+    TMxpSendTagHandler.h
+    MxpTag.h
+    TMxpTagHandler.h
+    TMxpTagParser.h
+    TMxpTagProcessor.h
+    TMxpSupportTagHandler.cpp
+    TMxpVarTagHandler.h
+    TMxpVersionTagHandler.h
     Tree.h
     TriggerUnit.h
     TRoom.h
@@ -200,7 +252,9 @@ set(mudlet_HDRS
     TScript.h
     TSplitter.h
     TSplitterHandle.h
+    TStringUtils.h
     TTabBar.h
+    TTextCodec.h
     TTextEdit.h
     TTimer.h
     TToolBar.h
@@ -257,6 +311,15 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
+if(NOT USE_OWN_QT5KEYCHAIN)
+  # Only use this when we are using a system package and NOT our own local build
+  find_package(Qt5Keychain REQUIRED)
+
+  # No need to test for it being found as the REQUIRED will make it error out
+  # if it is NOT found!
+  message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
+endif()
+
 if(USE_3DMAPPER)
   if(POLICY CMP0072)
     cmake_policy(SET CMP0072 NEW)
@@ -286,17 +349,23 @@ endif(UNIX)
 # Define a preprocessor symbol with the default fallback location from which to
 # load installed mudlet lua files. Set LUA_DEFAULT_DIR to a platform-specific
 # value. If LUA_DEFAULT_DIR is unset, the root directory will be used.
-target_compile_definitions(
-  mudlet
-  PRIVATE APP_VERSION="${APP_VERSION}" APP_BUILD="${APP_BUILD}"
-          APP_TARGET="${APP_TARGET}" LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-          QTKEYCHAIN_NO_EXPORT)
+target_compile_definitions(mudlet
+  PRIVATE
+    APP_VERSION="${APP_VERSION}"
+    APP_BUILD="${APP_BUILD}"
+    APP_TARGET="${APP_TARGET}"
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+
+if(USE_OWN_QT5KEYCHAIN)
+    # An extra definition is needed if we are using our own QtKeyChain to not
+    # export symbols from our self-built library:
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
 
 target_link_libraries(
   mudlet
   communi
   edbee-lib
-  qt5keychain
   Boost::boost
   HUNSPELL::HUNSPELL
   LUA51::LUA51
@@ -311,7 +380,8 @@ target_link_libraries(
   Qt5::Widgets
   YAJL::YAJL
   ZIP::ZIP
-  ZLIB::ZLIB)
+  ZLIB::ZLIB
+  qt5keychain)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)

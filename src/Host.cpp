@@ -37,6 +37,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
+
 #include "pre_guard.h"
 #include <chrono>
 #include <QtUiTools>
@@ -205,6 +206,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mMxpClient(this)
+, mMxpProcessor(&mMxpClient)
 , mMediaLocationGMCP(QString())
 , mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
@@ -1944,9 +1947,10 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if ( encoding == QLatin1String("GBK")
-             || encoding == QLatin1String("GB18030")
-             || encoding == QLatin1String("Big5")) {
+        if (encoding == QLatin1String("GBK")
+            || encoding == QLatin1String("GB18030")
+            || encoding == QLatin1String("Big5")
+            || encoding == QLatin1String("Big5-HKSCS")) {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
