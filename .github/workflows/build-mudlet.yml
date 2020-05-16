@@ -86,11 +86,12 @@ jobs:
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
     
-    - name: Run tests
+    - name: Run tests C++ tests
       uses: GabrielBB/xvfb-action@v1.0
       env:
         QT_DEBUG_PLUGINS: true
       with:
-        run: cd ${{runner.workspace}}/b/ninja && ctest --output-on-failure
+        working-directory: '${{runner.workspace}}/b/ninja'
+        run: ctest --output-on-failure
      
      
