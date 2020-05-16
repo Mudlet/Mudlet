@@ -130,9 +130,8 @@ class TBuffer
 
     inline static const int TCHAR_IN_BYTES = sizeof(TChar);
 
-    // arbitrary limit on how many characters a single echo can accept. On an average screen,
-    // a line is usually set to wrap at 200 max
-    inline static const int MAX_CHARACTERS_PER_ECHO = 10000;
+    // limit on how many characters a single echo can accept for performance reasons
+    inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
 public:
     TBuffer(Host* pH);
