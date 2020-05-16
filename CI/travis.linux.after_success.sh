@@ -2,6 +2,9 @@
 
 set -e
 
+# temp debugging
+set -x
+
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
@@ -32,7 +35,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     exit
   fi
 
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git -b add-linux-ptb "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
 
@@ -75,7 +78,11 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
       bash make-installer.sh -r "${VERSION}"
     fi
 
-    chmod +x "Mudlet.AppImage"
+    if [ "${public_test_build}" == "true" ]; then
+      chmod +x "Mudlet PTB.AppImage"
+    else
+      chmod +x "Mudlet.AppImage"
+    fi
 
     if [ "${public_test_build}" == "true" ]; then
       tar -czvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet.AppImage"
