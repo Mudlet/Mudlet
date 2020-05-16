@@ -98,6 +98,7 @@ jobs:
 
     - name: Run ctest
       if: always()
-      run: ctest
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: ctest --output-on-failure
      
      
