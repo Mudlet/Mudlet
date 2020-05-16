@@ -91,7 +91,8 @@ jobs:
       run: ctest --output-on-failure
     
     - name: (Linux) Run tests
-      if: runner.os == 'Linux'
+#       if: runner.os == 'Linux'
+      if: always()
       uses: GabrielBB/xvfb-action@v1.0
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet -profile Achaea
