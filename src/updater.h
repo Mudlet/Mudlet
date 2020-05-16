@@ -72,6 +72,7 @@ private:
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
     void finishSetup();
+    void showDialogManually() const;
 
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;

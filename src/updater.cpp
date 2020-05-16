@@ -115,8 +115,15 @@ void Updater::manuallyCheckUpdates()
 #if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
 #else
-    updateDialog->show();
+    feed->load();
+    QObject::connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 #endif
+}
+
+void Updater::showDialogManually() const
+{
+    updateDialog->show();
+    QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
 void Updater::showChangelog() const
