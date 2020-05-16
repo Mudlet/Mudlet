@@ -10,6 +10,10 @@ YAJL_PATH="$(pkg-config --variable=libdir yajl)"
 echo "Setting search path to $YAJL_PATH"
 luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 
+# CI changelog generation dependencies
+luarocks install --local argparse
+luarocks install --local lunajson
+
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   # download coverity tool only for cron jobs
   mkdir coverity
