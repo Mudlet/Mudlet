@@ -1677,14 +1677,14 @@ void cTelnet::processTelnetSuboption(const std::string& command)
             for (size_t i = 0; i < 256; ++i) {
                 if (myOptionState[i]) {
                     cmd.append({TN_WILL, static_cast<unsigned char>(i)});
-                    if (i == static_cast<unsigned char>(TN_SE)) {
+                    if (i == static_cast<char>(TN_SE)) {
                         // Handle corner case where sub-option value is the same as TN_SE (240)
                         cmd += i;
                     }
                 }
                 if (hisOptionState[i]) {
                     cmd.append({TN_DO, static_cast<unsigned char>(i)});
-                    if (i == static_cast<unsigned char>(TN_SE)) {
+                    if (i == static_cast<char>(TN_SE)) {
                         // Handle corner case where byte value is TN_SE
                         cmd += i;
                     }
