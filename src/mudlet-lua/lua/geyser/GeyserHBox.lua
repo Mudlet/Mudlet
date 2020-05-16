@@ -66,3 +66,11 @@ function Geyser.HBox:new2 (cons, container)
   local me = self:new(cons, container)
   return me
 end
+
+--- Overridden constructor to use add2
+function Geyser.HBox:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
+  return me
+end
