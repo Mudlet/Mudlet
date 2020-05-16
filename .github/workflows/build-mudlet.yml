@@ -89,7 +89,7 @@ jobs:
     # Linux requires tests to be run under xvfb
     - name: Run C++ tests (Linux)
       if: runner.os == 'Linux'
-      uses: GabrielBB/xvfb-action@v1.0
+      uses: GabrielBB/xvfb-action@v1.2
       env:
         QT_DEBUG_PLUGINS: true
       with:
