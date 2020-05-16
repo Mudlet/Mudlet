@@ -167,3 +167,11 @@ function Geyser.UserWindow:new(cons)
   me:resetWindow()
   return me
 end
+
+--- Overridden constructor to use add2
+function Geyser.UserWindow:new2 (cons)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons)
+  return me
+end

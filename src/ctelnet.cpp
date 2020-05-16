@@ -2691,7 +2691,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
                             bool _compress = false;
                             if ((i > 1) && (i + 2 < datalen)) {
-                                qDebug() << "checking mccp start seq...";
                                 if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
                                     qDebug() << "MCCP version 1 starting sequence";
                                     _compress = true;

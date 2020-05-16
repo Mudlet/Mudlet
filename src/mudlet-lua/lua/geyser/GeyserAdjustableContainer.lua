@@ -480,7 +480,7 @@ local function createMenus(self, menu, onClick)
     if not self[menu] then return end
     for i = self[menu.."Nr"], #self[menu] do
         local name = self[menu][i][1]
-        local menuTxt = self.Locale[name].message or name
+        local menuTxt = self.Locale[name] and self.Locale[name].message or name
         self[menu.."l"][i] = self[menu.."Label"]:addChild({
             width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
         })
@@ -578,11 +578,21 @@ end
 -- overriden add function to put every new window to the Inside container
 -- @param window derives from the original Geyser.Container:add function
 -- @param cons derives from the original Geyser.Container:add function
-function Adjustable.Container:add(window,cons)
+function Adjustable.Container:add(window, cons)
     if self.goInside then
-        self.Inside:add(window, cons)
+        if self.useAdd2 == false then
+            self.Inside:add(window, cons)
+        else
+            --add2 inheritance set to true
+            self.Inside:add2(window, cons, true)
+        end
     else
-        Geyser.Container.add(self, window, cons)
+        if self.useAdd2 == false then
+           Geyser.add(self, window, cons)
+        else
+            --add2 inheritance set to true
+            self:add2(window, cons, true)
+        end
     end
 end
 
@@ -647,9 +657,9 @@ function Adjustable.Container:load()
     end
 end
 
--- overridden reposition function to raise an event of the Adjustable.Container changing position/size
+--- overridden reposition function to raise an event of the Adjustable.Container changing position/size
+-- event name: "AdjustableContainerReposition" passed values (name, width, height, x, y)
 -- it also calls the shrink_title function
--- @see shrink_title
 function Adjustable.Container:reposition()
     Geyser.Container.reposition(self)
     raiseEvent("AdjustableContainerReposition", self.name, self.get_width(), self.get_height(), self.get_x(), self.get_y())
@@ -828,11 +838,11 @@ end
 
 function Adjustable.Container:new(cons,container)
     Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
-    local me = self.parent:new(cons, container)
     cons = cons or {}
+    cons.type = cons.type or "adjustablecontainer"
+    local me = self.parent:new(cons, container)
     setmetatable(me, self)
     self.__index = self
-    me.type = "adjustablecontainer"
     me.ParentMenuWidth = me.ParentMenuWidth or "102"
     me.ChildMenuWidth = me.ChildMenuWidth or "82"
     me.MenuHeight = me.MenuHeight or "22"
@@ -857,12 +867,7 @@ function Adjustable.Container:new(cons,container)
     me:createLabels()
     me.minimized =  me.minimized or false
     me.locked =  me.locked or false
-    if me.minimized then
-        me:minimize()
-    end
-    if me.locked then
-        me:lockContainer()
-    end
+
     me.adjLabelstyle = me.adjLabelstyle..[[ qproperty-alignment: 'AlignLeft | AlignTop';]]
     me.lockLabel.txt = me.lockLabel.txt or [[<font size="5" face="Noto Emoji">🔒</font>]] .. self.Locale.lock.message
     me.minLabel.txt = me.minLabel.txt or [[<font size="5" face="Noto Emoji">🗕</font>]] ..self.Locale.min_restore.message
@@ -914,6 +919,15 @@ function Adjustable.Container:new(cons,container)
             me:hide(true)
         end
     end
+
+    if me.minimized then
+        me:minimize()
+    end
+
+    if me.locked then
+        me:lockContainer()
+    end
+
     -- hide/show on creation
     if cons.hidden == true then
         me:hide()
@@ -934,5 +948,20 @@ function Adjustable.Container:new(cons,container)
     end
 
     Adjustable.Container.all[me.name] = me
+    return me
+end
+
+-- Adjustable Container already uses add2 as it is essential for its functioning (especially for the autoLoad function)
+-- added this wrapper for consistency
+Adjustable.Container.new2 = Adjustable.Container.new
+
+--- Overriden constructor to use the old add 
+-- if someone really wants to use the old add for Adjustable Container
+-- use this function (not recommended)
+-- or just create elements inside the Adjustable Container with the cons useAdd2 = false
+function Adjustable.Container:oldnew(cons, container)
+    cons = cons or {}
+    cons.useAdd2 = false
+    local me = self:new(cons, container)
     return me
 end
