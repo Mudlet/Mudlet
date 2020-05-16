@@ -85,4 +85,19 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
-        buildWithCMakeArgs: --config Debug --target test
+
+    - name: Run C++ tests
+      uses: lukka/run-cmake@v2
+      with:
+       cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+       cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+       useVcpkgToolchainFile: true
+       buildDirectory: '${{runner.workspace}}/b/ninja'
+       buildWithCMakeArgs: --target test
+        
+
+    - name: Run ctest
+      if: always()
+      run: ctest
+     
+     
