@@ -107,8 +107,17 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
     if [ "${public_test_build}" == "true" ]; then
+      echo "=== Downloading release feed ==="
+      downloadedfeed=$(mktemp)
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86" --output-document="$downloadedfeed"
+      echo "=== Generating a changelog ==="
+      pushd "${TRAVIS_BUILD_DIR}/CI/"
+      changelog=$(lua "${TRAVIS_BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+      popd
+
+
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}"
+      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}"
 
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
