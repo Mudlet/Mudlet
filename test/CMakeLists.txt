@@ -5,12 +5,6 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-SET(GCC_COVERAGE_LINK_FLAGS    "-fprofile-arcs -fprofile-generate -lgcov --coverage")
-add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
-SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
-SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}" )
-
 PROJECT(mudlet-tests
         LANGUAGES CXX)
 
@@ -33,8 +27,16 @@ link_libraries(
         Qt5::Network
         Qt5::Multimedia
         Qt5::UiTools
-        Qt5::Widgets
-        gcov)
+        Qt5::Widgets)
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+    SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+    SET(GCC_COVERAGE_LINK_FLAGS "-fprofile-arcs -fprofile-generate -lgcov --coverage")
+    add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
+    link_libraries(gcov)
+endif ()
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")

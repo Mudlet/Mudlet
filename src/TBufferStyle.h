@@ -54,6 +54,10 @@ public:
     void decodeSGR(const QString& sequence, bool haveColorSpaceId, const TColorSettings& hostColorSettings);
 
     static QColor from6x6x6(int tag);
+    static QColor fromComponents(const QStringList &components);
+    static QColor fromFgGrayscale(int tag);
+    static QColor fromBgGrayscale(int tag);
+
 };
 
 

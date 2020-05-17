@@ -21,7 +21,6 @@
  ***************************************************************************/
 
 
-
 #include "TBufferStyle.h"
 #include <QDebug>
 TBufferStyle::TBufferStyle(const TColorSettings& colorSettings)
@@ -900,7 +899,7 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
 #endif
         }
 
-        if (tag < 16) {
+        if (tag < 16) { // ANSI 0-15 colors
             if (tag >= 8) {
                 tag -= 8;
                 mBold = true;
@@ -909,131 +908,32 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
             }
             mIsDefaultColor = false;
 
-            switch (tag) {
-            case 0:
-                mFgColor = mBlack;
-                mFgColorLight = mLightBlack;
-                break;
-            case 1:
-                mFgColor = mRed;
-                mFgColorLight = mLightRed;
-                break;
-            case 2:
-                mFgColor = mGreen;
-                mFgColorLight = mLightGreen;
-                break;
-            case 3:
-                mFgColor = mYellow;
-                mFgColorLight = mLightYellow;
-                break;
-            case 4:
-                mFgColor = mBlue;
-                mFgColorLight = mLightBlue;
-                break;
-            case 5:
-                mFgColor = mMagenta;
-                mFgColorLight = mLightMagenta;
-                break;
-            case 6:
-                mFgColor = mCyan;
-                mFgColorLight = mLightCyan;
-                break;
-            case 7:
-                mFgColor = mWhite;
-                mFgColorLight = mLightWhite;
-                break;
-            }
-
-        } else if (tag < 232) {
-            // because color 1-15 behave like normal ANSI colors
-            tag -= 16;
-            // 6x6x6 RGB color space
-            quint8 r = tag / 36;
-            quint8 g = (tag - (r * 36)) / 6;
-            quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mFgColor = QColor(r * 51, g * 51, b * 51);
+            mFgColor = getColorFromAnsi(tag);
+            mFgColorLight = getColorFromAnsi(tag + 8);
+        } else if (tag < 232) { // 6x6x6 RGB color space
+            // because color 0-15 behave like normal ANSI colors
+            mFgColor = from6x6x6(tag - 16);
             mFgColorLight = mFgColor;
-
+        } else if (tag < 256) { // grayscale
+            mFgColor = fromFgGrayscale(tag);
+            mFgColorLight = mFgColor;
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-            case 232:   value =   0; break; //   0.000
-            case 233:   value =  11; break; //  11.087
-            case 234:   value =  22; break; //  22.174
-            case 235:   value =  33; break; //  33.261
-            case 236:   value =  44; break; //  44.348
-            case 237:   value =  55; break; //  55.435
-            case 238:   value =  67; break; //  66.522
-            case 239:   value =  78; break; //  77.609
-            case 240:   value =  89; break; //  88.696
-            case 241:   value = 100; break; //  99.783
-            case 242:   value = 111; break; // 110.870
-            case 243:   value = 122; break; // 121.957
-            case 244:   value = 133; break; // 133.043
-            case 245:   value = 144; break; // 144.130
-            case 246:   value = 155; break; // 155.217
-            case 247:   value = 166; break; // 166.304
-            case 248:   value = 177; break; // 177.391
-            case 249:   value = 188; break; // 188.478
-            case 250:   value = 200; break; // 199.565
-            case 251:   value = 211; break; // 210.652
-            case 252:   value = 222; break; // 221.739
-            case 253:   value = 233; break; // 232.826
-            case 254:   value = 244; break; // 243.913
-            case 255:   value = 255; break; // 255.000
-            default:
-                value = 192;
-#if defined(DEBUG_SGR_PROCESSING)
-                if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2) << ";..m sequence treating it as 192!";
-                    }
-#endif
-            }
-
-            // clang-format on
-            mFgColor = QColor(value, value, value);
+            mFgColor = QColor(192, 192, 192);
             mFgColorLight = mFgColor;
+#if defined(DEBUG_SGR_PROCESSING)
+            if (isColonSeparated) {
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
+                                             << ";..m sequence treating it as 192!";
+            } else {
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2)
+                                             << ";..m sequence treating it as 192!";
+            }
+#endif
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-        if (parameters.count() >= 6) {
-            // Have enough for all three colour
-            // components
-            mFgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
-        } else if (parameters.count() >= 5) {
-            // Have enough for two colour
-            // components, but blue component is
-            // zero
-            mFgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
-        } else if (parameters.count() >= 4) {
-            // Have enough for one colour component,
-            // but green and blue components are
-            // zero
-            mFgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-        } else {
-            // No codes left for any colour
-            // components so colour must be black,
-            // as all of red, green and blue
-            // components are zero
-            mFgColor = Qt::black;
-        }
+        mFgColor = fromComponents(parameters);
+        mFgColorLight = mFgColor;
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
@@ -1050,8 +950,6 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
 #endif
             }
         }
-        mFgColorLight = mFgColor;
-
     } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
@@ -1107,143 +1005,28 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
         }
 
         if (tag < 16) {
-            if (tag >= 8) {
-                tag -= 8;
-                useLightColor = true;
-            } else {
-                useLightColor = false;
-            }
             mIsDefaultColor = false;
-            QColor bgColorLight;
-
-            switch (tag) {
-            case 0:
-                mBgColor = mBlack;
-                bgColorLight = mLightBlack;
-                break;
-            case 1:
-                mBgColor = mRed;
-                bgColorLight = mLightRed;
-                break;
-            case 2:
-                mBgColor = mGreen;
-                bgColorLight = mLightGreen;
-                break;
-            case 3:
-                mBgColor = mYellow;
-                bgColorLight = mLightYellow;
-                break;
-            case 4:
-                mBgColor = mBlue;
-                bgColorLight = mLightBlue;
-                break;
-            case 5:
-                mBgColor = mMagenta;
-                bgColorLight = mLightMagenta;
-                break;
-            case 6:
-                mBgColor = mCyan;
-                bgColorLight = mLightCyan;
-                break;
-            case 7:
-                mBgColor = mWhite;
-                bgColorLight = mLightWhite;
-                break;
-            }
-            if (useLightColor) {
-                mBgColor = bgColorLight;
-            }
-
+            mBgColor = getColorFromAnsi(tag);
         } else if (tag < 232) {
             // because color 1-15 behave like normal ANSI colors
-            tag -= 16;
-            // 6x6x6 RGB color space
-            quint8 r = tag / 36;
-            quint8 g = (tag - (r * 36)) / 6;
-            quint8 b = (tag - (r * 36)) - (g * 6);
-            // Did use 42 as a factor but that isn't right
-            // as it yields:
-            // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
-            // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
-            // Instead we use 51:
-            // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mBgColor = QColor(r * 51, g * 51, b * 51);
-
+            mBgColor = from6x6x6(tag - 16);
+        } else if (tag < 256) {
+            mBgColor = fromBgGrayscale(tag);
         } else {
-            // black + 23 tone grayscale from dark to light
-            // gray. Similar to RGB case the multiplier was
-            // a bit off we had been using 10 but:
-            // 23 x 10 = 230
-            // whereas 23 should map to 255, this requires
-            // a non-integer multiplier, instead of
-            // multiplying and rounding we, for speed, can
-            // use a look-up table:
-            int value = 0;
-            // clang-format off
-            switch (tag) {
-            case 232:   value =   0; break; //   0.000
-            case 233:   value =  11; break; //  11.087
-            case 234:   value =  22; break; //  22.174
-            case 235:   value =  33; break; //  33.261
-            case 236:   value =  44; break; //  44.348
-            case 237:   value =  55; break; //  55.435
-            case 238:   value =  67; break; //  66.522
-            case 239:   value =  78; break; //  77.609
-            case 240:   value =  89; break; //  88.696
-            case 241:   value = 100; break; //  99.783
-            case 242:   value = 111; break; // 110.870
-            case 243:   value = 122; break; // 121.957
-            case 244:   value = 133; break; // 133.043
-            case 245:   value = 144; break; // 144.130
-            case 246:   value = 155; break; // 155.217
-            case 247:   value = 166; break; // 166.304
-            case 248:   value = 177; break; // 177.391
-            case 249:   value = 188; break; // 188.478
-            case 250:   value = 200; break; // 199.565
-            case 251:   value = 211; break; // 210.652
-            case 252:   value = 222; break; // 221.739
-            case 253:   value = 233; break; // 232.826
-            case 254:   value = 244; break; // 243.913
-            case 255:   value = 255; break; // 255.000
-            default:
-                value = 64;
+            mBgColor = QColor(64, 64, 64);
 #if defined(DEBUG_SGR_PROCESSING)
-                if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    } else {
-                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2) << ";..m sequence treating it as 64!";
-                    }
-#endif
+            if (isColonSeparated) {
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
+                                             << ";..m sequence treating it as 64!";
+            } else {
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2)
+                                             << ";..m sequence treating it as 64!";
             }
-            // clang-format on
-            mBgColor = QColor(value, value, value);
+#endif
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-        if (parameters.count() >= 6) {
-            // Have enough for all three colour
-            // components
-            mBgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
-
-        } else if (parameters.count() >= 5) {
-            // Have enough for two colour
-            // components, but blue component is
-            // zero
-            mBgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
-
-        } else if (parameters.count() >= 4) {
-            // Have enough for one colour component,
-            // but green and blue components are
-            // zero
-            mBgColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
-
-        } else {
-            // No codes left for any colour
-            // components so colour must be black,
-            // as all of red, green and blue
-            // components are zero
-            mBgColor = Qt::black;
-        }
+        mBgColor = fromComponents(parameters);
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
             if (!isColonSeparated) {
@@ -1292,4 +1075,117 @@ QColor TBufferStyle::from6x6x6(int tag)
     // Instead we use 51:
     // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
     return QColor(r * 51, g * 51, b * 51);
+}
+
+QColor TBufferStyle::fromComponents(const QStringList& parameters)
+{
+    int r = 0, g = 0, b = 0;
+
+    if (parameters.count() >= 4) {
+        r = qBound(0, parameters.at(3).toInt(), 255);
+    }
+
+    if (parameters.count() >= 5) {
+        g = qBound(0, parameters.at(4).toInt(), 255);
+    }
+
+    if (parameters.count() >= 6) {
+        b = qBound(0, parameters.at(5).toInt(), 255);
+    }
+
+    return QColor(r, g, b);
+}
+
+QColor TBufferStyle::fromFgGrayscale(int tag)
+{
+    assert(tag >= 232 && tag < 256);
+
+    // black + 23 tone grayscale from dark to light
+    // gray. Similar to RGB case the multiplier was
+    // a bit off we had been using 10 but:
+    // 23 x 10 = 230
+    // whereas 23 should map to 255, this requires
+    // a non-integer multiplier, instead of
+    // multiplying and rounding we, for speed, can
+    // use a look-up table:
+    int value = 0;
+    // clang-format off
+    switch (tag) {
+    case 232:   value =   0; break; //   0.000
+    case 233:   value =  11; break; //  11.087
+    case 234:   value =  22; break; //  22.174
+    case 235:   value =  33; break; //  33.261
+    case 236:   value =  44; break; //  44.348
+    case 237:   value =  55; break; //  55.435
+    case 238:   value =  67; break; //  66.522
+    case 239:   value =  78; break; //  77.609
+    case 240:   value =  89; break; //  88.696
+    case 241:   value = 100; break; //  99.783
+    case 242:   value = 111; break; // 110.870
+    case 243:   value = 122; break; // 121.957
+    case 244:   value = 133; break; // 133.043
+    case 245:   value = 144; break; // 144.130
+    case 246:   value = 155; break; // 155.217
+    case 247:   value = 166; break; // 166.304
+    case 248:   value = 177; break; // 177.391
+    case 249:   value = 188; break; // 188.478
+    case 250:   value = 200; break; // 199.565
+    case 251:   value = 211; break; // 210.652
+    case 252:   value = 222; break; // 221.739
+    case 253:   value = 233; break; // 232.826
+    case 254:   value = 244; break; // 243.913
+    case 255:   value = 255; break; // 255.000
+    default:
+        Q_UNREACHABLE();
+    }
+    // clang-format on
+
+    return QColor(value, value, value);
+}
+
+QColor TBufferStyle::fromBgGrayscale(int tag)
+{
+    assert(tag >= 232 && tag < 256);
+
+    // black + 23 tone grayscale from dark to light
+    // gray. Similar to RGB case the multiplier was
+    // a bit off we had been using 10 but:
+    // 23 x 10 = 230
+    // whereas 23 should map to 255, this requires
+    // a non-integer multiplier, instead of
+    // multiplying and rounding we, for speed, can
+    // use a look-up table:
+    int value = 0;
+    // clang-format off
+    switch (tag) {
+    case 232:   value =   0; break; //   0.000
+    case 233:   value =  11; break; //  11.087
+    case 234:   value =  22; break; //  22.174
+    case 235:   value =  33; break; //  33.261
+    case 236:   value =  44; break; //  44.348
+    case 237:   value =  55; break; //  55.435
+    case 238:   value =  67; break; //  66.522
+    case 239:   value =  78; break; //  77.609
+    case 240:   value =  89; break; //  88.696
+    case 241:   value = 100; break; //  99.783
+    case 242:   value = 111; break; // 110.870
+    case 243:   value = 122; break; // 121.957
+    case 244:   value = 133; break; // 133.043
+    case 245:   value = 144; break; // 144.130
+    case 246:   value = 155; break; // 155.217
+    case 247:   value = 166; break; // 166.304
+    case 248:   value = 177; break; // 177.391
+    case 249:   value = 188; break; // 188.478
+    case 250:   value = 200; break; // 199.565
+    case 251:   value = 211; break; // 210.652
+    case 252:   value = 222; break; // 221.739
+    case 253:   value = 233; break; // 232.826
+    case 254:   value = 244; break; // 243.913
+    case 255:   value = 255; break; // 255.000
+    default:
+        Q_UNREACHABLE();
+    }
+    // clang-format on
+
+    return QColor(value, value, value);
 }

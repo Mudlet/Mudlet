@@ -37,16 +37,19 @@ private slots:
         TBufferStyle bufStyle;
 
         // code 5, values 8 to 15 (bold)
+        bufStyle.mBold = false;
         bufStyle.decodeSGR38(QStringList({"", "5", "8"}), false);
         QCOMPARE(bufStyle.mFgColor, bufStyle.mBlack);
         QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightBlack);
         QCOMPARE(bufStyle.mBold, true);
 
+        bufStyle.mBold = false;
         bufStyle.decodeSGR38(QStringList({"", "5", "9"}), false);
         QCOMPARE(bufStyle.mFgColor, bufStyle.mRed);
         QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightRed);
         QCOMPARE(bufStyle.mBold, true);
 
+        bufStyle.mBold = false;
         bufStyle.decodeSGR38(QStringList({"", "5", "15"}), false);
         QCOMPARE(bufStyle.mFgColor, bufStyle.mWhite);
         QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightWhite);
@@ -113,6 +116,21 @@ private slots:
         QCOMPARE(bufStyle.mFgColorLight, QColor(255, 255, 255));
     }
 
+    void testDecodeSGR38Code5_UndefinedGrayscaleValue()
+    {
+        TBufferStyle bufStyle;
+
+        // code 5, values 232 to 255 (black+23 grayscale)
+        bufStyle.decodeSGR38(QStringList({"", "5", "258"}), false);
+        QCOMPARE(bufStyle.mFgColor, QColor(192, 192, 192));
+        QCOMPARE(bufStyle.mFgColorLight, QColor(192, 192, 192));
+
+        bufStyle.decodeSGR38(QStringList({"", "5", "270"}), false);
+        QCOMPARE(bufStyle.mFgColor, QColor(192, 192, 192));
+        QCOMPARE(bufStyle.mFgColorLight, QColor(192, 192, 192));
+
+    }
+
     void testDecodeSGR38Code2_6Params()
     {
         TBufferStyle bufStyle;
@@ -136,8 +154,12 @@ private slots:
         bufStyle.decodeSGR38(QStringList({"", "2", "", "100"}), false);
         QCOMPARE(bufStyle.mFgColor, QColor(100, 0, 0));
         QCOMPARE(bufStyle.mFgColorLight, QColor(100, 0, 0));
-    }
 
+        // code 2, 3 parameters
+        bufStyle.decodeSGR38(QStringList({"", "2", ""}), false);
+        QCOMPARE(bufStyle.mFgColor, Qt::black);
+        QCOMPARE(bufStyle.mFgColorLight, Qt::black);
+    }
 
     void testDecodeSGR48Code5Regular()
     {
@@ -212,6 +234,18 @@ private slots:
         QCOMPARE(bufStyle.mBgColor, QColor(255, 255, 255));
     }
 
+    void testDecodeSGR48Code5_UndefinedGrayscaleValue()
+    {
+        TBufferStyle bufStyle;
+
+        // code 5, values 232 to 255 (black+23 grayscale)
+        bufStyle.decodeSGR48(QStringList({"", "5", "258"}), false);
+        QCOMPARE(bufStyle.mBgColor, QColor(64, 64, 64));
+
+        bufStyle.decodeSGR48(QStringList({"", "5", "270"}), false);
+        QCOMPARE(bufStyle.mBgColor, QColor(64, 64, 64));
+    }
+
     void testDecodeSGR48Code2_6Params()
     {
         TBufferStyle bufStyle;
@@ -231,8 +265,11 @@ private slots:
         // code 2, 4 parameters
         bufStyle.decodeSGR48(QStringList({"", "2", "", "100"}), false);
         QCOMPARE(bufStyle.mBgColor, QColor(100, 0, 0));
-    }
 
+        // code 2, 3 parameters
+        bufStyle.decodeSGR48(QStringList({"", "2", ""}), false);
+        QCOMPARE(bufStyle.mBgColor, Qt::black);
+    }
 
     void cleanupTestCase()
     {
