@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font("DejaVu Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font("Verdana", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
         QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2020");
-        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QFont font(QStringLiteral("Verdana"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
