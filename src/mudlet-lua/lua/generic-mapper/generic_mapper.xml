@@ -2949,6 +2949,7 @@ function map.eventHandler(event, ...)
         config()
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
+            map.find_prompt()
             send("look", true)
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
