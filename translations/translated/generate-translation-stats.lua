@@ -60,6 +60,7 @@ local stats = {}
 
 while line <= #lines do
   local currentLine = lines[line]
+  print("Processing (A): \"" .. currentLine .. "\"")
   local lang = currentLine:match("Updating '.*mudlet_([a-z]+_[A-Z]+)%.qm'...")
   line = line + 1
   if lang then
@@ -79,6 +80,7 @@ while line <= #lines do
     currentLine = lines[line]
     local untranslated = 0
     if currentLine ~= nil then
+      print("Processing (B): \"" .. currentLine .. "\"")
       -- The untranslated line will not be present if translation is at 100%!
       untranslated = currentLine:match("Ignored (%d+) untranslated source text%(s%)")
       if untranslated ~= nil then
