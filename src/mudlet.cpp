@@ -50,7 +50,6 @@
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
 
-#include "TChar.h"
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>

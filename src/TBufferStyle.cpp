@@ -1,6 +1,26 @@
-//
-// Created by gustavo on 06/05/2020.
-//
+/***************************************************************************
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+
 
 #include "TBufferStyle.h"
 #include <QDebug>
@@ -861,10 +881,10 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
 #if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
+                    qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
                                                  << ":...;...m sequence treating it as a zero!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
+                    qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
                                                  << ";...m sequence treating it as a zero!";
                 }
             }
@@ -873,9 +893,9 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
             if (isColonSeparated) {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter element (the third part) in a SGR...;38:5;...m sequence treating it as a zero!";
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - missing color index parameter element (the third part) in a SGR...;38:5;...m sequence treating it as a zero!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - missing color index parameter string (the third part) in a SGR...;38;5;;m sequence treating it as a zero!";
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - missing color index parameter string (the third part) in a SGR...;38;5;;m sequence treating it as a zero!";
             }
 #endif
         }
@@ -980,9 +1000,9 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
                 value = 192;
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ";..m sequence treating it as 192!";
+                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2) << ";..m sequence treating it as 192!";
                     } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2) << ";..m sequence treating it as 192!";
+                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;38;5;" << parameters.at(2) << ";..m sequence treating it as 192!";
                     }
 #endif
             }
@@ -1022,10 +1042,10 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
                          << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
                             "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
                                              << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2)
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38:2:" << parameters.at(2)
                                              << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
@@ -1035,18 +1055,18 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
     } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unhandled SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
 
     } else {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR38(...) WARNING - unexpect SGR code: SGR...;38;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
     }
@@ -1055,7 +1075,7 @@ void TBufferStyle::decodeSGR38(const QStringList& parameters, bool isColonSepara
 void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
-    qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated << ") INFO - called";
+    qDebug() << "    TBufferStyle::decodeSGR48(" << parameters << "," << isColonSeparated << ") INFO - called";
 #endif
     bool useLightColor = false;
 
@@ -1067,10 +1087,10 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
 #if defined(DEBUG_SGR_PROCESSING)
             if (!isOk) {
                 if (isColonSeparated) {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
+                    qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
                                                  << ":...;...m sequence treating it as a zero!";
                 } else {
-                    qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
+                    qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
                                                  << ";...m sequence treating it as a zero!";
                 }
             }
@@ -1079,9 +1099,9 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
             // Missing last parameter - so it is treated as a zero
 #if defined(DEBUG_SGR_PROCESSING)
             if (isColonSeparated) {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter element (the third part) in a SGR...;48:5;...m sequence treating it as a zero!";
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - missing color index parameter element (the third part) in a SGR...;48:5;...m sequence treating it as a zero!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - missing color index parameter string (the third part) in a SGR...;48;5;;m sequence treating it as a zero!";
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - missing color index parameter string (the third part) in a SGR...;48;5;;m sequence treating it as a zero!";
             }
 #endif
         }
@@ -1189,9 +1209,9 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
                 value = 64;
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ";..m sequence treating it as 64!";
+                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2) << ";..m sequence treating it as 64!";
                     } else {
-                        qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2) << ";..m sequence treating it as 64!";
+                        qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) ERROR - unexpected color index parameter element (the third part) in a SGR...;48;5;" << parameters.at(2) << ";..m sequence treating it as 64!";
                     }
 #endif
             }
@@ -1232,10 +1252,10 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
                          << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
                             "Options tab of the preferences when it is not needed!";
 #else
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
                                              << ";...m sequence treating it as the default (empty) case!";
             } else {
-                qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2)
+                qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48:2:" << parameters.at(2)
                                              << ":...;...m sequence treating it as the default (empty) case!";
 #endif
             }
@@ -1244,18 +1264,18 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
     } else if (parameters.at(1) == QLatin1String("4") || parameters.at(1) == QLatin1String("3") || parameters.at(1) == QLatin1String("1") || parameters.at(1) == QLatin1String("0")) {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unhandled SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
 
     } else {
 #if defined(DEBUG_SGR_PROCESSING)
         if (isColonSeparated) {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48:" << parameters.at(1) << ":...;...m ignoring sequence!";
         } else {
-            qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
+            qDebug().noquote().nospace() << "TBufferStyle::decodeSGR48(...) WARNING - unexpect SGR code: SGR...;48;" << parameters.at(1) << ";...m ignoring sequence!";
         }
 #endif
     }
