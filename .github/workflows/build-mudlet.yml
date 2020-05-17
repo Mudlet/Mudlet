@@ -19,7 +19,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
           - os: macos-latest
-            buildname: 'macos w/ C++ tests'
+            buildname: 'macos and C++ tests'
             triplet: x64-osx
             compiler: clang_64
     env:
