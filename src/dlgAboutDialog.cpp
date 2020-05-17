@@ -57,7 +57,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font(QStringLiteral("Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(QStringLiteral("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -92,7 +92,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
         QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2020");
-        QFont font(QStringLiteral("Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -123,11 +123,11 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // clang-format off
     QString htmlHead(QStringLiteral(R"(
         <head><style type="text/css">
-        h1 { font-family: "Serif"; text-align: center; }
-        h2 { font-family: "Serif"; text-align: center; }
-        h3 { font-family: "Serif"; text-align: center; white-space: pre-wrap; }
-        h4 { font-family: "Serif"; white-space: pre-wrap; }
-        p { font-family: "Serif" }
+        h1 { font-family: "DejaVu Serif"; text-align: center; }
+        h2 { font-family: "DejaVu Serif"; text-align: center; }
+        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
+        p { font-family: "DejaVu Serif" }
         tt { font-family: "Monospace"; white-space: pre-wrap; }
         .container { text-align: center; }
         </style></head>
