@@ -1280,3 +1280,16 @@ void TBufferStyle::decodeSGR48(const QStringList& parameters, bool isColonSepara
 #endif
     }
 }
+QColor TBufferStyle::from6x6x6(int tag)
+{
+    quint8 r = tag / 36;
+    quint8 g = (tag - (r * 36)) / 6;
+    quint8 b = (tag - (r * 36)) - (g * 6);
+    // Did use 42 as a factor but that isn't right
+    // as it yields:
+    // 0:0; 1:42; 2:84; 3:126; 4:168; 5:210
+    // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
+    // Instead we use 51:
+    // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
+    return QColor(r * 51, g * 51, b * 51);
+}

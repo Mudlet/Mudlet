@@ -21,7 +21,7 @@
  ***************************************************************************/
 
 #include "TChar.h"
-#include "Host.h"
+#include "TColorSettings.h"
 
 // Default constructor:
 TChar::TChar() : mFgColor(Qt::white), mBgColor(Qt::black), mFlags(None), mIsSelected(false), mLinkIndex(0) {}

@@ -5,6 +5,11 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+SET(GCC_COVERAGE_LINK_FLAGS    "-fprofile-arcs -fprofile-generate -lgcov --coverage")
+add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
+SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}" )
 
 PROJECT(mudlet-tests
         LANGUAGES CXX)
@@ -28,7 +33,8 @@ link_libraries(
         Qt5::Network
         Qt5::Multimedia
         Qt5::UiTools
-        Qt5::Widgets)
+        Qt5::Widgets
+        gcov)
 
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
@@ -51,3 +57,6 @@ add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp)
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
+
+add_executable(TBufferStyleTest TBufferStyleTest.cpp ../src/TBufferStyle.cpp ../src/TColorSettings.cpp ../src/TColorScheme.cpp ../src/TChar.cpp)
+add_test(NAME TBufferStyleTest COMMAND TBufferStyleTest)

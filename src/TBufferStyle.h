@@ -52,6 +52,8 @@ public:
     void decodeSGR38(const QStringList& parameters, bool isColonSeparated);
     void decodeSGR48(const QStringList& parameters, bool isColonSeparated);
     void decodeSGR(const QString& sequence, bool haveColorSpaceId, const TColorSettings& hostColorSettings);
+
+    static QColor from6x6x6(int tag);
 };
 
 
