@@ -69,6 +69,7 @@ while line <= #lines do
     local unfinished = 0
     repeat
       currentLine = lines[line]
+      print("Processing (B): \"" .. currentLine .. "\"")
       translated, finished, unfinished = currentLine:match("Generated (%d+) translation%(s%) %((%d+) finished and (%d+) unfinished%)")
       if translated ~= nil and finished ~= nil and unfinished ~= nil then
         translated = tonumber(translated)
@@ -80,7 +81,7 @@ while line <= #lines do
     currentLine = lines[line]
     local untranslated = 0
     if currentLine ~= nil then
-      print("Processing (B): \"" .. currentLine .. "\"")
+      print("Processing (C): \"" .. currentLine .. "\"")
       -- The untranslated line will not be present if translation is at 100%!
       untranslated = currentLine:match("Ignored (%d+) untranslated source text%(s%)")
       if untranslated ~= nil then
