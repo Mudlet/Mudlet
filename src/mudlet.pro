@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.6.2
+VERSION = 4.8.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -1393,7 +1393,11 @@ macx {
 
 win32 {
     # set the Windows binary icon
-    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+    contains(BUILD, "-ptb.+") {
+        RC_ICONS = icons/mudlet_ptb.ico
+    } else {
+        RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+    }
 
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"

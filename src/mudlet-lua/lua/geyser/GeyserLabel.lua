@@ -300,7 +300,9 @@ end
 --- Sets the style sheet of the label
 -- @param css The style sheet string
 function Geyser.Label:setStyleSheet(css)
+  css = css or self.stylesheet
   setLabelStyleSheet(self.name, css)
+  self.stylesheet = css
 end
 --- Sets the tooltip of the label
 -- @param txt the tooltip txt
@@ -664,7 +666,10 @@ function Geyser.Label:new (cons, container)
     createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
-
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if me.hidden or me.auto_hidden then
+    hideWindow(me.name)
+  end
   -- parse any given format string and set sensible defaults
   me:processFormatString(cons.format)
 
@@ -759,7 +764,17 @@ function Geyser.Label:new (cons, container)
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
 
+  if me.stylesheet then me:setStyleSheet() end
+
   --print("  New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.Label:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end
 
@@ -850,11 +865,13 @@ end
 --- Sets label to no longer intercept mouse events
 function Geyser.Label:enableClickthrough()
   enableClickthrough(self.name)
+  self.clickthrough = true
 end
 
 --- Sets label to once again intercept mouse events
 function Geyser.Label:disableClickthrough()
   disableClickthrough(self.name)
+  self.clickthrough = false
 end
 
 ---
