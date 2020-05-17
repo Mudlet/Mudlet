@@ -5,7 +5,7 @@ on:
 
 jobs:
   compile-mudlet:
-    name: ${{matrix.os}}
+    name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
@@ -15,9 +15,11 @@ jobs:
           # - os: windows-latest
           #   triplet: x64-windows
           - os: ubuntu-latest
+            buildname: 'ubuntu'
             triplet: x64-linux
             compiler: gcc_64
           - os: macos-latest
+            buildname: 'macos / C++ tests'
             triplet: x64-osx
             compiler: clang_64
     env:
