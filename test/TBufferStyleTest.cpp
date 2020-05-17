@@ -128,7 +128,6 @@ private slots:
         bufStyle.decodeSGR38(QStringList({"", "5", "270"}), false);
         QCOMPARE(bufStyle.mFgColor, QColor(192, 192, 192));
         QCOMPARE(bufStyle.mFgColorLight, QColor(192, 192, 192));
-
     }
 
     void testDecodeSGR38Code2_6Params()
@@ -269,6 +268,157 @@ private slots:
         // code 2, 3 parameters
         bufStyle.decodeSGR48(QStringList({"", "2", ""}), false);
         QCOMPARE(bufStyle.mBgColor, Qt::black);
+    }
+
+    void testDecodeSGRColonSeparated()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.decodeSGR("38:5:1", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mRed);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightRed);
+        QCOMPARE(bufStyle.mBold, false);
+    }
+
+    void testDecodeSGRSemiColonSeparated()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.decodeSGR("38;5;1", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mRed);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightRed);
+        QCOMPARE(bufStyle.mBold, false);
+
+        bufStyle.decodeSGR("48;5;1", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mRed);
+    }
+
+    void testDecodeSGRUnderline()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.mUnderline = false;
+        bufStyle.decodeSGR("4:1", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, true);
+
+        bufStyle.mUnderline = true;
+        bufStyle.decodeSGR("4:0", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, false);
+
+        bufStyle.mUnderline = false;
+        bufStyle.decodeSGR("4:3", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, true);
+
+        bufStyle.mUnderline = true;
+        bufStyle.decodeSGR("4:4", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, false);
+    }
+
+    void testDecodeSGRItalics()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.mItalics = false;
+        bufStyle.decodeSGR("3:1", false, hostSettings);
+        QCOMPARE(bufStyle.mItalics, true);
+
+        bufStyle.mItalics = true;
+        bufStyle.decodeSGR("3:0", false, hostSettings);
+        QCOMPARE(bufStyle.mItalics, false);
+
+//        bufStyle.mItalics = false;
+//        bufStyle.decodeSGR("3:2", false, hostSettings);
+//        QCOMPARE(bufStyle.mItalics, true);
+//
+//        bufStyle.mItalics = true;
+//        bufStyle.decodeSGR("3:3", false, hostSettings);
+//        QCOMPARE(bufStyle.mItalics, false);
+    }
+
+    void testDecodeSGRSingleCode()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.mBold = false;
+        bufStyle.decodeSGR("1", false, hostSettings);
+        QCOMPARE(bufStyle.mBold, true);
+        bufStyle.decodeSGR("2", false, hostSettings);
+        QCOMPARE(bufStyle.mBold, false);
+
+        bufStyle.mItalics = false;
+        bufStyle.decodeSGR("3", false, hostSettings);
+        QCOMPARE(bufStyle.mItalics, true);
+        bufStyle.decodeSGR("23", false, hostSettings);
+        QCOMPARE(bufStyle.mItalics, false);
+
+        bufStyle.mUnderline = false;
+        bufStyle.decodeSGR("4", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, true);
+        bufStyle.decodeSGR("24", false, hostSettings);
+        QCOMPARE(bufStyle.mUnderline, false);
+    }
+
+    void testDecodeSGRColors()
+    {
+        TColorSettings hostSettings;
+        TBufferStyle bufStyle;
+
+        bufStyle.decodeSGR("30", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mBlack);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightBlack);
+
+        bufStyle.decodeSGR("31", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mRed);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightRed);
+
+        bufStyle.decodeSGR("37", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mWhite);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightWhite);
+
+        hostSettings.mFgColor = Qt::darkCyan;
+        bufStyle.decodeSGR("39", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, Qt::darkCyan);
+
+        bufStyle.mBgColor = Qt::green;
+        bufStyle.decodeSGR("40", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mBlack);
+
+        bufStyle.decodeSGR("41", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mRed);
+
+        bufStyle.decodeSGR("47", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mWhite);
+
+        bufStyle.decodeSGR("90", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mLightBlack);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightBlack);
+
+        bufStyle.decodeSGR("93", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mLightYellow);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightYellow);
+
+        bufStyle.decodeSGR("97", false, hostSettings);
+        QCOMPARE(bufStyle.mFgColor, bufStyle.mLightWhite);
+        QCOMPARE(bufStyle.mFgColorLight, bufStyle.mLightWhite);
+
+        bufStyle.decodeSGR("100", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mLightBlack);
+
+        bufStyle.decodeSGR("107", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, bufStyle.mLightWhite);
+
+        // UNDEFINED Value (shouldn't change)
+        bufStyle.mFgColor = Qt::darkBlue;
+        bufStyle.mBgColor = Qt::darkBlue;
+        bufStyle.decodeSGR("99", false, hostSettings);
+        QCOMPARE(bufStyle.mBgColor, Qt::darkBlue);
+        QCOMPARE(bufStyle.mFgColor, Qt::darkBlue);
+
     }
 
     void cleanupTestCase()
