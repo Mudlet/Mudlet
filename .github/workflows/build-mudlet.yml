@@ -88,17 +88,20 @@ jobs:
 
     - name: (Linux) Run Lua tests
       if: runner.os == 'Linux'
-      timeout-minutes: 1
+      timeout-minutes: 1      
       uses: GabrielBB/xvfb-action@v1.0
       with:
         run: ${{runner.workspace}}/b/ninja/src/mudlet --profile Achaea
 
     - name: Take a screenshot
+      # Mudlet should self shut down in the previous action, ideally
+      if: always()
       uses: OrbitalOwen/desktop-screenshot-action@0.1
       with:
         file-name: 'desktop.jpg'
 
     - name: Upload screenshot
+      if: always()
       uses: actions/upload-artifact@v2
       with:
         name: Screenshot
