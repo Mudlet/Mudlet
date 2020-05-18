@@ -76,7 +76,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ ! -z "$CERT_PW" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      if [ "${public_test_build}" == "true" ]; then
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+      else
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      fi
       echo "Signed final .dmg"
     fi
 
@@ -101,10 +105,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}"
+      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}" || true
     else
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"

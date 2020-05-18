@@ -1753,6 +1753,7 @@ local function create_room(name, exits, dir, coords)
     -- links with other rooms as appropriate
     -- links to adjacent rooms in direction of exits if in simple mode
     if map.mapping then
+        name = map.sanitizeRoomName(name)
         map.echo("New Room: " .. name,false,false,(dir or find_portal or force_portal) and true or false)
         local newID = createRoomID()
         addRoom(newID)
@@ -2722,6 +2723,7 @@ end
 
 local function handle_exits(exits)
     local room = map.prompt.room or name_search()
+    room = map.sanitizeRoomName(room)
     exits = map.prompt.exits or exits
     exits = string.lower(exits)
     exits = string.gsub(exits,"%a+", exitmap)
@@ -2897,6 +2899,20 @@ function map.showMap(shown)
     end
 end
 
+-- some games embed an ASCII map on the same line, which messes up the room room name
+-- extract the longest continuous piece of text from the line to be the room name
+function map.sanitizeRoomName(roomtitle)
+  assert(type(roomtitle) == "string", "map.sanitizeRoomName: bad argument #1 expected room title, got "..type(roomtitle).."!")
+  if not roomtitle:match("  ") then return roomtitle end
+  
+  local parts = roomtitle:split("  ")
+  table.sort(parts, function(a,b) return #a &lt; #b end)
+  local longestpart = parts[#parts]
+  
+  local trimmed = utf8.match(longestpart, "[%w ]+"):trim()
+  return trimmed
+end
+
 function map.eventHandler(event, ...)
     if event == "onNewRoom" then
         handle_exits(arg[1])
@@ -2949,6 +2965,7 @@ function map.eventHandler(event, ...)
         config()
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
+            map.find_prompt()
             send("look", true)
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
