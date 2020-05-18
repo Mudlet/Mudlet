@@ -14,8 +14,8 @@ luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 luarocks install --local argparse
 luarocks install --local lunajson
 
-if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  # download coverity tool only for cron jobs
+  # download coverity tool only for cron+deploy jobs
+if [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${DEPLOY}" = "deploy" ]; then
   mkdir coverity
   cd coverity
   wget https://scan.coverity.com/download/linux64 --post-data "token=${COVERITY_SCAN_TOKEN}&project=Mudlet%2FMudlet" -O coverity_tool.tgz
