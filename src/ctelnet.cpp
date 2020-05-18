@@ -1430,7 +1430,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            rawData = rawData.mid(3, static_cast<int>(command.size()) - 5);
+            rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
             mpHost->mLuaInterpreter.msdp2Lua(rawData.constData());
             return;
         }
