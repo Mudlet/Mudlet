@@ -327,9 +327,6 @@
      <property name="toolTip">
       <string>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</string>
      </property>
-     <property name="whatsThis">
-      <string>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</string>
-     </property>
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
@@ -394,10 +391,7 @@
       </font>
      </property>
      <property name="toolTip">
-      <string>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</string>
-     </property>
-     <property name="whatsThis">
-      <string>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</string>
+      <string>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</string>
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
