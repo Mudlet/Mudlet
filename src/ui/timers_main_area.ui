@@ -247,7 +247,7 @@
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string notr="true">:</string>
      </property>
     </widget>
    </item>
@@ -313,7 +313,7 @@
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string notr="true">:</string>
      </property>
     </widget>
    </item>
@@ -382,7 +382,7 @@
       </font>
      </property>
      <property name="text">
-      <string>.</string>
+      <string notr="true">.</string>
      </property>
     </widget>
    </item>
