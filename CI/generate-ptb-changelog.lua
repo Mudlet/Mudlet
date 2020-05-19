@@ -74,14 +74,18 @@ end
 function scan_commits(historical_commits, released_commits)
   local commits_added_since = {}
 
+  local released_commits_length = #released_commits[1]
+  for i, commit in ipairs(historical_commits) do historical_commits[i] = string.cut(commit, released_commits_length) end
+
   for i, v in ipairs(historical_commits) do
     if table.contains(released_commits, v) then
+      commits_added_since[#commits_added_since + 1] = v
       return commits_added_since
     end
     commits_added_since[#commits_added_since + 1] = v
   end
 
-  print("Hit the "..MAX_COMMITS_PER_CHANGELOG.." commit limit - no releases found in history that have been published. Is this the right branch?")
+  print("(hit the "..MAX_COMMITS_PER_CHANGELOG.." commit limit - couldn't find the latest published PTB release)")
   return {}
 end
 
