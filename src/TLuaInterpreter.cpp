@@ -13575,7 +13575,7 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
     }
     std::string func;
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #2 (function name as string expected, got %s)", luaL_typename(L, 1));
+        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #2 (function name as string expected, got %s)", luaL_typename(L, 2));
         return lua_error(L);
     } else {
         func = lua_tostring(L, 2);
