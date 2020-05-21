@@ -418,8 +418,12 @@ END : {
                 // otherwise highlight complete expression match
                 if (i % numberOfCaptureGroups != 1) {
                     pC->selectSection(begin, length);
-                    pC->setBgColor(r1, g1, b1);
-                    pC->setFgColor(r2, g2, b2);
+                    if (mBgColor != QColorConstants::Transparent) {
+                        pC->setBgColor(r1, g1, b1);
+                    }
+                    if (mFgColor != QColorConstants::Transparent) {
+                        pC->setFgColor(r2, g2, b2);
+                    }
                 }
             } else {
                 pC->selectSection(begin, length);
@@ -491,8 +495,12 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+                if (mBgColor != QColorConstants::Transparent) {
+                    pC->setBgColor(r1, g1, b1);
+                }
+                if (mFgColor != QColorConstants::Transparent) {
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -611,8 +619,12 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+                if (mBgColor != QColorConstants::Transparent) {
+                    pC->setBgColor(r1, g1, b1);
+                }
+                if (mFgColor != QColorConstants::Transparent) {
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -722,8 +734,12 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+                if (mBgColor != QColorConstants::Transparent) {
+                    pC->setBgColor(r1, g1, b1);
+                }
+                if (mFgColor != QColorConstants::Transparent) {
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -850,8 +866,12 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+                if (mBgColor != QColorConstants::Transparent) {
+                    pC->setBgColor(r1, g1, b1);
+                }
+                if (mFgColor != QColorConstants::Transparent) {
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
