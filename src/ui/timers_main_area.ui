@@ -214,7 +214,7 @@
       <enum>QDateTimeEdit::HourSection</enum>
      </property>
      <property name="displayFormat">
-      <string>hh</string>
+      <string notr="true">hh</string>
      </property>
     </widget>
    </item>
@@ -247,7 +247,7 @@
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string notr="true">:</string>
      </property>
     </widget>
    </item>
@@ -280,7 +280,7 @@
       <enum>QDateTimeEdit::MinuteSection</enum>
      </property>
      <property name="displayFormat">
-      <string>mm</string>
+      <string notr="true">mm</string>
      </property>
     </widget>
    </item>
@@ -313,7 +313,7 @@
       </font>
      </property>
      <property name="text">
-      <string>:</string>
+      <string notr="true">:</string>
      </property>
     </widget>
    </item>
@@ -346,7 +346,7 @@
       <enum>QDateTimeEdit::SecondSection</enum>
      </property>
      <property name="displayFormat">
-      <string>ss</string>
+      <string notr="true">ss</string>
      </property>
     </widget>
    </item>
@@ -379,7 +379,7 @@
       </font>
      </property>
      <property name="text">
-      <string>.</string>
+      <string notr="true">.</string>
      </property>
     </widget>
    </item>
@@ -412,7 +412,7 @@
       <enum>QDateTimeEdit::MSecSection</enum>
      </property>
      <property name="displayFormat">
-      <string>zzz</string>
+      <string notr="true">zzz</string>
      </property>
     </widget>
    </item>
