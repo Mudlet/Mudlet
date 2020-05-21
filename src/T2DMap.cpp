@@ -551,6 +551,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
 
     auto pixmap = new QPixmap(symbolRectangle.toRect().size());
     pixmap->fill(Qt::transparent);
+// more code after here...
 
     if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
         // if the space to draw the symbol on is too small then do not create
