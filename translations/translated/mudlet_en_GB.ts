@@ -1545,7 +1545,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15563"/>
       <source>ERROR</source>
-      <translation type="unfinished">ERROR</translation>
+      <translation>ERROR</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15564"/>
@@ -1579,7 +1579,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16468"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished">No error message available from Lua</translation>
+      <translation>No error message available from Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16470"/>
@@ -3202,13 +3202,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</translation>
       <location filename="../src/TTextEdit.cpp" line="1758"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
-      <translation type="unfinished">{variation selector 5}</translation>
+      <translation>{variation selector 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
-      <translation type="unfinished">{variation selector 6}</translation>
+      <translation>{variation selector 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
@@ -3274,7 +3274,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</translation>
       <location filename="../src/TTextEdit.cpp" line="1770"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished">{zero width no-break space}</translation>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1776"/>
@@ -3286,7 +3286,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</translation>
       <location filename="../src/TTextEdit.cpp" line="1777"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished">{interlinear annotation separator}</translation>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1778"/>
@@ -3334,13 +3334,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</translation>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished">{FitzPatrick modifier 5}</translation>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished">{FitzPatrick modifier 6}</translation>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
@@ -5103,7 +5103,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
       <source>Copy</source>
-      <translation type="unfinished">Copy</translation>
+      <translation>Copy</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
@@ -7165,7 +7165,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8798"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8804"/>
       <source>Select All</source>
-      <translation type="unfinished">Select All</translation>
+      <translation>Select All</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8949"/>
@@ -7525,7 +7525,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished">Copy</translation>
+      <translation>Copy</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -7535,7 +7535,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="510"/>
       <source>Select All</source>
-      <translation type="unfinished">Select All</translation>
+      <translation>Select All</translation>
     </message>
   </context>
   <context>
@@ -9325,7 +9325,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="388"/>
       <source>Package Exporter</source>
-      <translation type="unfinished">Package Exporter</translation>
+      <translation>Package Exporter</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="279"/>
@@ -11234,7 +11234,7 @@ try again when it has finished.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2853"/>
       <source>Port:</source>
-      <translation type="unfinished">Port:</translation>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2891"/>
@@ -11249,7 +11249,7 @@ try again when it has finished.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>Server address:</source>
-      <translation type="unfinished">Server address:</translation>
+      <translation>Server address:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2884"/>
@@ -11722,7 +11722,7 @@ try again when it has finished.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished">&amp;Cancel</translation>
+      <translation>&amp;Cancel</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -11945,7 +11945,7 @@ or LUA script</translation>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="590"/>
       <source>1</source>
-      <translation type="unfinished">1</translation>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
@@ -12128,7 +12128,7 @@ or LUA script</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished">match on the prompt line</translation>
+      <translation>match on the prompt line</translation>
     </message>
   </context>
   <context>
