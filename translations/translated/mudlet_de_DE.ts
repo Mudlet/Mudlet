@@ -11922,7 +11922,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="394"/>
       <source>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Der &lt;b&gt;Millisekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
