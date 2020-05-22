@@ -132,7 +132,6 @@ private:
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
-    void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
 
     int mFontHeight;
     int mFontWidth;
