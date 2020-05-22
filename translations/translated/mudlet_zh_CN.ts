@@ -575,7 +575,7 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished">Mapper: Cannot find a path from %1 to %2 using known exits.</translation>
+      <translation>Mapper: 找不到从房间 %1 到 %2 的有效路径。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2204"/>
@@ -1459,7 +1459,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2725"/>
       <location filename="../src/TConsole.cpp" line="2764"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished">No search results, sorry!</translation>
+      <translation>未找到搜索结果</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2800"/>
@@ -1534,7 +1534,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16468"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished">No error message available from Lua</translation>
+      <translation>Lua没有错误消息</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16470"/>
@@ -7521,7 +7521,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished">profile</translation>
+      <translation>单个配置</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
