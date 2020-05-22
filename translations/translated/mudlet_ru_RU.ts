@@ -11955,7 +11955,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="394"/>
       <source>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;&lt;b&gt;Миллисекундная&lt;/b&gt; часть интервала на котором таймер срабатывает (1000мс = 1 секунда).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
