@@ -322,36 +322,6 @@ inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, cons
     painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
 }
 
-inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QString& text, const QColor& fgColor, const TChar::AttributeFlags flags)
-{
-    if ( (painter.font().bold() != (flags & TChar::Bold))
-       ||(painter.font().underline() != (flags & TChar::Underline))
-       ||(painter.font().italic() != (flags & TChar::Italic))
-       ||(painter.font().strikeOut() != (flags & TChar::StrikeOut))
-       ||(painter.font().overline() != (flags & TChar::Overline))) {
-
-        QFont font = painter.font();
-        font.setBold(flags & TChar::Bold);
-        font.setUnderline(flags & TChar::Underline);
-        font.setItalic(flags & TChar::Italic);
-        font.setStrikeOut(flags & TChar::StrikeOut);
-        font.setOverline(flags & TChar::Overline);
-        painter.setFont(font);
-    }
-
-    if (painter.pen().color() != fgColor) {
-        painter.setPen(fgColor);
-    }
-
-#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-    QPointF _p(rect.x(), rect.bottom() - mFontDescent);
-    painter.drawText(_p, text);
-#else
-    // The second argument is the y-position and is the baseline of the text:
-    painter.drawText(rect.x(), rect.bottom() - mFontDescent, text);
-#endif
-}
-
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
