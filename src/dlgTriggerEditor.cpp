@@ -8855,9 +8855,9 @@ void dlgTriggerEditor::slot_editorContextMenu()
 QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bool isEnabled)
 {
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    if (color != QColorConstants::Transparent) {
+    if (color != QColorConstants::Transparent && color.isValid()) {
 #else
-    if (color != QColor("transparent")) {
+    if (color != QColor("transparent") && color.isValid()) {
 #endif
         if (isEnabled) {
             return QStringLiteral("QPushButton {color: %1; background-color: %2; }")

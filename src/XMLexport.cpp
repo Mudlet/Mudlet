@@ -822,12 +822,9 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             trigger.append_child("mFgColor").text().set(pT->mFgColor == QColorConstants::Transparent ? "transparent": pT->mFgColor.name().toUtf8().constData());
-#else
-            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColor("transparent") ? "transparent": pT->mFgColor.name().toUtf8().constData());
-#endif
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             trigger.append_child("mBgColor").text().set(pT->mBgColor == QColorConstants::Transparent ? "transparent": pT->mBgColor.name().toUtf8().constData());
 #else
+            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColor("transparent") ? "transparent": pT->mFgColor.name().toUtf8().constData());
             trigger.append_child("mBgColor").text().set(pT->mBgColor == QColor("transparent") ? "transparent": pT->mBgColor.name().toUtf8().constData());
 #endif
             trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toUtf8().constData());
