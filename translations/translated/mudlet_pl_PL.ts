@@ -573,7 +573,7 @@ to z nowym symbolem dla tego pokoju:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished">Mapper: Cannot find a path from %1 to %2 using known exits.</translation>
+      <translation>Mapper: Nie może znaleźć ścieżki od %1 do %2 używając znanych wyjść.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2204"/>
@@ -1498,7 +1498,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2725"/>
       <location filename="../src/TConsole.cpp" line="2764"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished">No search results, sorry!</translation>
+      <translation>Brak wyników wyszukiwania, przepraszam!</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2800"/>
@@ -1573,7 +1573,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16468"/>
       <source>No error message available from Lua</source>
-      <translation type="unfinished">No error message available from Lua</translation>
+      <translation>Brak komunikatu o błędzie z Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16470"/>
@@ -7599,7 +7599,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>profile</source>
-      <translation type="unfinished">profile</translation>
+      <translation>proﬁl</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="168"/>
@@ -9557,7 +9557,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="896"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">ISO 8859-13 (Baltic)</translation>
+      <translation>ISO 8859-13 (kraje bałtyckie/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="897"/>
