@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           # - os: windows-latest
           #   triplet: x64-windows
@@ -21,6 +21,10 @@ jobs:
           - os: macos-latest
             buildname: 'macos / C++ tests'
             triplet: x64-osx
+            compiler: clang_64
+          - os: windows-latest
+            buildname: 'windows'
+            triplet: x64-windows
             compiler: clang_64
     env:
       qt: "5.14.1"
@@ -86,7 +90,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
+        cmakeAppendedArgs: --target test -G Ninja # -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
