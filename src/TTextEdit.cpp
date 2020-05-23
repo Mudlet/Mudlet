@@ -921,8 +921,13 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
+    //new event to get mouse position on the parent window
+    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+    if (mpConsole->getType() == TConsole::SubConsole) {
+        qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
+    }
+
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
-        QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
         mpConsole->raiseMudletMousePressOrReleaseEvent(&newEvent, true);
     }
 
@@ -1484,8 +1489,13 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mMouseTracking = false;
         mCtrlSelecting = false;
     }
+    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+
+    if (mpConsole->getType() == TConsole::SubConsole) {
+        qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
+    }
+
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
-        QMouseEvent newEvent(event->type(), mpConsole->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
         mpConsole->raiseMudletMousePressOrReleaseEvent(&newEvent, false);
     }
     if (mpConsole->getType() == TConsole::UserWindow && mpConsole->mpDockWidget && mpConsole->mpDockWidget->isFloating()) {
