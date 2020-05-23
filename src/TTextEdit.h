@@ -84,6 +84,7 @@ public:
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
+    void reportCodepointErrors();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -116,6 +117,7 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void slot_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_copySelectionToClipboardImage();
@@ -178,6 +180,8 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
+    bool mShowAllCodepointIssues;
+    mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 };
 
 #endif // MUDLET_TTEXTEDIT_H
