@@ -69,6 +69,9 @@ void TDockWidget::setVisible(bool visible)
 {
     auto pC = mpHost->mpConsole->mSubConsoleMap.value(widgetConsoleName);
     auto pW = mpHost->mpConsole->mDockWidgetMap.value(widgetConsoleName);
+    if (!pC || !pW) {
+        return;
+    }
     //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
     if (visible) {
         pC->show();
