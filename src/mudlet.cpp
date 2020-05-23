@@ -215,7 +215,7 @@ mudlet::mudlet()
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
     // } else { // scmIsDevelopmentVersion, currently waiting for dev image to be created
     //     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
-    }         
+    }
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
@@ -2080,11 +2080,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         loadWindowLayout();
         dockwidget->hasLayoutAlready = true;
     }
-
-    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-    console->show();
     dockwidget->show();
-    console->showWindow(name);
 
     if (!autoDock) {
         dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
