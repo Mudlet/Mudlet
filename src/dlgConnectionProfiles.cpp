@@ -2240,10 +2240,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    bool needsGenericPackagesInstall = false;
+    bool preInstallPackages = false;
     mudlet::self()->hideMudletsVariables(pHost);
     if (entries.isEmpty()) {
-        needsGenericPackagesInstall = true;
+        preInstallPackages = true;
     } else {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
@@ -2254,7 +2254,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            needsGenericPackagesInstall = true;
+            preInstallPackages = true;
         }
     }
 
@@ -2299,40 +2299,30 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (needsGenericPackagesInstall) {
-        // Install appropriate mapper and other scripts for the game
-        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-            // IRE MUD profiles:
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
+    if (preInstallPackages) {
+        auto gameUrl = pHost->getUrl().toLower();
+        const QHash<QString, QStringList> defaultScripts = {
+                {QStringLiteral(":/run-lua-code-v4.xml"), {QStringLiteral("*")}},
+                {QStringLiteral(":/echo.xml"), {QStringLiteral("*")}},
+                {QStringLiteral(":/send-text-to-all-games.xml"), {QStringLiteral("*")}},
+                {QStringLiteral(":/deleteOldProfiles.xml"), {QStringLiteral("*")}},
+                {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
+                {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
+                {QStringLiteral(":/mudlet-mapper.xml"),
+                 {QStringLiteral("aetolia.com"), QStringLiteral("achaea.com"), QStringLiteral("lusternia.com"), QStringLiteral("imperian.com"), QStringLiteral("starmourn.com")}},
+        };
 
-        } else if (pHost->getUrl().contains(QStringLiteral("carrionfields.net"), Qt::CaseInsensitive)) {
-            // Carrion Fields loader - downloads and installs latest GUI from GitHub site
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/CF-loader.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-
-        } else if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
-            // Mudlet self-test profile ONLY:
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
-
-        } else {
-            // All OTHER profiles:
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-
+        QHashIterator<QString, QStringList> i(defaultScripts);
+        while (i.hasNext()) {
+            i.next();
+            if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
+                mudlet::self()->packagesToInstallList.append(i.key());
+            }
         }
 
-        // ALL profiles should have this one:
-        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
+        if (!mudlet::self()->packagesToInstallList.contains(QStringLiteral(":/mudlet-mapper.xml"))) {
+            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+        }
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
