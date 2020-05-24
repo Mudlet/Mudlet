@@ -203,17 +203,6 @@ function InstallMsys() {
   exec "mingw-get" @("install", "mingw32-autotools")
 }
 
-function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
-  if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
-    Step "Creating Boost path"
-    New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
-  }
-  ExtractTar "boost.tar.gz" "."
-  Step "Copying folder"
-  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
-}
-
 function InstallQt() {
   DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
   Step "Installing"
@@ -453,10 +442,6 @@ function CheckAndInstallMingwGet(){
 
 function CheckAndInstallMsys(){
     CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
-}
-
-function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){
