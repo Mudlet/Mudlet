@@ -285,7 +285,6 @@ unix:!macx {
         -lpugixml \
         -lWs2_32
     INCLUDEPATH += \
-         "C:\\Libraries\\boost_1_71_0" \
          "$${MINGW_BASE_DIR_TEST}\\include" \
          "$${MINGW_BASE_DIR_TEST}\\lib\include"
     # Leave this unset - we do not need it on Windows:
