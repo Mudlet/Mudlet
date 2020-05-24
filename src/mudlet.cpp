@@ -209,12 +209,12 @@ mudlet::mudlet()
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    if (scmIsReleaseVersion || scmIsDevelopmentVersion) {
+    if (scmIsReleaseVersion) {
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet.png")));
     } else if (scmIsPublicTestVersion) {
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
-    // } else { // scmIsDevelopmentVersion, currently waiting for dev image to be created
-    //     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
+    } else { // scmIsDevelopmentVersion
+        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
     }         
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
