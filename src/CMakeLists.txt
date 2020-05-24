@@ -365,7 +365,6 @@ target_link_libraries(
   mudlet
   communi
   edbee-lib
-  Boost::boost
   HUNSPELL::HUNSPELL
   LUA51::LUA51
   PCRE::PCRE
