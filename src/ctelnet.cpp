@@ -2302,16 +2302,10 @@ void cTelnet::gotRest(std::string& mud_data)
             }
         }
 
-    } else if (mGA_Driver) {
+    } else {
         mMudData += mud_data;
         postData();
         mMudData = "";
-    } else {
-        mMudData += mud_data;
-        if (!mIsTimerPosting) {
-            mpPostingTimer->start();
-            mIsTimerPosting = true;
-        }
     }
 }
 
