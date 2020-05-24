@@ -2519,7 +2519,7 @@ void cTelnet::slot_processReplayChunk()
                 command = "";
             }
         } else {
-            if (ch != '\r') {
+            if (ch != '\r' && ch != '\0') {
                 cleandata += ch;
             }
         }
@@ -2701,7 +2701,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     // flash taskbar for 3 seconds on the telnet bell
                     QApplication::alert(mudlet::self(), 3000);
                 }
-                if (ch != '\r' && ch != 0) {
+                if (ch != '\r' && ch != '\0') {
                     cleandata += ch;
                 }
             }
