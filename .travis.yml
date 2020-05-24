@@ -19,7 +19,6 @@ addons:
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
-    - libboost-graph-dev
     - zlib1g-dbg
     - libzip-dev
     - libpulse-dev
