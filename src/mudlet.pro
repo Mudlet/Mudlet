@@ -1387,10 +1387,12 @@ win32 {
     # set the Windows binary icon
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
-    } else contains(BUILD, "-dev.+") {
-        RC_ICONS = icons/mudlet_dev.ico
-    } else {
-        RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+    } else { 
+        contains(BUILD, "-dev.+") {
+            RC_ICONS = icons/mudlet_dev.ico
+        } else {
+            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+        }
     }
 
     # specify some windows information about the binary
