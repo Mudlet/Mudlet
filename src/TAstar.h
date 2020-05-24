@@ -26,9 +26,9 @@
 
 #ifndef Q_MOC_RUN
 #include "pre_guard.h"
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/astar_search.hpp>
-#include <boost/graph/graphviz.hpp>
+#include "../3rdparty/boost/graph/adjacency_list.hpp"
+#include "../3rdparty/boost/graph/astar_search.hpp"
+#include "../3rdparty/boost/graph/graphviz.hpp"
 #include "post_guard.h"
 #endif
 
