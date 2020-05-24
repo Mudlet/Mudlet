@@ -222,7 +222,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
-, mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))

@@ -668,8 +668,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-    //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
-    //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);

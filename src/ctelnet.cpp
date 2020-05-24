@@ -74,7 +74,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
-, mLF_ON_GA(false)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
@@ -386,7 +385,6 @@ void cTelnet::connectIt(const QString& address, int port)
 {
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
@@ -2533,9 +2531,7 @@ void cTelnet::slot_processReplayChunk()
                 }
             }
 
-            if (mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA) {
-                cleandata.push_back('\n'); //part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            }
+            cleandata.push_back('\n');
             recvdGA = false;
             gotPrompt(cleandata);
             cleandata = "";
@@ -2721,10 +2717,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     gotPrompt(cleandata);
                     cleandata = "";
                 } else {
-                    if (mLF_ON_GA) //TODO: reenable option in preferences
-                    {
-                        cleandata.push_back('\n');
-                    }
+                    cleandata.push_back('\n');
                 }
             }
         } //for
