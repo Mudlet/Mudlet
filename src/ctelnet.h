@@ -214,9 +214,8 @@ signals:
 private:
     cTelnet() = default;
 
-    void processSocketData(char *data, int size);
     void initStreamDecompressor();
-    int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    int decompressBuffer(char*, int&, char*);
     void reset();
 
     void processTelnetCommand(const std::string& command);

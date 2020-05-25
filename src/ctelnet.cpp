@@ -2342,7 +2342,7 @@ void cTelnet::initStreamDecompressor()
     inflateInit(&mZstream);
 }
 
-int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
+int cTelnet::decompressBuffer(char* in_buffer, int& length, char* out_buffer)
 {
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
@@ -2555,21 +2555,14 @@ void cTelnet::handle_socket_signal_readyRead()
     }
 
     char in_buffer[100010];
-
     int amount = socket.read(in_buffer, 100000);
-    processSocketData(in_buffer, amount);
-}
-
-void cTelnet::processSocketData(char* in_buffer, int amount)
-{
-    mpHost->mInsertedMissingLF = false;
-
     char out_buffer[100010];
 
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
         return;
     }
+
     if (amount == 0) {
         return;
     }
@@ -2588,7 +2581,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         if (mpHost->mpConsole->mRecordReplay) {
             mpHost->mpConsole->mReplayStream << timeOffset.elapsed() - lastTimeOffset;
             mpHost->mpConsole->mReplayStream << datalen;
-            mpHost->mpConsole->mReplayStream.writeRawData(&buffer[0], datalen);
+            mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
         }
 
         recvdGA = false;
