@@ -2562,8 +2562,6 @@ void cTelnet::handle_socket_signal_readyRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    mpHost->mInsertedMissingLF = false;
-
     char out_buffer[100010];
 
     in_buffer[amount + 1] = '\0';
