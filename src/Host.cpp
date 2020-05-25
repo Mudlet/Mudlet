@@ -213,7 +213,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mInsertedMissingLF(false)
 , mSslTsl(false)
 , mUseProxy(false)
 , mProxyAddress(QString())
@@ -942,7 +941,6 @@ QPair<QString, QString> Host::getSearchEngine()
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
-        mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
