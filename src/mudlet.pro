@@ -1342,9 +1342,17 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-
-    # Set the .app's icns file
-    ICON = icons/osx.icns
+    
+    # Set the macOS application's icon
+    contains(BUILD, "-ptb.+") {
+        ICON = icons/mudlet_ptb.icns
+    } else {
+        contains(BUILD, "-dev.+") {
+            ICON = icons/mudlet_dev.icns
+        } else {
+            ICON = icons/mudlet.icns
+        }
+    }
 
     LIBS += -framework AppKit
 
