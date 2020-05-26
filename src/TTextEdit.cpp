@@ -400,6 +400,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  */
 int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
+    static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     if (unicode == '\t') {
@@ -446,7 +447,7 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         painter.setPen(fgColor);
     }
 
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (charWidth ? grapheme : QStringLiteral("%1").arg(QChar::ReplacementCharacter)));
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (charWidth ? grapheme : replacementCharacter));
     return (charWidth ? charWidth : 1);
 }
 
