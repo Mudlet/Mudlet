@@ -718,7 +718,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
-                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
+//                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
