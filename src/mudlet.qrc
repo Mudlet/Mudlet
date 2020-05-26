@@ -123,11 +123,13 @@
         <file>icons/media-tape.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
+        <file>icons/mudlet.png</file>
         <file>icons/mudlet_color.png</file>
         <file>icons/mudlet_configure.png</file>
         <file>icons/mudlet_custom_exit.png</file>
         <file>icons/mudlet_custom_exit_properties.png</file>
         <file>icons/mudlet_debug.png</file>
+        <file>icons/mudlet_dev_256px.png</file>
         <file>icons/mudlet_editor.png</file>
         <file>icons/mudlet_important.png</file>
         <file>icons/mudlet_information.png</file>
@@ -137,6 +139,7 @@
         <file>icons/mudlet_main_48px.png</file>
         <file>icons/mudlet_map_download.png</file>
         <file>icons/mudlet_notepad.png</file>
+        <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
