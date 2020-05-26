@@ -2080,11 +2080,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         loadWindowLayout();
         dockwidget->hasLayoutAlready = true;
     }
-
-    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-    console->show();
     dockwidget->show();
-    console->showWindow(name);
 
     if (!autoDock) {
         dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
