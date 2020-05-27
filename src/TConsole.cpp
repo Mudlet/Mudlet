@@ -3104,3 +3104,19 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
+
+bool TConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
+{
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
+        return true;
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
+        return true;
+    }
+
+    return false;
+}
