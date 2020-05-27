@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,13 +24,16 @@
 
 
 #include "Host.h"
-#include <QRegularExpression>
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QKeyEvent>
+#include <QRegularExpression>
+#include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
@@ -107,6 +110,13 @@ bool TCommandLine::event(QEvent* event)
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
+        if (!ke) {
+            // Something is wrong -
+            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynmically castable to the latter - so the processing of this event "
+                                     "has been aborted - please report this to Mudlet Makers.";
+            // Indicate that we don't want to touch this event with a barge-pole!
+            return false;
+        }
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {

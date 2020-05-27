@@ -391,6 +391,13 @@ void Discord::UpdatePresence()
         mCurrentApplicationId = applicationID;
     }
 
+    // Coverity thinks that pDiscordPresence could be a nullptr here, which
+    // would be bad {CID 1473922} so lets test for that and abort:
+    if (!pDiscordPresence) {
+        qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
+        return;
+    }
+
     if (pHost->mDiscordAccessFlags & Host::DiscordSetDetail) {
         pDiscordPresence->setDetailText(mDetailTexts.value(pHost));
     } else {
