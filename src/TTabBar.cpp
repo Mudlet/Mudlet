@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QStyleOption>
 #include <QPainter>
+#include <QVariant>
 #include "post_guard.h"
 
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
@@ -138,5 +139,47 @@ QSize TTabBar::tabSizeHint(int index) const
         return {s.width() - w + bw, s.height()};
     } else {
         return QTabBar::tabSizeHint(index);
+    }
+}
+
+QString& TTabBar::tabName(const int index) const
+{
+    QString result{tabData(index).toString()};
+    return result;
+}
+
+int TTabBar::tabIndex(const QString& name) const
+{
+    int index = -1;
+    if (name.isEmpty()) {
+        return index;
+    }
+    const int total = count();
+    while (++index < total) {
+        if (!tabData(index).toString().compare(name)) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+void TTabBar::removeTab(int index)
+{
+    if (index >= 0 && index < count()) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
+    }
+}
+
+void TTabBar::removeTab(const QString& name)
+{
+    int index = tabIndex(name);
+    if (index > -1) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
     }
 }

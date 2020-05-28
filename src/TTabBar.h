@@ -2,7 +2,7 @@
 #define TTABBAR_H
 
 /***************************************************************************
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -84,6 +84,10 @@ public:
     bool tabItalic(const int index) const {return mStyle.tabItalic(index);}
     bool tabUnderline(const QString& tabName) const {return mStyle.tabUnderline(tabName);}
     bool tabUnderline(const int index) const {return mStyle.tabUnderline(index);}
+    QString& tabName(const int) const;
+    int tabIndex(const QString&) const;
+    void removeTab(const QString&);
+    void removeTab(int);
 
 private:
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
