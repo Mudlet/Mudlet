@@ -841,7 +841,10 @@ do
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
-        func(event, ...)
+        local worked, err = pcall(func, event, ...)
+        if not worked then
+          debugc(string.format("Anonymous Event Handler for event %s failed with the following error: %s", event, err))
+        end
       end
     end
   end
