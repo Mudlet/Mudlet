@@ -4,22 +4,16 @@ if mingw_base_dir then
   package.path = package.path .. ";"..mingw_base_dir.."/share/lua/5.1/?.lua"
 end
 
-print("1")
-
 local argparse = require "argparse"
 local lunajson = require "lunajson"
-
-print"2"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
 local builddir_env = os.getenv("TRAVIS_BUILD_DIR")
 if builddir_env then
   -- the script struggles to load the load files relatively in Travis
-  print("loading: ".. builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")
   loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
   loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
 else
-  print("oldscool loading, $TRAVIS_BUILD_DIR empty")
   loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
   loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
 end

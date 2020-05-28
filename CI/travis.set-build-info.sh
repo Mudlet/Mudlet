@@ -8,10 +8,6 @@ if [ -z "${TRAVIS_TAG}" ]; then
   else
     MUDLET_VERSION_BUILD="-testing"
   fi
-  # temporary test
-  MUDLET_VERSION_BUILD="-ptb"
-  TRAVIS_EVENT_TYPE="cron"
-  export TRAVIS_EVENT_TYPE
 
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
