@@ -8,8 +8,16 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
-loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
-loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
+local builddir_env = os.getenv("TRAVIS_BUILD_DIR")
+if builddir_env then
+  -- the script struggles to load the load files relatively in Travis
+  print("loading: ".. builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")
+  loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
+else
+  loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
+end
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")

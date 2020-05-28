@@ -109,7 +109,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
       cd "${TRAVIS_BUILD_DIR}/CI"
-      changelog=$(lua "generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+      changelog=$(lua "${TRAVIS_BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
