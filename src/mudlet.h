@@ -323,7 +323,6 @@ public:
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
-    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
 
@@ -501,7 +500,8 @@ public slots:
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
-    void slot_multi_view();
+    void slot_multi_view(const bool);
+    void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
     void slot_send_login();
@@ -550,6 +550,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
+    void signal_setCompactInputLine(const bool);
 
 
 private slots:
@@ -580,6 +581,7 @@ private slots:
     void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
+    void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
 
@@ -723,6 +725,9 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
+
+    // Whether multi-view is in effect (if more than one tab is present)
+    bool mMultiView;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

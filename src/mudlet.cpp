@@ -180,6 +180,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
+, mMultiView(false)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -231,7 +232,10 @@ mudlet::mudlet()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    mpTabBar->setMovable(true);
+    // Do not enable this option currently - although the user can drag the tabs
+    // the underlying main TConsoles do not move and then it means that the
+    // wrong title can be shown over the wrong window.
+    mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
@@ -407,8 +411,11 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
 
     mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
+    mpActionMultiView->setToolTip(tr("<p>Enabled when multiple profiles are open, this splits the Mudlet screen to show them all at once.</p>"));
     mpMainToolBar->addAction(mpActionMultiView);
+    mpActionMultiView->setCheckable(true);
+    mpActionMultiView->setChecked(false);
+    mpActionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
@@ -520,7 +527,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1623,6 +1630,26 @@ void mudlet::slot_tab_changed(int tabID)
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
+    // Restore the multi-view mode if it enabled:
+    if (mpTabBar->count() > 1) {
+        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(true);
+            dactionMultiView->setEnabled(true);
+        }
+        if (mMultiView) {
+            QMapIterator<Host*, TConsole*> it(mConsoleMap);
+            while (it.hasNext()) {
+                it.next();
+                it.value()->show();
+            }
+        }
+
+    } else {
+        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(false);
+            dactionMultiView->setEnabled(false);
+        }
+    }
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
@@ -1669,7 +1696,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpCurrentActiveHost = pH;
 
-    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -3610,7 +3636,7 @@ void mudlet::slot_update_shortcuts()
         dactionModuleManager->setShortcut(QKeySequence());
 
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
-        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_multi_view);
+        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
         connectShortcut = new QShortcut(connectKeySequence, this);
@@ -4236,49 +4262,58 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 }
 
-void mudlet::slot_multi_view()
+// Needed because the use of a shortcut to trigger the menuaction does not
+// provide the checked state of the item to which the shortcut is associated:
+void mudlet::slot_toggle_multi_view()
 {
+    const bool newState = !mMultiView;
+    slot_multi_view(newState);
+}
+
+void mudlet::slot_multi_view(const bool state)
+{
+    if (mpActionMultiView->isChecked() != state) {
+        mpActionMultiView->setChecked(state);
+    }
+    if (dactionMultiView->isChecked() != state) {
+        dactionMultiView->setChecked(state);
+    }
+    mMultiView = state;
+    bool foundActiveHost = false;
     QMapIterator<Host*, TConsole*> it(mConsoleMap);
     while (it.hasNext()) {
         it.next();
-        it.value()->show();
+        if (mpCurrentActiveHost && (mpCurrentActiveHost == it.key())) {
+            // After switching the option off need to redraw the, now only, main
+            // TConsole to be displayed for the currently active profile:
+            foundActiveHost = true;
+            it.value()->show();
+        } else if (mMultiView) {
+            it.value()->show();
+        } else {
+            it.value()->hide();
+        }
+    }
+    if (!foundActiveHost && mpTabBar->count() > 0) {
+        // If there IS at least one profile still active, but none of them WAS
+        // the active one then make one (the first) the active one:
+        slot_tab_changed(0);
     }
 }
 
-
+// Called by short-cut that doesn't pass the menu-items checked state
 void mudlet::slot_toggle_compact_input_line()
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-        setCompactInputLine(false);
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
-        setCompactInputLine(true);
-    }
+    const bool newState = !mCompactInputLine;
+    slot_compact_input_line(newState);
 }
 
-void mudlet::set_compact_input_line()
+// Called by the menu-item's action that returns the checked state
+void mudlet::slot_compact_input_line(const bool state)
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (!compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        emit signal_setCompactInputLine(state);
     }
 }
 

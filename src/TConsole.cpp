@@ -570,6 +570,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // absence of files for the first run in a new profile or from an older
         // Mudlet version:
         setProfileSpellDictionary();
+        slot_setCompactInputLine(mudlet::self()->compactInputLine());
+        connect(mudlet::self(), &mudlet::signal_setCompactInputLine, this, &TConsole::slot_setCompactInputLine, Qt::UniqueConnection);
     }
 
     // error and debug consoles inherit font of the main console
@@ -3103,4 +3105,11 @@ void TConsole::mousePressEvent(QMouseEvent* event)
 void TConsole::mouseReleaseEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, false);
+}
+
+void TConsole::slot_setCompactInputLine(const bool state)
+{
+    if (mpButtonMainLayer) {
+        mpButtonMainLayer->setVisible(!state);
+    }
 }

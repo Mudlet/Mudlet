@@ -289,16 +289,31 @@
    <property name="text">
     <string>MultiView</string>
    </property>
+   <property name="enabled">
+     <bool>false</bool>
+   </property>
+   <property name="checkable">
+     <bool>true</bool>
+   </property>
+   <property name="checked">
+     <bool>false</bool>
+   </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Enabled when multiple profiles are open, this splits the Mudlet screen to show them all at once.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionInputLine">
    <property name="text">
     <string>Compact input line</string>
    </property>
+   <property name="checkable">
+     <bool>true</bool>
+   </property>
+   <property name="checked">
+     <bool>false</bool>
+   </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line for all profiles.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionDiscord">
