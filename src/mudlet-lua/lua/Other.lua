@@ -842,7 +842,7 @@ do
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
         local success, error = pcall(func, event, ...)
-	if not success then debugc(string.format("Error running event handler for %s: %s", event, error)) end
+        if not success then showHandlerError(event, error) end
       end
     end
   end
