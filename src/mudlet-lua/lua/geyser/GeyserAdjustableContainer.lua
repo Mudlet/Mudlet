@@ -20,11 +20,11 @@ Adjustable.Container = Adjustable.Container or Geyser.Container:new({name = "Adj
 local adjustInfo = {}
 
 -- Internal function to add "%" to a value and round it
--- @param num is the value a "%" will be added to
+-- Resulting percentage has five precision points to ensure accurate 
+-- representation in pixel space.
+-- @param num Any float. For 0-100% output, use 0.0-1.0
 local function make_percent(num)
-    num = math.floor(10000*num)/100
-    num = tostring(num).."%"
-    return num
+    return string.format("%.5f%%", (num * 100))
 end
 
 -- Internal function: checks where the mouse is at on the Label
