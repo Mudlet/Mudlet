@@ -5476,7 +5476,10 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 
     dict.close();
 
-    qDebug().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") - INFO actual(recorded) word counts is(were): " << wl.count() << "(" << oldWC << ").";
+    qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
+    if (oldWC != wl.count()) {
+        qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
+    }
     if (wl.count() > 1) {
         // This will use the system default locale - it might be better to use
         // the Mudlet one...
