@@ -591,6 +591,10 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
+        QFileInfo moduleFile = moduleStringList[0];
+        if (!moduleFile.suffix().compare(QLatin1String("xml"), Qt::CaseInsensitive) == 0) {
+            return {false, QStringLiteral("module has to be a .xml file")};
+        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
