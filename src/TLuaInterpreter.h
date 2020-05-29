@@ -52,7 +52,6 @@ extern "C" {
 #include <list>
 #include <string>
 #include <memory>
-#include <optional>
 
 
 class Host;
@@ -117,7 +116,8 @@ public:
     static int dirToNumber(lua_State*, int);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
-    std::optional<int> createHttpHeadersTable(QNetworkReply*);
+    int createHttpResponseTable(QNetworkReply*);
+    void createHttpHeadersTable(lua_State*, QNetworkReply*);
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);

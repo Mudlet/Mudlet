@@ -178,10 +178,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
         }
 
-        if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
-            event.mArgumentList << QString::number(*registryKey);
-            event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
-        }
+        event.mArgumentList << QString::number(createHttpResponseTable(reply));
+        event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -300,10 +298,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
     }
 
-    if (std::optional<int> registryKey = createHttpHeadersTable(reply); registryKey.has_value()) {
-        event.mArgumentList << QString::number(*registryKey);
-        event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
-    }
+    event.mArgumentList << QString::number(createHttpResponseTable(reply));
+    event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
 
     reply->deleteLater();
@@ -18543,24 +18539,42 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     }
 }
 
-// Internal function - Looks for headers in an http response. If it finds them,
-// it creates a table on the lua stack for the headers, pops the table from the
-// stack, puts it in the lua registry, and returns the key to where it is in
-// registery, wrapped in an optional. Otherwise it returns an empty optional.
-std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
+// Internal function - Creates a table for useful information from the http
+// response. It creates an empty table, calls upon other functions to
+// add things to it, and then returns a key to where it is in the lua registery.
+int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
         return {};
     }
-    const QList<QByteArray> headerList = reply->rawHeaderList();
-    if (headerList.isEmpty()) {
-        return {};
+
+    // Push empty table onto stack
+    lua_newtable(L);
+    // Delegate work for adding "headers" table to table
+    createHttpHeadersTable(L, reply);
+    // Pop table from stack, store it in registry, return key to it
+    return luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+// Internal function - Adds an empty table to a "headers" key to the table for
+// tracking useful information from the http response. If there are any headers
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
     }
 
-    // Push table onto stack
+    // Push "headers" key and empty table value onto stack
+    lua_pushstring(L, "headers");
     lua_newtable(L);
+
+    // Parse headers, add them as key-value pairs to the empty table
+    const QList<QByteArray> headerList = reply->rawHeaderList();
     for (QByteArray header : headerList) {
         // Push header key onto stack
         lua_pushstring(L, header.constData());
@@ -18569,6 +18583,7 @@ std::optional<int> TLuaInterpreter::createHttpHeadersTable(QNetworkReply* reply)
         // Put key-value pair into table (now 3 deep in stack), pop stack twice
         lua_settable(L, -3);
     }
-    // Pop table from stack, store it in registry, return key to it
-    return luaL_ref(L, LUA_REGISTRYINDEX);
+
+    // Put "headers" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
 }
