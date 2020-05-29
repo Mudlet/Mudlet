@@ -1169,7 +1169,9 @@ void mudlet::layoutModules()
             auto itemPriority = new QTableWidgetItem();
             QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
             QFileInfo moduleFile = moduleInfo[0];
-            if (moduleFile.suffix().compare(QLatin1String("xml"), Qt::CaseInsensitive) == 0) {
+            QStringList accepted_suffix;
+            accepted_suffix << "xml" << "trigger";
+            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
                 masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
                 masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
                                                  .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
