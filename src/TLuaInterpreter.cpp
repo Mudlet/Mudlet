@@ -7105,6 +7105,30 @@ int TLuaInterpreter::debug(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::showHandlerError(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString event, error;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "showHandlerError: bad argument #1 type (event name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        event = QString::fromUtf8(lua_tostring(L, 1));
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "showHandlerError: bad argument #2 type (error message as string expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    } else {
+        error = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    host.mLuaInterpreter.logEventError(event, error);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
@@ -15577,6 +15601,27 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::logEventError(const QString& event, const QString& error)
+{
+    // Log error to Editor's Errors TConsole:
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
+    }
+
+    // Log error to Profile's Main TConsole:
+    if (mpHost->mEchoLuaErrors) {
+        // ensure the Lua error is on a line of its own and is not prepended to the previous line
+        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+            mpHost->postMessage(QStringLiteral("\n"));
+        }
+
+        mpHost->postMessage(QStringLiteral("[  LUA  ] - error in event handler for %1:\n<%2>").arg(event, error));
+    }
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
@@ -16564,6 +16609,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "paste", TLuaInterpreter::paste);
     lua_register(pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow);
     lua_register(pGlobalLua, "debugc", TLuaInterpreter::debug);
+    lua_register(pGlobalLua, "showHandlerError", TLuaInterpreter::showHandlerError);
     lua_register(pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap);
     lua_register(pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent);
     lua_register(pGlobalLua, "resetFormat", TLuaInterpreter::resetFormat);
