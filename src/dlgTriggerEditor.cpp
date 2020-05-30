@@ -8876,7 +8876,6 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     } else {
         return QStringLiteral("QPushButton {color: white; background-color: grey; }");
     }
-    return QString();
 }
 
 // Retrive the background-color or color setting from the previous method, the
