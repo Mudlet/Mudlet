@@ -215,7 +215,7 @@ mudlet::mudlet()
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
     } else { // scmIsDevelopmentVersion
         setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
-    }         
+    }
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
@@ -1167,8 +1167,23 @@ void mudlet::layoutModules()
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
             QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+            QFileInfo moduleFile = moduleInfo[0];
+            QStringList accepted_suffix;
+            accepted_suffix << "xml" << "trigger";
+            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                         "is saved at the end of the session.")));
+            } else {
+                masterModule->setFlags(Qt::NoItemFlags);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
+                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
+            }
+
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -1176,10 +1191,7 @@ void mudlet::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                             .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                     "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                     "is saved at the end of the session.")));
+
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
@@ -1492,15 +1504,11 @@ void mudlet::slot_close_profile_requested(int tab)
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-#if defined (Q_OS_WIN32)
     if (pH->mSslTsl) {
         pH->mTelnet.abortConnection();
     } else {
         pH->mTelnet.disconnectIt();
     }
-#else
-    pH->mTelnet.disconnectIt();
-#endif
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
@@ -1538,11 +1546,6 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     migrateDebugConsole(pH);
-
-    // Wait for disconnection to complete
-    while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-        QApplication::processEvents();
-    }
 
     mConsoleMap.value(pH)->close();
     if (!mTabMap.contains(pH->getName())) {
@@ -2080,11 +2083,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         loadWindowLayout();
         dockwidget->hasLayoutAlready = true;
     }
-
-    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-    console->show();
     dockwidget->show();
-    console->showWindow(name);
 
     if (!autoDock) {
         dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
@@ -3136,7 +3135,11 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     for (auto pC : mConsoleMap) {
         // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-        pC->mpHost->mTelnet.disconnectIt();
+        if (pC->mpHost->mSslTsl) {
+            pC->mpHost->mTelnet.abortConnection();
+        } else {
+            pC->mpHost->mTelnet.disconnectIt();
+        }
 
         // close script-editor
         if (pC->mpHost->mpEditorDialog) {
@@ -3153,11 +3156,6 @@ void mudlet::closeEvent(QCloseEvent* event)
         if (mpIrcClientMap.contains(pC->mpHost)) {
             mpIrcClientMap[pC->mpHost]->setAttribute(Qt::WA_DeleteOnClose);
             mpIrcClientMap[pC->mpHost]->deleteLater();
-        }
-
-        // Wait for disconnection to complete
-        while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-            QApplication::processEvents();
         }
 
         // close console
@@ -3186,7 +3184,12 @@ void mudlet::forceClose()
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        host->mTelnet.disconnectIt();
+        if (host->mSslTsl) {
+            host->mTelnet.abortConnection();
+        } else {
+            host->mTelnet.disconnectIt();
+        }
+
         // close script-editor
         if (host->mpEditorDialog) {
             host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3202,11 +3205,6 @@ void mudlet::forceClose()
 
         if (mpIrcClientMap.contains(host)) {
             mpIrcClientMap.value(host)->close();
-        }
-
-        // Wait for disconnection to complete
-        while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-            QApplication::processEvents();
         }
 
         console->close();
@@ -5490,7 +5488,10 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 
     dict.close();
 
-    qDebug().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") - INFO actual(recorded) word counts is(were): " << wl.count() << "(" << oldWC << ").";
+    qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
+    if (oldWC != wl.count()) {
+        qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
+    }
     if (wl.count() > 1) {
         // This will use the system default locale - it might be better to use
         // the Mudlet one...
