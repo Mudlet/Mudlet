@@ -841,7 +841,8 @@ do
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
-        func(event, ...)
+        local success, error = pcall(func, event, ...)
+        if not success then showHandlerError(event, error) end
       end
     end
   end
