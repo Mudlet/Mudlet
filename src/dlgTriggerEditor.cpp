@@ -7217,11 +7217,16 @@ void dlgTriggerEditor::slot_source_find_next()
 
 void dlgTriggerEditor::slot_source_find_text_changed()
 {
+    auto text = mpSourceEditorFindArea->lineEdit_findText->text();
+    if (text.length() <= 2) {
+        return;
+    }
+
     auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
     controller->borderedTextRanges()->clear();
     controller->textSelection()->range(0).clearSelection();
-    searcher->setSearchTerm(mpSourceEditorFindArea->lineEdit_findText->text());
+    searcher->setSearchTerm(text);
     searcher->markAll(controller->borderedTextRanges());
     controller->update();
 }
