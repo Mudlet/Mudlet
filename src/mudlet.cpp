@@ -1167,8 +1167,23 @@ void mudlet::layoutModules()
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
             QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+            QFileInfo moduleFile = moduleInfo[0];
+            QStringList accepted_suffix;
+            accepted_suffix << "xml" << "trigger";
+            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                         "is saved at the end of the session.")));
+            } else {
+                masterModule->setFlags(Qt::NoItemFlags);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
+                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
+            }
+
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -1176,10 +1191,7 @@ void mudlet::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                             .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                     "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                     "is saved at the end of the session.")));
+
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
