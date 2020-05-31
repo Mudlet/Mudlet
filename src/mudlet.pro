@@ -1388,7 +1388,7 @@ win32 {
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
-        contains(BUILD, "-dev.+") {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             RC_ICONS = icons/mudlet_dev.ico
         } else {
             RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
