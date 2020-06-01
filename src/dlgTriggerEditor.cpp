@@ -233,9 +233,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorArea = new dlgSourceEditorArea(this);
     splitter_right->addWidget(mpSourceEditorArea);
 
-    // And the new edbee widget
+    // And the edbee widget
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbee->setAutoScrollMargin(20);
+    mpSourceEditorEdbee->setPlaceholderText(tr("-- add your Lua code here"));
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
@@ -3439,7 +3440,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     saveVar();
     mpVarsMainArea->comboBox_variable_key_type->setCurrentIndex(0);
     if (isFolder) {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(false);
         mpVarsMainArea->comboBox_variable_value_type->setDisabled(true);
         mpVarsMainArea->comboBox_variable_value_type->setCurrentIndex(4);
@@ -3448,7 +3449,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
 
         clearDocument(mpSourceEditorEdbee, QLatin1Literal("NewTable"));
     } else {
-        // Edbee doesn't have a readonly option, so I'm using setEnabled
+        // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
         mpVarsMainArea->lineEdit_var_name->setText(QString());
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Variable name..."));
@@ -3788,13 +3789,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     } else {
         name = tr("New script");
     }
-    QStringList mainFun;
-    mainFun << "-------------------------------------------------\n"
-            << "--         Put your Lua functions here.        --\n"
-            << "--                                             --\n"
-            << "-- Note that you can also use external scripts --\n"
-            << "-------------------------------------------------\n";
-    QString script = mainFun.join("");
+    QString script;
     QStringList nameL;
     nameL << name;
 
@@ -6765,8 +6760,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         mNeedUpdateData = false;
     }
 
-    // Edbee doesn't have a readonly option, so I'm using setEnabled
-     mpSourceEditorEdbee->setEnabled(true);
+    // in lieu of readonly
+    mpSourceEditorEdbee->setEnabled(true);
 
     if (mCurrentView != view) {
         clearDocument(mpSourceEditorEdbee); // Change View
