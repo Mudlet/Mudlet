@@ -2264,23 +2264,6 @@ bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& path)
     }
 }
 
-bool mudlet::setTextFormat(Host* pHost, const QString& name, const QColor& bgColor, const QColor& fgColor, const TChar::AttributeFlags attributes)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, attributes);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state)
 {
     if (!pHost || !pHost->mpConsole) {

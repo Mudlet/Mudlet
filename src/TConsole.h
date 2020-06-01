@@ -219,6 +219,7 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
 
 
     QPointer<Host> mpHost;
