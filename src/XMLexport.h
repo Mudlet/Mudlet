@@ -56,7 +56,6 @@ public:
     XMLexport(TAction*);
     XMLexport(TScript*);
     XMLexport(TKey*);
-    ~XMLexport();
 
     void writeHost(Host*, pugi::xml_node hostPackage);
     void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
