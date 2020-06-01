@@ -611,11 +611,11 @@ void GLWidget::paintGL()
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
-                    if (areaExit) {
-                        glLineWidth(1); //1/mScale+2);
-                    } else {
+                    // if (areaExit) {
+                    //    glLineWidth(1); //1/mScale+2);
+                    // } else {
                         glLineWidth(1); //1/mScale);
-                    }
+                    // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
@@ -1022,11 +1022,11 @@ void GLWidget::paintGL()
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
-                    if (areaExit) {
-                        glLineWidth(1); //1/mScale+2);
-                    } else {
+                    // if (areaExit) {
+                    //    glLineWidth(1); //1/mScale+2);
+                    // } else {
                         glLineWidth(1); //1/mScale);
-                    }
+                    // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);

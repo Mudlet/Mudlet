@@ -4572,6 +4572,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     if (currentValueType == LUA_TFUNCTION || currentNameType == LUA_TTABLE) {
         return 0; //no recasting functions or table keys
     }
+
     if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
         //trying to change a table to something else
         if (!var->getChildren(false).empty()) {
@@ -4580,9 +4581,7 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
         //no children, we can do this without bad things happening
         return 1;
     }
-    if (newValueType == LUA_TTABLE && currentValueType != LUA_TTABLE) {
-        return 1; //non-table to table
-    }
+
     if (currentNameType == newNameType && currentValueType == newValueType) {
         return 2;
     }

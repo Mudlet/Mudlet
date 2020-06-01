@@ -70,7 +70,20 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
 , mpComposer(nullptr)
+, mpDownloader()
+, mpProgressDialog()
+, mProfileName(profileName)
 , mpHost(pH)
+, mpOutOfBandDataIncomingCodec()
+, outgoingDataCodec()
+, hostPort()
+, mWaitingForResponse()
+, mZstream()
+, mNeedDecompression()
+, iac()
+, iac2()
+, insb()
+, recvdGA()
 , mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
@@ -78,20 +91,14 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
-, mpProgressDialog()
-, mProfileName(profileName)
-, hostPort()
-, networkLatencyMin()
-, networkLatencyMax()
-, mWaitingForResponse()
-, mZstream()
-, recvdGA()
+, mIsTimerPosting()
 , lastTimeOffset()
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
 , enableMSP(false)
 , enableChannel102(false)
+, mDontReconnect(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
@@ -99,10 +106,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
 {
-    mIsTimerPosting = false;
-    mNeedDecompression = false;
-    mDontReconnect = false;
-
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
@@ -112,12 +115,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
         termType.append(QStringLiteral(APP_BUILD));
     }
 
-    iac = iac2 = insb = false;
-
     command = "";
-    curX = 80;
-    curY = 25;
-
     // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";

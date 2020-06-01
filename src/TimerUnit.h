@@ -70,7 +70,6 @@ public:
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
-    QMutex mTimerUnitLock;
     int statsActiveTriggers;
     int statsTriggerTotal;
     int statsTempTriggers;

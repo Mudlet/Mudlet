@@ -119,8 +119,6 @@ XMLexport::XMLexport( TKey * pT )
 {
 }
 
-XMLexport::~XMLexport() = default;
-
 void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
 {
     auto pHost = mpHost;

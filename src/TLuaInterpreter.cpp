@@ -5855,11 +5855,15 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         if (!roomIdsFound.isEmpty()) {
             for (int i : roomIdsFound) {
                 TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
-                QString name = pR->name;
-                int roomID = pR->getId();
-                lua_pushnumber(L, roomID);
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_settable(L, -3);
+                // This test is to keep Coverity happy as it thinks pR could be
+                // a nullptr in some odd situation {CID 1415023}:
+                if (pR) {
+                    QString name = pR->name;
+                    int roomID = pR->getId();
+                    lua_pushnumber(L, roomID);
+                    lua_pushstring(L, name.toUtf8().constData());
+                    lua_settable(L, -3);
+                }
             }
         }
         return 1;
@@ -7478,6 +7482,9 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         }
 
         TTimer* timer = host.getTimerUnit()->getTimer(result.first);
+        Q_ASSERT_X(timer,
+                   "TLuaInterpreter::tempTimer(...)",
+                   "Got a positive result from LuaInterpreter::startTempTimer(...) but that failed to produce pointer to it from Host::mTimerUnit::getTimer(...)");
         timer->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
@@ -15786,7 +15793,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
-    int error;
+    int error = 0;
     if (qE) {
         // Create Lua table with QEvent data if needed
         switch (qE->type()) {

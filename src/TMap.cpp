@@ -66,6 +66,11 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 , mMapSymbolFontFudgeFactor(1.0)
 , mIsOnlyMapSymbolFontToBeUsed(false)
+// These three are actually set to values from the Host class but initialising
+// them to the same defaults here keeps Coverity happy:
+, mPlayerRoomStyle(0)
+, mPlayerRoomOuterDiameterPercentage(120)
+, mPlayerRoomInnerDiameterPercentage(70)
 , mIsFileViewingRecommended(false)
 , mpNetworkAccessManager(Q_NULLPTR)
 , mpProgressDialog(Q_NULLPTR)

@@ -328,8 +328,8 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else { // No valid exit on the dialogue
-        if (originalExits.value(dirCode)->destination > 0) {
-            pR->setExit(-1, dirCode); // Destination has been deleted So ensure the value for no exit is stored
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
+            pR->setExit(-1, dirCode); // Destination has been deleted so ensure the value for no exit is stored
         }
         if (stub_nw->isChecked() != pR->hasExitStub(dirCode)) {
             // Does the stub exit setting differ from what is stored
@@ -357,7 +357,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_n->isChecked() != pR->hasExitStub(dirCode)) {
@@ -385,7 +385,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_ne->isChecked() != pR->hasExitStub(dirCode)) {
@@ -413,7 +413,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_up->isChecked() != pR->hasExitStub(dirCode)) {
@@ -441,7 +441,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_w->isChecked() != pR->hasExitStub(dirCode)) {
@@ -469,7 +469,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_e->isChecked() != pR->hasExitStub(dirCode)) {
@@ -497,7 +497,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_down->isChecked() != pR->hasExitStub(dirCode)) {
@@ -525,7 +525,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_sw->isChecked() != pR->hasExitStub(dirCode)) {
@@ -553,7 +553,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_s->isChecked() != pR->hasExitStub(dirCode)) {
@@ -581,7 +581,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_se->isChecked() != pR->hasExitStub(dirCode)) {
@@ -609,7 +609,7 @@ void dlgRoomExits::save()
             pR->setExitWeight(exitKey, 0);
         }
     } else {
-        if (originalExits.value(dirCode)->destination > 0) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination > 0) {
             pR->setExit(-1, dirCode);
         }
         if (stub_in->isChecked() != pR->hasExitStub(dirCode)) {

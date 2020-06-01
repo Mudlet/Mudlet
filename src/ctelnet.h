@@ -243,8 +243,6 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    double networkLatencyMin;
-    double networkLatencyMax;
     bool mWaitingForResponse;
     std::queue<int> mCommandQueue;
 
@@ -252,7 +250,9 @@ private:
 
     bool mNeedDecompression;
     std::string command;
-    bool iac, iac2, insb;
+    bool iac;
+    bool iac2;
+    bool insb;
     // Set if we have negotiated the use of the option by us:
     bool myOptionState[256];
     // Set if he has negotiated the use of the option by him:
@@ -266,7 +266,6 @@ private:
     bool triedToEnable[256];
     bool recvdGA;
 
-    int curX, curY;
     QString termType;
     QByteArray mEncoding;
     QTimer* mpPostingTimer;

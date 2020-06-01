@@ -16,9 +16,27 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagParser.h"
 #include "TStringUtils.h"
+
+TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
+: mOptionIgnoreText(ignoreText)
+, mIsEndTag(false)
+, mIsInsideTag(false)
+, mIsInsideAttr(false)
+, mReadingAttrValue(false)
+, mIsInsideSequence(false)
+, mIsQuotedSequence(false)
+, mOpeningQuote('\0')
+, mSequenceHasSpaces(false)
+, mHasSequence(false)
+, mIsInsideText(false)
+, mHasNode(false)
+, mIsText(false)
+{
+}
 
 bool TMxpNodeBuilder::accept(char ch)
 {
