@@ -15235,7 +15235,6 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 {
     Host& host = getHostFromLua(pGlobalLua);
     QByteArray transcodedSrc = host.mTelnet.decodeBytes(src);
-    qDebug().nospace().noquote() << "<MSDP><" << transcodedSrc << ">";
     QStringList varList;
     QByteArray lastVar;
     int textLength = transcodedSrc.length();
@@ -15313,7 +15312,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) {
+            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) ||
+                (textLength <= i + 1)) {
                 script.append('\"');
             }
             varList.append(QString::fromUtf8(lastVar));
