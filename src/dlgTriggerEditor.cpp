@@ -8868,7 +8868,7 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
         return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
                 .arg(QLatin1String("darkGray"), disabledColor.name());
     } else {
-        return QStringLiteral("QPushButton {color: white; background-color: grey; }");
+        return QString();
     }
 }
 
