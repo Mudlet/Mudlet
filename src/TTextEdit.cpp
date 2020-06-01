@@ -693,8 +693,7 @@ void TTextEdit::unHighlight()
                 mpBuffer->buffer.at(y).at(x).deselect();
             }
     }
-    mForceUpdate = true;
-    update();
+    forceUpdate();
 }
 
 // ensure that mPA is top-right and mPB is bottom-right
@@ -949,6 +948,20 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             }
         }
         unHighlight();
+        // Ensure BOTH panes are updated if the lower one is showing
+        if (mIsLowerPane) {
+            // We wouldn't be getting to here if the lower pane was not visible:
+            mpConsole->mUpperPane->forceUpdate();
+            forceUpdate();
+        } else if (!mIsTailMode) {
+            // Not in tail mode means the lower pane is also showing (and we are the
+            // upper one) - so update both:
+            forceUpdate();
+            mpConsole->mLowerPane->forceUpdate();
+        } else {
+            // We are the upper pane and the lower one is not showing
+            forceUpdate();
+        }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
             int xind = x;
@@ -1136,8 +1149,24 @@ void TTextEdit::slot_selectAll()
 {
     mDragStart = QPoint(0, 0);
     mDragSelectionEnd = mpBuffer->getEndPos();
+    // need this to convert the above to mPA and mPB:
+    normaliseSelection();
+
     highlightSelection();
-    update();
+    // Ensure BOTH panes are updated if the lower one is showing
+    if (mIsLowerPane) {
+        // We wouldn't be getting to here if the lower pane was not visible:
+        mpConsole->mUpperPane->forceUpdate();
+        forceUpdate();
+    } else if (!mIsTailMode) {
+        // Not in tail mode means the lower pane is also showing (and we are the
+        // upper one) - so update both:
+        forceUpdate();
+        mpConsole->mLowerPane->forceUpdate();
+    } else {
+        // We are the upper pane and the lower one is not showing
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_searchSelectionOnline()
