@@ -1421,14 +1421,17 @@ void cTelnet::processTelnetCommand(const std::string& command)
         if (option == OPT_MSDP) {
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
-            QByteArray _m = command.c_str();
+            QByteArray rawData = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            // _m is in the Mud Server's encoding, trim off the Telnet suboption
+
+            rawData = rawData.replace(TN_BELL, QLatin1String("\\\\7"));
+
+            // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            _m = _m.mid(3, static_cast<int>(command.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.constData());
+            rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(rawData.constData());
             return;
         }
 
