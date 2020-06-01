@@ -5126,24 +5126,16 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
             | (strikeout ? TChar::StrikeOut : TChar::None)
             | (underline ? TChar::Underline : TChar::None);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        TConsole* pC = host.mpConsole;
-        if (Q_UNLIKELY(!pC)) {
-            lua_pushboolean(L, false);
-            lua_pushstring(L, "mudlet error: main window does not exist");
-            return 2;
-        }
-        pC->mFormatCurrent.setTextFormat(QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                         QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                         flags);
-        lua_pushboolean(L, true);
-    } else {
-        lua_pushboolean(L, mudlet::self()->setTextFormat(&host, windowName,
-                                                         QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                                         QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                                         flags));
+    if (!host.mpConsole->setTextFormat(windowName,
+                                      QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
+                                      QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
+                                      flags)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
+        return 2;
     }
 
+    lua_pushboolean(L, true);
     return 1;
 }
 
