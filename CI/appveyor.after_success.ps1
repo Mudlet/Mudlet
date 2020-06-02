@@ -2,8 +2,8 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
   exit 0
 }
 
-cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --release mudlet.exe
+cd "$Env:APPVEYOR_BUILD_FOLDER\src\debug"
+windeployqt.exe --debug mudlet.exe
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
@@ -20,8 +20,8 @@ $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
-  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
+  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\debug\mudlet.exe" -NewName "Mudlet.exe"
+  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\debug\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -33,10 +33,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   if ($Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\debug\mudlet.exe" -NewName "Mudlet PTB.exe"
   } else {
-    Write-Output "=== Creating a release build ==="
-    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    Write-Output "=== Creating a debug build ==="
+    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\debug\mudlet.exe" -NewName "Mudlet.exe"
   }
 
   Write-Output "=== Cloning installer project ==="
@@ -56,13 +56,13 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   Write-Output "=== Moving things to where Squirel expects them ==="
-  # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
-  Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
+  # move everything into src\debug\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
+  Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\debug\* $SQUIRRELWINBIN
 
   $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
   if ($Script:PublicTestBuild) {
-    # allow public test builds to be installed side by side with the release builds by renaming the app
+    # allow public test builds to be installed side by side with the debug builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
@@ -85,8 +85,8 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   # fails silently if the nupkg file is not found
   .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 
-  Write-Output "=== Removing old directory content of release folder ==="
-  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
+  Write-Output "=== Removing old directory content of debug folder ==="
+  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\debug\*
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
