@@ -23,7 +23,7 @@
 
 
 #include "TLabel.h"
-#include "Host.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -88,7 +88,10 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
     if (mpHost && mClickFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
+        // The use of accept() here prevents the propogation of the event to
+        // any parent, e.g. the containing TConsole
         event->accept();
+        mudlet::self()->activateProfile(mpHost);
     } else {
         QWidget::mousePressEvent(event);
     }

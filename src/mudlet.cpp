@@ -411,7 +411,9 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
 
     mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("<p>Enabled when multiple profiles are open, this splits the Mudlet screen to show them all at once.</p>"));
+    mpActionMultiView->setToolTip(tr("<p>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</p>",
+                                     // Intentional comment to separate arguments
+                                     "Same text is used in 2 places."));
     mpMainToolBar->addAction(mpActionMultiView);
     mpActionMultiView->setCheckable(true);
     mpActionMultiView->setChecked(false);
@@ -1633,7 +1635,7 @@ void mudlet::slot_tab_changed(int tabID)
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
-    // Restore the multi-view mode if it enabled:
+    // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
         if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
             mpActionMultiView->setEnabled(true);
@@ -5201,6 +5203,10 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    if (mMultiView) {
+        // We do not need to mark tabs with activity if they are all on show anyhow:
+        return;
+    }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
         if (mpTabBar->count() > 1) {
@@ -5995,4 +6001,28 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+void mudlet::activateProfile(Host* pHost)
+{
+    if (!mMultiView || !pHost) {
+        // We do not need to update the currently selected tab if we are not in
+        // multi-view mode as that will happen by the user selecting the tab
+        // themself - also, if the supplied argument is a nullptr we do not need
+        // to do anything:
+        return;
+    }
+
+    const QString newActiveHostName{pHost->getName()};
+    if (mpCurrentActiveHost != pHost) {
+        // Need to switch mpCurrentActiveHost to be the given pHost and change
+        // the tab to match - without triggering slot_tab_changed(int)
+        int tabToBeActive = mpTabBar->tabIndex(newActiveHostName);
+        if (tabToBeActive >= 0) {
+            mpTabBar->blockSignals(true);
+            mpTabBar->setCurrentIndex(tabToBeActive);
+            mpTabBar->blockSignals(false);
+        }
+        mpCurrentActiveHost = pHost;
+    }
 }

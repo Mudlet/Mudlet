@@ -253,6 +253,8 @@ public:
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void activateProfile(Host*);
+
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -724,7 +726,7 @@ private:
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
 
-    // Whether multi-view is in effect (if more than one tab is present)
+    // Whether multi-view is in effect:
     bool mMultiView;
 };
 
