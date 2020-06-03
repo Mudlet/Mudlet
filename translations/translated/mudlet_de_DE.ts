@@ -11773,7 +11773,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Entferne (ausgewählte) Ereignisbehandler aus der Liste.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Entferne den ausgewählten Ereignisbehandler aus der Liste.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -11788,7 +11788,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ergänze den eingegebenen Namen des Ereignisbehandler auf der Liste.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Füge den genannten Ereignisbehandler der Liste hinzu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
