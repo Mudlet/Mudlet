@@ -122,7 +122,7 @@ private slots:
 
 private:
     void initDefaultSettings();
-    QString getSelectedText(QChar newlineChar = QChar::LineFeed);
+    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
