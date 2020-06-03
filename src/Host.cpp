@@ -221,7 +221,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
-, mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
@@ -591,6 +590,12 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
+        QFileInfo moduleFile = moduleStringList[0];
+        QStringList accepted_suffix;
+        accepted_suffix << "xml" << "trigger";
+        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+            return {false, QStringLiteral("module has to be a .xml file")};
+        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};

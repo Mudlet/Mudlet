@@ -286,12 +286,6 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void set_LF_ON_GA(bool b)
-    {
-        mLF_ON_GA = b;
-        mTelnet.set_LF_ON_GA(b);
-    }
-
     void adjustNAWS();
 
     bool installPackage(const QString&, int);
@@ -389,7 +383,6 @@ public:
     // pushed down:
     bool mIsProfileLoadingSequence;
 
-    bool mLF_ON_GA;
     bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;

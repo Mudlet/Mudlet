@@ -70,28 +70,34 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
 , mpComposer(nullptr)
+, mpDownloader()
+, mpProgressDialog()
+, mProfileName(profileName)
 , mpHost(pH)
+, mpOutOfBandDataIncomingCodec()
+, outgoingDataCodec()
+, hostPort()
+, mWaitingForResponse()
+, mZstream()
+, mNeedDecompression()
+, iac()
+, iac2()
+, insb()
+, recvdGA()
 , mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
-, mLF_ON_GA(false)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
-, mpProgressDialog()
-, mProfileName(profileName)
-, hostPort()
-, networkLatencyMin()
-, networkLatencyMax()
-, mWaitingForResponse()
-, mZstream()
-, recvdGA()
+, mIsTimerPosting()
 , lastTimeOffset()
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
 , enableMSP(false)
 , enableChannel102(false)
+, mDontReconnect(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
@@ -99,10 +105,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
 {
-    mIsTimerPosting = false;
-    mNeedDecompression = false;
-    mDontReconnect = false;
-
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
@@ -112,12 +114,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
         termType.append(QStringLiteral(APP_BUILD));
     }
 
-    iac = iac2 = insb = false;
-
     command = "";
-    curX = 80;
-    curY = 25;
-
     // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
@@ -386,7 +383,6 @@ void cTelnet::connectIt(const QString& address, int port)
 {
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
@@ -1421,14 +1417,17 @@ void cTelnet::processTelnetCommand(const std::string& command)
         if (option == OPT_MSDP) {
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
-            QByteArray _m = command.c_str();
+            QByteArray rawData = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            // _m is in the Mud Server's encoding, trim off the Telnet suboption
+
+            rawData = rawData.replace(TN_BELL, QLatin1String("\\\\7"));
+
+            // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            _m = _m.mid(3, static_cast<int>(command.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.constData());
+            rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(rawData.constData());
             return;
         }
 
@@ -2527,9 +2526,7 @@ void cTelnet::slot_processReplayChunk()
                 }
             }
 
-            if (mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA) {
-                cleandata.push_back('\n'); //part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            }
+            cleandata.push_back('\n');
             recvdGA = false;
             gotPrompt(cleandata);
             cleandata = "";
@@ -2713,10 +2710,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     gotPrompt(cleandata);
                     cleandata = "";
                 } else {
-                    if (mLF_ON_GA) //TODO: reenable option in preferences
-                    {
-                        cleandata.push_back('\n');
-                    }
+                    cleandata.push_back('\n');
                 }
             }
         } //for

@@ -693,8 +693,7 @@ void TTextEdit::unHighlight()
                 mpBuffer->buffer.at(y).at(x).deselect();
             }
     }
-    mForceUpdate = true;
-    update();
+    forceUpdate();
 }
 
 // ensure that mPA is top-right and mPB is bottom-right
@@ -949,6 +948,20 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             }
         }
         unHighlight();
+        // Ensure BOTH panes are updated if the lower one is showing
+        if (mIsLowerPane) {
+            // We wouldn't be getting to here if the lower pane was not visible:
+            mpConsole->mUpperPane->forceUpdate();
+            forceUpdate();
+        } else if (!mIsTailMode) {
+            // Not in tail mode means the lower pane is also showing (and we are the
+            // upper one) - so update both:
+            forceUpdate();
+            mpConsole->mLowerPane->forceUpdate();
+        } else {
+            // We are the upper pane and the lower one is not showing
+            forceUpdate();
+        }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
             int xind = x;
@@ -1136,8 +1149,24 @@ void TTextEdit::slot_selectAll()
 {
     mDragStart = QPoint(0, 0);
     mDragSelectionEnd = mpBuffer->getEndPos();
+    // need this to convert the above to mPA and mPB:
+    normaliseSelection();
+
     highlightSelection();
-    update();
+    // Ensure BOTH panes are updated if the lower one is showing
+    if (mIsLowerPane) {
+        // We wouldn't be getting to here if the lower pane was not visible:
+        mpConsole->mUpperPane->forceUpdate();
+        forceUpdate();
+    } else if (!mIsTailMode) {
+        // Not in tail mode means the lower pane is also showing (and we are the
+        // upper one) - so update both:
+        forceUpdate();
+        mpConsole->mLowerPane->forceUpdate();
+    } else {
+        // We are the upper pane and the lower one is not showing
+        forceUpdate();
+    }
 }
 
 void TTextEdit::slot_searchSelectionOnline()
@@ -1148,6 +1177,10 @@ void TTextEdit::slot_searchSelectionOnline()
 
 void TTextEdit::slot_copySelectionToClipboard()
 {
+    if (!establishSelectedText()) {
+        return;
+    }
+
     QString selectedText = getSelectedText();
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
@@ -1155,6 +1188,10 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
+    if (!establishSelectedText()) {
+        return;
+    }
+
     QString title;
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
@@ -1220,13 +1257,6 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // Is this a single line then we do NOT need to pad the first (and thus
     // only) line to the right:
     bool isSingleLine = (mDragStart.y() == mDragSelectionEnd.y());
-    if (mDragStart.y() < mDragSelectionEnd.y() || (mDragStart.y() == mDragSelectionEnd.y() && mDragStart.x() == mDragSelectionEnd.x())) {
-        mPA = mDragStart;
-        mPB = mDragSelectionEnd;
-    } else {
-        mPA = mDragSelectionEnd;
-        mPB = mDragStart;
-    }
     for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             return;
@@ -1252,6 +1282,33 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     forceUpdate();
 }
 
+bool TTextEdit::establishSelectedText()
+{
+    // mPA QPoint where selection started
+    // mPB QPoint where selection ended
+
+    // if selection was made backwards swap
+    // right to left
+    if (mFontWidth <= 0 || mFontHeight <= 0) {
+        return false;
+    }
+
+    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
+        return false;
+    }
+
+    if (mScreenHeight <= 0 || mScreenWidth <= 0) {
+        mScreenHeight = height() / mFontHeight;
+        mScreenWidth = 100;
+        if (mScreenHeight <= 0) {
+            return false;
+        }
+    }
+
+    normaliseSelection();
+    return true;
+}
+
 // Technically this copies whole lines into the image even if the selection does
 // not start at the beginning of the first line or end at the last grapheme on
 // the last line.
@@ -1259,32 +1316,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
 
-    // mPA QPoint where selection started
-    // mPB QPoint where selection ended
-
-    // if selection was made backwards swap
-    // right to left
-    if (mFontWidth <= 0 || mFontHeight <= 0) {
+    if (!establishSelectedText()) {
         return;
-    }
-
-    if (mSelectedRegion == QRegion(0, 0, 0, 0)) {
-        return;
-    }
-
-    if (mScreenHeight <= 0 || mScreenWidth <= 0) {
-        mScreenHeight = height() / mFontHeight;
-        mScreenWidth = 100;
-        if (mScreenHeight <= 0 || mScreenWidth <= 0) {
-            return;
-        }
-    }
-    if (mDragStart.y() < mDragSelectionEnd.y() || (mDragStart.y() == mDragSelectionEnd.y() && mDragStart.x() == mDragSelectionEnd.x())) {
-        mPA = mDragStart;
-        mPB = mDragSelectionEnd;
-    } else {
-        mPA = mDragSelectionEnd;
-        mPB = mDragStart;
     }
 
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
@@ -1381,76 +1414,40 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
 void TTextEdit::searchSelectionOnline()
 {
-    QString selectedText = getSelectedText(' ');
+    QString selectedText = getSelectedText(QChar::Space);
     QString url = QUrl::toPercentEncoding(selectedText.trimmed());
     url.prepend(mpHost->getSearchEngine().second);
     QDesktopServices::openUrl(QUrl(url));
 }
 
-QString TTextEdit::getSelectedText(char newlineChar)
+QString TTextEdit::getSelectedText(QChar newlineChar)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
 
-    // if selection was made backwards swap
-    // right to left
-    normaliseSelection();
+    int startLine = std::max(0, mPA.y());
+    int endLine = std::min(mPB.y(), mpBuffer->lineBuffer.size());
+    int offset = endLine - startLine;
+    int startPos = std::max(0, mPA.x());
+    int endPos = std::min(mPB.x(), mpBuffer->lineBuffer.at(endLine).size());
+    QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
-    QString text;
-    int x, y, total;
-
-
-    if(!mpBuffer->buffer[0].size()) {
-        return text;
+    if (mPA.y() == mPB.y()) {
+        // Is a single line, so trim characters off the beginning and end
+        // according to startPos and endPos:
+        textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
+    } else {
+        // replace a number of QChars at the front with a corresponding
+        // number of spaces to push the first line to the right so it lines up
+        // with the following lines:
+        textLines[0] = textLines.at(0).mid(startPos);
+        textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
+        // and chop off the required number of QChars from the end of the last
+        // line:
+        textLines[offset] = textLines.at(offset).left(1 + endPos);
     }
-    // for each selected line
-    bool isSingleLine = (mPA.y() == mPB.y());
-    // CHECKME: the <= together with the +1 in the test looks suspecious:
-    for (y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
-        // stop if we are at the end of the buffer lines
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return text;
-        }
 
-        x = 0;
-        // if the selection started on this line
-        if (y == mPA.y()) {
-            // start from the column where the selection started
-            if (mpBuffer->lineBuffer.at(y).size()) {
-                if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                    x = mPA.x();
-                }
-            }
-            if (!isSingleLine) {
-                // insert the number of spaces to push the first line to the right
-                // so it lines up with the following lines - but only if there
-                // is MORE than a single line:
-                text.append(QStringLiteral(" ").repeated(x));
-            }
-        }
-        // while we are not at the end of the buffer line
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                text.append(mpBuffer->lineBuffer[y].at(x));
-            }
-            // if the selection ended on this line
-            if (y >= mPB.y()) {
-                // stop if the selection ended on this column or the buffer line is ending
-                if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return text;
-                }
-            }
-            x++;
-        }
-        // we never append the last character of a buffer line se we set our own
-        text.append(newlineChar);
-    }
-    qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
-    return text;
+    return textLines.join(newlineChar);
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
