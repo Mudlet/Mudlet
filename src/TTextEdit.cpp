@@ -1284,8 +1284,10 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
 bool TTextEdit::establishSelectedText()
 {
-    // mPA QPoint where selection started
-    // mPB QPoint where selection ended
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        // Prevent problems with trying to do a copy when TBuffer is empty:
+        return false;
+    }
 
     // if selection was made backwards swap
     // right to left
