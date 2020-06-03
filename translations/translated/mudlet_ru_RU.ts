@@ -10545,7 +10545,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1085"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</translation>
+      <translation>&lt;body&gt;&lt;p&gt;При отображении содержимого Lua в области текстового редактора вместо пробелов отображаются символы табуляции и пробелы с видимыми метками.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1095"/>
@@ -10869,7 +10869,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2077"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Область по умолчанию (идентификатор области -1) используется некоторыми скриптами картографа (mapper) как временная &apos; &apos; для комнат до того, как они&apos;будут помещены в нужную область&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
@@ -10889,7 +10889,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished">Original</translation>
+      <translation>Оригинал</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
@@ -11624,7 +11624,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Это значение по умолчанию для этого помещения, которое будет использоваться для любого выхода &lt;i&gt;, который ведет к &lt;u&gt;в этой комнате&lt;/u&gt;&lt;/i&gt;, у которого нет собственного набора значений-это значение нельзя изменить здесь.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
@@ -11789,7 +11789,7 @@ Weight</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Установите положительное целое значение, чтобы переопределить значение по умолчанию (Room) для использования этого выхода, ноль означает значение по умолчанию.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
