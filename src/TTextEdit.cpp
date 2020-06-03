@@ -1422,7 +1422,7 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
-QString TTextEdit::getSelectedText(QChar newlineChar)
+QString TTextEdit::getSelectedText(const QChar& newlineChar)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
@@ -1437,16 +1437,22 @@ QString TTextEdit::getSelectedText(QChar newlineChar)
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
         // according to startPos and endPos:
-        textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
+        if (!textLines.at(0).isEmpty()) {
+            textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
+        }
     } else {
         // replace a number of QChars at the front with a corresponding
         // number of spaces to push the first line to the right so it lines up
         // with the following lines:
-        textLines[0] = textLines.at(0).mid(startPos);
-        textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
+        if (!textLines.at(0).isEmpty()) {
+            textLines[0] = textLines.at(0).mid(startPos);
+            textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
+        }
         // and chop off the required number of QChars from the end of the last
         // line:
-        textLines[offset] = textLines.at(offset).left(1 + endPos);
+        if (!textLines.at(offset).isEmpty()) {
+            textLines[offset] = textLines.at(offset).left(1 + endPos);
+        }
     }
 
     return textLines.join(newlineChar);
