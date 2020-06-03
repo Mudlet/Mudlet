@@ -232,10 +232,7 @@ mudlet::mudlet()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    // Do not enable this option currently - although the user can drag the tabs
-    // the underlying main TConsoles do not move and then it means that the
-    // wrong title can be shown over the wrong window.
-    mpTabBar->setMovable(false);
+    mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
@@ -527,7 +524,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1699,6 +1696,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpCurrentActiveHost = pH;
 
+    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -4247,16 +4245,21 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 }
 
-// Needed because the use of a shortcut to trigger the menuaction does not
-// provide the checked state of the item to which the shortcut is associated:
+// Connected to and needed by the shortcut to trigger the menu or toolbar button
+// action because it does not provide the checked state of the item to which the
+// shortcut is associated:
 void mudlet::slot_toggle_multi_view()
 {
     const bool newState = !mMultiView;
     slot_multi_view(newState);
 }
 
+// Connected to a menu and toolbar button (but not a short-cut to one of them)
+// as they provide their checked state directly:
 void mudlet::slot_multi_view(const bool state)
 {
+    // Ensure the state of both controls is updated to reflect the state of the
+    // option:
     if (mpActionMultiView->isChecked() != state) {
         mpActionMultiView->setChecked(state);
     }
@@ -4286,19 +4289,39 @@ void mudlet::slot_multi_view(const bool state)
     }
 }
 
-// Called by short-cut that doesn't pass the menu-items checked state
 void mudlet::slot_toggle_compact_input_line()
 {
-    const bool newState = !mCompactInputLine;
-    slot_compact_input_line(newState);
+    if (!mpCurrentActiveHost) {
+        return;
+    }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
+
+    if (compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+        setCompactInputLine(false);
+    } else {
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
+        setCompactInputLine(true);
+    }
 }
 
-// Called by the menu-item's action that returns the checked state
-void mudlet::slot_compact_input_line(const bool state)
+void mudlet::set_compact_input_line()
 {
-    if (mCompactInputLine != state) {
-        mCompactInputLine = state;
-        emit signal_setCompactInputLine(state);
+    if (!mpCurrentActiveHost) {
+        return;
+    }
+
+    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
+
+    if (!compactInputLine()) {
+        buttons->show();
+        dactionInputLine->setText(tr("Compact input line"));
+    } else {
+        buttons->hide();
+        dactionInputLine->setText(tr("Standard input line"));
     }
 }
 

@@ -322,6 +322,7 @@ public:
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
     bool compactInputLine() const { return mCompactInputLine; }
+    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
 
@@ -549,7 +550,6 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
-    void signal_setCompactInputLine(const bool);
 
 
 private slots:
@@ -580,7 +580,6 @@ private slots:
     void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
-    void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
 
