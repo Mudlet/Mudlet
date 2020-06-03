@@ -10160,7 +10160,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Если вы играете в не англоязычную игру и видите � вместо текста или специальных букв типа &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t - попробуйте изменить кодировку на UTF-8 или на ту, которую предлагает ваша игра.&lt;/p&gt;&lt;p&gt;Для некоторых кодировок на некоторых операционных системах сам Mudlet должен предоставлять нужный кодек; если это так, то к этим именам кодировок будет применен префикс &lt;tt&gt;m &lt;/tt&gt; (так что если у них есть ошибки, то вина может быть адресована верно!)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
@@ -10170,7 +10170,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Включает MSP - предоставляет сообщения протокола Mud Sound во время игры для игр которые поддерживают протокол&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
@@ -10436,7 +10436,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation type="unfinished">Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</translation>
+      <translation>Включить MSP (Mud Sound Protocol, (экспериментально) в Mudlet)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="485"/>
@@ -10540,7 +10540,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1075"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Некоторые игры (в частности, все IRE MUD) страдают от ошибки, когда&apos;t не корректно собщают клиенту, где должна быть новая строка. Включите эту опцию, чтобы исправить добавление текста к предыдущей строке запроса.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1085"/>
