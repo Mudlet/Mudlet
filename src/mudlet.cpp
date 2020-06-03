@@ -520,7 +520,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1672,7 +1672,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpCurrentActiveHost = pH;
 
-    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -4230,40 +4229,20 @@ void mudlet::slot_multi_view()
     }
 }
 
-
+// Called by the short-cut to the menu item that doesn't pass the checked state
+// of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-        setCompactInputLine(false);
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
-        setCompactInputLine(true);
-    }
+    const bool newState = !mCompactInputLine;
+    slot_compact_input_line(newState);
 }
 
-void mudlet::set_compact_input_line()
+// Called by the menu-item's action itself, that DOES pass the checked state:
+void mudlet::slot_compact_input_line(const bool state)
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (!compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        emit signal_setCompactInputLine(state);
     }
 }
 
