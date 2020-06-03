@@ -2707,7 +2707,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1212"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished">It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</translation>
+      <translation>Было обнаружено, что &quot;_###&quot; уже были использованы формы суффиксов;, для простоты в алгоритме переименования они были удалены и, возможно изменены, так как Mudlet классифицирует это, если номер, назначенный таким образом &lt;b&gt;имеет значение&lt;/b&gt; важен для вас, вы можете изменить его обратно, при условии переименования области, которая выделила суффикс, который был нужен первым...!&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1216"/>
@@ -7621,7 +7621,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished">&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Похоже, что у вас&apos;еще не установлены &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;скрипты (mapping scripts) отвечающие за создание карт&lt;/a&gt; - картографу(mapper) необходим скрипт чтобы он мог отслеживать нахождение и перемещение на карте вашего персонажа. Вы можете либо создать его самостоятельно, либо импортировать существующий, который сделал кто-то другой.&lt;/p&gt;&lt;p&gt;Хотите посмотреть, существует ли такой?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -9524,7 +9524,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="879"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">ASCII (Basic)</translation>
+      <translation>ASCII (базовый)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="880"/>
@@ -9536,7 +9536,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="885"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">ISO 8859-1 (Western European)</translation>
+      <translation>ISO-8859-1 - Западноевропейский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="886"/>
@@ -9666,7 +9666,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="910"/>
       <source>CP1161 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">CP1161 (Latin/Thai)</translation>
+      <translation>CP1161 (Латинский/Тайландский)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="911"/>
@@ -9766,19 +9766,19 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="882"/>
       <source>GB18030 (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">GB18030 (Chinese)</translation>
+      <translation>GBK (Китайский/Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="883"/>
       <source>Big5-ETen (Taiwan)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">Big5-ETen (Taiwan)</translation>
+      <translation>Big5-ETen (Тайвань)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="884"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished">Big5-HKSCS (Hong Kong)</translation>
+      <translation>Big5-HKSCS (Гонконг)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1138"/>
