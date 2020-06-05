@@ -6925,7 +6925,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8976"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>хранить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5629"/>
@@ -7216,7 +7216,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- Введите сюда Lua код</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -9702,7 +9702,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1186"/>
       <source>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronized across profiles at the moment. </source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Примечание:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; и &lt;i&gt;.mpackage&lt;/i&gt; модули в настоящее время не могут быть синхронизированы&lt;br&gt; только &lt;i&gt;.xml&lt;/i&gt; пакеты в данный момент могут быть синхронизированы между профилями. </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4036"/>
@@ -12063,7 +12063,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="689"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>оставить</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="650"/>
