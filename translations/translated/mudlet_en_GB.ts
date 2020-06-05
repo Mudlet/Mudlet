@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Too many redirects.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>No data received from server</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Could not verify download integrity.</translation>
     </message>
   </context>
   <context>
@@ -33,13 +33,13 @@
       <location filename="../src/Host.cpp" line="804"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="805"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1528"/>
@@ -79,7 +79,7 @@ please wait...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2549"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Map - %1</translation>
     </message>
   </context>
   <context>
@@ -393,37 +393,38 @@ please wait...</translation>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Invalid keysequence used %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Error parsing %1: %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Error reading file %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 ranges</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Line %1, Column %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, Offset %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 chars selected</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
@@ -529,7 +530,7 @@ it with a new symbol for this room:</translation>
       <location filename="../src/T2DMap.cpp" line="3646"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {count:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3770"/>
@@ -545,7 +546,7 @@ it with a new symbol for this room:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="4106"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {count:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1349"/>
@@ -571,7 +572,7 @@ it with a new symbol for this room:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
@@ -1215,7 +1216,14 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Choose an existing
+roomweight (= travel
+time) from the list
+(sorted by most commonly
+used first) or enter a
+new (positive) integer
+value for all selected
+rooms:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4165"/>
@@ -6798,7 +6806,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8976"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>keep</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5629"/>
@@ -7087,7 +7095,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- add your Lua code here</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -9570,7 +9578,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="1186"/>
       <source>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronized across profiles at the moment. </source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Note:&lt;/b&gt; &lt;i&gt;.zip&lt;/i&gt; and &lt;i&gt;.mpackage&lt;/i&gt; modules are currently unable to be synced&lt;br&gt; only &lt;i&gt;.xml&lt;/i&gt; packages are able to be synchronised across profiles at the moment. </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4036"/>
@@ -11917,7 +11925,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="689"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>keep</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="650"/>
