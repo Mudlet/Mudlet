@@ -142,7 +142,7 @@ QSize TTabBar::tabSizeHint(int index) const
     }
 }
 
-QString& TTabBar::tabName(const int index) const
+QString TTabBar::tabName(const int index) const
 {
     QString result{tabData(index).toString()};
     return result;
