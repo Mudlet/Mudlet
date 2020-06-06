@@ -84,7 +84,7 @@ public:
     bool tabItalic(const int index) const {return mStyle.tabItalic(index);}
     bool tabUnderline(const QString& tabName) const {return mStyle.tabUnderline(tabName);}
     bool tabUnderline(const int index) const {return mStyle.tabUnderline(index);}
-    QString& tabName(const int) const;
+    QString tabName(const int) const;
     int tabIndex(const QString&) const;
     void removeTab(const QString&);
     void removeTab(int);
