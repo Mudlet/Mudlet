@@ -97,7 +97,7 @@ while line <= #lines do
         -- Or, since May 2020 at all it seems - so now warn if one is seen
         print()
         print([[WARNING: a line reporting 'Ignored X untranslated source text(s)' has been
-ound in the mudlet_]] .. lang .. [[ translation.
+found in the mudlet_]] .. lang .. [[ translation.
 this is no longer expected or handled and will need to be addressed!
 ]])
         -- There IS an "Ignored..." line so increment the line counter past it,
