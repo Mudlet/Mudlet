@@ -993,9 +993,15 @@ function loadTranslations(packageName, fileName, languageCode, folder)
       translation = readJsonFile(langFile)
       translation = getTranslationTable(translation, packageName)
   end
-  if table.is_empty(translation) and defaultFile then
-      translation = readJsonFile(defaultFile)
-      translation = getTranslationTable(translation, packageName)
+  if defaultFile then
+    local defaultTranslation = readJsonFile(defaultFile)
+    defaultTranslation = getTranslationTable(defaultTranslation, packageName)
+    if table.is_empty(translation) then
+      translation = defaultTranslation
+    else
+      -- if some strings in language file are empty, string from defaultTranslation will be used
+      translation = table.update(defaultTranslation, translation)
+    end
   end
   if table.is_empty(translation) then
       return nil, "couldn't find translations for '"..packageName.."'"
