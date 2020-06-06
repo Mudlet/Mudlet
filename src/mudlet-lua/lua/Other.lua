@@ -999,7 +999,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
     if table.is_empty(translation) then
       translation = defaultTranslation
     else
-      -- if some strings in language file are empty string from defaultTranslation will be used
+      -- if some strings in language file are empty, string from defaultTranslation will be used
       translation = table.update(defaultTranslation, translation)
     end
   end
