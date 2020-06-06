@@ -51,6 +51,17 @@ function lines_from(file)
   return lines
 end
 
+-- From Igor Skoric (i.skoric@student.tugraz.at) at:
+-- http://lua-users.org/wiki/SimpleRound :
+function round(num, numDecimalPlaces)
+  local mult = 10^(numDecimalPlaces or 0)
+  if num >= 0 then
+    return math.floor(num * mult + 0.5) / mult
+  else
+    return math.ceil(num * mult - 0.5) / mult
+  end
+end
+
 -- tests the functions above
 local file = 'lrelease_output.txt'
 local lines = lines_from(file)
@@ -83,6 +94,12 @@ while line <= #lines do
       untranslated = currentLine:match("Ignored (%d+) untranslated source text%(s%)")
       if untranslated ~= nil then
         untranslated = tonumber(untranslated)
+        -- Or, since May 2020 at all it seems - so now warn if one is seen
+        print()
+        print([[WARNING: a line reporting 'Ignored X untranslated source text(s)' has been
+ound in the mudlet_]] .. lang .. [[ translation.
+this is no longer expected or handled and will need to be addressed!
+]])
         -- There IS an "Ignored..." line so increment the line counter past it,
         line = line + 1
       else
@@ -99,7 +116,8 @@ while line <= #lines do
       finished = finished,
       unfinished = unfinished,
       total = translated + (untranslated or 0),
-      translatedpc = math.floor((100 * translated)/(translated + (untranslated or 0)))
+--      translatedpc = math.floor((100 * translated)/(translated + (untranslated or 0)))
+      translatedpc = round((100 * finished)/translated)
     }
   end
 end
