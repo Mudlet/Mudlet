@@ -18,35 +18,14 @@
  ***************************************************************************/
 #include "TStringUtils.h"
 
-QStringRef TStringUtils::trimmedRef(const QStringRef& ref)
-{
-    int start = 0;
-    int end = ref.length();
-
-    while (start < end && ref[start].isSpace()) {
-        start++;
-    }
-
-    while (end > start && ref[end - 1].isSpace()) {
-        end--;
-    }
-
-    return QStringRef(ref.string(), ref.position() + start, end - start);
-}
-
-QStringRef TStringUtils::trimmedRef(const QString& str)
-{
-    return trimmedRef(QStringRef(&str));
-}
-
-QStringRef TStringUtils::stripRef(const QString& str, QChar start, QChar end)
+QStringView TStringUtils::strip(QStringView str, QChar start, QChar end)
 {
     int len = str.length();
     if (len > 1 && str.front() == start && str.back() == end) {
-        return str.midRef(1, len - 2);
+        return str.mid(1, len - 2);
     }
 
-    return QStringRef(&str);
+    return str;
 }
 
 bool TStringUtils::isQuote(QChar ch)
@@ -65,21 +44,17 @@ bool TStringUtils::isOneOf(QChar ch, const QString& chars)
     return false;
 }
 
-bool TStringUtils::isQuoted(const QStringRef& ref)
+bool TStringUtils::isQuoted(QStringView ref)
 {
     return TStringUtils::isQuote(ref.front()) && ref.front() == ref.back();
 }
 
-QStringRef TStringUtils::unquoteRef(const QStringRef& ref)
+QStringView TStringUtils::unquote(QStringView ref)
 {
     return isQuoted(ref) ? ref.mid(1, ref.size() - 2) : ref;
 }
-bool TStringUtils::isBetween(const QString& str, char first, char last)
-{
-    return isBetween(QStringRef(&str), first, last);
-}
 
-bool TStringUtils::isBetween(const QStringRef& str, char first, char last)
+bool TStringUtils::isBetween(QStringView str, char first, char last)
 {
     return str.front() == first && str.back() == last;
 }
