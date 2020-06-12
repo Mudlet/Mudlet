@@ -321,7 +321,6 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
-    bool compactInputLine() const { return mCompactInputLine; }
     void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
 
@@ -548,7 +547,6 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
-    void signal_setCompactInputLine(const bool);
 
 
 private slots:
@@ -593,7 +591,6 @@ private:
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
     void check_for_mappingscript();
-    void set_compact_input_line();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadMaps();
@@ -688,8 +685,6 @@ private:
     HostManager mHostManager;
 
     bool mshowMapAuditErrors;
-
-    bool mCompactInputLine;
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

@@ -176,7 +176,6 @@ mudlet::mudlet()
 , mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
 , mshowMapAuditErrors(false)
-, mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
@@ -1625,6 +1624,8 @@ void mudlet::slot_tab_changed(int tabID)
 
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
+
+    dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
@@ -3249,7 +3250,6 @@ void mudlet::readLateSettings(const QSettings& settings)
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
-    mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
@@ -3388,7 +3388,6 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
-    settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
@@ -4233,16 +4232,19 @@ void mudlet::slot_multi_view()
 // of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
 {
-    const bool newState = !mCompactInputLine;
+    const bool newState = !dactionInputLine->isChecked();
     slot_compact_input_line(newState);
 }
 
 // Called by the menu-item's action itself, that DOES pass the checked state:
 void mudlet::slot_compact_input_line(const bool state)
 {
-    if (mCompactInputLine != state) {
-        mCompactInputLine = state;
-        emit signal_setCompactInputLine(state);
+    if (dactionInputLine->isChecked() != state) {
+        // Ensure the menu item reflectes the actual state:
+        dactionInputLine->setChecked(state);
+    }
+    if (mpCurrentActiveHost) {
+        mpCurrentActiveHost->setCompactInputLine(state);
     }
 }
 
