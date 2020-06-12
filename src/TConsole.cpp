@@ -560,8 +560,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
-        // For some odd reason the first seems to get connected twice - the
-        // last flag prevents multiple ones being made
 
         // Load up the spelling dictionary from the system:
         setSystemSpellDictionary(mpHost->getSpellDic());
@@ -2689,6 +2687,12 @@ void TConsole::showStatistics()
 
 void TConsole::slot_searchBufferUp()
 {
+    // The search term entry box is one widget that does not pass a mouse press
+    // event up to the main TConsole and thus does not cause the focus to shift
+    // to the profile's tab when in multi-view mode - so add a call to make that
+    // happen:
+    mudlet::self()->activateProfile(mpHost);
+
     QString _txt = mpBufferSearchBox->text();
     if (_txt != mSearchQuery) {
         mSearchQuery = _txt;
@@ -3048,9 +3052,13 @@ std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const
     return {false, QStringLiteral("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
 }
 
-
+// This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
+    // Ensure that this profile is the one that has it's tab selected in a
+    // multi-view situation:
+    mudlet::self()->activateProfile(mpHost);
+
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? QStringLiteral("sysWindowMousePressEvent") : QStringLiteral("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
@@ -3094,7 +3102,8 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mpHost->raiseEvent(mudletEvent);
 }
 
-
+// This does not tend to get the leftButton press events as they tend to be
+// captured by the TTextEdit or TCommandLine or other widgets within this class:
 void TConsole::mousePressEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, true);
