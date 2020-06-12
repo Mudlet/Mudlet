@@ -180,6 +180,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
+, mMultiView(false)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -410,8 +411,13 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
 
     mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
+    mpActionMultiView->setToolTip(tr("<p>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</p>",
+                                     // Intentional comment to separate arguments
+                                     "Same text is used in 2 places."));
     mpMainToolBar->addAction(mpActionMultiView);
+    mpActionMultiView->setCheckable(true);
+    mpActionMultiView->setChecked(false);
+    mpActionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
@@ -1629,6 +1635,26 @@ void mudlet::slot_tab_changed(int tabID)
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
+    // Restore the multi-view mode if it was enabled:
+    if (mpTabBar->count() > 1) {
+        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(true);
+            dactionMultiView->setEnabled(true);
+        }
+        if (mMultiView) {
+            QMapIterator<Host*, TConsole*> it(mConsoleMap);
+            while (it.hasNext()) {
+                it.next();
+                it.value()->show();
+            }
+        }
+
+    } else {
+        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(false);
+            dactionMultiView->setEnabled(false);
+        }
+    }
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
@@ -3598,7 +3624,7 @@ void mudlet::slot_update_shortcuts()
         dactionModuleManager->setShortcut(QKeySequence());
 
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
-        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_multi_view);
+        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
         connectShortcut = new QShortcut(connectKeySequence, this);
@@ -4224,15 +4250,49 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 }
 
-void mudlet::slot_multi_view()
+// Connected to and needed by the shortcut to trigger the menu or toolbar button
+// action because it does not provide the checked state of the item to which the
+// shortcut is associated:
+void mudlet::slot_toggle_multi_view()
 {
+    const bool newState = !mMultiView;
+    slot_multi_view(newState);
+}
+
+// Connected to a menu and toolbar button (but not a short-cut to one of them)
+// as they provide their checked state directly:
+void mudlet::slot_multi_view(const bool state)
+{
+    // Ensure the state of both controls is updated to reflect the state of the
+    // option:
+    if (mpActionMultiView->isChecked() != state) {
+        mpActionMultiView->setChecked(state);
+    }
+    if (dactionMultiView->isChecked() != state) {
+        dactionMultiView->setChecked(state);
+    }
+    mMultiView = state;
+    bool foundActiveHost = false;
     QMapIterator<Host*, TConsole*> it(mConsoleMap);
     while (it.hasNext()) {
         it.next();
-        it.value()->show();
+        if (mpCurrentActiveHost && (mpCurrentActiveHost == it.key())) {
+            // After switching the option off need to redraw the, now only, main
+            // TConsole to be displayed for the currently active profile:
+            foundActiveHost = true;
+            it.value()->show();
+        } else if (mMultiView) {
+            it.value()->show();
+        } else {
+            it.value()->hide();
+        }
+    }
+    if (!foundActiveHost && mpTabBar->count() > 0) {
+        // If there IS at least one profile still active, but none of them WAS
+        // the active one then make one (the first) the active one:
+        slot_tab_changed(0);
     }
 }
-
 
 void mudlet::slot_toggle_compact_input_line()
 {
@@ -5143,6 +5203,10 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    if (mMultiView) {
+        // We do not need to mark tabs with activity if they are all on show anyhow:
+        return;
+    }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
         if (mpTabBar->count() > 1) {
@@ -5937,4 +6001,28 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+void mudlet::activateProfile(Host* pHost)
+{
+    if (!mMultiView || !pHost) {
+        // We do not need to update the currently selected tab if we are not in
+        // multi-view mode as that will happen by the user selecting the tab
+        // themself - also, if the supplied argument is a nullptr we do not need
+        // to do anything:
+        return;
+    }
+
+    const QString newActiveHostName{pHost->getName()};
+    if (mpCurrentActiveHost != pHost) {
+        // Need to switch mpCurrentActiveHost to be the given pHost and change
+        // the tab to match - without triggering slot_tab_changed(int)
+        int tabToBeActive = mpTabBar->tabIndex(newActiveHostName);
+        if (tabToBeActive >= 0) {
+            mpTabBar->blockSignals(true);
+            mpTabBar->setCurrentIndex(tabToBeActive);
+            mpTabBar->blockSignals(false);
+        }
+        mpCurrentActiveHost = pHost;
+    }
 }
