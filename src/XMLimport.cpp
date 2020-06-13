@@ -371,7 +371,8 @@ void XMLimport::readMap()
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).begin(), tempAreaRoomsHash.values(areaId).end()};
+        auto values = tempAreaRoomsHash.values(areaId);
+        QSet<int> areaRoomsSet{values.begin(), values.end()};
 #else
         QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
 #endif
