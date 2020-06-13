@@ -5611,7 +5611,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2687"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Press to pick destination(s)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2924"/>
@@ -7801,7 +7801,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="302"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="307"/>
@@ -8297,7 +8297,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="426"/>
@@ -10854,7 +10854,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1902"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Copy map to other profile(s):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1918"/>
@@ -10864,7 +10864,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Copy to destination(s)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1943"/>
@@ -11717,7 +11717,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation type="unfinished"/>
+      <translation>Which area would you like to move the room(s) to?</translation>
     </message>
   </context>
   <context>
