@@ -7910,7 +7910,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/ui/main_window.ui" line="302"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Divide lo schermo Mudlet per mostrare più profili contemporaneamente; disabilitato quando non ne caricati almeno due.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="307"/>
@@ -8406,7 +8406,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Divide lo schermo Mudlet per mostrare più profili contemporaneamente; disabilitato quando non ne caricati almeno due.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="426"/>
