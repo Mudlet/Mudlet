@@ -2,8 +2,8 @@ describe("Tests TableUtils.lua functions", function()
 
   describe("spairs", function()
     it("should sort by basic sorted keys by default", function()
-      local tbl = { Tom = 40, Mary = 50, Joe = 23 }
-      local expected = "Joe has 23 thingies\nMary has 50 thingies\nTom has 40 thingies\n"
+      local tbl = { Tom = 40, Mary = 50, Joe = 24 }
+      local expected = "Joe has 24 thingies\nMary has 50 thingies\nTom has 40 thingies\n"
       local actual = ""
       for name, thingies in spairs(tbl) do
         actual = actual .. string.format("%s has %d thingies\n", name, thingies)
