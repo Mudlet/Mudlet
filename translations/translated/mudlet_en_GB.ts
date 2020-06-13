@@ -1442,7 +1442,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1596"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Loading map(1) at %1 report</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1598"/>
@@ -3256,7 +3256,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2095"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Visual</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2038"/>
@@ -3338,7 +3338,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>Loading update information…</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
@@ -3438,27 +3438,27 @@ and this one cannot read it, you need a newer Mudlet!</translation>
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Parsing area data...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="354"/>
       <source>Parsing room data...</source>
-      <translation type="unfinished"/>
+      <translation>Parsing room data...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="358"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Parsing environment data...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="366"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Assigning rooms to their areas...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="520"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Parsing room data [count: %1]...</translation>
     </message>
   </context>
   <context>
@@ -3519,12 +3519,12 @@ and this one cannot read it, you need a newer Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="170"/>
       <source>Dock Area Top</source>
-      <translation type="unfinished"/>
+      <translation>Dock Area Top</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="175"/>
       <source>Dock Area Left</source>
-      <translation type="unfinished"/>
+      <translation>Dock Area Left</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="180"/>
@@ -3539,27 +3539,27 @@ and this one cannot read it, you need a newer Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Button Properties</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Button Rotation:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>no rotation</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
       <source>90° rotation to the left</source>
-      <translation type="unfinished"/>
+      <translation>90° rotation to the left</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="241"/>
       <source>90° rotation to the right</source>
-      <translation type="unfinished"/>
+      <translation>90° rotation to the right</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
@@ -4032,58 +4032,58 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2362"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>Optional</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2378"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Character name:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2388"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>The character's name</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Enable Discord integration (not supported by game)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <location filename="../src/ui/connection_profiles.ui" line="2552"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Game description or your notes</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2368"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Password:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2427"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Character's password. Note that the password isn&apos;t encrypted in storage</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2404"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2410"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Open profile on Mudlet start</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2420"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Reconnect automatically</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2443"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Discord integration</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2478"/>
