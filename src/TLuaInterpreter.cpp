@@ -14594,6 +14594,7 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
 int TLuaInterpreter::getClipboardText(lua_State* L)
 {
     QClipboard* clipboard = QApplication::clipboard();
@@ -14601,6 +14602,7 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
