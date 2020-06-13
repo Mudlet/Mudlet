@@ -14603,15 +14603,14 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    if (lua_isstring(L, 1)) {
-        QClipboard* clipboard = QApplication::clipboard();
-        clipboard->setText(QString::fromUtf8(lua_tostring(L, 1)));
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setClipboard: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setClipboardText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
         return lua_error(L);
     }
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(QString::fromUtf8(lua_tostring(L, 1)));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // No documentation available in wiki - internal function
