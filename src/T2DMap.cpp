@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -2498,6 +2498,7 @@ bool T2DMap::event(QEvent* event)
 
 void T2DMap::mousePressEvent(QMouseEvent* event)
 {
+    mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (event->buttons() & Qt::LeftButton) {
         // move map with left mouse button + ALT

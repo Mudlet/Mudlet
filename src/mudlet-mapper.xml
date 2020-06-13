@@ -5288,7 +5288,7 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "20.4.1"
+local newversion = "20.6.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -11058,6 +11058,33 @@ end</script>
 						</eventHandlerList>
 					</Script>
 				</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>StickMUD</name>
+						<packageName></packageName>
+						<script>-------------------------------------------------
+--         Put your Lua functions here.        --
+--                                             --
+-- Note that you can also use external scripts --
+-------------------------------------------------
+</script>
+						<eventHandlerList />
+						<Script isActive="yes" isFolder="no">
+							<name>stickmud_stop_speedwalk_for_wrong_dir</name>
+							<packageName></packageName>
+							<script>function stickmud_stop_speedwalk_for_wrong_dir()
+  if mmp.game and mmp.game ~= "StickMUD" then
+    return
+  end
+  if #mmp.speedWalkPath &gt; 0 then
+    echo("The way \"" .. gmcp.Room.WrongDir .. "\" is blocked. Stopping speedwalk.")
+    mmp.stop()
+  end
+end</script>
+							<eventHandlerList>
+								<string>gmcp.Room.WrongDir</string>
+							</eventHandlerList>
+						</Script>
+					</Script>
 			</ScriptGroup>
 			<ScriptGroup isActive="yes" isFolder="yes">
 				<name>Test / one-time things</name>

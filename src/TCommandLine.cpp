@@ -549,6 +549,10 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
 
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
+
+    // Make sure this profile's tab gets activated in multi-view mode:
+    mudlet::self()->activateProfile(mpHost);
+
     QPlainTextEdit::focusInEvent(event);
 }
 
@@ -820,12 +824,17 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
+        // The use of accept here prevents this event from reaching any parent
+        // widget - like the TConsole containing this TCommandLine...
         event->accept();
+        mudlet::self()->activateProfile(mpHost);
         return;
     }
 
-    // Process any other possible mousePressEvent
+    // Process any other possible mousePressEvent - which is default popup
+    // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
