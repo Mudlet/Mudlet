@@ -6007,5 +6007,6 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }
