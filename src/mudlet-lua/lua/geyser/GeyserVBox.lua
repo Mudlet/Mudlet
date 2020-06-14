@@ -27,7 +27,14 @@ end
 -- Called when a new element is added
 function Geyser.VBox:organize()
   self.parent:reposition()
-
+  -- Workaround for issue with width/height being 0 at creation
+  local zero_width, zero_height = false, false
+  if self:get_width() == 0 then
+    self:resize(1, nil)
+  end
+  if self:get_height() == 0 then
+    self:resize(nil, 1)
+  end
   local window_height = (self:calculate_dynamic_window_size().height / self.get_height()) * 100
   local start_y = 0
   for _, window_name in ipairs(self.windows) do
@@ -42,7 +49,7 @@ function Geyser.VBox:organize()
       height = window_height * window.v_stretch_factor
     end
     window:resize(width.."%", height.."%")
-    start_y = start_y + (window:get_height() / self:get_height()) * 100
+    start_y = start_y + height
   end
 end
 
