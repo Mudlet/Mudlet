@@ -1,5 +1,27 @@
 describe("Tests TableUtils.lua functions", function()
 
+  describe("spairs", function()
+    it("should sort by basic sorted keys by default", function()
+      local tbl = { Tom = 40, Mary = 50, Joe = 24 }
+      local expected = "Joe has 24 thingies\nMary has 50 thingies\nTom has 40 thingies\n"
+      local actual = ""
+      for name, thingies in spairs(tbl) do
+        actual = actual .. string.format("%s has %d thingies\n", name, thingies)
+      end
+      assert.are.equal(expected,actual)
+    end)
+
+    it("should sort based on a given function", function()
+      local tbl = { Tom = 40, Mary = 50, Joe = 23 }
+      local expected = "Joe has 23 thingies\nTom has 40 thingies\nMary has 50 thingies\n"
+      local actual = ""
+      for name, thingies in spairs(tbl, function(t,a,b) return t[a] < t[b] end) do --iterate from lowest value to highest
+        actual = actual .. string.format("%s has %d thingies\n", name, thingies)
+      end
+      assert.are.equal(expected, actual)
+    end)
+  end)
+
   describe("table.is_empty(tbl)", function()
     it("Should return false if the table has an entry in it", function()
       assert.is_false(table.is_empty({"one"}))
