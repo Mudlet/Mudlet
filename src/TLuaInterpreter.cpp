@@ -14594,6 +14594,27 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
+int TLuaInterpreter::getClipboardText(lua_State* L)
+{
+    QClipboard* clipboard = QApplication::clipboard();
+    lua_pushstring(L, clipboard->text().toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
+int TLuaInterpreter::setClipboardText(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setClipboardText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(QString::fromUtf8(lua_tostring(L, 1)));
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
@@ -16920,6 +16941,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "getClipboardText", TLuaInterpreter::getClipboardText);
+    lua_register(pGlobalLua, "setClipboardText", TLuaInterpreter::setClipboardText);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "tempAnsiColorTrigger", TLuaInterpreter::tempAnsiColorTrigger);
     lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);
