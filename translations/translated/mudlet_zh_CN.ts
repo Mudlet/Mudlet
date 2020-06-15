@@ -7131,22 +7131,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>-- add your Lua code here</source>
-      <translation>-- 在此输入您的 lua 代码</translation>
+      <translation>-- 在这里添加你的 Lua 代码</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>精确匹配大小写</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="684"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>包含变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="687"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>搜索变量（较慢）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="779"/>
@@ -7526,7 +7526,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/main.cpp" line="165"/>
       <source>Profile to open automatically</source>
-      <translation type="unfinished"/>
+      <translation>要自动打开的配置文件</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="165"/>
@@ -7537,12 +7537,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/main.cpp" line="168"/>
       <location filename="../src/main.cpp" line="174"/>
       <source>Display help and exit</source>
-      <translation type="unfinished"/>
+      <translation>显示帮助并退出</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="171"/>
       <source>Display version and exit</source>
-      <translation type="unfinished"/>
+      <translation>显示版本并退出</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="184"/>
@@ -7555,7 +7555,15 @@ It will not save to disk, so changes will be lost in case of a computer/program 
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>用法: %1 [OPTION...]
+       -h， --help 显示此消息。
+       -v， --version 显示版本信息。
+       -q， --quiet 启动时不显示启动屏幕。
+       --profile=&lt;profile&gt;  打开其它配置文件
+
+来自Qt库的其他继承的选项，有可能不能
+在此应用程序正常使用:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="241"/>
@@ -7577,13 +7585,15 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="249"/>
       <source>Copyright © 2008-2020  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>版权所有 © 2008-2020  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
-      <translation type="unfinished"/>
+      <translation>许可证 GPLv2+: GNU GPL 版本 2 或更高版本 - http://gnu.org/licenses/gpl.html
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="251"/>
@@ -9402,19 +9412,19 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="888"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ASCII(基本)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="889"/>
       <source>UTF-8 (Recommended)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>UTF-8 (推荐)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="894"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-1 (西欧)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="895"/>
@@ -9505,21 +9515,21 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="910"/>
       <source>CP437 (OEM Font)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM字体)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="911"/>
       <location filename="../src/mudlet.cpp" line="912"/>
       <source>CP667 (Mazovia)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP667 (马佐维亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="913"/>
       <location filename="../src/mudlet.cpp" line="914"/>
       <source>CP737 (DOS Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP737 ( DOS 希腊语)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="915"/>
@@ -9538,13 +9548,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="918"/>
       <source>CP869 (DOS Greek 2)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP869 ( DOS 希腊语 2)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="919"/>
       <source>CP1161 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP1161(拉丁文/泰文)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="920"/>
@@ -9643,25 +9653,25 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="890"/>
       <source>GBK (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GBK(中文)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="891"/>
       <source>GB18030 (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GB18030(中文)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="892"/>
       <source>Big5-ETen (Taiwan)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-ETen(台湾)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="893"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-HKSCS(香港)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1147"/>
@@ -10837,7 +10847,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2987"/>
       <source>TextLabel</source>
-      <translation type="unfinished"/>
+      <translation>文本标签</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3017"/>
@@ -11457,7 +11467,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置房间 up 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -11486,7 +11496,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置房间 west 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
@@ -11636,7 +11646,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>特殊出口:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
@@ -11649,13 +11659,13 @@ Room ID</source>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>没有路径</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>出口权重</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
@@ -11672,7 +11682,7 @@ None</source>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>开启的门</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
@@ -11968,7 +11978,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="689"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>保持</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="650"/>
