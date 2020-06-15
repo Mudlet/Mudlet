@@ -34,7 +34,7 @@ function Geyser.VBox:organize()
   if self:get_height() == 0 then
     self:resize(nil, "0.9px")
   end
-  local window_height = (self:calculate_dynamic_window_size().height / self.get_height()) * 100
+  local window_height = (self:calculate_dynamic_window_size().height / self:get_height()) * 100
   local start_y = 0
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
