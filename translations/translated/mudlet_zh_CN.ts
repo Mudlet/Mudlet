@@ -7746,7 +7746,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="326"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>公测版将更新的功能更快地送到你手中，你也能帮助我们更快地发现其中的问题。发现了什么奇怪的东西？请尽快告诉我们</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -9647,7 +9647,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="430"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>公共测试版将更新的功能更快地送到你手中，你也能帮助我们更快地发现其中的问题。发现了什么奇怪的东西？请尽快告诉我们</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="890"/>
@@ -9852,7 +9852,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="5114"/>
       <source>Update installed - restart to apply</source>
-      <translation type="unfinished"/>
+      <translation>更新已安装 - 重新启动以应用</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="5188"/>
@@ -10842,7 +10842,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2975"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>保存角色登录密码：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2987"/>
