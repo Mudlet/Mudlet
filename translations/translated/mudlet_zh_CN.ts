@@ -33,13 +33,13 @@
       <location filename="../src/Host.cpp" line="804"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 非常感谢你使用公共测试版!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="805"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - %1 提交报告将帮助我们提升 Mudlet .</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1528"/>
@@ -1540,13 +1540,13 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Lua 错误: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 找不到 Lua 模块 %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
@@ -3357,7 +3357,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% 更新</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
@@ -3792,7 +3792,12 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - 内部错误，没有找到当前设置的{&quot;%1&quot;} 的编码解码器。
+因此Mudlet不能以这种格式向游戏服务器发送数据。
+请检查是否有MUD和Mudlet可以
+使用的替代方式。Mudlet将尝试使用ASCII编码
+发送数据，但将仅限于基本英语的无重音字符。
+注意：该警告只会发出一次，直到编码改变。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2148"/>
@@ -5485,7 +5490,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="883"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (*错误, 向 Mudlet 开发者报告*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="997"/>
@@ -6533,13 +6538,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="570"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器工具栏 - %1 - 操作</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="606"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器工具栏 - %1 - 项</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="670"/>
@@ -6835,7 +6840,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8976"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>保持</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5629"/>
@@ -7126,7 +7131,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- 在此输入您的 lua 代码</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -7838,7 +7843,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="302"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;分割 Mudlet 屏幕以一次显示多个配置文件; 若加载的配置文件小于2个时则禁用此功能。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="307"/>
@@ -8333,7 +8338,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;分割 Mudlet 屏幕以一次显示多个配置文件; 若加载的配置文件小于2个时则禁用此功能。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="426"/>
