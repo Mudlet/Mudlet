@@ -26,6 +26,13 @@ end
 -- Called when a new element is added
 function Geyser.HBox:organize()
   self.parent:reposition()
+  -- Workaround for issue with width/height being 0 at creation
+  if self:get_width() == 0 then
+    self:resize("0.9px", nil)
+  end
+  if self:get_height() == 0 then
+    self:resize(nil, "0.9px")
+  end
   local window_width = (self:calculate_dynamic_window_size().width / self:get_width()) * 100
   local start_x = 0
   for _, window_name in ipairs(self.windows) do
@@ -40,7 +47,7 @@ function Geyser.HBox:organize()
       height = 100
     end
     window:resize(width.."%", height.."%")
-    start_x = start_x + (window:get_width() / self:get_width()) * 100
+    start_x = start_x + width
   end
 end
 
@@ -56,14 +63,6 @@ function Geyser.HBox:new(cons, container)
   setmetatable(me, self)
   self.__index = self
   me:organize()
-  return me
-end
-
---- Overridden constructor to use add2
-function Geyser.HBox:new2 (cons, container)
-  cons = cons or {}
-  cons.useAdd2 = true
-  local me = self:new(cons, container)
   return me
 end
 
