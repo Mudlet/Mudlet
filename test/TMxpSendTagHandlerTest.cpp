@@ -127,6 +127,31 @@ private slots:
         QCOMPARE(stub.mHints[0], "say I am Gandalf");
     }
 
+    void testSendHrefHintMismatch() {
+        // Example from starmourn on WARES command from NPCs
+        // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        TMxpTagParser parser;
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("3091");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 2);
+        QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
+        QCOMPARE(stub.mHrefs[1], "send([[BUY SUSPENDERS30901]])");
+
+        QCOMPARE(stub.mHints.size(), 2);
+        QCOMPARE(stub.mHints[0], "PROBE SUSPENDERS30901");
+        QCOMPARE(stub.mHints[1], "BUY SUSPENDERS30901");
+    }
+
 };
 
 #include "TMxpSendTagHandlerTest.moc"
