@@ -76,7 +76,7 @@ end</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>^\s*\[\s*[Ee]xits:\s*(.*)\]</string>
+					<string>(?i)^\s*\[\s*Exits:\s*(.*)\]</string>
 					<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
 					<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
 					<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>

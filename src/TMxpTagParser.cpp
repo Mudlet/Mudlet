@@ -22,19 +22,19 @@
 #include "TStringUtils.h"
 #include <QDebug>
 
-static QStringRef stripTagAndTrim(const QString& tagText)
+static QStringView stripTagAndTrim(const QString& tagText)
 {
-    return TStringUtils::trimmedRef(TStringUtils::stripRef(tagText, '<', '>'));
+    return TStringUtils::strip(QStringView(tagText).trimmed(), '<', '>').trimmed();
 }
 
 static bool isEndTag(const QString& tagText)
 {
-    return stripTagAndTrim(tagText).startsWith("/");
+    return stripTagAndTrim(tagText).startsWith('/');
 }
 
 static bool isTag(const QString& tagString)
 {
-    return TStringUtils::isBetween(TStringUtils::trimmedRef(tagString), '<', '>');
+    return TStringUtils::isBetween(QStringView(tagString).trimmed(), '<', '>');
 }
 
 QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& tagText, bool ignoreText) const
@@ -63,7 +63,7 @@ MxpTag* TMxpTagParser::parseTag(const QString& tagText) const
 
 MxpEndTag* TMxpTagParser::parseEndTag(const QString& tagText) const
 {
-    QStringRef tagContent = TStringUtils::trimmedRef(stripTagAndTrim(tagText)).mid(1);
+    QStringView tagContent = stripTagAndTrim(tagText).mid(1);
     const QStringList& parts = parseToList(tagContent);
 
     if (parts.size() > 1) {
@@ -75,7 +75,7 @@ MxpEndTag* TMxpTagParser::parseEndTag(const QString& tagText) const
 
 MxpStartTag* TMxpTagParser::parseStartTag(const QString& tagText) const
 {
-    QStringRef tagContent = TStringUtils::stripRef(tagText, '<', '>');
+    QStringView tagContent = TStringUtils::strip(tagText, '<', '>');
 
     const QStringList& parts = parseToList(tagContent);
 
@@ -104,16 +104,16 @@ MxpTagAttribute TMxpTagParser::parseAttribute(const QString& attr) const
     }
 
     const QString& name = attr.left(sepIdx);
-    const QString& value = TStringUtils::unquoteRef(attr.midRef(sepIdx + 1)).toString();
+    const QString& value = TStringUtils::unquote(QStringView(attr).mid(sepIdx + 1)).toString();
 
     return MxpTagAttribute(name, value);
 }
 QStringList TMxpTagParser::parseToList(const QString& tagText)
 {
-    return parseToList(QStringRef(&tagText));
+    return parseToList(QStringView(tagText));
 }
 
-QStringList TMxpTagParser::parseToList(const QStringRef& tagText)
+QStringList TMxpTagParser::parseToList(QStringView tagText)
 {
     QStringList result;
 
@@ -146,7 +146,7 @@ QStringList TMxpTagParser::parseToList(const QStringRef& tagText)
     return result;
 }
 
-int TMxpTagParser::readTextBlock(const QStringRef& str, int start, int end, QChar terminatingChar)
+int TMxpTagParser::readTextBlock(QStringView str, int start, int end, QChar terminatingChar)
 {
     bool inQuote = false;
     QChar curQuote = 0;

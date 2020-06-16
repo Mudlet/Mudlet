@@ -512,6 +512,8 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getClipboardText(lua_State*);
+    static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
