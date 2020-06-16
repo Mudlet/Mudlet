@@ -787,7 +787,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()) {
                 setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpHost->mpConsole->getLinkStore().getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 QToolTip::showText(event->globalPos(), tooltip.join("\n"));
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -937,7 +937,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
-                    QStringList command = mpHost->mpConsole->getLinkStore().getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
