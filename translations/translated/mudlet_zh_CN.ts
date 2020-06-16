@@ -4976,7 +4976,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2354"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation>不允许 %1 字符。 使用下列其中一项:</translation>
+      <translation>字符 %1 不允许使用， 可选用下列其中一项：</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2384"/>
@@ -5079,7 +5079,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2397"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation>端口号必须在0 ~ 65535之间。</translation>
+      <translation>端口号须大于0且不超过65535。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
