@@ -403,10 +403,16 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
+    bool useReplacementCharacter = false;
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
     } else {
         charWidth = getGraphemeWidth(unicode);
+        if (!charWidth) {
+            // Print the grapheme replacement character instead - which seems to
+            // be 1 wide
+            useReplacementCharacter = true;
+        }
     }
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
@@ -440,15 +446,15 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         bgColor = charStyle.background();
     }
 
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * (charWidth ? charWidth : 1), mFontHeight);
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * (useReplacementCharacter ? 1 : charWidth), mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
 
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (charWidth ? grapheme : replacementCharacter));
-    return (charWidth ? charWidth : 1);
+    painter.drawText(textRect.x(), textRect.y() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
+    return (useReplacementCharacter ? 1 : charWidth);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -465,12 +471,12 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         return 2;
     case widechar_nonprint:
         // -1 = The character is not printable - so put in a replacement
-        // character instead
+        // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
-                                             << QString::number(unicode, 16) << ".";
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
                 mProblemCodepoints.insert(unicode, std::make_tuple(1, "Unprintable"));
@@ -488,7 +494,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
-                                             << QString::number(unicode, 16) << ".";
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
                 mProblemCodepoints.insert(unicode, std::tuple{1, "Zero Width Combiner"});
@@ -507,7 +513,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
-                qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+                qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
                 mProblemCodepoints.insert(unicode, std::tuple{1, "Private Use"});
@@ -523,7 +530,8 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
             if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
-                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
+                                               << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
                 mProblemCodepoints.insert(unicode, std::tuple{1, "Unassigned"});
@@ -904,6 +912,8 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
                 auto reportedWidth = getGraphemeWidth(unicode);
+                // The paint code is set to use a replacement character for a
+                // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
             }
             column += charWidth;
@@ -1415,6 +1425,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
                 auto reportedWidth = getGraphemeWidth(unicode);
+                // The paint code is set to use a replacement character for a
+                // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
             }
             column += charWidth;
@@ -2244,5 +2256,7 @@ void TTextEdit::reportCodepointErrors()
                 qDebug().nospace().noquote() << QStringLiteral("           U+%1 %2 %3").arg(key, 6, 16, QLatin1Char('0')).arg(count, 7).arg(reason.c_str());
             }
         }
+        // Needed to put a blank line after the last entry:
+        qDebug().nospace().noquote() << " ";
     }
 }
