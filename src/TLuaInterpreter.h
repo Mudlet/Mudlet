@@ -314,6 +314,7 @@ public:
     static int disableKey(lua_State* L);
     static int killKey(lua_State* L);
     static int debug(lua_State* L);
+    static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
     static int resetFormat(lua_State*);
@@ -511,6 +512,8 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getClipboardText(lua_State*);
+    static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
@@ -562,6 +565,7 @@ public slots:
 
 private:
     void logError(std::string& e, const QString&, const QString& function);
+    void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
     QByteArray encodeBytes(const char*);

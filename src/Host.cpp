@@ -213,7 +213,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mInsertedMissingLF(false)
 , mSslTsl(false)
 , mUseProxy(false)
 , mProxyAddress(QString())
@@ -222,7 +221,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
-, mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
@@ -593,6 +591,12 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
+        QFileInfo moduleFile = moduleStringList[0];
+        QStringList accepted_suffix;
+        accepted_suffix << "xml" << "trigger";
+        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+            return {false, QStringLiteral("module has to be a .xml file")};
+        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -943,7 +947,6 @@ QPair<QString, QString> Host::getSearchEngine()
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
-        mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right

@@ -149,6 +149,7 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
+    void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> deleteLabel(const QString&);
@@ -218,6 +219,7 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
 
 
     QPointer<Host> mpHost;
@@ -334,6 +336,8 @@ public slots:
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
     void dropEvent(QDropEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
+    void mousePressEvent(QMouseEvent*) override;
 
 private:
     void refreshMiniConsole() const;

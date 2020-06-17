@@ -5126,24 +5126,16 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
             | (strikeout ? TChar::StrikeOut : TChar::None)
             | (underline ? TChar::Underline : TChar::None);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        TConsole* pC = host.mpConsole;
-        if (Q_UNLIKELY(!pC)) {
-            lua_pushboolean(L, false);
-            lua_pushstring(L, "mudlet error: main window does not exist");
-            return 2;
-        }
-        pC->mFormatCurrent.setTextFormat(QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                         QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                         flags);
-        lua_pushboolean(L, true);
-    } else {
-        lua_pushboolean(L, mudlet::self()->setTextFormat(&host, windowName,
-                                                         QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                                         QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                                         flags));
+    if (!host.mpConsole->setTextFormat(windowName,
+                                      QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
+                                      QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
+                                      flags)) {
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
+        return 2;
     }
 
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -5855,11 +5847,15 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         if (!roomIdsFound.isEmpty()) {
             for (int i : roomIdsFound) {
                 TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
-                QString name = pR->name;
-                int roomID = pR->getId();
-                lua_pushnumber(L, roomID);
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_settable(L, -3);
+                // This test is to keep Coverity happy as it thinks pR could be
+                // a nullptr in some odd situation {CID 1415023}:
+                if (pR) {
+                    QString name = pR->name;
+                    int roomID = pR->getId();
+                    lua_pushnumber(L, roomID);
+                    lua_pushstring(L, name.toUtf8().constData());
+                    lua_settable(L, -3);
+                }
             }
         }
         return 1;
@@ -7105,6 +7101,30 @@ int TLuaInterpreter::debug(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::showHandlerError(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString event, error;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "showHandlerError: bad argument #1 type (event name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        event = QString::fromUtf8(lua_tostring(L, 1));
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "showHandlerError: bad argument #2 type (error message as string expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    } else {
+        error = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    host.mLuaInterpreter.logEventError(event, error);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
@@ -7454,6 +7474,9 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         }
 
         TTimer* timer = host.getTimerUnit()->getTimer(result.first);
+        Q_ASSERT_X(timer,
+                   "TLuaInterpreter::tempTimer(...)",
+                   "Got a positive result from LuaInterpreter::startTempTimer(...) but that failed to produce pointer to it from Host::mTimerUnit::getTimer(...)");
         timer->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
@@ -14571,6 +14594,27 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getClipboardText
+int TLuaInterpreter::getClipboardText(lua_State* L)
+{
+    QClipboard* clipboard = QApplication::clipboard();
+    lua_pushstring(L, clipboard->text().toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
+int TLuaInterpreter::setClipboardText(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setClipboardText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(QString::fromUtf8(lua_tostring(L, 1)));
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
@@ -15211,7 +15255,6 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 {
     Host& host = getHostFromLua(pGlobalLua);
     QByteArray transcodedSrc = host.mTelnet.decodeBytes(src);
-    qDebug().nospace().noquote() << "<MSDP><" << transcodedSrc << ">";
     QStringList varList;
     QByteArray lastVar;
     int textLength = transcodedSrc.length();
@@ -15289,7 +15332,8 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             if (last == MSDP_VAL || last == MSDP_TABLE_CLOSE || last == MSDP_ARRAY_CLOSE) {
                 script.append(',');
             }
-            if (transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) {
+            if (((textLength > i + 1) && transcodedSrc.at(i + 1) && transcodedSrc.at(i + 1) != MSDP_TABLE_OPEN && transcodedSrc.at(i + 1) != MSDP_ARRAY_OPEN) ||
+                (textLength <= i + 1)) {
                 script.append('\"');
             }
             varList.append(QString::fromUtf8(lastVar));
@@ -15577,6 +15621,27 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::logEventError(const QString& event, const QString& error)
+{
+    // Log error to Editor's Errors TConsole:
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral(" event handler for %1:\n").arg(event), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("        <%1>\n").arg(error), QColor(Qt::red), QColor(Qt::black));
+    }
+
+    // Log error to Profile's Main TConsole:
+    if (mpHost->mEchoLuaErrors) {
+        // ensure the Lua error is on a line of its own and is not prepended to the previous line
+        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+            mpHost->postMessage(QStringLiteral("\n"));
+        }
+
+        mpHost->postMessage(QStringLiteral("[  LUA  ] - error in event handler for %1:\n<%2>").arg(event, error));
+    }
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
@@ -15741,7 +15806,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
-    int error;
+    int error = 0;
     if (qE) {
         // Create Lua table with QEvent data if needed
         switch (qE->type()) {
@@ -16564,6 +16629,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "paste", TLuaInterpreter::paste);
     lua_register(pGlobalLua, "pasteWindow", TLuaInterpreter::pasteWindow);
     lua_register(pGlobalLua, "debugc", TLuaInterpreter::debug);
+    lua_register(pGlobalLua, "showHandlerError", TLuaInterpreter::showHandlerError);
     lua_register(pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap);
     lua_register(pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent);
     lua_register(pGlobalLua, "resetFormat", TLuaInterpreter::resetFormat);
@@ -16875,6 +16941,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getColumnCount", TLuaInterpreter::getColumnCount);
     lua_register(pGlobalLua, "getRowCount", TLuaInterpreter::getRowCount);
     lua_register(pGlobalLua, "getOS", TLuaInterpreter::getOS);
+    lua_register(pGlobalLua, "getClipboardText", TLuaInterpreter::getClipboardText);
+    lua_register(pGlobalLua, "setClipboardText", TLuaInterpreter::setClipboardText);
     lua_register(pGlobalLua, "getAvailableFonts", TLuaInterpreter::getAvailableFonts);
     lua_register(pGlobalLua, "tempAnsiColorTrigger", TLuaInterpreter::tempAnsiColorTrigger);
     lua_register(pGlobalLua, "setDiscordApplicationID", TLuaInterpreter::setDiscordApplicationID);

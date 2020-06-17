@@ -169,7 +169,6 @@ public:
     bool pasteWindow(Host* pHost, const QString& name);
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(Host*, const QString& name, QString& path);
-    bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
     bool setLabelClickCallback(Host*, const QString&, const int);
     bool setLabelDoubleClickCallback(Host*, const QString&, const int);
@@ -254,6 +253,8 @@ public:
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void activateProfile(Host*);
+
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -501,7 +502,8 @@ public slots:
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
-    void slot_multi_view();
+    void slot_multi_view(const bool);
+    void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
     void slot_send_login();
@@ -723,6 +725,9 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
+
+    // Whether multi-view is in effect:
+    bool mMultiView;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

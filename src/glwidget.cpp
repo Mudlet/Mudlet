@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016, 2019 by Stephen Lyons                       *
+ *   Copyright (C) 2014, 2016, 2019-2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,7 +24,7 @@
 #include "glwidget.h"
 
 
-#include "Host.h"
+#include "mudlet.h"
 #include "TArea.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -611,11 +611,11 @@ void GLWidget::paintGL()
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
-                    if (areaExit) {
-                        glLineWidth(1); //1/mScale+2);
-                    } else {
+                    // if (areaExit) {
+                    //    glLineWidth(1); //1/mScale+2);
+                    // } else {
                         glLineWidth(1); //1/mScale);
-                    }
+                    // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
@@ -1022,11 +1022,11 @@ void GLWidget::paintGL()
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
-                    if (areaExit) {
-                        glLineWidth(1); //1/mScale+2);
-                    } else {
+                    // if (areaExit) {
+                    //    glLineWidth(1); //1/mScale+2);
+                    // } else {
                         glLineWidth(1); //1/mScale);
-                    }
+                    // }
                     if (k == mRID || ((rz == pz) && (rx == px) && (ry == py))) {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
@@ -2155,6 +2155,7 @@ void GLWidget::resizeGL(int w, int h)
 
 void GLWidget::mousePressEvent(QMouseEvent* event)
 {
+    mudlet::self()->activateProfile(mpHost);
     if (event->buttons() & Qt::LeftButton) {
         int x = event->x();
         int y = height() - event->y(); //opengl ursprungspunkt liegt unten links
