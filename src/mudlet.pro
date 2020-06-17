@@ -295,7 +295,7 @@ unix:!macx {
 
         INCLUDEPATH += \
              "C:\\Libraries\\boost_1_71_0" \
-             "$${MINGW_BASE_DIR_TEST}\\includ"e \
+             "$${MINGW_BASE_DIR_TEST}\\include" \
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
     } else {
