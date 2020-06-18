@@ -497,7 +497,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                              << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::tuple{1, "Zero Width Combiner"});
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Zero Width Combiner"}});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
@@ -517,7 +517,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                              << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::tuple{1, "Private Use"});
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Private Use"}});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
@@ -534,7 +534,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                                << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::tuple{1, "Unassigned"});
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Unassigned"}});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
