@@ -262,63 +262,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     label_invalidFontError->hide();
     label_variableWidthFontWarning->hide();
 
-    comboBox_guiLanguage->clear();
-    for (auto& code : pMudlet->getAvailableTranslationCodes()) {
-        auto& translation = pMudlet->mTranslationsMap.value(code);
-        auto& nativeName = translation.getNativeName();
-        if (translation.fromResourceFile()) {
-            auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= pMudlet->mTranslationGoldStar) {
-                comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
-                                              nativeName,
-                                              code);
-            } else {
-                // This will also be used if the percentage is set to zero
-                // because it was not found in the translation statistics file
-                // during compilation even though the Mudlet translation is in
-                // the resources file:
-                comboBox_guiLanguage->addItem(QIcon(),
-                                              tr("%1 (%2% done)",
-                                                 // Intentional argument to separate arguments
-                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.")
-                                              .arg(nativeName, QString::number(translatedPc)),
-                                              code);
-            }
-        } else {
-            // For translations that come from somewhere else we are not likely
-            // to have the translations statistics so no icon and no extra text:
-            comboBox_guiLanguage->addItem(QIcon(), nativeName, code);
-        }
-    }
-    comboBox_guiLanguage->model()->sort(0);
-    auto currentLanguage = pMudlet->getInterfaceLanguage();
-    int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
-    if (Q_LIKELY(currentIndex != -1)) {
-        // The language code has been found in the UserData role for one of the
-        // entries - so select it
-        comboBox_guiLanguage->setCurrentIndex(currentIndex);
-        connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
-    } else {
-        currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
-        if (Q_LIKELY(currentIndex != -1)) {
-           // The default code has been found in the UserData role for one of
-           // the entries - so select it as a fallback
-            comboBox_guiLanguage->setCurrentIndex(currentIndex);
-            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
-        } else if (comboBox_guiLanguage->count()) {
-            // There is at least ONE entry but it is not the expected one
-            // or the American English default - so select that first one as a
-            // last ditch effort:
-            comboBox_guiLanguage->setCurrentIndex(0);
-            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
-        } else {
-            // Nothing available - so disable the control:
-            comboBox_guiLanguage->setEnabled(false);
-            // And insert an Engineering English warning text - this is probably
-            // a sign of significant borkage in the translation system!
-            comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
-        }
-    }
+    generateLocaleTexts();
 
     setupPasswordsMigration();
 }
@@ -527,10 +471,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircChannels->setText(dlgIRC::readIrcChannels(pHost).join(" "));
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
-    dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    dictList->clear();
+    listWidget_dictionaries->setSelectionMode(QAbstractItemView::SingleSelection);
+    listWidget_dictionaries->clear();
     // Disable sorting whilst populating the widget:
-    dictList->setSortingEnabled(false);
+    listWidget_dictionaries->setSortingEnabled(false);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
@@ -546,79 +490,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
-    // On the first run for a profile this will be the "English (American)"
-    // dictionary "en_US".
-    const QString& currentDictionary = pHost->getSpellDic();
-    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
-
-    // Tweak the label for the provided spelling dictionaries depending on where
-    // they come from:
-    if (mudlet::self()->mUsingMudletDictionaries) {
-        checkBox_spellCheck->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
-    } else {
-        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
-    }
-
-    QDir dir(path);
-    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
-    // Use the affix file as that may eliminate supplimental dictionaries:
-    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
-    entries = entries.filter(rex);
-    // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-    // whilst populating the widget, it reduces noise about:
-    // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
-    dictList->blockSignals(true);
-    if (entries.count()) {
-        QListWidgetItem* scrollToItem = nullptr;
-        for (int i = 0, total = entries.size(); i < total; ++i) {
-            // This is a file name and to support macOs platforms should not be case sensitive:
-            entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
-
-            if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
-                // Skip medical dictionaries - there may be others  we also want to hide:
-                continue;
-            }
-
-            auto item = new QListWidgetItem();
-            item->setTextAlignment(Qt::AlignCenter);
-            auto key = entries.at(i).toLower();
-            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
-            key.replace(QLatin1String("-"), QLatin1String("_"));
-            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
-                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
-                item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
-            } else {
-                item->setText(tr("%1 - not recognised").arg(entries.at(i)));
-                item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
-                                    "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i))));
-            }
-            item->setData(Qt::UserRole, entries.at(i));
-            dictList->addItem(item);
-            if (entries.at(i) == currentDictionary) {
-                scrollToItem = item;
-            }
-        }
-
-        // Reenable sorting now we have populated the widget:
-        dictList->setSortingEnabled(true);
-        // Actually do the sort:
-        dictList->sortItems();
-
-        if (scrollToItem) {
-            // As the selection mode is set to
-            // QAbstractItemView::SingleSelection this also selects this item:
-            dictList->setCurrentItem(scrollToItem);
-            // And scroll to it:
-            dictList->scrollToItem(scrollToItem);
-        }
-
-    } else {
-        dictList->setEnabled(false);
-        dictList->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
-    }
-    dictList->blockSignals(false);
+    generateDictionaryTexts();
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -880,28 +752,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         widget_playerRoomStyle->hide();
     }
 
-    comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
-    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
-        auto encodingTitle = mudlet::self()->getEncodingNamesMap().value(encoding, tr("%1 (*Error, report to Mudlet Makers*)",
-                                                                                      // Intentional comment to separate arguments
-                                                                                      "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
-                                                                         .arg(QLatin1String(encoding)));
-        comboBox_encoding->addItem(encodingTitle, encoding);
-    }
-    if (pHost->mTelnet.getEncoding().isEmpty()) {
-        // cTelnet::mEncoding is (or should be) empty for the default 7-bit
-        // ASCII case, so need to set the control specially to its (the
-        // first) value
-        comboBox_encoding->setCurrentIndex(0);
-    } else {
-        int currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
-        if (currentIndex >=0) {
-            comboBox_encoding->setCurrentIndex(currentIndex);
-        } else {
-            // invalid or not found - so reset to ASCII:
-            comboBox_encoding->setCurrentIndex(0);
-        }
-    }
+    generateEncodingTexts();
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     notificationArea->hide();
@@ -1178,7 +1029,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircChannels->clear();
     ircNick->clear();
 
-    dictList->clear();
+    listWidget_dictionaries->clear();
     checkBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
@@ -2375,8 +2226,8 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        if (dictList->isEnabled() && dictList->currentItem()) {
-            pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
+        if (listWidget_dictionaries->isEnabled() && listWidget_dictionaries->currentItem()) {
+            pHost->setSpellDic(listWidget_dictionaries->currentItem()->data(Qt::UserRole).toString());
         }
 
         pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
@@ -3733,6 +3584,213 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // assembled after the class instance was created {i.e. outside of the
     // setupUi(...) call in the constructor} would be needed in every class with
     // persistent UI texts - this is not trivial and has been deemed NWIH...!
+
+    // However it is worthwhile regenerating some texts:
+    generateLocaleTexts();
+    generateEncodingTexts();
+    generateDictionaryTexts();
+}
+
+void dlgProfilePreferences::generateLocaleTexts()
+{
+    auto pMudlet = mudlet::self();
+    comboBox_guiLanguage->blockSignals(true);
+    comboBox_guiLanguage->clear();
+    for (auto& code : pMudlet->getAvailableTranslationCodes()) {
+        auto& translation = pMudlet->mTranslationsMap.value(code);
+        auto& nativeName = translation.getNativeName();
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= pMudlet->mTranslationGoldStar) {
+                comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"), nativeName, code);
+            } else {
+                // This will also be used if the percentage is set to zero
+                // because it was not found in the translation statistics file
+                // during compilation even though the Mudlet translation is in
+                // the resources file:
+                comboBox_guiLanguage->addItem(QIcon(),
+                                              tr("%1 (%2% done)",
+                                                 // Intentional argument to separate arguments
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.")
+                                                      .arg(nativeName, QString::number(translatedPc)),
+                                              code);
+            }
+        } else {
+            // For translations that come from somewhere else we are not likely
+            // to have the translations statistics so no icon and no extra text:
+            comboBox_guiLanguage->addItem(QIcon(), nativeName, code);
+        }
+    }
+    comboBox_guiLanguage->model()->sort(0);
+    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
+    if (Q_LIKELY(currentIndex != -1)) {
+        // The language code has been found in the UserData role for one of the
+        // entries - so select it
+        comboBox_guiLanguage->setCurrentIndex(currentIndex);
+        connect(comboBox_guiLanguage, QOverload<const QString&>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    } else {
+        currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
+        if (Q_LIKELY(currentIndex != -1)) {
+            // The default code has been found in the UserData role for one of
+            // the entries - so select it as a fallback
+            comboBox_guiLanguage->setCurrentIndex(currentIndex);
+            connect(comboBox_guiLanguage, QOverload<const QString&>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else if (comboBox_guiLanguage->count()) {
+            // There is at least ONE entry but it is not the expected one
+            // or the American English default - so select that first one as a
+            // last ditch effort:
+            comboBox_guiLanguage->setCurrentIndex(0);
+            connect(comboBox_guiLanguage, QOverload<const QString&>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else {
+            // Nothing available - so disable the control:
+            comboBox_guiLanguage->setEnabled(false);
+            // And insert an Engineering English warning text - this is probably
+            // a sign of significant borkage in the translation system!
+            comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
+        }
+    }
+    comboBox_guiLanguage->blockSignals(false);
+}
+
+void dlgProfilePreferences::generateEncodingTexts()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    comboBox_encoding->blockSignals(true);
+    QByteArray initialData;
+    if (comboBox_encoding->count()) {
+        // The comboBox has already been populated once so need to record the
+        // data value associated with the current selection:
+        initialData = comboBox_encoding->currentData().toByteArray();
+        comboBox_encoding->clear();
+    } else {
+        // We are populating the comboBox for the first time so need to record
+        // the data value associated with profile's:
+        initialData = pHost->mTelnet.getEncoding();
+    }
+
+    comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
+    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
+        auto encodingTitle =
+                mudlet::self()->getEncodingNamesMap().value(encoding,
+                                                            tr("%1 (*Error, report to Mudlet Makers*)",
+                                                               // Intentional comment to separate arguments
+                                                               "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
+                                                                    .arg(QLatin1String(encoding)));
+        comboBox_encoding->addItem(encodingTitle, encoding);
+    }
+    if (initialData.isEmpty()) {
+        comboBox_encoding->setCurrentIndex(0);
+    } else {
+        int currentIndex = comboBox_encoding->findData(initialData);
+        if (currentIndex >= 0) {
+            comboBox_encoding->setCurrentIndex(currentIndex);
+        } else {
+            // invalid or not found - so reset to ASCII:
+            comboBox_encoding->setCurrentIndex(0);
+        }
+    }
+    comboBox_encoding->blockSignals(false);
+}
+
+void dlgProfilePreferences::generateDictionaryTexts()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    // On the first run for a profile this will be the "English (American)"
+    // dictionary "en_US".
+
+    // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+    // whilst populating the widget, it reduces noise about:
+    // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "listWidget_dictionaries")  index:  ##
+    listWidget_dictionaries->blockSignals(true);
+
+    QString currentDictionary;
+    if (!listWidget_dictionaries->count()) {
+        // Empty, so this is likely to be the first call to this method:
+        currentDictionary = pHost->getSpellDic();
+    } else {
+        // Already populated so note the current setting:
+        if (listWidget_dictionaries->currentItem()) {
+            currentDictionary = listWidget_dictionaries->currentItem()->data(Qt::UserRole).toString();
+        }
+        listWidget_dictionaries->clear();
+    }
+    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
+
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        checkBox_spellCheck->setText(
+                tr("Mudlet dictionaries:",
+                   "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
+    } else {
+        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
+    }
+
+    QDir dir(path);
+    QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // Use the affix file as that may eliminate supplimental dictionaries:
+    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
+    entries = entries.filter(rex);
+    if (entries.count()) {
+        QListWidgetItem* scrollToItem = nullptr;
+        for (int i = 0, total = entries.size(); i < total; ++i) {
+            // This is a file name and to support macOs platforms should not be case sensitive:
+            entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
+
+            if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
+                // Skip medical dictionaries - there may be others  we also want to hide:
+                continue;
+            }
+
+            auto item = new QListWidgetItem();
+            item->setTextAlignment(Qt::AlignCenter);
+            auto key = entries.at(i).toLower();
+            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
+                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
+                item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
+            } else {
+                item->setText(tr("%1 - not recognised").arg(entries.at(i)));
+                item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                                    "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>")
+                                         .arg(entries.at(i), dir.absoluteFilePath(entries.at(i))));
+            }
+            item->setData(Qt::UserRole, entries.at(i));
+            listWidget_dictionaries->addItem(item);
+            if (entries.at(i) == currentDictionary) {
+                scrollToItem = item;
+            }
+        }
+
+        // Reenable sorting now we have populated the widget:
+        listWidget_dictionaries->setSortingEnabled(true);
+        // Actually do the sort:
+        listWidget_dictionaries->sortItems();
+
+        if (scrollToItem) {
+            // As the selection mode is set to
+            // QAbstractItemView::SingleSelection this also selects this item:
+            listWidget_dictionaries->setCurrentItem(scrollToItem);
+            // And scroll to it:
+            listWidget_dictionaries->scrollToItem(scrollToItem);
+        }
+
+    } else {
+        listWidget_dictionaries->setEnabled(false);
+        listWidget_dictionaries->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
+    }
+    listWidget_dictionaries->blockSignals(false);
 }
 
 void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)

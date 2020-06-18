@@ -5347,6 +5347,11 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
         // signal_guiLanguageChanged call will do in classes wired up to it
         // {run retranslateUi(), and regenerate (persistent) texts generated
         // within the Mudlet application code}...
+
+        // Anyhow regenerate some texts that might be in use on the opened
+        // preferences dialog:
+        loadMaps();
+
         emit signal_guiLanguageChanged(languageCode);
     }
 }

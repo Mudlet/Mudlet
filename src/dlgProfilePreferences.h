@@ -181,6 +181,9 @@ private:
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    void generateLocaleTexts();
+    void generateEncodingTexts();
+    void generateDictionaryTexts();
 
     int mFontSize;
     QPointer<Host> mpHost;
