@@ -306,8 +306,14 @@
    <property name="text">
     <string>Compact input line</string>
    </property>
+   <property name="checkable">
+     <bool>true</bool>
+   </property>
+   <property name="checked">
+     <bool>false</bool>
+   </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line for the current profile.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionDiscord">
