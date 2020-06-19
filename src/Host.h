@@ -325,6 +325,8 @@ public:
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    void setCompactInputLine(const bool state);
+    bool getCompactInputLine() const { return mCompactInputLine; }
 
 
     cTelnet mTelnet;
@@ -687,6 +689,9 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
