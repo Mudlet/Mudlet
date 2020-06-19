@@ -54,6 +54,18 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     setupUi(this);
 
     mDateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
+    if (mDateTimeFormat.contains(QLatin1Char('t'))) {
+        // There is a timezone identifier in there - which (apart from perhaps
+        // the period around DST changes) we don't really need and which takes
+        // up space:
+        if (mDateTimeFormat.contains(QLatin1String(" t"))) {
+            // Deal with the space if the time zone is appended to the end of
+            // the string:
+            mDateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
+        } else {
+            mDateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
+        }
+    }
     QPixmap holdPixmap;
 
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
