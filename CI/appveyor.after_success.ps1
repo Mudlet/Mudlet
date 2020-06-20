@@ -26,6 +26,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "outFile" -Value "upload-location.txt";
+  Write-Output "=== Uploading the snapshot build ==="
   Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
