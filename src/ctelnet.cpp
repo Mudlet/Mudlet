@@ -1887,7 +1887,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && transcodedMsg.startsWith(QStringLiteral("Client.Media"))) {
+    if (mpHost->mAcceptServerMedia
+        && (packageMessage.startsWith(QStringLiteral("Client.Media")) // Camel case preferred for GMCP
+            || packageMessage.startsWith(QStringLiteral("client.media")))) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
