@@ -1607,7 +1607,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation>[ OK ] - модуль Lua %1 загружен.</translation>
+      <translation>[  OK  ] - модуль Lua %1 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16988"/>
