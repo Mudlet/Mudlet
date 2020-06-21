@@ -183,7 +183,9 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     // This is JSON
     auto json = document.object();
 
-    if (packageMessage == "Client.Media.Stop") {
+    QString package = packageMessage.toLower(); // Don't change original variable
+
+    if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
         return;
     }
@@ -192,11 +194,11 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         return;
     }
 
-    if (packageMessage == "Client.Media.Default" || packageMessage == "Client.Media") { // Client.Media obsolete
+    if (package == "client.media.default" || package == "client.media") { // Client.Media obsolete
         TMedia::parseJSONForMediaDefault(json);
-    } else if (packageMessage == "Client.Media.Load") {
+    } else if (package == "client.media.load") {
         TMedia::parseJSONForMediaLoad(json);
-    } else if (packageMessage == "Client.Media.Play") {
+    } else if (package == "client.media.play") {
         TMedia::parseJSONForMediaPlay(json);
     }
 }
