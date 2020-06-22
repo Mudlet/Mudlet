@@ -60,7 +60,6 @@ public:
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
-    void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -123,7 +122,7 @@ private slots:
 
 private:
     void initDefaultSettings();
-    QString getSelectedText(char newlineChar = '\n');
+    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
@@ -132,7 +131,7 @@ private:
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
-    void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
+    bool establishSelectedText();
 
     int mFontHeight;
     int mFontWidth;

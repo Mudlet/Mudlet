@@ -83,7 +83,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.6.2)
+set(APP_VERSION 4.9.1)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -164,6 +164,7 @@ add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
+add_subdirectory(test)
 
 if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)

@@ -104,7 +104,7 @@ void TRoomDB::deleteValuesFromEntranceMap(QSet<int>& valueSet)
     QList<int> keyList = entranceMap.keys();
     QList<int> valueList = entranceMap.values();
     QList<uint> deleteEntries;
-    foreach (int roomId, valueSet) {
+    for (auto roomId : valueSet) {
         int index = valueList.indexOf(roomId);
         while (index >= 0) {
             deleteEntries.append(index);
@@ -285,7 +285,7 @@ bool TRoomDB::removeRoom(int id)
             // Now we store mRoomId for each profile, we must remove any where
             // this room was used
             QList<QString> profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);
-            foreach (QString key, profilesWithUserInThisRoom) {
+            for (auto key : profilesWithUserInThisRoom) {
                 mpMap->mRoomIdHash[key] = 0;
             }
         }
@@ -321,7 +321,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
         }
         mpTempRoomDeletionSet->remove(deleteRoomId);
     }
-    foreach (int deleteRoomId, deletedRoomIds) {
+    for (auto deleteRoomId : deletedRoomIds) {
         entranceMap.remove(deleteRoomId); // This has been deferred from __removeRoom()
     }
     deleteValuesFromEntranceMap(deletedRoomIds);
@@ -639,14 +639,23 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     // Check for existance of all areas needed by rooms
-    QSet<int> areaIdSet{areaRoomMultiHash.keys().begin(), areaRoomMultiHash.keys().end()};
+    QList<int> areaIdsFromRoomsList{areaRoomMultiHash.uniqueKeys()};
+    QSet<int> areaIdSet{areaIdsFromRoomsList.begin(), areaIdsFromRoomsList.end()};
 
     // START OF TASK 3
     // Throw in the area Ids from the areaNamesMap:
-    areaIdSet.unite(QSet<int>{areaNamesMap.keys().begin(), areaNamesMap.keys().end()});
+    if (!areaNamesMap.isEmpty()) {
+        QList<int> areaIdsFromAreaNamesList{areaNamesMap.keys()};
+        QSet<int> areaIdsFromAreaNamesSet{areaIdsFromAreaNamesList.begin(), areaIdsFromAreaNamesList.end()};
+        areaIdSet.unite(areaIdsFromAreaNamesSet);
+    }
 
     // And the area Ids used by the map labels:
-    areaIdSet.unite(QSet<int>{mpMap->mapLabels.keys().begin(), mpMap->mapLabels.keys().end()});
+    if (!mpMap->mapLabels.isEmpty()) {
+        QList<int> areaIdsFromLabelsList{mpMap->mapLabels.keys()};
+        QSet<int> areaIdsFromLabelsSet{areaIdsFromLabelsList.begin(), areaIdsFromLabelsList.end()};
+        areaIdSet.unite(areaIdsFromLabelsSet);
+    }
 #else
     // Check for existance of all areas needed by rooms
     QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
@@ -925,6 +934,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             // Exit stubs:
             unsigned int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            // These next few constuction of a QSet from a QList or vice versa
+            // are probably safe as both iterators refer to the SAME instance
+            // that is persistent:
             QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
 #else
             QSet<int> _set{pR->exitStubs.toSet()};
@@ -996,9 +1008,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 pA->rooms.unite(replacementRoomsSet);
             }
 
-            // Now compare pA->rooms to areaRoomMultiHash.values( itArea.key() )
+            // Now compare pA->rooms to areaRoomMultiHash.values(itArea.key())
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            QSet<int> foundRooms{areaRoomMultiHash.values(itArea.key()).begin(), areaRoomMultiHash.values(itArea.key()).end()};
+            // Have to create a local copy of the list of rooms to safely make
+            // a QSet of them:
+            QList<int> roomIdsInAreaList{areaRoomMultiHash.values(itArea.key())};
+            QSet<int> foundRooms{roomIdsInAreaList.begin(), roomIdsInAreaList.end()};
 #else
             QSet<int> foundRooms{areaRoomMultiHash.values(itArea.key()).toSet()};
 #endif
@@ -1123,7 +1138,7 @@ void TRoomDB::clearMapDB()
         delete room; // Uses the internally held value of the room Id
                      // (TRoom::id) to call TRoomDB::__removeRoom(id)
     }
-    //    assert( rooms.size() == 0 ); // Pointless as rooms.clear() will have achieved the test condition
+    //    assert(!rooms.size()); // Pointless as rooms.clear() will have achieved the test condition
 
     QList<TArea*> areaList = getAreaPtrList();
     for (auto area : areaList) {

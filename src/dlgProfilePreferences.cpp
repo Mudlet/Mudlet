@@ -541,8 +541,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-    //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
-    //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
@@ -1285,10 +1283,8 @@ void dlgProfilePreferences::setColors2()
 
 void dlgProfilePreferences::setTab(QString tab)
 {
-    foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
-    {
-        if (child->objectName().contains(tab, Qt::CaseInsensitive))
-        {
+    for (auto child : tabWidget->findChildren<QWidget*>()) {
+        if (child->objectName().contains(tab, Qt::CaseInsensitive)) {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
         }
@@ -1969,7 +1965,8 @@ void dlgProfilePreferences::copyMap()
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().begin(), mudlet::self()->mConsoleMap.keys().begin()};
+    QList<Host*> activeHostsList{mudlet::self()->mConsoleMap.keys()};
+    QSet<Host*> activeHosts{activeHostsList.begin(), activeHostsList.end()};
 #else
     QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().toSet()};
 #endif
@@ -2019,12 +2016,12 @@ void dlgProfilePreferences::copyMap()
         int otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
-        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
-                                                 & otherProfileFileUsed,
-                                                 & otherProfileVersion,
-                                                 & otherProfileCurrentRoomId,
-                                                 & otherProfileAreaCount,
-                                                 & otherProfileRoomCount ) ) {
+        if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),
+                                               &otherProfileFileUsed,
+                                               &otherProfileVersion,
+                                               &otherProfileCurrentRoomId,
+                                               &otherProfileAreaCount,
+                                               &otherProfileRoomCount)) {
 
             qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
                      << itOtherProfile.key()

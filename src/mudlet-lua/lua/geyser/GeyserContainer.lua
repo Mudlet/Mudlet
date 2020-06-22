@@ -181,6 +181,8 @@ function Geyser.Container:show_impl()
 end
 
 --- Raises the window to the top of the z-order stack, displaying in front of all other windows
+--@param changeWindowIndex used internally
+--@see Geyser.Container:raiseAll
 function Geyser.Container:raise (changeWindowIndex)
   raiseWindow(self.name)
   if changeWindowIndex ~= false then
@@ -195,6 +197,8 @@ function Geyser.Container:raise (changeWindowIndex)
 end
 
 --- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
+--@param changeWindowIndex used internally
+--@see Geyser.Container:lowerAll
 function Geyser.Container:lower (changeWindowIndex)
   lowerWindow(self.name)
   if changeWindowIndex ~= false then
@@ -208,6 +212,10 @@ function Geyser.Container:lower (changeWindowIndex)
   end
 end
 
+--- Raises the window and all its containing elements to the top of the z-order stack, displaying in front of all other windows.
+--@param container used internally
+--@param me used internally
+--@see Geyser.Container:raise
 function Geyser.Container:raiseAll(container, me)
   container = container or self
   -- raise myself
@@ -232,6 +240,8 @@ local function createWindowTable(container)
   end
 end
 
+--- Lowers the window and all its containing elements to the bottom of the z-order stack, displaying behind all other windows
+--@see Geyser.Container:lower
 function Geyser.Container:lowerAll()
   createWindowTable(self)
   -- iterate in reverse order through all elements to keep the same z-axis inside the container
@@ -318,8 +328,14 @@ function Geyser.Container:new(cons, container)
   me.name = me.name or Geyser.nameGen()
   me.windowList = {}
   me.windows = {}
-  me.hidden = false
-  me.auto_hidden = false
+  --pass the given hidden/auto_hidden values for add2
+  if me.useAdd2 == true or (container and container.useAdd2) then
+    me.hidden = me.hidden or false
+    me.auto_hidden = me.auto_hidden or false
+  else
+    me.hidden = false
+    me.auto_hidden = false
+  end
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
@@ -329,16 +345,28 @@ function Geyser.Container:new(cons, container)
   if not string.find(me.name, ".*Class") then
     -- If passed in a container, add me to that container
     if container then
-      container:add(me)
+      if me.useAdd2 then
+        container:add2(me)
+      else
+        container:add(me)
+      end
     else
       -- Else assume the root window is my container
-      Geyser:add(me)
+      if me.useAdd2 then
+        Geyser:add2(me)
+      else
+        Geyser:add(me)
+      end
       container=Geyser
     end
    --Create Root-Container for UserWindow and add Children
    if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
         container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
-        container:add(me)
+        if me.useAdd2 then
+          container:add2(me)
+        else
+          container:add(me)
+        end
         container.get_width = function()
             return getUserWindowSize(me.windowname)
         end
@@ -350,5 +378,13 @@ function Geyser.Container:new(cons, container)
   end
 
   --print("New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.Container:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

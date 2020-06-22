@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.6.2
+VERSION = 4.9.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -303,6 +303,7 @@ unix:!macx {
 # installation details for the unix case:
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
+        LUA_TRANSLATIONS.path = $${LUA.path}/translations
         LUA_LCF.path = $${LUA.path}/lcf
         LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
@@ -516,14 +517,38 @@ SOURCES += \
     TDebug.cpp \
     TDockWidget.cpp \
     TEasyButtonBar.cpp \
+    TEncodingTable.cpp \
+    TEntityHandler.cpp \
+    TEntityResolver.cpp \
     TFlipButton.cpp \
     TForkedProcess.cpp \
     TimerUnit.cpp \
     TKey.cpp \
     TLabel.cpp \
+    TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TMap.cpp \
     TMedia.cpp \
+    TMxpElementDefinitionHandler.cpp \
+    TMxpElementRegistry.cpp \
+    TMxpEntityTagHandler.cpp \
+    TMxpFormattingTagsHandler.cpp \
+    TMxpBRTagHandler.cpp \
+    TMxpColorTagHandler.cpp \
+    TMxpCustomElementTagHandler.cpp \
+    TMxpFontTagHandler.cpp \
+    TMxpLinkTagHandler.cpp \
+    TMxpMudlet.cpp \
+    TMxpNodeBuilder.cpp \
+    TMxpProcessor.cpp \
+    TMxpSendTagHandler.cpp \
+    TMxpSupportTagHandler.cpp \
+    MxpTag.cpp \
+    TMxpTagHandler.cpp \
+    TMxpTagParser.cpp \
+    TMxpTagProcessor.cpp \
+    TMxpVarTagHandler.cpp \
+    TMxpVersionTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -539,7 +564,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    TStringUtils.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -591,6 +617,9 @@ HEADERS += \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
+    TEncodingTable.h \
+    TEntityHandler.h \
+    TEntityResolver.h \
     testdbg.h \
     TEvent.h \
     TFlipButton.h \
@@ -598,10 +627,33 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
+    TLinkStore.h \
     TLuaInterpreter.h \
     TMap.h \
-    TMedia.h \
     TMatchState.h \
+    TMedia.h \
+    TMxpBRTagHandler.h \
+    TMxpClient.h \
+    TMxpColorTagHandler.h \
+    TMxpCustomElementTagHandler.h \
+    TMxpFontTagHandler.h \
+    TMxpLinkTagHandler.h \
+    TMxpElementDefinitionHandler.h \
+    TMxpElementRegistry.h \
+    TMxpEntityTagHandler.h \
+    TMxpContext.h \
+    TMxpFormattingTagsHandler.h \
+    TMxpMudlet.h \
+    TMxpNodeBuilder.h \
+    TMxpProcessor.h \
+    TMxpSendTagHandler.h \
+    MxpTag.h \
+    TMxpTagHandler.h \
+    TMxpTagParser.h \
+    TMxpTagProcessor.h \
+    TMxpSupportTagHandler.cpp \
+    TMxpVarTagHandler.h \
+    TMxpVersionTagHandler.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \
@@ -621,7 +673,8 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
+    TStringUtils.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -791,6 +844,10 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
 LUA_GEYSER.depends = mudlet
+
+LUA_TRANSLATIONS.files = \
+    $${PWD}/../translations/lua/*
+LUA_TRANSLATIONS.depends = mudlet
 
 # Our customised 5.1 Lua Code Formatter files, unfortunately to get the Qt
 # makefile constructor to reproduce the exact directory structure we have to
@@ -1280,6 +1337,12 @@ macx {
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
+    APP_MUDLET_LUA_TRANSLATION.files = \
+        ../translations/lua
+
+    APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
+    QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
+
     # Set the .app's icns file
     ICON = icons/osx.icns
 
@@ -1322,7 +1385,15 @@ macx {
 
 win32 {
     # set the Windows binary icon
-    RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+    contains(BUILD, "-ptb.+") {
+        RC_ICONS = icons/mudlet_ptb.ico
+    } else {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
+            RC_ICONS = icons/mudlet_dev.ico
+        } else {
+            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+        }
+    }
 
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
@@ -1340,6 +1411,7 @@ win32 {
 OTHER_FILES += \
     $${LUA.files} \
     $${LUA_GEYSER.files} \
+    $${LUA_TRANSLATIONS.files} \
     $${LUA_TESTS.files} \
     $${DISTFILES} \
     ../README \
@@ -1358,6 +1430,7 @@ unix:!macx {
         target \
         LUA \
         LUA_GEYSER \
+        LUA_TRANSLATIONS \
         LUA_LCF \
         LUA_LCF_L1_GET__AST \
         LUA_LCF_L1_GET__FORMATTER__AST \

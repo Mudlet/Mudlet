@@ -149,7 +149,6 @@ public:
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
-    void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
@@ -257,8 +256,6 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    double networkLatencyMin;
-    double networkLatencyMax;
     bool mWaitingForResponse;
     std::queue<int> mCommandQueue;
 
@@ -266,7 +263,9 @@ private:
 
     bool mNeedDecompression;
     std::string command;
-    bool iac, iac2, insb;
+    bool iac;
+    bool iac2;
+    bool insb;
     // Set if we have negotiated the use of the option by us:
     bool myOptionState[256];
     // Set if he has negotiated the use of the option by him:
@@ -280,12 +279,10 @@ private:
     bool triedToEnable[256];
     bool recvdGA;
 
-    int curX, curY;
     QString termType;
     QByteArray mEncoding;
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
-    bool mLF_ON_GA;
 
     int mCommands;
     bool mMCCP_version_1;

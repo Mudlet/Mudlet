@@ -560,8 +560,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
-        // For some odd reason the first seems to get connected twice - the
-        // last flag prevents multiple ones being made
 
         // Load up the spelling dictionary from the system:
         setSystemSpellDictionary(mpHost->getSpellDic());
@@ -582,6 +580,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     if (mType & (MainConsole | UserWindow)) {
         setAcceptDrops(true);
+        setMouseTracking(true);
+    }
+
+    if (mType & MainConsole) {
+        mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
     }
 }
 
@@ -1245,8 +1248,11 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
 
-    while (!buffer.mMxpEvents.isEmpty()) {
-        const MxpEvent &event = buffer.mMxpEvents.dequeue();
+    // dequeues MXP events and raise them through the LuaInterpreter
+    // TODO: move this somewhere else more appropriate
+    auto &mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
+    while (!mxpEventQueue.isEmpty()) {
+        const auto& event = mxpEventQueue.dequeue();
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 
@@ -2685,6 +2691,12 @@ void TConsole::showStatistics()
 
 void TConsole::slot_searchBufferUp()
 {
+    // The search term entry box is one widget that does not pass a mouse press
+    // event up to the main TConsole and thus does not cause the focus to shift
+    // to the profile's tab when in multi-view mode - so add a call to make that
+    // happen:
+    mudlet::self()->activateProfile(mpHost);
+
     QString _txt = mpBufferSearchBox->text();
     if (_txt != mSearchQuery) {
         mSearchQuery = _txt;
@@ -3042,4 +3054,82 @@ std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const
     // as it means that the TConsole is flagged as being a user window yet
     // it does not have a TDockWidget to hold it...
     return {false, QStringLiteral("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+}
+
+// This is also called from the TTextEdit mouse(Press|Release)Event()s:
+void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
+{
+    // Ensure that this profile is the one that has it's tab selected in a
+    // multi-view situation:
+    mudlet::self()->activateProfile(mpHost);
+
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(isPressEvent ? QStringLiteral("sysWindowMousePressEvent") : QStringLiteral("sysWindowMouseReleaseEvent"));
+    switch (event->button()) {
+    case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
+    case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
+    case Qt::MidButton:     mudletEvent.mArgumentList.append(QString::number(3));   break;
+    case Qt::BackButton:    mudletEvent.mArgumentList.append(QString::number(4));   break;
+    case Qt::ForwardButton: mudletEvent.mArgumentList.append(QString::number(5));   break;
+    case Qt::TaskButton:    mudletEvent.mArgumentList.append(QString::number(6));   break;
+    case Qt::ExtraButton4:  mudletEvent.mArgumentList.append(QString::number(7));   break;
+    case Qt::ExtraButton5:  mudletEvent.mArgumentList.append(QString::number(8));   break;
+    case Qt::ExtraButton6:  mudletEvent.mArgumentList.append(QString::number(9));   break;
+    case Qt::ExtraButton7:  mudletEvent.mArgumentList.append(QString::number(10));  break;
+    case Qt::ExtraButton8:  mudletEvent.mArgumentList.append(QString::number(11));  break;
+    case Qt::ExtraButton9:  mudletEvent.mArgumentList.append(QString::number(12));  break;
+    case Qt::ExtraButton10: mudletEvent.mArgumentList.append(QString::number(13));  break;
+    case Qt::ExtraButton11: mudletEvent.mArgumentList.append(QString::number(14));  break;
+    case Qt::ExtraButton12: mudletEvent.mArgumentList.append(QString::number(15));  break;
+    case Qt::ExtraButton13: mudletEvent.mArgumentList.append(QString::number(16));  break;
+    case Qt::ExtraButton14: mudletEvent.mArgumentList.append(QString::number(17));  break;
+    case Qt::ExtraButton15: mudletEvent.mArgumentList.append(QString::number(18));  break;
+    case Qt::ExtraButton16: mudletEvent.mArgumentList.append(QString::number(19));  break;
+    case Qt::ExtraButton17: mudletEvent.mArgumentList.append(QString::number(20));  break;
+    case Qt::ExtraButton18: mudletEvent.mArgumentList.append(QString::number(21));  break;
+    case Qt::ExtraButton19: mudletEvent.mArgumentList.append(QString::number(22));  break;
+    case Qt::ExtraButton20: mudletEvent.mArgumentList.append(QString::number(23));  break;
+    case Qt::ExtraButton21: mudletEvent.mArgumentList.append(QString::number(24));  break;
+    case Qt::ExtraButton22: mudletEvent.mArgumentList.append(QString::number(25));  break;
+    case Qt::ExtraButton23: mudletEvent.mArgumentList.append(QString::number(26));  break;
+    case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
+    default:                mudletEvent.mArgumentList.append(QString::number(0));
+    }
+    mudletEvent.mArgumentList.append(QString::number(event->x()));
+    mudletEvent.mArgumentList.append(QString::number(event->y()));
+    mudletEvent.mArgumentList.append(mConsoleName);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(mudletEvent);
+}
+
+// This does not tend to get the leftButton press events as they tend to be
+// captured by the TTextEdit or TCommandLine or other widgets within this class:
+void TConsole::mousePressEvent(QMouseEvent* event)
+{
+    raiseMudletMousePressOrReleaseEvent(event, true);
+}
+
+void TConsole::mouseReleaseEvent(QMouseEvent* event)
+{
+    raiseMudletMousePressOrReleaseEvent(event, false);
+}
+
+bool TConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
+{
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
+        return true;
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
+        return true;
+    }
+
+    return false;
 }

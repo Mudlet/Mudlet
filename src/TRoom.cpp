@@ -41,7 +41,7 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
 {
     int temporary;
     ds >> temporary;
-    switch(temporary) {
+    switch (temporary) {
     case Qt::DotLine:
         [[fallthrough]];
     case Qt::DashLine:
@@ -881,7 +881,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             // exit lines and remove those which are already included in the
             // colours) is much easier to perform on a QSet rather than a QList:
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            QSet<QString> missingKeys{QSet<QString>{customLines.keys().begin(), customLines.keys().end()}.subtract(QSet<QString>{customLinesColor.keys().begin(), customLinesColor.keys().end()})};
+            auto customLineKeys = customLines.keys();
+            QSet<QString> missingKeys{customLineKeys.begin(), customLineKeys.end()};
+            if (!customLinesColor.isEmpty()) {
+                auto customLinesColorKeys = customLinesColor.keys();
+                QSet<QString> customLinesColorKeysSet{customLinesColorKeys.begin(), customLinesColorKeys.end()};
+                missingKeys.subtract(customLinesColorKeysSet);
+            }
 #else
             QSet<QString> missingKeys{customLines.keys().toSet().subtract(customLinesColor.keys().toSet())};
 #endif

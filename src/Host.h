@@ -44,6 +44,9 @@
 #include <QTextStream>
 #include "post_guard.h"
 
+#include "TMxpMudlet.h"
+#include "TMxpProcessor.h"
+
 class QDialog;
 class QDockWidget;
 class QPushButton;
@@ -152,25 +155,25 @@ public:
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
-    void               setName(const QString& s );
+    void               setName(const QString& s);
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
+    void               setUrl(const QString& s)         { QMutexLocker locker(& mLock); mUrl = s; }
     QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
-    void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
+    void               setUserDefinedName(const QString& s) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
-    void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
-    void               setAutoReconnect(bool b)         { mTelnet.setAutoReconnect(b); }
+    void               setPort(const int p)                 { QMutexLocker locker(& mLock); mPort = p; }
+    void               setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
-    void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
+    void               setLogin(const QString& s)       { QMutexLocker locker(& mLock); mLogin = s; }
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
-    void               setPass(const QString& s )       { QMutexLocker locker(& mLock); mPass = s; }
+    void               setPass(const QString& s)        { QMutexLocker locker(& mLock); mPass = s; }
     int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries( int c )              { QMutexLocker locker(& mLock); mRetries = c; }
+    void               setRetries(const int c)          { QMutexLocker locker(& mLock); mRetries = c; }
     int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout( int seconds )        { QMutexLocker locker(& mLock); mTimeout = seconds; }
+    void               setTimeout(const int seconds)    { QMutexLocker locker(& mLock); mTimeout = seconds; }
     bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state );
+    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
     Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
                                                                        return mAutoAmbigousWidthGlyphsSetting
@@ -285,12 +288,6 @@ public:
         mTelnet.set_USE_IRE_DRIVER_BUGFIX(b);
     }
 
-    void set_LF_ON_GA(bool b)
-    {
-        mLF_ON_GA = b;
-        mTelnet.set_LF_ON_GA(b);
-    }
-
     void adjustNAWS();
 
     bool installPackage(const QString&, int);
@@ -330,6 +327,8 @@ public:
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    void setCompactInputLine(const bool state);
+    bool getCompactInputLine() const { return mCompactInputLine; }
 
 
     cTelnet mTelnet;
@@ -358,6 +357,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+
+    TMxpMudlet mMxpClient;
+    TMxpProcessor mMxpProcessor;
     QString mMediaLocationGMCP;
     QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
@@ -365,7 +367,6 @@ public:
     bool mFORCE_GA_OFF;
     bool mFORCE_NO_COMPRESSION;
     bool mFORCE_SAVE_ON_EXIT;
-    bool mInsertedMissingLF;
 
     bool mSslTsl;
     bool mAutoReconnect;
@@ -386,7 +387,6 @@ public:
     // pushed down:
     bool mIsProfileLoadingSequence;
 
-    bool mLF_ON_GA;
     bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
@@ -692,6 +692,9 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine;
 
     // If greater than 0 (the default, disabled case) then use the indicated
     // custom login text of QMap<int, QString> mudlet::mCustomLoginTexts:

@@ -37,6 +37,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
+
 #include "pre_guard.h"
 #include <chrono>
 #include <QtUiTools>
@@ -207,12 +208,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mMxpClient(this)
+, mMxpProcessor(&mMxpClient)
 , mMediaLocationGMCP(QString())
 , mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mInsertedMissingLF(false)
 , mSslTsl(false)
 , mUseProxy(false)
 , mProxyAddress(QString())
@@ -221,7 +223,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
-, mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
@@ -380,6 +381,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -595,6 +597,12 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
+        QFileInfo moduleFile = moduleStringList[0];
+        QStringList accepted_suffix;
+        accepted_suffix << "xml" << "trigger";
+        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+            return {false, QStringLiteral("module has to be a .xml file")};
+        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -945,7 +953,6 @@ QPair<QString, QString> Host::getSearchEngine()
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
-        mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
@@ -1950,10 +1957,10 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if ( encoding == QLatin1String("GBK")
-             || encoding == QLatin1String("GB18030")
-             || encoding == QLatin1String("Big5")
-             || encoding == QLatin1String("Big5-HKSCS")) {
+        if (encoding == QLatin1String("GBK")
+            || encoding == QLatin1String("GB18030")
+            || encoding == QLatin1String("Big5")
+            || encoding == QLatin1String("Big5-HKSCS")) {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
@@ -2552,6 +2559,20 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     }
 
     return {true, QString()};
+}
+
+void Host::setCompactInputLine(const bool state)
+{
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        // When the profile is being loaded and the previously saved data is
+        // read from the XML file the main TConsole has not been instatiated
+        // yet - so must check for it existing first - and ensure the read
+        // setting is applied in the constructor for it:
+        if (mpConsole && mpConsole->mpButtonMainLayer) {
+            mpConsole->mpButtonMainLayer->setVisible(!state);
+        }
+    }
 }
 
 void Host::setCustomLoginId(const int value)

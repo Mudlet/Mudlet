@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -2474,26 +2474,22 @@ bool T2DMap::event(QEvent* event)
     // day the setFocusPolicy() calls in the constructor need to be uncommented
 
     if (event->type() == QEvent::KeyPress) {
-        // auto* ke = static_cast<QKeyEvent*>(event);
-        //        if( ke->key() == Qt::Key_Delete )
-        //        {
-        //            if( mCustomLineSelectedRoom != 0  )
-        //            {
-        //                if( mpMap->rooms.contains(mCustomLineSelectedRoom) )
-        //                {
-        //                    TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
-        //                    if( pR->customLines.contains( mCustomLineSelectedExit) )
-        //                    {
-        //                        pR->customLines.remove(mCustomLineSelectedExit);
-        //                        repaint();
-        //                        mCustomLineSelectedRoom = 0;
-        //                        mCustomLineSelectedExit = "";
-        //                        mCustomLineSelectedPoint = -1;
-        //                        return QWidget::event(event);
-        //                    }
-        //                }
-        //            }
-        //        }
+//        auto* ke = static_cast<QKeyEvent*>(event);
+//        if (ke->key() == Qt::Key_Delete ) {
+//            if (mCustomLineSelectedRoom != 0  ) {
+//                if (mpMap->rooms.contains(mCustomLineSelectedRoom)) {
+//                    TRoom * pR = mpMap->rooms[mCustomLineSelectedRoom];
+//                    if (pR->customLines.contains( mCustomLineSelectedExit)) {
+//                        pR->customLines.remove(mCustomLineSelectedExit);
+//                        repaint();
+//                        mCustomLineSelectedRoom = 0;
+//                        mCustomLineSelectedExit = "";
+//                        mCustomLineSelectedPoint = -1;
+//                        return QWidget::event(event);
+//                    }
+//                }
+//            }
+//        }
     } else if (event->type() == QEvent::Resize) { // Tweak the room selection widget to fit
         resizeMultiSelectionWidget();
     }
@@ -2502,6 +2498,7 @@ bool T2DMap::event(QEvent* event)
 
 void T2DMap::mousePressEvent(QMouseEvent* event)
 {
+    mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (event->buttons() & Qt::LeftButton) {
         // move map with left mouse button + ALT
@@ -4268,7 +4265,8 @@ void T2DMap::slot_setArea()
                 // Failed on the last of multiple room area move so do the missed
                 // out recalculations for the dirtied areas
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-                QSetIterator<TArea*> itpArea{QSet<TArea*>{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()}};
+                QSet<TArea*> areaPtrsSet{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()};
+                QSetIterator<TArea*> itpArea{areaPtrsSet};
 #else
                 QSetIterator<TArea*> itpArea{mpMap->mpRoomDB->getAreaPtrList().toSet()};
 #endif
