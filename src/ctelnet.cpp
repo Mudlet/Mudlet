@@ -483,6 +483,46 @@ void cTelnet::sendCharacterPassword()
     }
 }
 
+std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
+{
+    if (!loginId) {
+        return {false, QStringLiteral("custom login is disabled (login id is zero)")};
+    }
+
+    int actualLoginId = loginId;
+    if (loginId == -1) {
+        actualLoginId = mpHost->getCustomLoginId();
+    }
+
+    if (!mudlet::self()->mCustomLoginTexts.contains(actualLoginId)) {
+        return {false, QStringLiteral("custom login %1 does not exist in this version of Mudlet").arg(actualLoginId)};
+    }
+
+    QString loginString{mudlet::self()->mCustomLoginTexts.value(actualLoginId)};
+    const QString password = mpHost->getPass();
+    if (loginString.contains(QLatin1String("{character name}"), Qt::CaseSensitive)) {
+        const QString characterName = mpHost->getLogin();
+        if (characterName.isEmpty()) {
+            return {false, QStringLiteral("custom login %1 requires the character name and that is not currently defined for this profilee").arg(actualLoginId)};
+        }
+        if (password.isEmpty()) {
+            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profilee").arg(actualLoginId)};
+        }
+        loginString.replace(QLatin1String("{character name}"), QLatin1String("%1"));
+        loginString.replace(QLatin1String("{password}"), QLatin1String("%2"));
+        loginString = loginString.arg(characterName, password);
+    } else {
+        if (password.isEmpty()) {
+            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profilee").arg(actualLoginId)};
+        }
+        loginString.replace(QLatin1String("{password}"), QLatin1String("%1"));
+        loginString = loginString.arg(password);
+    }
+
+    sendData(loginString);
+    return {true, QString()};
+}
+
 void cTelnet::handle_socket_signal_connected()
 {
     QString msg;

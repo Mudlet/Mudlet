@@ -41,6 +41,7 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QMap>
 #include <QNetworkDiskCache>
 #include <QPainter>
 #include <QString>
@@ -753,6 +754,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     generateEncodingTexts();
+    generateLoginTexts();
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
     notificationArea->hide();
@@ -920,10 +922,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
-
-    //Security tab
-
-
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -2479,6 +2477,8 @@ void dlgProfilePreferences::slot_save_and_exit()
                                              pHost->mpMap->mPlayerRoomOuterColor,
                                              pHost->mpMap->mPlayerRoomInnerColor);
         }
+
+        pHost->setCustomLoginId(comboBox_customLoginText->currentData().toInt());
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -3585,10 +3585,12 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // setupUi(...) call in the constructor} would be needed in every class with
     // persistent UI texts - this is not trivial and has been deemed NWIH...!
 
-    // However it is worthwhile regenerating some texts:
+    // However it is worthwhile regenerating some texts within this dialogue
+    // just to help the user with initial setup of some things:
     generateLocaleTexts();
     generateEncodingTexts();
     generateDictionaryTexts();
+    generateLoginTexts();
 }
 
 void dlgProfilePreferences::generateLocaleTexts()
@@ -3791,6 +3793,59 @@ void dlgProfilePreferences::generateDictionaryTexts()
         listWidget_dictionaries->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
     }
     listWidget_dictionaries->blockSignals(false);
+}
+
+void dlgProfilePreferences::generateLoginTexts()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    comboBox_customLoginText->blockSignals(true);
+    // TODO: If/when mudlet::htmlWrapper gets revised to just put in a pair of "<p>"..."</p>" tags (pending in another PR I {SlySven} have not yet published) also revise this to use it:
+    comboBox_customLoginText->setToolTip(QStringLiteral("<p>%1</p>")
+                                                 .arg(tr("Provides a means to send both of the character name and the password in a single "
+                                                         "line to the Game server for those that have a requirement that cannot be met by "
+                                                         "sending each of them on their own shortly after a connection has been made.</p>"
+                                                         "<p>The number to the left is available in the Lua system by calling "
+                                                         "<tt>getCustomLoginTextId()</tt> and if a choice other than the first one is made "
+                                                         "here the function <tt>sendCustomLoginText()</tt> will be available for use in "
+                                                         "scripts.</p>"
+                                                         "<p>If the MUD you wish to connect to has a requirement that cannot be met "
+                                                         "by any method that Mudlet provides, please get in touch with the Mudlet Makers "
+                                                         "and they will investigate to see if a new text needs to be added. Please note "
+                                                         "that the the words outside of '{'...'}' are the exact characters that will be "
+                                                         "used, whereas those inside have been translated for your convenience and they "
+                                                         "along with the '{' and '}' will be replaced by the corresponding element stored "
+                                                         "in the profile.")));
+    int selection = 0;
+    if (!comboBox_customLoginText->count()) {
+        // Empty - this is the first time this method has been called, so read
+        // the setting from the profile:
+        selection = pHost->getCustomLoginId();
+    } else {
+        // Not empty - this method has been called before so note the current
+        // setting:
+        selection = comboBox_customLoginText->currentData().toInt();
+        // And clear the widget
+        comboBox_customLoginText->clear();
+    }
+
+    QMapIterator<int, QString> itTranslatedLoginText(mudlet::self()->mLocaliseCustomLoginTexts);
+    while (itTranslatedLoginText.hasNext()) {
+        itTranslatedLoginText.next();
+        if (!itTranslatedLoginText.key()) {
+            // Disable (zero) case
+            comboBox_customLoginText->addItem(QStringLiteral("%1: %2").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+        } else {
+            comboBox_customLoginText->addItem(QStringLiteral("%1: \"%2\"").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+        }
+    }
+
+    comboBox_customLoginText->setCurrentIndex(comboBox_customLoginText->findData(selection));
+
+    comboBox_customLoginText->blockSignals(false);
 }
 
 void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)

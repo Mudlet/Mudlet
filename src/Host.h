@@ -186,6 +186,8 @@ public:
     const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
     void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
+    void               setCustomLoginId(const int value);
+    int                getCustomLoginId() { QMutexLocker locker(&mLock); return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
@@ -690,6 +692,10 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+
+    // If greater than 0 (the default, disabled case) then use the indicated
+    // custom login text of QMap<int, QString> mudlet::mCustomLoginTexts:
+    int mCustomLoginId;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

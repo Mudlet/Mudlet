@@ -184,6 +184,7 @@ private:
     void generateLocaleTexts();
     void generateEncodingTexts();
     void generateDictionaryTexts();
+    void generateLoginTexts();
 
     int mFontSize;
     QPointer<Host> mpHost;

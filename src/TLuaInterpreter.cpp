@@ -16925,6 +16925,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "sendCharacterName", TLuaInterpreter::sendCharacterName);
     lua_register(pGlobalLua, "sendCharacterPassword", TLuaInterpreter::sendCharacterPassword);
+    lua_register(pGlobalLua, "getCustomLoginTextId", TLuaInterpreter::getCustomLoginTextId);
+    lua_register(pGlobalLua, "sendCustomLoginText", TLuaInterpreter::sendCustomLoginText);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
@@ -18261,7 +18263,7 @@ int TLuaInterpreter::sendCharacterPassword(lua_State* L)
 
     if (!host.mTelnet.getCanLuaSendPassword()) {
         lua_pushnil(L);
-        lua_pushstring(L, "sending the password is only allowed for a short time, now expired, after connecting to the game");
+        lua_pushstring(L, "sending the password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
         return 2;
     }
 
@@ -18278,6 +18280,35 @@ int TLuaInterpreter::sendCharacterPassword(lua_State* L)
     }
 
     host.mTelnet.sendCharacterPassword();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#getCustomLoginTextId
+int TLuaInterpreter::getCustomLoginTextId(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.getCustomLoginId());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#sendCustomLoginText
+int TLuaInterpreter::sendCustomLoginText(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    if (!host.mTelnet.getCanLuaSendPassword()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sending the password is only allowed for a short time after connecting to the game; either that period has elapsed or the profile is currently disconnected");
+        return 2;
+    }
+
+    if (auto [success, message] = host.mTelnet.sendCustomLogin(); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }

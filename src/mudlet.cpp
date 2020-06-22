@@ -133,6 +133,20 @@ QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
 
+// The texts here must be replicated exactly as the source texts for the
+// translationed form to be held in mudlet::mLocaliseCustomLoginTexts in the
+// mudlet::loadMaps() method further down - if any entry is ever deleted the
+// number must be retired as well as that is what will be stored in the
+// profile's settings and in the event that a particular value is not present
+// the first one will be selected which is the disabled one.
+// The strings "{character name}" and "{password}" are specific tokens that
+// are replaced - but only the second one is required to be present in all but
+// the disabled one:
+const QMap<unsigned int, QString> mudlet::mCustomLoginTexts{
+        {0, QStringLiteral("disabled")},
+        {1, QStringLiteral("connect {character name} {password}")}
+};
+
 void mudlet::start()
 {
     _self = new mudlet;
@@ -914,6 +928,12 @@ void mudlet::loadMaps()
                         {"WINDOWS-1256", tr("WINDOWS-1256 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")}};
+    // Any additional entries must have a matching one loaded into the
+    // mudlet::mCustomLoginTexts QMap at the top of this file:
+    mLocaliseCustomLoginTexts = {
+            {0, tr("disabled")},
+            {1, tr("connect {character name} {password}", "This represents a user selectable text that can be sent to the Game server to log in, please provide translation only of the wording within each '{...}'.")}
+    };
 }
 
 // migrates the Central Debug Console to the next available host, if any

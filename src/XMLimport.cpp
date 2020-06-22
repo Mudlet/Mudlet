@@ -944,6 +944,12 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
     pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 
+    if (attributes().hasAttribute(QLatin1String("CustomLoginId"))) {
+        pHost->setCustomLoginId(attributes().value(QLatin1String("CustomLoginId")).toInt());
+    } else {
+        pHost->setCustomLoginId(0);
+    }
+
     while (!atEnd()) {
         readNext();
 

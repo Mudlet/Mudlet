@@ -2553,3 +2553,11 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 
     return {true, QString()};
 }
+
+void Host::setCustomLoginId(const int value)
+{
+    if (value >= 0 && value < mudlet::mCustomLoginTexts.count()) {
+        QMutexLocker locker(&mLock);
+        mCustomLoginId = value;
+    }
+}

@@ -178,6 +178,9 @@ public:
     const bool& getCanLuaSendPassword() const { return mLuaSendPasswordEnable; }
     void sendCharacterName();
     void sendCharacterPassword();
+    // If the default argument is used then it will lookup the actual value
+    // stored for this profile:
+    std::pair<bool, QString> sendCustomLogin(const int loginId = -1);
 
     // A one-shot timer used to prevent the Lua sendCharacterPassword() command
     // from functioning for more than a short time after a successful connection

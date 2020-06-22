@@ -109,9 +109,14 @@ of the form:
   end
 
 so that the Lua interpreter doesn't run this code.
+
+Also revised to check and use a custom login text if specified in the profile
+preferences (on "Special options" tab):
 ]]
 function doLogin()
-  if getCharacterName() ~= "" then
+  if getCustomLoginId() > 0 then
+    tempTimer(2.0, [[sendCustomLoginText()]], 1)
+  elseif getCharacterName() ~= "" then
     tempTimer(2.0, [[sendCharacterName()]], 1)
     tempTimer(3.0, [[sendCharacterPassword()]], 1)
   end
