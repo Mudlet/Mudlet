@@ -450,7 +450,7 @@ void cTelnet::slot_send_login()
 void cTelnet::slot_send_pass()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
-        sendData(mpHost->getPass());
+        sendData(mpHost->getPass(), false);
     }
 }
 
@@ -613,16 +613,18 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event {};
-    event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(data);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    if (Q_LIKELY(permitDataSendRequestEvent)) {
+        TEvent event{};
+        event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(data);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
