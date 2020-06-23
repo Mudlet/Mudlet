@@ -584,6 +584,8 @@ private:
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
 
+    const int LUA_FUNCTION_MAX_ARGS = 50;
+
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;
