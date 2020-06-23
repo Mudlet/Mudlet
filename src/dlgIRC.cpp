@@ -45,7 +45,13 @@ QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarted(false), mInputHistoryMax(8), mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost) 
+: mReadyForSending(false)
+, mpHost(pHost)
+, mIrcStarted(false)
+, mIsDefaultIrcClient(true)
+, mInputHistoryMax(8)
+, mConnectedHostName()
 {
     mInputHistoryMax = 8;
     mInputHistoryIdxNext = 0;
