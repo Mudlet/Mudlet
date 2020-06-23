@@ -13741,7 +13741,6 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     if (!mudlet::self()->mpIrcClientMap.contains(pHost)) {
         // create a new irc client if one isn't ready.
         mudlet::self()->mpIrcClientMap[pHost] = new dlgIRC(pHost);
-        mudlet::self()->mpIrcClientMap.value(pHost)->setDefaultHostClient(false);
         mudlet::self()->mpIrcClientMap.value(pHost)->raise();
         mudlet::self()->mpIrcClientMap.value(pHost)->show();
     }
