@@ -625,7 +625,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2368"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>图片标签</translation>
+      <translation>圖片標籤</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2372"/>
@@ -10188,12 +10188,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="177"/>
       <source>Interface language:</source>
-      <translation>界面文字：</translation>
+      <translation>介面語言：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="191"/>
       <source>Server data encoding:</source>
-      <translation>服务器数据编码格式：</translation>
+      <translation>伺服器資料編碼：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="213"/>
@@ -10243,7 +10243,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="551"/>
       <source>Spell checking</source>
-      <translation>拼写检查</translation>
+      <translation>拼字檢查</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="557"/>
@@ -10431,7 +10431,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1505"/>
       <location filename="../src/ui/profile_preferences.ui" line="2322"/>
       <source>Light black:</source>
-      <translation>浅黑色:</translation>
+      <translation>淺黑：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1512"/>
@@ -10442,7 +10442,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1525"/>
       <location filename="../src/ui/profile_preferences.ui" line="2339"/>
       <source>Red:</source>
-      <translation>红色：</translation>
+      <translation>紅色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1532"/>
@@ -10464,7 +10464,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1565"/>
       <location filename="../src/ui/profile_preferences.ui" line="2373"/>
       <source>Green:</source>
-      <translation>绿色：</translation>
+      <translation>綠色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1572"/>
@@ -10508,7 +10508,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1645"/>
       <location filename="../src/ui/profile_preferences.ui" line="2441"/>
       <source>Blue:</source>
-      <translation>蓝色：</translation>
+      <translation>藍色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1652"/>
@@ -10530,7 +10530,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1685"/>
       <location filename="../src/ui/profile_preferences.ui" line="2475"/>
       <source>Magenta:</source>
-      <translation>品红：</translation>
+      <translation>洋紅：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1692"/>
@@ -10574,7 +10574,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1765"/>
       <location filename="../src/ui/profile_preferences.ui" line="2543"/>
       <source>White:</source>
-      <translation>白色:</translation>
+      <translation>白色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
@@ -10596,7 +10596,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1805"/>
       <location filename="../src/ui/profile_preferences.ui" line="2577"/>
       <source>Reset all colors to default</source>
-      <translation>重置所有颜色为默认值</translation>
+      <translation>將所有顏色重設為預設值</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1812"/>
@@ -10611,12 +10611,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1839"/>
       <source>Mapper</source>
-      <translation>地图器</translation>
+      <translation>地圖工具</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1845"/>
       <source>Map files</source>
-      <translation>地图文件</translation>
+      <translation>地圖檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1851"/>
@@ -10777,27 +10777,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3035"/>
       <source>Certificate</source>
-      <translation>认证</translation>
+      <translation>憑證</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3095"/>
       <source>Serial:</source>
-      <translation>序列号：</translation>
+      <translation>序號：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3044"/>
       <source>Issuer:</source>
-      <translation>发证者：</translation>
+      <translation>發行者：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3061"/>
       <source>Issued to:</source>
-      <translation>发证给：</translation>
+      <translation>發佈至：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3078"/>
       <source>Expires:</source>
-      <translation>到期时间：</translation>
+      <translation>到期：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5065"/>
@@ -10843,7 +10843,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1990"/>
       <source>Map download</source>
-      <translation>地图下载</translation>
+      <translation>地圖下載</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2012"/>
@@ -10853,7 +10853,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2025"/>
       <source>Map backups</source>
-      <translation>地图备份</translation>
+      <translation>地圖備份</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
@@ -10878,7 +10878,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2070"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation>在2D显示时使用高质量图形</translation>
+      <translation>在 2D 檢視中使用高品質圖形</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="184"/>
@@ -11771,7 +11771,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
       <source>Show normally hidden variables</source>
-      <translation>显示隐藏变量</translation>
+      <translation>顯示隱藏變數</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
@@ -11781,7 +11781,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="510"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;切换结果搜索区显示。&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;切換搜尋結果區的顯示。&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -11962,7 +11962,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
