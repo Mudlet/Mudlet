@@ -6306,7 +6306,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <source>Show Variables</source>
-      <translation>显示变量</translation>
+      <translation>顯示變數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
@@ -7119,7 +7119,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2045"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2080"/>
       <source>Trigger</source>
-      <translation>触发器</translation>
+      <translation>觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1424"/>
@@ -7286,7 +7286,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2423"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2453"/>
       <source>Timer</source>
-      <translation>计时器</translation>
+      <translation>計時器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1467"/>
@@ -7302,13 +7302,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1424"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1438"/>
       <source>Variable</source>
-      <translation>变量</translation>
+      <translation>變數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1438"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1444"/>
       <source>Value</source>
-      <translation>值</translation>
+      <translation>數值</translation>
     </message>
   </context>
   <context>
@@ -7375,12 +7375,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation>複製</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="509"/>
       <source>Paste</source>
-      <translation>粘贴</translation>
+      <translation>貼上</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="511"/>
@@ -7444,7 +7444,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
       <source>Close</source>
-      <translation>关闭</translation>
+      <translation>關閉</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="93"/>
@@ -7549,12 +7549,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
       <source>Options</source>
-      <translation>选项</translation>
+      <translation>選項</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="116"/>
       <source>Help</source>
-      <translation>帮助</translation>
+      <translation>幫助</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="126"/>
@@ -7564,7 +7564,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="134"/>
       <source>Games</source>
-      <translation>游戏</translation>
+      <translation>遊戲</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="149"/>
@@ -7666,7 +7666,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation>断开连接</translation>
+      <translation>中斷連線</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
@@ -7676,12 +7676,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
       <source>Preferences</source>
-      <translation>首选项</translation>
+      <translation>偏好設定</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="181"/>
       <source>Script editor</source>
-      <translation>脚本编辑器</translation>
+      <translation>腳本編輯器</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="189"/>
@@ -9170,7 +9170,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Triggers</source>
-      <translation>触发器</translation>
+      <translation>觸發</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
@@ -9190,7 +9190,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="297"/>
       <source>Timers</source>
-      <translation>定时器</translation>
+      <translation>計時器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
@@ -9200,7 +9200,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
       <source>Buttons</source>
-      <translation>按钮</translation>
+      <translation>按鈕</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
@@ -9230,7 +9230,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Variables</source>
-      <translation>变量</translation>
+      <translation>變數</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
@@ -9245,7 +9245,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
       <source>Show/hide the map</source>
-      <translation>显示/隐藏地图</translation>
+      <translation>顯示/隱藏地圖</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="354"/>
@@ -9255,7 +9255,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="355"/>
       <source>Browse reference material and documentation</source>
-      <translation>浏览参考资料和文档</translation>
+      <translation>瀏覽參考資料和說明文件</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="360"/>
@@ -9265,7 +9265,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="361"/>
       <source>See and edit profile preferences</source>
-      <translation>查看并编辑配置文件首选项</translation>
+      <translation>查看並編輯偏好設定</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
@@ -10017,32 +10017,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
       <source>Display Border</source>
-      <translation>显示的边框</translation>
+      <translation>顯示邊框</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="762"/>
       <source>Top border height:</source>
-      <translation>顶部边框高度：</translation>
+      <translation>頂部邊框高度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="806"/>
       <source>Left border width:</source>
-      <translation>左边边框宽度：</translation>
+      <translation>左側邊框寬度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="850"/>
       <source>Bottom border height:</source>
-      <translation>底部边框高度：</translation>
+      <translation>底端邊框高度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="894"/>
       <source>Right border width:</source>
-      <translation>右边边框宽度：</translation>
+      <translation>右側邊框寬度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="935"/>
       <source>Word wrapping</source>
-      <translation>自动换行</translation>
+      <translation>文字換行</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="959"/>
@@ -10063,7 +10063,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1040"/>
       <source>Double-click</source>
-      <translation>双击</translation>
+      <translation>點擊兩下（Double-Click）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1046"/>
