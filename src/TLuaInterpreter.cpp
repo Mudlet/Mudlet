@@ -18552,8 +18552,10 @@ int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 
     // Push empty table onto stack
     lua_newtable(L);
-    // Delegate work for adding "headers" table to table
+    // Add "headers" table to table
     createHttpHeadersTable(L, reply);
+    // Add "cookies" table to table
+    createCookiesTable(L, reply);
     // Pop table from stack, store it in registry, return key to it
     return luaL_ref(L, LUA_REGISTRYINDEX);
 }
@@ -18585,5 +18587,37 @@ void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
     }
 
     // Put "headers" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
+}
+
+// Internal function - Adds an empty table to a "cookies" key to the table for
+// tracking useful information from the http response. If there are any cookies
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
+    }
+
+    // Push "cookies" key and empty table value onto stack
+    lua_pushstring(L, "cookies");
+    lua_newtable(L);
+
+    // Parse cookies, add them as key-value pairs to the empty table
+    Host& host = getHostFromLua(L);
+    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
+    for (QNetworkCookie cookie : cookies) {
+        // Push cookie name onto stack
+        lua_pushstring(L, cookie.name().constData());
+        // Push cookie value onto stack
+        lua_pushstring(L,  cookie.value().constData());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+
+    // Put "cookies" table into table (now 3 deep in stack), pop stack twice
     lua_settable(L, -3);
 }

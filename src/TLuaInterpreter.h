@@ -118,6 +118,7 @@ public:
     void updateExtendedAnsiColorsInTable();
     int createHttpResponseTable(QNetworkReply*);
     void createHttpHeadersTable(lua_State*, QNetworkReply*);
+    void createCookiesTable(lua_State*, QNetworkReply*);
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
