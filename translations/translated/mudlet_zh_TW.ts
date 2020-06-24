@@ -727,19 +727,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>載入地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>創建房間</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2846"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>移動</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2847"/>
@@ -823,7 +823,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2874"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>重量</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2875"/>
@@ -835,7 +835,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2878"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2879"/>
@@ -1512,7 +1512,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17022"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>部分功能可能無法使用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16512"/>
@@ -3264,7 +3264,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2103"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>位元組</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2046"/>
@@ -3331,7 +3331,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>載入更新資訊…</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
@@ -3357,7 +3357,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="180"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>目前沒有可用的更新。</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="196"/>
@@ -3387,12 +3387,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="390"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>稍後提醒我</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="395"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>略過此版本</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
@@ -3931,7 +3931,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>儲存</translation>
     </message>
   </context>
   <context>
@@ -3964,7 +3964,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2186"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>歡迎訊息</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2202"/>
