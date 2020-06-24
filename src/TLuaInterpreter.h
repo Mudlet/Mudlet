@@ -32,6 +32,7 @@
 #include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
+#include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
