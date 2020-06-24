@@ -11915,7 +11915,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="327"/>
       <source>match all</source>
-      <translation>全匹配</translation>
+      <translation>全部符合</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="460"/>
