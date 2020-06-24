@@ -9240,7 +9240,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="348"/>
       <source>Map</source>
-      <translation>地图</translation>
+      <translation>地圖</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
@@ -9260,7 +9260,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Settings</source>
-      <translation>设置</translation>
+      <translation>設定</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="361"/>
@@ -9283,7 +9283,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="385"/>
       <location filename="../src/mudlet.cpp" line="1435"/>
       <source>Package Manager</source>
-      <translation>包管理器</translation>
+      <translation>套件管理工具</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="388"/>
@@ -9892,22 +9892,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="356"/>
       <source>Save log files in:</source>
-      <translation>保存日志文件到：</translation>
+      <translation>記錄儲存位置：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="373"/>
       <source>Browse...</source>
-      <translation>浏览...</translation>
+      <translation>瀏覽...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="380"/>
       <source>Reset</source>
-      <translation>重置</translation>
+      <translation>重設</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="387"/>
       <source>Log format:</source>
-      <translation>日志格式：</translation>
+      <translation>記錄格式：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="400"/>
@@ -9927,7 +9927,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="462"/>
       <source>Input</source>
-      <translation>输入</translation>
+      <translation>輸入</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="468"/>
@@ -9992,12 +9992,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="659"/>
       <source>Font</source>
-      <translation>字体</translation>
+      <translation>字型</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="665"/>
       <source>Font:</source>
-      <translation>字体:</translation>
+      <translation>字型：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="688"/>
@@ -10848,7 +10848,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2012"/>
       <source>Download</source>
-      <translation>下载</translation>
+      <translation>下載</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2025"/>
@@ -10868,7 +10868,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2061"/>
       <source>Map view</source>
-      <translation>地图显示</translation>
+      <translation>地圖檢視</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2090"/>
@@ -10924,12 +10924,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2262"/>
       <source>Select your color preferences for the map display</source>
-      <translation>选择你的地图显示颜色偏好</translation>
+      <translation>選擇地圖顯示的顏色偏好</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2268"/>
       <source>Link color</source>
-      <translation>连接色</translation>
+      <translation>連結顏色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2288"/>
@@ -10939,7 +10939,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2601"/>
       <source>Special Options</source>
-      <translation>特别选项</translation>
+      <translation>特殊選項</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2613"/>
@@ -11028,7 +11028,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2747"/>
       <source>Enable Lua API</source>
-      <translation>启用Lua API</translation>
+      <translation>啟用 Lua API</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2779"/>
@@ -11083,12 +11083,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2884"/>
       <source>Auto-join channels: </source>
-      <translation>自动进入的频道： </translation>
+      <translation>自動加入頻道： </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2870"/>
       <source>Nickname:</source>
-      <translation>昵称:</translation>
+      <translation>暱稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2863"/>
@@ -11098,7 +11098,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2917"/>
       <source>Search Engine</source>
-      <translation>搜索引擎</translation>
+      <translation>搜尋引擎</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2901"/>
@@ -11113,12 +11113,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2929"/>
       <source>Other Special options</source>
-      <translation>其它特别选项</translation>
+      <translation>其他特殊選項</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2959"/>
       <source>Show icons on menus</source>
-      <translation>在菜单上显示图标</translation>
+      <translation>在選單上顯示圖示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3011"/>
@@ -11627,7 +11627,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -11691,17 +11691,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="171"/>
       <source>Time:</source>
-      <translation>时间:</translation>
+      <translation>時間：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
@@ -11789,7 +11789,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="65"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
@@ -11799,7 +11799,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>指令：</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="198"/>
@@ -11895,7 +11895,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
       <source>play sound</source>
-      <translation>播放声音</translation>
+      <translation>播放聲音</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="78"/>
