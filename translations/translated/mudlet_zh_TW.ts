@@ -3979,12 +3979,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2231"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>伺服器位址：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>連接埠：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2304"/>
@@ -4151,7 +4151,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>樣式：</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
@@ -4310,7 +4310,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>刪除</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
@@ -4351,7 +4351,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>房間</translation>
     </message>
   </context>
   <context>
@@ -4816,27 +4816,27 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>黑色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>紅色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>綠色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>黃色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>蓝色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
@@ -4846,7 +4846,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>青色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -5002,13 +5002,13 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1950"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>重設圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1952"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>自訂圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1962"/>
@@ -5023,7 +5023,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2397"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>連接埠必須大於 0 且小於 65535。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
@@ -5033,7 +5033,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2440"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>請輸入遊戲伺服器的 URL 或 IP 位址。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
@@ -5335,7 +5335,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="138"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>紀錄文件</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="184"/>
@@ -5767,25 +5767,25 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3369"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>大型圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3370"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>詳細資料</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3372"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>小型圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3373"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>狀態</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3375"/>
@@ -6359,7 +6359,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="8342"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8361"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl + S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="477"/>
@@ -6420,7 +6420,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8344"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8363"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl + Shift + S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="528"/>
@@ -7559,7 +7559,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="126"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>關於</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="134"/>
@@ -7656,7 +7656,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/ui/main_window.ui" line="320"/>
       <location filename="../src/ui/main_window.ui" line="323"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>回報問題</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="326"/>
@@ -7671,7 +7671,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>重新連線</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
@@ -9298,7 +9298,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="407"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>重新連線</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="408"/>
@@ -9314,7 +9314,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="437"/>
       <location filename="../src/mudlet.cpp" line="5072"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>關於</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="438"/>
@@ -9777,12 +9777,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>安裝</translation>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>卸載</translation>
     </message>
   </context>
   <context>
@@ -9872,7 +9872,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="317"/>
       <location filename="../src/ui/profile_preferences.ui" line="2656"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>請重新連線到您的遊戲，變更才會生效</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="333"/>
@@ -9917,7 +9917,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="420"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="453"/>
@@ -10198,7 +10198,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="213"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>請重新啟動 Mudlet 以套用新的語言</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
