@@ -24,7 +24,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>無法驗證下載完整性。</translation>
     </message>
   </context>
   <context>
@@ -631,19 +631,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>輸入標籤文字。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2379"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>背景顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2380"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>前景顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2384"/>
@@ -709,7 +709,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2802"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>完成</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2803"/>
@@ -751,7 +751,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2850"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>刪除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2851"/>
@@ -871,7 +871,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>區域</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2891"/>
@@ -943,7 +943,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>刪除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2945"/>
