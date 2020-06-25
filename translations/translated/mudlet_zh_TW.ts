@@ -380,7 +380,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>找不到資料！</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -397,12 +397,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>剖析 %1 時發生錯誤：%2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>讀取檔案 %1 時發生錯誤：%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
@@ -532,12 +532,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3771"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>刪除顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3789"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>定義顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4107"/>
@@ -551,7 +551,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2376"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>沒有文字</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -901,19 +901,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2904"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>建立標籤</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2905"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>建立標籤以顯示文字或影像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>設定位置</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2910"/>
@@ -931,7 +931,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2941"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>移動</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2942"/>
@@ -955,7 +955,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2961"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>新增點</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2968"/>
@@ -973,7 +973,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2975"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>移除點</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2982"/>
@@ -1211,12 +1211,12 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="665"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>新增至使用者字典</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>從使用者字典移除</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="671"/>
@@ -1280,7 +1280,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="914"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>紀錄文件</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="955"/>
@@ -1490,14 +1490,14 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15598"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>物件</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15587"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15598"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>函式</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17200"/>
@@ -1507,7 +1507,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17202"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Lua 錯誤：</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17022"/>
@@ -1522,7 +1522,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Lua 錯誤：%1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
@@ -3279,7 +3279,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="74"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>工具列 - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3326,7 +3326,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% 更新</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
@@ -3367,7 +3367,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="306"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>自動下載最新版本</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="353"/>
@@ -3377,7 +3377,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="373"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>立即安裝更新</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="380"/>
@@ -3397,7 +3397,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="555"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>無法開啟下載的檔案 %1</translation>
     </message>
   </context>
   <context>
@@ -3883,7 +3883,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>設定為 RGB 值</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
@@ -3944,7 +3944,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>設定檔案清單</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2087"/>
