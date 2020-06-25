@@ -12,6 +12,25 @@ private slots:
     void initTestCase()
     {}
 
+    void testParseUrl() {
+        TMxpTagParser parser;
+        QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<A HREF=\"https://www.google.com/search?q=mudlet\">", true);
+
+        QCOMPARE(list.size(), 1);
+        QVERIFY(list[0]->isStartTag());
+        QCOMPARE(list[0]->asStartTag()->getName(), "A");
+        QCOMPARE(list[0]->asStartTag()->getAttributeValue("HREF"), "https://www.google.com/search?q=mudlet");
+    }
+
+    void testParseWithEqualSymbol() {
+        TMxpTagParser parser;
+        QList<QSharedPointer<MxpNode>> list = parser.parseToMxpNodeList("<SEND HREF=\"1+1=2\">", true);
+
+        QCOMPARE(list.size(), 1);
+        QVERIFY(list[0]->isStartTag());
+        QCOMPARE(list[0]->asStartTag()->getName(), "SEND");
+        QCOMPARE(list[0]->asStartTag()->getAttributeValue("HREF"), "1+1=2");
+    }
 
     void testParseWithQuotes()
     {
