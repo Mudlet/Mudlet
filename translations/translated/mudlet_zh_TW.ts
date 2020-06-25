@@ -14,12 +14,12 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="275"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>太多重新導向</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="284"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>未從伺服器接收任何資料</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
@@ -33,7 +33,7 @@
       <location filename="../src/Host.cpp" line="804"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 非常感謝您使用公用測試版本！</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="805"/>
@@ -4030,7 +4030,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <location filename="../src/ui/connection_profiles.ui" line="2552"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>遊戲描述或筆記</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2368"/>
@@ -4060,7 +4060,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2443"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Discord 整合</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2478"/>
@@ -4093,7 +4093,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>樣式：</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
@@ -4346,7 +4346,7 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>使用次數</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
@@ -4771,7 +4771,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>更多顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
