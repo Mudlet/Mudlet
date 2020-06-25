@@ -39,30 +39,30 @@
       <location filename="../src/Host.cpp" line="805"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 提交任何問題，幫助我們讓 Mudlet 變得更好。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1528"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation>正在解压模块:
+      <translation>正在解壓縮模組：
 &quot;%1&quot;
-请稍候...</translation>
+請稍後…</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1530"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation>正在解压包:
+      <translation>正在解壓縮套件：
 &quot;%1&quot;
-请稍候...</translation>
+請稍後…</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1534"/>
       <source>Unpacking</source>
-      <translation>正在解压缩</translation>
+      <translation>正在解壓縮</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2142"/>
@@ -79,7 +79,7 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="2549"/>
       <source>Map - %1</source>
-      <translation>地图 - %1</translation>
+      <translation>地圖 - %1</translation>
     </message>
   </context>
   <context>
@@ -87,27 +87,27 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation>! %1 离开了 (%2)</translation>
+      <translation>! %1 離開了 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation>! %1 回来了</translation>
+      <translation>! %1 回來了</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation>! 邀请%1加入%2</translation>
+      <translation>! 應請 %1 加入 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation>! %2被邀请加入%3</translation>
+      <translation>! %2 被邀請加入 %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
@@ -117,12 +117,12 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation>! %1已加入%2</translation>
+      <translation>! %1 已加入 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation>! %1把%2踢出了队伍</translation>
+      <translation>! %1 把 %2 踢出了隊伍</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -132,38 +132,38 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation>! %1 设置模式 %2 %3 %4</translation>
+      <translation>! %1 設置模式 %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation>! %1 有 %2 用户: %3</translation>
+      <translation>! %1 有 %2 位使用者：%3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation>! %1 有 %2 用户</translation>
+      <translation>! %1 有 %2 使用者</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation>! %1 将nick更改为 %2</translation>
+      <translation>! %1 將暱稱變更為 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation>! %1在%2内回复了</translation>
+      <translation>! %1 在 %2 内回覆了</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation>! %1 时间是 %2</translation>
+      <translation>! %1 時間是 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
@@ -174,93 +174,93 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[Channel URL] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation>! %1 已离开 %2</translation>
+      <translation>! %1 已經離開 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation>! %1 已离开 %2 (%3)</translation>
+      <translation>! %1 已經離開 %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation>! %1在%2秒内回复了</translation>
+      <translation>! %1在 %2 秒内回覆了</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation>! %1 已退出</translation>
+      <translation>! %1 已經退出</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation>! %1 已退出 (%2)</translation>
+      <translation>! %1 已經退出 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation>! 没有主题</translation>
+      <translation>! 沒有主題</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation>! %2清空了主题</translation>
+      <translation>! %2 清空了主題</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation>! %2变更了主题</translation>
+      <translation>! %2 變更了主題</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
