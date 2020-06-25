@@ -16963,17 +16963,16 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    const auto separator = QDir::separator();
     const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
-
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
-
-    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
+#if defined(Q_OS_WIN32)
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = toNativeSeparators([[%1/?.lua;%1/?/init.lua;]]) .. package.path").arg(nativeHomeDirectory).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = toNativeSeparators([[%1/?.dll;]]) .. package.cpath").arg(nativeHomeDirectory).toUtf8().constData());
+#else
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1/?.lua;%1/?/init.lua;]] .. package.path").arg(nativeHomeDirectory).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1/?.so;]] .. package.cpath").arg(nativeHomeDirectory).toUtf8().constData());
+#endif
 
 #if defined(Q_OS_LINUX)
-    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
-
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_MAC)
@@ -16981,7 +16980,12 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_WIN32)
+// The following is only needed in the original powershell script based Mudlet
+// build environment - and should probably have been done via the LUA_CPATH
+// environmental variable:
+#if defined(INCLUDE_MAIN_BUILD_SYSTEM)
     luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
+#endif
 #endif
 
     QQueue<QString> modLoadMessageQueue;
@@ -17158,8 +17162,6 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState.get(), "debugc", TLuaInterpreter::debug);
     // PLACEMARKER: End of indenter Lua interpreter functions registration
 
-
-
 #if defined(Q_OS_MACOS)
     // macOS app bundle would like the search path for the binary modules to
     // also be set to the current binary directory:
@@ -17171,23 +17173,24 @@ void TLuaInterpreter::initIndenterGlobals()
     // Now also included for the MacOs case so that MacOS developers can build
     // from within the Qt Creator IDE
 
-    /* Additional paths for the lua package search path - ? is the "package"
+    /*
+     * Additional paths for the lua package search path - ? is the "package"
      * name though in the case for the lua code formatter it itself includes
      * leading path elements of "lcf" and "workshop" in the
      * require("lcf.workshop.base") case - the lua script being sought is the
      * "base.lua" file but our paths must give the loction of the "lcf"
      * directory two parent directories up:
-     * * installed *nix case:
+     * 1 installed *nix case - probably not applicable to Windows
      *     "LUA_DEFAULT_PATH/?.lua" (if defined and not empty)
-     * * AppImage (subdirectory of executable):
+     * 2 AppImage (subdirectory of executable):
      *     "<applicationDirectory>/?.lua"
-     * * QMake shadow builds without CONFIG containing "debug_and_release" AND
-     *   "debug_and_release_target" (though the latter one IS there by default):
+     * 3 QMake shadow builds without CONFIG containing "debug_and_release" but
+     *   with "debug_and_release_target" (default on most OS but NOT Windows):
      *     "<applicationDirectory>/../3rdparty/?.lua"
-     * * QMake shadow builds with CONFIG containing "debug_and_release" AND
-     *   "debug_and_release_target" (though the latter one IS there by default):
+     * 4 QMake shadow builds with CONFIG containing "debug_and_release" AND
+     *   "debug_and_release_target" (usually Windows):
      *     "<applicationDirectory>/../../3rdparty/?.lua"
-     * * CMake shadow builds
+     * 5 CMake shadow builds
      *     "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
      * NOTE: In the cmake case the shadow build directory is alongside the base
      * directory of the extracted source package so it MUST be extracted into
@@ -17196,21 +17199,21 @@ void TLuaInterpreter::initIndenterGlobals()
 #if defined(LUA_DEFAULT_PATH)
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = [["
-                                                           LUA_DEFAULT_PATH "/?.lua;"
-                                                           "%1/?.lua;"
-                                                           "%1/../3rdparty/?.lua;"
-                                                           "%1/../../3rdparty/?.lua;"
-                                                           "%1/../../mudlet/3rdparty/?.lua;]]"
+                                                           LUA_DEFAULT_PATH "/?.lua;" // 1
+                                                           "%1/?.lua;" // 2
+                                                           "%1/../3rdparty/?.lua;" // 3
+                                                           "%1/../../3rdparty/?.lua;" // 4
+                                                           "%1/../../mudlet/3rdparty/?.lua;]]" // 5
                                                            " .. package.path")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     } else {
 #endif
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = [["
-                                                           "%1/?.lua;"
-                                                           "%1/../3rdparty/?.lua;"
-                                                           "%1/../../3rdparty/?.lua;"
-                                                           "%1/../../mudlet/3rdparty/?.lua;]]"
-                                                           ".. package.path")
+                                                           "%1/?.lua;" // 2
+                                                           "%1/../3rdparty/?.lua;" // 3
+                                                           "%1/../../3rdparty/?.lua;" // 4
+                                                           "%1/../../mudlet/3rdparty/?.lua;]]" // 5
+                                                           " .. package.path")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #if defined(LUA_DEFAULT_PATH)
     }
@@ -17240,44 +17243,24 @@ void TLuaInterpreter::initIndenterGlobals()
 end)LUA");
     // clang-format on
 
-    /* Additional paths for the lua package search path - ? is the "package"
-     * name though in the case for the lua code formatter it itself includes
-     * leading path elements of "lcf" and "workshop" in the
-     * require("lcf.workshop.base") case - the lua script being sought is the
-     * "base.lua" file but our paths must give the loction of the "lcf"
-     * directory two parent directories up:
-     * * installed case if there ever is one:
-     *     "LUA_DEFAULT_PATH/?.lua" (if defined and not empty)
-     * * AppImage (subdirectory of executable):
-     *     "<applicationDirectory>/?.lua"
-     * * QMake shadow builds without CONFIG containing "debug_and_release" AND
-     *   "debug_and_release_target" (BOTH are there by default on Windows):
-     *     "<applicationDirectory>/../3rdparty/?.lua"
-     * * QMake shadow builds with CONFIG containing "debug_and_release" AND
-     *   "debug_and_release_target" (BOTH are there by default on Windows):
-     *     "<applicationDirectory>/../../3rdparty/?.lua"
-     * * CMake shadow builds
-     *     "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
-     * NOTE: In the cmake case the shadow build directory is alongside the base
-     * directory of the extracted source package so it MUST be extracted into
-     * a known directory name which is assumed here to be "mudlet"!
-     */
 #if defined(LUA_DEFAULT_PATH)
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         // clang-format off
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([["
-                      LUA_DEFAULT_PATH "/?.lua;"
-                      "%1/../3rdparty/?.lua;"
-                      "%1/../../3rdparty/?.lua;"
-                      "%1/../../mudlet/3rdparty/?.lua;]] .. package.path)")
+                                                           LUA_DEFAULT_PATH "/?.lua;" // 1
+                                                           "%1/../3rdparty/?.lua;" // 3
+                                                           "%1/../../3rdparty/?.lua;" // 4
+                                                           "%1/../../mudlet/3rdparty/?.lua;]]" // 5
+                                                           " .. package.path)")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     } else {
 #endif
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([["
-                      "%1/../3rdparty/?.lua;"
-                      "%1/../../3rdparty/?.lua;"
-                      "%1/../../mudlet/3rdparty/?.lua;]] .. package.path)")
-                      .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+                                                           "%1/../3rdparty/?.lua;" // 3
+                                                           "%1/../../3rdparty/?.lua;" // 4
+                                                           "%1/../../mudlet/3rdparty/?.lua;]]" // 5
+                                                           " .. package.path)")
+                                                           .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #if defined(LUA_DEFAULT_PATH)
         // clang-format on
     }
