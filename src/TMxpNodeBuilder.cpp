@@ -142,7 +142,7 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
 
     resetCurrentSequence();
 
-    if (ch == '=') {
+    if (ch == '=' && !mReadingAttrValue) {
         mReadingAttrValue = true;
         return false;
     } else {
@@ -187,7 +187,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
         }
     }
 
-    if (mIsQuotedSequence && !mSequenceHasSpaces && ch == '=') {
+    if (mIsQuotedSequence && !mSequenceHasSpaces && !mReadingAttrValue && ch == '=') {
         return true;
     }
 
