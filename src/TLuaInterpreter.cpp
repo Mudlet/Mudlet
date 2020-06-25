@@ -17182,7 +17182,7 @@ void TLuaInterpreter::initIndenterGlobals()
      * directory two parent directories up:
      * 1 installed *nix case - probably not applicable to Windows
      *     "LUA_DEFAULT_PATH/?.lua" (if defined and not empty)
-     * 2 AppImage (subdirectory of executable):
+     * 2 AppImage (directory of executable):
      *     "<applicationDirectory>/?.lua"
      * 3 QMake shadow builds without CONFIG containing "debug_and_release" but
      *   with "debug_and_release_target" (default on most OS but NOT Windows):
