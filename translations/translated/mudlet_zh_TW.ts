@@ -4050,7 +4050,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2410"/>
       <source>Open profile on Mudlet start</source>
-      <translation>在Mudlet启动时开启此配置</translation>
+      <translation>啟動 Mudlet 時載入此設定</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2420"/>
@@ -7569,7 +7569,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="149"/>
       <source>Play</source>
-      <translation>开始</translation>
+      <translation>開啟遊戲</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="152"/>
@@ -7691,12 +7691,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
       <source>API Reference</source>
-      <translation>API参考文档</translation>
+      <translation>參考文件</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="237"/>
       <source>Online forum</source>
-      <translation>在线论坛</translation>
+      <translation>線上論壇</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
@@ -7722,7 +7722,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="221"/>
       <source>Video tutorials</source>
-      <translation>视频教程</translation>
+      <translation>影片教學</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
@@ -8499,7 +8499,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="760"/>
       <source>French</source>
-      <translation>法文</translation>
+      <translation>French</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="761"/>
@@ -9796,7 +9796,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="61"/>
       <source>Icon sizes</source>
-      <translation>图标尺寸</translation>
+      <translation>圖示大小</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
@@ -9829,7 +9829,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
       <location filename="../src/ui/profile_preferences.ui" line="160"/>
       <source>Always</source>
-      <translation>始终</translation>
+      <translation>總是</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="139"/>
