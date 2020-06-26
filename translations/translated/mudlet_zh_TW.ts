@@ -3954,7 +3954,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2106"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation>複製</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2131"/>
@@ -4055,7 +4055,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2420"/>
       <source>Reconnect automatically</source>
-      <translation>自动重连</translation>
+      <translation>自動重新連線</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2443"/>
@@ -4951,7 +4951,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation>複製</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
@@ -5204,7 +5204,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="58"/>
       <source>Triggers</source>
-      <translation>触发器</translation>
+      <translation>觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
@@ -5214,7 +5214,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="60"/>
       <source>Timers</source>
-      <translation>定时器</translation>
+      <translation>計時</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
@@ -6378,7 +6378,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8825"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8831"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation>複製</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="486"/>
@@ -9844,7 +9844,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="236"/>
       <source>Force auto save on exit</source>
-      <translation>退出时强制自动保存</translation>
+      <translation>結束時強制自動儲存</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="243"/>
@@ -10076,7 +10076,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1088"/>
       <source>Show Spaces/Tabs</source>
-      <translation>显示空格/制表符</translation>
+      <translation>顯示空白（space）/制表符（tab）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1098"/>
