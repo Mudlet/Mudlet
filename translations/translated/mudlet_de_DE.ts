@@ -7786,7 +7786,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeige oder verstecke den Suchbereich und die Schaltflächen unten.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
