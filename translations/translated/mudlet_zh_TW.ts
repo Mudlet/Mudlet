@@ -102,7 +102,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation>! 應請 %1 加入 %2</translation>
+      <translation>! 邀請 %1 加入 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
