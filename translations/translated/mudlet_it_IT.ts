@@ -7787,7 +7787,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nascondi o mostra l'area di ricerca e i bottoni a fianco della riga dei comandi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
