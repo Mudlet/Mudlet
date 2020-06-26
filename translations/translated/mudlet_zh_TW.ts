@@ -3939,7 +3939,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation>選擇設定檔進行連接</translation>
+      <translation>選擇設定檔進行連線</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
@@ -4910,7 +4910,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="79"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>連線</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1213"/>
@@ -6237,7 +6237,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="417"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5856"/>
       <source>Triggers</source>
-      <translation>触发器</translation>
+      <translation>觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
@@ -6269,7 +6269,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="431"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5862"/>
       <source>Timers</source>
-      <translation>定时器</translation>
+      <translation>計時</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="432"/>
@@ -6280,7 +6280,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="435"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5868"/>
       <source>Scripts</source>
-      <translation>脚本</translation>
+      <translation>腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="436"/>
@@ -6301,7 +6301,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="6268"/>
       <source>Variables</source>
-      <translation>变量</translation>
+      <translation>變數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
@@ -6440,7 +6440,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="537"/>
       <source>Statistics</source>
-      <translation>统计</translation>
+      <translation>統計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="538"/>
@@ -6634,7 +6634,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3455"/>
       <source>Variable name...</source>
-      <translation>变量名</translation>
+      <translation>變數名稱</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3512"/>
@@ -7226,7 +7226,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2223"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2255"/>
       <source>Script</source>
-      <translation>脚本</translation>
+      <translation>腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1755"/>
@@ -7913,7 +7913,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation>卸載</translation>
+      <translation>解除安裝</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
@@ -9770,7 +9770,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation>卸載</translation>
+      <translation>解除安裝</translation>
     </message>
   </context>
   <context>
@@ -12009,7 +12009,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
       <source>hidden variable</source>
-      <translation>隐藏变量</translation>
+      <translation>隱藏變數</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
