@@ -9910,7 +9910,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="453"/>
       <source>Input line</source>
-      <translation>输入行</translation>
+      <translation>輸入設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="462"/>
@@ -9975,7 +9975,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="647"/>
       <source>Main display</source>
-      <translation>主要显示</translation>
+      <translation>顯示設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="659"/>
@@ -10116,7 +10116,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1340"/>
       <source>Color view</source>
-      <translation>顯示色彩</translation>
+      <translation>色彩設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1346"/>
@@ -10907,7 +10907,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2256"/>
       <source>Mapper colors</source>
-      <translation>地圖顏色</translation>
+      <translation>地圖色彩</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2262"/>
