@@ -1619,7 +1619,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ 信息 ]  - 正在转换旧版标签, 标签号: %1.</translation>
+      <translation>[ INFO ] - 正在转换旧版标签, 标签号: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="479"/>
@@ -1761,7 +1761,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1379"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[ 信息 ]  - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
+      <translation>[ INFO ] - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1386"/>
@@ -1775,7 +1775,7 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[ 信息 ]  - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
+      <translation>[ INFO ] - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
 这个地图文件已经缺少了太多数据, 你最好还是重新做一个...</translation>
     </message>
     <message>
@@ -1783,9 +1783,9 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[信息] - 读取地图文件中 (格式版本: %1):
+      <translation>[ INFO ] - 讀取地圖文件中（格式版本：%1）：
 &quot;%2&quot;,
-请稍等...</translation>
+請稍候...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1403"/>
@@ -1796,13 +1796,13 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="1516"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[ 信息 ]  - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
+      <translation>[ INFO ] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1600"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ 信息 ]  - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
+      <translation>[ INFO ] - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1615"/>
@@ -1886,7 +1886,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[信息] - 关于上次地图操作的信息己保存在最近的报告文件中:
+      <translation>[ INFO ] - 关于上次地图操作的信息己保存在最近的报告文件中:
 &quot;%1&quot;
 - 找到 (最近一次的) 带有下面标题的报告:
 &quot;%2&quot;.</translation>
@@ -1902,7 +1902,7 @@ and there is enough space. The download operation has failed.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2227"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[ 信息 ]  - 己开始下载地图, 请稍等...</translation>
+      <translation>[ INFO ] - 已經開始下載地圖，請稍候…</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2238"/>
@@ -1979,7 +1979,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2437"/>
       <location filename="../src/TMap.cpp" line="2454"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ 信息 ]  - ... 地图下载并存储完毕, 开始分析...</translation>
+      <translation>[ INFO ] - …地圖下载并存储完毕，開始分析…</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2445"/>
@@ -3644,7 +3644,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="593"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ 信息 ]  - IP地址 %1 已经找到. 它是: %2
+      <translation>[ INFO ]  - 已經取得 %1 的 IP 位址：%2
 </translation>
     </message>
     <message>
@@ -3797,7 +3797,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2387"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[信息] - 正在加载重播文件:
+      <translation>[ INFO ] - 正在加载重播文件:
 &quot;%1&quot;。</translation>
     </message>
     <message>
@@ -3820,7 +3820,7 @@ Try again when it has finished.</source>
       <location filename="../src/ctelnet.cpp" line="2419"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation>[错误] - 无法读取文件 &quot;%1&quot;,
+      <translation>[ INFO ] - 无法读取文件 &quot;%1&quot;,
 错误信息是： &quot;%2&quot;.</translation>
     </message>
     <message>
@@ -9875,7 +9875,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation>在日志行开头添加日期戳</translation>
+      <translation>在紀錄文件的開頭加入時間戳記</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="356"/>
@@ -9900,7 +9900,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="400"/>
       <source>Log name:</source>
-      <translation>日志名:</translation>
+      <translation>紀錄檔名：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="420"/>
@@ -10000,7 +10000,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="713"/>
       <source>Enable anti-aliasing</source>
-      <translation>启用抗锯齿</translation>
+      <translation>使用平滑字型</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
