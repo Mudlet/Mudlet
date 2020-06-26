@@ -1409,7 +1409,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1682"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[ 信息 ]  - 已找到并打开地图文件, 开始分析...</translation>
+      <translation>[ INFO ]  - 地圖文件已就緒，開始分析…</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
@@ -1446,12 +1446,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2809"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ 信息 ]  - 系统收到重新加载地图的请求...</translation>
+      <translation>[ INFO ]  - 系统收到重新加載地圖的請求…</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2814"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[好] - ... 系统已完成重新加载地图的请求.</translation>
+      <translation>[  OK  ] - …系统已完成重新加載地圖的請求。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2816"/>
@@ -1634,12 +1634,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="511"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[好] - 审核地图完成(%1s). 祝游戏愉快...</translation>
+      <translation>[  OK  ] - 審核地圖完成（%1s）。祝遊戲愉快…</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="518"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[好] - 地图加载成功 (%1s).</translation>
+      <translation>[  OK  ] - 地圖加載完成 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
@@ -2580,8 +2580,8 @@ they have been removed.</source>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation>[好] - 所做的更改表示为:
-(编号) &quot;旧名称&quot; ==&gt; &quot;新名称&quot;
+      <translation>[  OK  ] - 所做的變更為：
+（編號） &quot;舊名稱&quot; ==&gt; &quot;新名稱&quot;
 </translation>
     </message>
     <message>
@@ -3826,7 +3826,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2447"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[好] - 重播已结束.</translation>
+      <translation>[  OK  ] - 重播已結束。</translation>
     </message>
   </context>
   <context>
@@ -10116,7 +10116,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1340"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>顯示色彩</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1346"/>
@@ -10907,7 +10907,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2256"/>
       <source>Mapper colors</source>
-      <translation>地图颜色</translation>
+      <translation>地圖顏色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2262"/>
@@ -11111,7 +11111,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3011"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>連線設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5075"/>
