@@ -9801,17 +9801,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon size toolbars:</source>
-      <translation>工具栏上的图标尺寸：</translation>
+      <translation>工具選單上的圖示大小：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="90"/>
       <source>Icon size in tree views:</source>
-      <translation>树状视图的图标尺寸：</translation>
+      <translation>樹狀視圖中的圖示大小：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="110"/>
       <source>Show menu bar:</source>
-      <translation>显示菜单栏：</translation>
+      <translation>顯示功能表列：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="121"/>
@@ -9865,7 +9865,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="333"/>
       <source>Log options</source>
-      <translation>日志选项</translation>
+      <translation>紀錄選項</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="342"/>
@@ -9880,7 +9880,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="356"/>
       <source>Save log files in:</source>
-      <translation>記錄儲存位置：</translation>
+      <translation>儲存位置：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="373"/>
@@ -9895,7 +9895,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="387"/>
       <source>Log format:</source>
-      <translation>記錄格式：</translation>
+      <translation>紀錄格式：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="400"/>
@@ -10171,7 +10171,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="171"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation>文字 &amp;&amp; 数据编码</translation>
+      <translation>語言編碼</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="177"/>
@@ -10181,7 +10181,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="191"/>
       <source>Server data encoding:</source>
-      <translation>伺服器資料編碼：</translation>
+      <translation>資料編碼：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="213"/>
