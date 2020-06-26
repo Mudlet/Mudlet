@@ -3666,18 +3666,19 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="466"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 成功建立安全連線。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="468"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 成功建立連線。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="504"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 連線時間：%1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="541"/>
@@ -3725,7 +3726,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="408"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 正在尋找伺服器的 IP 位址：%1:%2…</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="531"/>
