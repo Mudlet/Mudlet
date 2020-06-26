@@ -313,7 +313,7 @@
      <bool>false</bool>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line for the current profile.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionDiscord">
