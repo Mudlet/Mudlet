@@ -557,7 +557,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -1015,7 +1015,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>刪除行</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3010"/>
@@ -1461,7 +1461,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="3044"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>使用者視窗 - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1837,7 +1837,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2101"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>區域編號：%1 "%2"</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2103"/>
@@ -1852,7 +1852,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2119"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>房間編號：%1 "%2"</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2121"/>
