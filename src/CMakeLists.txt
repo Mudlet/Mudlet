@@ -358,30 +358,66 @@ target_compile_definitions(mudlet
 
 if(USE_OWN_QT5KEYCHAIN)
     # An extra definition is needed if we are using our own QtKeyChain to not
-    # export symbols from our self-built library:
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    # export symbols from our self-built library and we are NOT on Windows;
+    # if we ARE on Windows this is not to be defined so that a header file
+    # "qkeychain_export.h" is created and set up so that the functions are
+    # marked for export from the ".dll" during their compilation but not later
+    # on, when instead they are marked for import by the Windows dynamic linker:
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN)
+    if(WIN32)
+        target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN)
+    else()
+        target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+    endif()
 endif()
 
-target_link_libraries(
-  mudlet
-  communi
-  edbee-lib
-  Boost::boost
-  HUNSPELL::HUNSPELL
-  LUA51::LUA51
-  PCRE::PCRE
-  PUGIXML::PUGIXML
-  Qt5::Concurrent
-  Qt5::Core
-  Qt5::Network
-  Qt5::Multimedia
-  Qt5::OpenGL
-  Qt5::UiTools
-  Qt5::Widgets
-  YAJL::YAJL
-  ZIP::ZIP
-  ZLIB::ZLIB
-  qt5keychain)
+if(WIN32 AND NOT USE_MAIN_BUILD_SYSTEM)
+  # For this combination the use of an INTERFACE definition (with the library
+  # name listed twice with "::" separators of some libraries causes build
+  # failures with an obscure error message of the form:
+  # "src/CMakeFiles/mudlet.dir/build.make:1954: *** target pattern contains no '%'.  Stop."
+  target_link_libraries(
+    mudlet
+    communi
+    edbee-lib
+    Boost::boost
+    HUNSPELL
+    LUA51::LUA51
+    PCRE
+    PUGIXML::PUGIXML
+    Qt5::Concurrent
+    Qt5::Core
+    Qt5::Network
+    Qt5::Multimedia
+    Qt5::OpenGL
+    Qt5::UiTools
+    Qt5::Widgets
+    YAJL
+    ZIP
+    ZLIB::ZLIB
+    qt5keychain)
+else()
+  target_link_libraries(
+    mudlet
+    communi
+    edbee-lib
+    Boost::boost
+    HUNSPELL::HUNSPELL
+    LUA51::LUA51
+    PCRE::PCRE
+    PUGIXML::PUGIXML
+    Qt5::Concurrent
+    Qt5::Core
+    Qt5::Network
+    Qt5::Multimedia
+    Qt5::OpenGL
+    Qt5::UiTools
+    Qt5::Widgets
+    YAJL::YAJL
+    ZIP::ZIP
+    ZLIB::ZLIB
+    qt5keychain)
+endif()
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
@@ -405,6 +441,16 @@ endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(mudlet PRIVATE INCLUDE_VARIABLE_SPLASH_SCREEN)
+endif()
+
+if(WIN32)
+  if(USE_MAIN_BUILD_SYSTEM)
+    # The UNICODE and _UNICODE definitions are needed to make
+    # (QString) mudlet::getShortPathName(const QString& name) work:
+    target_compile_definitions(mudlet PRIVATE INCLUDE_MAIN_BUILD_SYSTEM UNICODE _UNICODE)
+  else()
+    target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
+  endif()
 endif()
 
 if(WIN32)
