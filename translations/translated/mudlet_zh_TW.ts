@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="149"/>
       <source>via Mudlet</source>
-      <translation>通过Mudlet</translation>
+      <translation>透過 Mudlet</translation>
     </message>
   </context>
   <context>
@@ -1264,17 +1264,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="829"/>
       <source>Do you want to save the profile %1?</source>
-      <translation>要保存用户配置文件%1吗?</translation>
+      <translation>是否儲存使用者設定文件 %1？</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="842"/>
       <source>Couldn&apos;t save profile</source>
-      <translation>无法保存用户配置文件</translation>
+      <translation>無法儲存使用者設定文件</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="842"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
+      <translation>抱歉，以下錯誤導致無法儲存使用者設定文件：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="918"/>
@@ -2691,7 +2691,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1057"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation>複製</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1068"/>
@@ -3939,7 +3939,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation>选择配置文件进行连接</translation>
+      <translation>選擇設定檔進行連接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
@@ -3969,12 +3969,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2202"/>
       <source>Required</source>
-      <translation>必填项</translation>
+      <translation>必要選項</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2208"/>
       <source>Profile name:</source>
-      <translation>配置名称:</translation>
+      <translation>設定名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2231"/>
@@ -3984,7 +3984,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Port:</source>
-      <translation>連接埠：</translation>
+      <translation>連接埠號：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2304"/>
@@ -3994,22 +3994,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2311"/>
       <source>Profile history:</source>
-      <translation>配置历史:</translation>
+      <translation>歷史設定：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2334"/>
       <source>load newest profile</source>
-      <translation>加载最新配置文件</translation>
+      <translation>載入最新設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2339"/>
       <source>load oldest profile</source>
-      <translation>加载最早的配置文件</translation>
+      <translation>載入最舊設定檔</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2362"/>
       <source>Optional</source>
-      <translation>可选项</translation>
+      <translation>可選項目</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2378"/>
@@ -4035,12 +4035,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2368"/>
       <source>Password:</source>
-      <translation>密码:</translation>
+      <translation>密碼：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2427"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation>角色密码. 注意, 密码以明文存储存.</translation>
+      <translation>角色密碼。注意！密碼將以明文儲存。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2404"/>
@@ -4065,7 +4065,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2478"/>
       <source>Informational</source>
-      <translation>更多信息</translation>
+      <translation>更多資訊</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2505"/>
@@ -4966,7 +4966,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation>角色密码. 注意, 密码以明文存储存.</translation>
+      <translation>角色密碼。注意！密碼將以明文儲存。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="482"/>
@@ -5306,7 +5306,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="45"/>
       <source>Add Files</source>
-      <translation>添加文件</translation>
+      <translation>新增檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
