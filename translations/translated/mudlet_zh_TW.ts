@@ -10475,7 +10475,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1605"/>
       <location filename="../src/ui/profile_preferences.ui" line="2407"/>
       <source>Yellow:</source>
-      <translation>黃色:</translation>
+      <translation>黃色：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1612"/>
