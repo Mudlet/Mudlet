@@ -42,11 +42,12 @@ function Geyser.HBox:organize()
     window:move(start_x.."%", "0%")
     if window.h_policy == Geyser.Dynamic then
       width = window_width * window.h_stretch_factor
+      window:resize(width .. "%", nil)
     end
     if window.v_policy == Geyser.Dynamic then
       height = 100
+      window:resize(nil, height .. "%")
     end
-    window:resize(width.."%", height.."%")
     start_x = start_x + width
   end
 end
