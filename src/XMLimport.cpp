@@ -952,7 +952,11 @@ void XMLimport::readHostPackage(Host* pHost)
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
-
+    if (attributes().hasAttribute(QLatin1String("CustomLoginId"))) {
+        pHost->setCustomLoginId(attributes().value(QLatin1String("CustomLoginId")).toInt());
+    } else {
+        pHost->setCustomLoginId(0);
+    }
 
     while (!atEnd()) {
         readNext();

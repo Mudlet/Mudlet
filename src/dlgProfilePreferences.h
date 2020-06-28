@@ -181,6 +181,7 @@ private:
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
+    void generateLoginTexts();
 
     int mFontSize;
     QPointer<Host> mpHost;

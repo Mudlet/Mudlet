@@ -182,11 +182,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
-    if (mudlet::self()->storingPasswordsSecurely()) {
-        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
-    } else {
-        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
-    }
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
@@ -258,7 +253,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        slot_connectToServer();
+        connectToServer();
         QDialog::accept();
     }
 }
@@ -2212,14 +2207,16 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
 
 void dlgConnectionProfiles::slot_load()
 {
-    loadProfile(false);
+    loadProfile(false, login_entry->text(), character_password_entry->text());
     QDialog::accept();
 }
-void dlgConnectionProfiles::slot_connectToServer()
+
+void dlgConnectionProfiles::connectToServer()
 {
-    loadProfile(true);
+    loadProfile(true, login_entry->text(), character_password_entry->text());
 }
-void dlgConnectionProfiles::loadProfile(bool alsoConnect)
+
+void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerName, const QString& playerPassword)
 {
     QString profile_name = profile_name_entry->text().trimmed();
 
@@ -2238,10 +2235,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
     // load an old profile if there is any
     // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), playerName, playerPassword)) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return ;
+            return;
         }
     } else {
         return;
@@ -2286,18 +2283,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         }
 
         pHost->mSslTsl = port_ssl_tsl->isChecked();
-
-        if (character_password_entry->text().trimmed().size() > 0) {
-            pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_update_pass(pHost->getPass());
-        }
-
-        if (login_entry->text().trimmed().size() > 0) {
-            pHost->setLogin(login_entry->text().trimmed());
-        } else {
-            slot_update_login(pHost->getLogin());
-        }
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:

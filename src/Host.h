@@ -189,6 +189,8 @@ public:
     const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
     void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
+    void               setCustomLoginId(const int value);
+    int                getCustomLoginId() { QMutexLocker locker(&mLock); return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
@@ -551,6 +553,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    static const int mLuaSendPasswordTimeout;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -692,6 +695,11 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    // If greater than 0 (the default, disabled case) then use the indicated
+    // custom login text of QMap<int, QString> mudlet::mCustomLoginTexts:
+    int mCustomLoginId;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

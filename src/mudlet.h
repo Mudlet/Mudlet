@@ -489,6 +489,14 @@ public:
     // the system
     bool mUsingMudletDictionaries;
 
+    // A set of fixed strings that the user can choose one of to be used when
+    // the lua function sendCustomLogin() is used in a script/package, the texts
+    // are stored in this map:
+    static const QMap<int, QString> mCustomLoginTexts;
+    // and the translated form for display in the preferences are stored in this
+    // one:
+    QMap<int, QString> mLocaliseCustomLoginTexts;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
