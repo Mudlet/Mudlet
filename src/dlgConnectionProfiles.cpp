@@ -38,14 +38,14 @@
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog(parent)
+, validName()
+, validUrl()
+, validPort()
 , mProfileList(QStringList())
 , offline_button(nullptr)
 , connect_button(nullptr)
 , delete_profile_lineedit(nullptr)
 , delete_button(nullptr)
-, validName()
-, validUrl()
-, validPort()
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
@@ -430,6 +430,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString& newName)
 {
+    Q_UNUSED(newName)
     validateProfile();
 }
 
