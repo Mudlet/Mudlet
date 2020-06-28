@@ -43,13 +43,13 @@ function Geyser.VBox:organize()
     local height = (window:get_height() / self:get_height()) * 100
     if window.h_policy == Geyser.Dynamic then
       width = 100
-      if window.width ~= width then
+      if window.width ~= width .. "%" then
         window:resize(width .. "%", nil)
       end
     end
     if window.v_policy == Geyser.Dynamic then
       height = window_height * window.v_stretch_factor
-      if window.height ~= height then
+      if window.height ~= height .. "%" then
         window:resize(nil, height .. "%")
       end
     end
