@@ -3427,13 +3427,16 @@ void mudlet::writeSettings()
 
 void mudlet::slot_show_connection_dialog()
 {
-    auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
-    pDlg->fillout_form();
+    if (mConnectionDialog) {
+        return;
+    }
+    mConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
+    mConnectionDialog->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
-    pDlg->setAttribute(Qt::WA_DeleteOnClose);
-    pDlg->show();
+    connect(mConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    mConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mConnectionDialog->show();
 }
 
 void mudlet::show_editor_dialog()
