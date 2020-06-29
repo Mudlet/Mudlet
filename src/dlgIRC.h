@@ -79,8 +79,6 @@ public:
     QStringList getChannels() { return mChannels; }
     QString getConnectedHost() { return mConnectedHostName; }
     void ircRestart(bool reloadConfigs = true);
-    void setDefaultHostClient(bool isDefaultClient) { mIsDefaultIrcClient = isDefaultClient; }
-    bool isDefaultHostClient() { return mIsDefaultIrcClient; }
 
 private slots:
     void slot_onConnected();
@@ -120,7 +118,6 @@ private:
 
     Host* mpHost;
     bool mIrcStarted;
-    bool mIsDefaultIrcClient;
     IrcCompleter* completer;
     IrcCommandParser* commandParser;
     IrcBufferModel* bufferModel;
