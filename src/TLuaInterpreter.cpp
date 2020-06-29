@@ -15982,7 +15982,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         return false;
     }
 
-    for (int i = 0; i < pE.mArgumentList.size(); i++) {
+    // Lua is limited to ~50 arguments on a function
+    auto maxArguments = std::min(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
+    for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
             lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
@@ -16008,7 +16010,13 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+    error = lua_pcall(L, maxArguments, LUA_MULTRET, 0);
+
+    if (mudlet::debugMode && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
+                                                   << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << "\n"
+                >> 0;
+    }
 
     if (error) {
         std::string err = "";

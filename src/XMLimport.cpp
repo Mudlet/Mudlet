@@ -944,6 +944,15 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
     pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
+    bool compactInputLine = false;
+    if (attributes().hasAttribute(QLatin1String("CompactInputLine"))) {
+        compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == "yes";
+    }
+    pHost->setCompactInputLine(compactInputLine);
+    if (mudlet::self()->mpCurrentActiveHost == pHost) {
+        mudlet::self()->dactionInputLine->setChecked(compactInputLine);
+    }
+
 
     while (!atEnd()) {
         readNext();

@@ -443,7 +443,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString& newName)
 {
-    Q_UNUSED(newName);
+    Q_UNUSED(newName)
     validateProfile();
 }
 

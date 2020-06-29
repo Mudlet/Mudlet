@@ -176,7 +176,6 @@ mudlet::mudlet()
 , mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
 , mshowMapAuditErrors(false)
-, mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
@@ -529,7 +528,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1635,6 +1634,8 @@ void mudlet::slot_tab_changed(int tabID)
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
+    dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+
     // Restore the multi-view mode if it was enabled:
     if (mpTabBar->count() > 1) {
         if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
@@ -1655,6 +1656,7 @@ void mudlet::slot_tab_changed(int tabID)
             dactionMultiView->setEnabled(false);
         }
     }
+
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
@@ -1701,7 +1703,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpCurrentActiveHost = pH;
 
-    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -3285,7 +3286,6 @@ void mudlet::readLateSettings(const QSettings& settings)
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
-    mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
@@ -3424,7 +3424,6 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
-    settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
@@ -3434,13 +3433,16 @@ void mudlet::writeSettings()
 
 void mudlet::slot_show_connection_dialog()
 {
-    auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
-    pDlg->fillout_form();
+    if (mConnectionDialog) {
+        return;
+    }
+    mConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
+    mConnectionDialog->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
-    pDlg->setAttribute(Qt::WA_DeleteOnClose);
-    pDlg->show();
+    connect(mConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    mConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mConnectionDialog->show();
 }
 
 void mudlet::show_editor_dialog()
@@ -4300,39 +4302,23 @@ void mudlet::slot_multi_view(const bool state)
     }
 }
 
+// Called by the short-cut to the menu item that doesn't pass the checked state
+// of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-        setCompactInputLine(false);
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
-        setCompactInputLine(true);
-    }
+    const bool newState = !dactionInputLine->isChecked();
+    slot_compact_input_line(newState);
 }
 
-void mudlet::set_compact_input_line()
+// Called by the menu-item's action itself, that DOES pass the checked state:
+void mudlet::slot_compact_input_line(const bool state)
 {
-    if (!mpCurrentActiveHost) {
-        return;
+    if (dactionInputLine->isChecked() != state) {
+        // Ensure the menu item reflectes the actual state:
+        dactionInputLine->setChecked(state);
     }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (!compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
+    if (mpCurrentActiveHost) {
+        mpCurrentActiveHost->setCompactInputLine(state);
     }
 }
 
@@ -6038,5 +6024,6 @@ void mudlet::activateProfile(Host* pHost)
             mpTabBar->blockSignals(false);
         }
         mpCurrentActiveHost = pHost;
+        dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
     }
 }
