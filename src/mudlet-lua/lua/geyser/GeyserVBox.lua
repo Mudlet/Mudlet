@@ -26,7 +26,6 @@ end
 --- Responsible for organizing the elements inside the VBox
 -- Called when a new element is added
 function Geyser.VBox:organize()
-  self.parent:reposition()
   -- Workaround for issue with width/height being 0 at creation
   if self:get_width() == 0 then
     self:resize("0.9px", nil)
