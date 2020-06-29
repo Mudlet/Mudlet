@@ -430,9 +430,8 @@ void dlgProfilePreferences::disableHostDetails()
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
 
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+    groupBox_ircOptions->setEnabled(false);
+
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
 
@@ -494,9 +493,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+
+    groupBox_ircOptions->setEnabled(true);
+
     groupbox_searchEngineSelection->setEnabled(true);
 
 #if defined(QT_NO_SSL)

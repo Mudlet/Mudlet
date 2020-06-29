@@ -45,7 +45,12 @@ QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
 int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarted(false), mInputHistoryMax(8), mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost) 
+: mReadyForSending(false)
+, mpHost(pHost)
+, mIrcStarted(false)
+, mInputHistoryMax(8)
+, mConnectedHostName()
 {
     mInputHistoryMax = 8;
     mInputHistoryIdxNext = 0;
@@ -609,9 +614,7 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
                 if (!textToLua.isEmpty()) {
                     QString from = message->nick();
                     QString to = getMessageTarget(message, buffer->title());
-                    if (!isDefaultHostClient()) {
-                        mpHost->postIrcMessage(from, to, textToLua);
-                    }
+                    mpHost->postIrcMessage(from, to, textToLua);
                 }
             }
 
@@ -644,9 +647,7 @@ void dlgIRC::slot_nickNameChanged(const QString& nick)
     }
 
     // send a notice to Lua about the nick name change.
-    if (!isDefaultHostClient()) {
-        mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
-    }
+    mpHost->postIrcMessage(mNickName, nick, tr("Your nick has changed."));
     mNickName = nick;
 
     setClientWindowTitle();
@@ -665,9 +666,7 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
 
     if (message->isOwn()) {
         QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
-        if (!isDefaultHostClient()) {
-            mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
-        }
+        mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
     }
 }
 
@@ -678,7 +677,7 @@ void dlgIRC::slot_partedChannel(IrcPartMessage* message)
         mChannels.removeAll(chan);
     }
 
-    if (message->isOwn() && !isDefaultHostClient()) {
+    if (message->isOwn()) {
         QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
         mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
     }
