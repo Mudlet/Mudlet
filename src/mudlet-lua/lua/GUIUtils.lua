@@ -742,12 +742,12 @@ end
 ---   selectString(matches[2], 1)
 ---   replace("hello")
 ---   </pre>
-function replaceWildcard(what, replacement)
+function replaceWildcard(what, replacement, keepColor)
   if replacement == nil or what == nil then
     return
   end
   selectCaptureGroup(what)
-  replace(replacement)
+  replace(replacement, keepColor)
 end
 
 -- internal sorting function, sorts first by hue, then luminosity, then value
