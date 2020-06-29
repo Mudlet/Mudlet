@@ -35,6 +35,7 @@ function Geyser.VBox:organize()
   end
   local window_height = (self:calculate_dynamic_window_size().height / self:get_height()) * 100
   local start_y = 0
+  self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
     window:move("0%", start_y.."%")
