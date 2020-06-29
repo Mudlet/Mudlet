@@ -41,6 +41,9 @@ function Geyser.VBox:organize()
     window:move("0%", start_y.."%")
     local width = (window:get_width() / self:get_width()) * 100
     local height = (window:get_height() / self:get_height()) * 100
+    if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
+      self.contains_fixed = true
+    end
     if window.h_policy == Geyser.Dynamic then
       width = 100
       if window.width ~= width .. "%" then
@@ -54,6 +57,13 @@ function Geyser.VBox:organize()
       end
     end
     start_y = start_y + height
+  end
+end
+
+function Geyser.VBox:reposition()
+  Geyser.Container.reposition(self)
+  if self.contains_fixed then
+    self:organize()
   end
 end
 
