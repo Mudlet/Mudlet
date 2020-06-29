@@ -34,6 +34,7 @@ function Geyser.HBox:organize()
   end
   local window_width = (self:calculate_dynamic_window_size().width / self:get_width()) * 100
   local start_x = 0
+  self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
     local width = (window:get_width() / self:get_width()) * 100
