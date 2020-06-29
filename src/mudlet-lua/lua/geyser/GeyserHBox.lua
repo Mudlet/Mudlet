@@ -25,7 +25,6 @@ end
 --- Responsible for organizing the elements inside the HBox
 -- Called when a new element is added
 function Geyser.HBox:organize()
-  self.parent:reposition()
   -- Workaround for issue with width/height being 0 at creation
   if self:get_width() == 0 then
     self:resize("0.9px", nil)
@@ -39,6 +38,9 @@ function Geyser.HBox:organize()
     local window = self.windowList[window_name]
     local width = (window:get_width() / self:get_width()) * 100
     local height = (window:get_height() / self:get_height()) * 100
+    if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
+      self.contains_fixed = true
+    end
     window:move(start_x.."%", "0%")
     if window.h_policy == Geyser.Dynamic then
       width = window_width * window.h_stretch_factor
@@ -53,6 +55,13 @@ function Geyser.HBox:organize()
       end
     end
     start_x = start_x + width
+  end
+end
+
+function Geyser.HBox:reposition()
+  Geyser.Container.reposition(self)
+  if self.contains_fixed then
+    self:organize()
   end
 end
 
