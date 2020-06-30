@@ -902,7 +902,7 @@ if false then
   ---
   --- @see selectString
   --- @see deleteLine
-  function replace(with)
+  function replace(with, keepColor)
   end
 
 
