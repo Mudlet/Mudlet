@@ -1441,7 +1441,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2734"/>
       <location filename="../src/TConsole.cpp" line="2773"/>
       <source>No search results, sorry!</source>
-      <translation type="unfinished"/>
+      <translation>沒有搜尋結果，抱歉！</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2809"/>
@@ -1925,7 +1925,7 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2235"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>正載下載用於 %1 的地圖檔案…</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2265"/>
@@ -3336,7 +3336,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>有新版本的 %APPNAME% 可以使用！</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="110"/>
@@ -3347,12 +3347,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="145"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% 的更新記錄</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="152"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>您正在使用版本 %CURRENT_VERSION%。</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="180"/>
@@ -3459,22 +3459,22 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>關於 Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>支持者</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>授權許可</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
@@ -3620,7 +3620,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
       <source>Regex</source>
-      <translation type="unfinished"/>
+      <translation>正則表達式</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="129"/>
@@ -4957,7 +4957,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>僅複製設定</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -5312,7 +5312,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>匯出位置：</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="89"/>
