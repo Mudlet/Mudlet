@@ -1309,7 +1309,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2581"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>系統訊息：%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="368"/>
@@ -4926,7 +4926,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2384"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>你必須輸入一個數字，不允許使用其他字元。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2370"/>
@@ -4972,7 +4972,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="482"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>無法在電腦上創建新的設定檔資料夾。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="579"/>
@@ -6609,23 +6609,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3257"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>新增觸發群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3259"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4101"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>新增觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3358"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>新增計時群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3360"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>新增計時</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3448"/>
@@ -6640,24 +6640,24 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3512"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>新增熱鍵群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3514"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>新增熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3596"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>新增別名群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3598"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4209"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4279"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>新增別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3687"/>
@@ -6678,13 +6678,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3788"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4528"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>新增腳本群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3790"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4528"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>新增腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4223"/>
@@ -6725,7 +6725,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8571"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>預設前景顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4979"/>
@@ -6749,7 +6749,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8634"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>預設背景顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4994"/>
@@ -7343,17 +7343,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>字串</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>數字</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>布林值</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
@@ -7687,7 +7687,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="189"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>筆記</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="197"/>
@@ -7702,7 +7702,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>關於 Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
@@ -8269,7 +8269,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="425"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>回報問題</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="715"/>
@@ -9146,7 +9146,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="270"/>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>連線</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="275"/>
@@ -9271,7 +9271,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="368"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>筆記</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
@@ -9328,13 +9328,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="887"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ASCII（基本）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="888"/>
       <source>UTF-8 (Recommended)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>UTF-8（建議使用）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="893"/>
@@ -9728,7 +9728,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="4413"/>
       <location filename="../src/mudlet.cpp" line="4430"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>時間：%1</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="5049"/>
@@ -9787,7 +9787,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>偏好設定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
@@ -10363,7 +10363,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1310"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>自動補全</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
@@ -10979,7 +10979,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2737"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>隱藏計時</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2760"/>
@@ -11122,7 +11122,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5090"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>位址</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5110"/>
