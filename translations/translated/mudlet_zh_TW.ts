@@ -745,7 +745,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2847"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>移动房间</translation>
+      <translation>移動房間</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2850"/>
@@ -757,7 +757,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>删除房间</translation>
+      <translation>刪除房間</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
@@ -769,7 +769,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2855"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>改变房间颜色</translation>
+      <translation>變更房間顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
@@ -11127,7 +11127,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5110"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>連接埠</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
@@ -11852,12 +11852,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="525"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>選擇檔案⋯</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="556"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>沒有檔案</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
@@ -11977,7 +11977,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>變數名稱 ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
@@ -12020,17 +12020,17 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>字串</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>數字</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>布林值</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
