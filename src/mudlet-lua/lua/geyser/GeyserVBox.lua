@@ -62,7 +62,7 @@ end
 
 function Geyser.VBox:reposition()
   Geyser.Container.reposition(self)
-  if self.contains_fixed then
+  if self.contains_fixed then -- prevent gaps when items have fixed size
     self:organize()
   end
 end
