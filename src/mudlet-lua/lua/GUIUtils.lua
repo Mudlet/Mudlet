@@ -631,7 +631,7 @@ end
 ---   -- also handles recursive matches:
 ---   replaceAll("you", "you and me")
 ---   </pre>
-function replaceAll(word, what)
+function replaceAll(word, what, keepColor)
   local getCurrentLine, selectSection, replace = getCurrentLine, selectSection, replace
   local startp, endp = 1, 1
   while true do
@@ -640,7 +640,7 @@ function replaceAll(word, what)
       break
     end
     selectSection(startp - 1, endp - startp + 1)
-    replace(what)
+    replace(what, keepColor)
     endp = endp + (#what - #word) + 1 -- recalculate the new word ending to start search from there
   end
 end
@@ -742,12 +742,12 @@ end
 ---   selectString(matches[2], 1)
 ---   replace("hello")
 ---   </pre>
-function replaceWildcard(what, replacement)
+function replaceWildcard(what, replacement, keepColor)
   if replacement == nil or what == nil then
     return
   end
   selectCaptureGroup(what)
-  replace(replacement)
+  replace(replacement, keepColor)
 end
 
 -- internal sorting function, sorts first by hue, then luminosity, then value
