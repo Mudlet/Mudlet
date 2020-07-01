@@ -426,6 +426,7 @@ public:
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
+    const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
@@ -694,6 +695,10 @@ private:
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
     QString mInterfaceLanguage {};
+    // An encapsulation of the above in a form that Qt uses to hold all the
+    // details:
+    QLocale mUserLocale {};
+
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call

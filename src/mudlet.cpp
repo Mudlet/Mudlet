@@ -3258,6 +3258,12 @@ void mudlet::readEarlySettings(const QSettings& settings)
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
+    mUserLocale = QLocale(mInterfaceLanguage);
+    if (mUserLocale == QLocale::c()) {
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
+    } else {
+        qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    }
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -5374,6 +5380,14 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     if (mInterfaceLanguage != languageCode) {
         mInterfaceLanguage = languageCode;
+        mUserLocale = QLocale(mInterfaceLanguage);
+        if (mUserLocale == QLocale::c()) {
+            qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                           << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+        }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
         // would also need a call here to do the same in this class that the
