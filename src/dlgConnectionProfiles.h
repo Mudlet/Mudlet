@@ -117,6 +117,7 @@ private:
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile {};
+    QString mDateTimeFormat;
 
 
 private slots:
