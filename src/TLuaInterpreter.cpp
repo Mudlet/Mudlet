@@ -244,6 +244,24 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     case QNetworkAccessManager::GetOperation:
         QString localFileName = downloadMap.value(reply);
         downloadMap.remove(reply);
+
+        // If the user forgot to give us a file path, we're not going to
+        // consider this an error, we're just going to skip downloading the
+        // response. Another way this could happen is the user made a POST
+        // request, and it redirected to a GET. In the case of POST requests,
+        // we don't ask the user for a file path, and so here too we will just
+        // skip downloading the response.
+        if (localFileName.isEmpty())
+        {
+            event.mArgumentList << QLatin1String("sysDownloadDone");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QString::number(0);
+            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            break;
+        }
+
         QFile localFile(localFileName);
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
