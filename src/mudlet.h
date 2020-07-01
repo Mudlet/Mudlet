@@ -506,8 +506,6 @@ public slots:
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
-    void slot_send_login();
-    void slot_send_pass();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
@@ -606,9 +604,6 @@ private:
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QQueue<QString> tempLoginQueue;
-    QQueue<QString> tempPassQueue;
-    QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
