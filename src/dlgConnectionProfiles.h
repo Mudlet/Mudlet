@@ -44,6 +44,9 @@ public:
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
+    QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
+
+    const static int csmNameRole{Qt::UserRole};
 
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
@@ -86,9 +89,9 @@ private:
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
     bool hasCustomIcon(const QString& profileName) const;
-    void setProfileIcon(const QFont& font) const;
-    void loadCustomProfile(const QFont& font, const QString& profileName) const;
-    void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
+    void setProfileIcon() const;
+    void loadCustomProfile(const QString& profileName) const;
+    void generateCustomProfile(int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
