@@ -17196,7 +17196,7 @@ void TLuaInterpreter::initIndenterGlobals()
      * directory of the extracted source package so it MUST be extracted into
      * a known directory name which is assumed here to be "mudlet"!
      */
-#if defined(LUA_DEFAULT_PATH)
+
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = [["
                                                            LUA_DEFAULT_PATH "/?.lua;" // 1
@@ -17207,7 +17207,6 @@ void TLuaInterpreter::initIndenterGlobals()
                                                            " .. package.path")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     } else {
-#endif
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = [["
                                                            "%1/?.lua;" // 2
                                                            "%1/../3rdparty/?.lua;" // 3
@@ -17215,9 +17214,7 @@ void TLuaInterpreter::initIndenterGlobals()
                                                            "%1/../../mudlet/3rdparty/?.lua;]]" // 5
                                                            " .. package.path")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#if defined(LUA_DEFAULT_PATH)
     }
-#endif
 
 #if ! defined (Q_OS_MACOS)
     // AppInstaller on Linux would like the search path for the binary modules
@@ -17243,7 +17240,6 @@ void TLuaInterpreter::initIndenterGlobals()
 end)LUA");
     // clang-format on
 
-#if defined(LUA_DEFAULT_PATH)
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         // clang-format off
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([["
@@ -17254,17 +17250,14 @@ end)LUA");
                                                            " .. package.path)")
                       .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
     } else {
-#endif
         luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([["
                                                            "%1/../3rdparty/?.lua;" // 3
                                                            "%1/../../3rdparty/?.lua;" // 4
                                                            "%1/../../mudlet/3rdparty/?.lua;]]" // 5
                                                            " .. package.path)")
                                                            .arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#if defined(LUA_DEFAULT_PATH)
         // clang-format on
     }
-#endif
 #endif
 
     // clang-format off
