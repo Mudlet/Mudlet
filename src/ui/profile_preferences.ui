@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>876</width>
-    <height>610</height>
+    <width>700</width>
+    <height>501</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -226,7 +226,8 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
-             <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
+             <string comment="This text is a bit long so it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Toolbar notification if Mudlet is
+minimized and new data arrives</string>
             </property>
            </widget>
           </item>
@@ -247,7 +248,8 @@
           <item row="1" column="1">
            <widget class="QCheckBox" name="acceptServerMedia">
             <property name="text">
-             <string>Allow server to download and play media (requires GMCP enabled below)</string>
+             <string comment="This text is a bit long so it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Allow server to download and play media
+(requires GMCP enabled below)</string>
             </property>
            </widget>
           </item>
@@ -722,7 +724,8 @@
              </font>
             </property>
             <property name="text">
-             <string>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</string>
+             <string>This font is not monospace, which may not be ideal for playing some text games:
+you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
@@ -5103,7 +5106,8 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string comment="The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!">Show 'LUA OK' messages for Timers with minimum interval of (h:mm:ss.zzz):</string>
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match translations in the glossary - assuming they have been put in there! Also, as this text is a bit long it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Show 'LUA OK' messages for Timers with
+minimum interval of (h:mm:ss.zzz):</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
