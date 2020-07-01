@@ -136,7 +136,9 @@ public:
     void reconnect();
     void disconnectIt();
     void abortConnection();
-    bool sendData(QString& data);
+    // Second argument needs to be set false when sending password to prevent
+    // it being sniffed by scripts/packages:
+    bool sendData(QString& data, bool permitDataSendRequestEvent = true);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);

@@ -4123,30 +4123,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->mTelnet.sendData(login);
-}
-
-void mudlet::slot_send_pass()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->mTelnet.sendData(pass);
-}
-//////////////////////////////////////////////////////////////////////////////
-
-
 void mudlet::processEventLoopHack()
 {
     QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
@@ -4241,8 +4217,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
 
-    tempHostQueue.enqueue(pHost);
-    tempHostQueue.enqueue(pHost);
     if (connect) {
         pHost->connectToServer();
     } else {
