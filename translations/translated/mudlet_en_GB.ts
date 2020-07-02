@@ -1569,7 +1569,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17251"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Lua error:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17071"/>
@@ -7680,7 +7680,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
