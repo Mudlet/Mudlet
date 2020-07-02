@@ -244,6 +244,24 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     case QNetworkAccessManager::GetOperation:
         QString localFileName = downloadMap.value(reply);
         downloadMap.remove(reply);
+
+        // If the user forgot to give us a file path, we're not going to
+        // consider this an error, we're just going to skip downloading the
+        // response. Another way this could happen is the user made a POST
+        // request, and it redirected to a GET. In the case of POST requests,
+        // we don't ask the user for a file path, and so here too we will just
+        // skip downloading the response.
+        if (localFileName.isEmpty())
+        {
+            event.mArgumentList << QLatin1String("sysDownloadDone");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << localFileName;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QString::number(0);
+            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            break;
+        }
+
         QFile localFile(localFileName);
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -15982,7 +16000,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         return false;
     }
 
-    for (int i = 0; i < pE.mArgumentList.size(); i++) {
+    // Lua is limited to ~50 arguments on a function
+    auto maxArguments = std::min(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
+    for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
             lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
@@ -16008,7 +16028,13 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+    error = lua_pcall(L, maxArguments, LUA_MULTRET, 0);
+
+    if (mudlet::debugMode && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
+                                                   << " arguments passed to Lua function, exceeding Lua's limit. Trimmed arguments to " << LUA_FUNCTION_MAX_ARGS << "\n"
+                >> 0;
+    }
 
     if (error) {
         std::string err = "";

@@ -582,6 +582,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setAcceptDrops(true);
         setMouseTracking(true);
     }
+
+    if (mType & MainConsole) {
+        mpButtonMainLayer->setVisible(!mpHost->getCompactInputLine());
+    }
 }
 
 TConsole::~TConsole()

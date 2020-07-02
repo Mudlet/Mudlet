@@ -380,6 +380,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mDebugShowAllProblemCodepoints(false)
+, mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -2560,5 +2561,19 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
     if (mDebugShowAllProblemCodepoints != state) {
         mDebugShowAllProblemCodepoints = state;
         emit signal_changeDebugShowAllProblemCodepoints(state);
+    }
+}
+
+void Host::setCompactInputLine(const bool state)
+{
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        // When the profile is being loaded and the previously saved data is
+        // read from the XML file the main TConsole has not been instatiated
+        // yet - so must check for it existing first - and ensure the read
+        // setting is applied in the constructor for it:
+        if (mpConsole && mpConsole->mpButtonMainLayer) {
+            mpConsole->mpButtonMainLayer->setVisible(!state);
+        }
     }
 }

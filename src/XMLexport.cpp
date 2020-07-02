@@ -448,6 +448,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
     host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
     host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);

@@ -327,6 +327,8 @@ public:
     std::pair<bool, QString> setMapperTitle(const QString&);
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
+    void setCompactInputLine(const bool state);
+    bool getCompactInputLine() const { return mCompactInputLine; }
 
 
     cTelnet mTelnet;
@@ -696,6 +698,9 @@ private:
     // any dodgy codepoints that it has problems with - if false it only reports
     // each codepoint the first time it encounters itL
     bool mDebugShowAllProblemCodepoints;
+
+    // Now a per profile option this one represents the state of this profile:
+    bool mCompactInputLine;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

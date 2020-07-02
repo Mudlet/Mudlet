@@ -38,14 +38,14 @@
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog(parent)
+, validName()
+, validUrl()
+, validPort()
 , mProfileList(QStringList())
 , offline_button(nullptr)
 , connect_button(nullptr)
 , delete_profile_lineedit(nullptr)
 , delete_button(nullptr)
-, validName()
-, validUrl()
-, validPort()
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
@@ -53,6 +53,19 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 {
     setupUi(this);
 
+    mDateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
+    if (mDateTimeFormat.contains(QLatin1Char('t'))) {
+        // There is a timezone identifier in there - which (apart from perhaps
+        // the period around DST changes) we don't really need and which takes
+        // up space:
+        if (mDateTimeFormat.contains(QLatin1String(" t"))) {
+            // Deal with the space if the time zone is appended to the end of
+            // the string:
+            mDateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
+        } else {
+            mDateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
+        }
+    }
     QPixmap holdPixmap;
 
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
@@ -430,6 +443,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString& newName)
 {
+    Q_UNUSED(newName)
     validateProfile();
 }
 
@@ -1195,14 +1209,11 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             QDateTime datetime;
             datetime.setTime(QTime(hour.toInt(), minute.toInt(), second.toInt()));
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
-
-            //readableEntries << datetime.toString(Qt::SystemLocaleLongDate);
-            //profile_history->addItem(datetime.toString(Qt::SystemLocaleShortDate), QVariant(entry));
-            profile_history->addItem(datetime.toString(Qt::SystemLocaleLongDate), QVariant(entry));
+            profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
         } else if (entry == QLatin1String("autosave.xml")) {
             QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
-            profile_history->addItem(QIcon::fromTheme(QStringLiteral("document-save"), QIcon(QStringLiteral(":/icons/document-save.png"))), lastModified.toString(Qt::SystemLocaleLongDate), QVariant(entry));
+            profile_history->addItem(QIcon::fromTheme(QStringLiteral("document-save"), QIcon(QStringLiteral(":/icons/document-save.png"))), mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat), QVariant(entry));
         } else {
             profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
