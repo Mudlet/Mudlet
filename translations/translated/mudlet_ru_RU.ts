@@ -7807,7 +7807,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Скрыть/показать область поиска и кнопки в нижней части экрана.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
