@@ -46,7 +46,7 @@ public:
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
 
-    const static int csmNameRole{Qt::UserRole};
+    static const int csmNameRole{Qt::UserRole};
 
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
