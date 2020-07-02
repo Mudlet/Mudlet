@@ -495,7 +495,6 @@ void dlgConnectionProfiles::slot_save_name()
         // run fillout_form to re-create the default profile icon and description
         fillout_form();
         // and re-select the profile since focus is lost
-        // However there is not a findData(...) method for QListWidgets...
         auto pRestoredItems = findData(*profiles_tree_widget, newProfileName, csmNameRole);
         Q_ASSERT_X(pRestoredItems.count() < 1, "dlgConnectionProfiles::slot_save_name", "no previously deleted Mud found with matching name when trying to restore one");
         Q_ASSERT_X(pRestoredItems.count() > 1, "dlgConnectionProfiles::slot_save_name", "multiple deleted Muds found with matching name when trying to restore one");
