@@ -46,7 +46,9 @@
 #include <memory>
 #include "post_guard.h"
 
-const int Host::mLuaSendPasswordTimeout = 30000; // milli-seconds!
+using namespace std::chrono_literals;
+
+const int Host::mLuaSendPasswordTimeout = 30s;
 
 stopWatch::stopWatch()
 : mIsInitialised(false)
