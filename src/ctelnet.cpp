@@ -151,7 +151,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     mpPostingTimer->setInterval(300); //FIXME
     connect(mpPostingTimer, &QTimer::timeout, this, &cTelnet::slot_timerPosting);
 
-    mpLuaSendPasswordTimer->setInterval(Host::mLuaSendPasswordTimeout);
+    mpLuaSendPasswordTimer->setInterval(Host::csmLuaSendPasswordTimeout);
     mpLuaSendPasswordTimer->setSingleShot(true);
     connect(this, &cTelnet::signal_connected, this, &cTelnet::slot_enableLuaSendPassword);
     // Because there are two slots, one with, one without a timeout (int)

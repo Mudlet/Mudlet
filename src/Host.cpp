@@ -48,7 +48,7 @@
 
 using namespace std::chrono_literals;
 
-const int Host::mLuaSendPasswordTimeout = 30s;
+const std::chrono::seconds Host::csmLuaSendPasswordTimeout = 30s;
 
 stopWatch::stopWatch()
 : mIsInitialised(false)
