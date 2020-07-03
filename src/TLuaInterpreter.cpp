@@ -18317,7 +18317,7 @@ int TLuaInterpreter::getCharacterName(lua_State* L)
     const QString name{host.getLogin()};
     if (name.isEmpty()) {
         lua_pushnil(L);
-        lua_pushstring(L, "no character name set, so nothing to return");
+        lua_pushstring(L, "no character name set");
         return 2;
     }
 
@@ -18332,7 +18332,7 @@ int TLuaInterpreter::sendCharacterName(lua_State* L)
 
     if (host.getLogin().isEmpty()) {
         lua_pushnil(L);
-        lua_pushstring(L, "no character name set, so nothing to send");
+        lua_pushstring(L, "no character name set");
         return 2;
     }
 
@@ -18360,7 +18360,7 @@ int TLuaInterpreter::sendCharacterPassword(lua_State* L)
     // something but was just out of stock in the password department! 8-)
     if (host.getPass().isEmpty()) {
         lua_pushnil(L);
-        lua_pushstring(L, "no password set, so nothing to send");
+        lua_pushstring(L, "no password set");
         return 2;
     }
 
