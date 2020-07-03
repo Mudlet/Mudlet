@@ -2389,9 +2389,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             postMessage(tr("[ INFO ]  - Loading replay file:\n"
                            "\"%1\".")
                         .arg(name));
-            mIsReplayRunFromLua = true;
-        } else {
             mIsReplayRunFromLua = false;
+        } else {
+            mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
         if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
