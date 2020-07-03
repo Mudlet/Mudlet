@@ -503,17 +503,17 @@ std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
     if (loginString.contains(QLatin1String("{character name}"), Qt::CaseSensitive)) {
         const QString characterName = mpHost->getLogin();
         if (characterName.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the character name and that is not currently defined for this profilee").arg(actualLoginId)};
+            return {false, QStringLiteral("custom login %1 requires the character name and that is not currently defined for this profile").arg(actualLoginId)};
         }
         if (password.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profilee").arg(actualLoginId)};
+            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
         }
         loginString.replace(QLatin1String("{character name}"), QLatin1String("%1"));
         loginString.replace(QLatin1String("{password}"), QLatin1String("%2"));
         loginString = loginString.arg(characterName, password);
     } else {
         if (password.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profilee").arg(actualLoginId)};
+            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
         }
         loginString.replace(QLatin1String("{password}"), QLatin1String("%1"));
         loginString = loginString.arg(password);
