@@ -1021,3 +1021,13 @@ function packageDrop(event, fileName, suffix)
   installPackage(fileName)
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+
+-- Add dummy functions for the TTS functions if Mudlet has been compiled without them
+-- This is to prevent scripts erroring if they've been written with TTS capabilities
+-- then loaded into a Mudlet without them.
+if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TTS capabilities.
+  local funcs = {"ttsClearQueue", "ttsGetCurrentLine", "ttsGetCurrentVoice", "ttsGetQueue", "ttsGetState", "ttsGetVoices", "ttsPause", "ttsQueue", "ttsResume", "ttsSpeak", "ttsSetPitch", "ttsSetRate", "ttsSetVolume", "ttsSetVoiceByIndex", "ttsSetVoiceByName", "ttsSkip"}
+  for _,fn in ipairs(funcs) do
+    _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
+  end
+end
