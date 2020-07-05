@@ -204,13 +204,11 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
   DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
-########## Full MSYS2 (alternative Windows build) environment support ##########
-# Those developers working in a Windows environemnt may choose to do so using a
-# full MSYS2 system - as documented at:
+################ Alternative Windows build environment support #################
+# Developers using a full MSYS2/Mingw-w64 system, as documented at:
 # https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows_7.2B_.28MSYS2_Alternative.29
-# in that case there are some differences in the names/paths for some libraries
-# and header files - these can be switched in by setting the environmental
-# variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
+# will need some tweaks to names/paths for some libraries/header files, do this
+# by setting an environment variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
 MAIN_BUILD_SYSTEM_TEST = $$upper($$(WITH_MAIN_BUILD_SYSTEM))
 isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
   DEFINES += INCLUDE_MAIN_BUILD_SYSTEM

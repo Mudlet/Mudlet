@@ -17326,7 +17326,7 @@ void TLuaInterpreter::loadGlobal()
         }
 
         if (!(QFileInfo(pathFileName).isFile())) {
-            failedMessages << tr("%1 (isn't a file or symlink to a file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            failedMessages << tr("%1 (isn't a file or symlink to a file)").arg(pathFileName);
             continue;
         }
 
@@ -17335,7 +17335,7 @@ void TLuaInterpreter::loadGlobal()
         qt_ntfs_permission_lookup++;
 #endif
         if (!(QFileInfo(pathFileName).isReadable())) {
-            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)", "This is not a file or a symbolic link to a readable (for this user) file").arg(pathFileName);
+            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)").arg(pathFileName);
             continue;
         }
 #if defined(Q_OS_WIN32)
