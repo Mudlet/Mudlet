@@ -5575,7 +5575,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="882"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (*Ошибка, сообщите Mudlet Makers*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="996"/>
