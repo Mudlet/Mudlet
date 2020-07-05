@@ -1622,7 +1622,8 @@ rooms:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="17254"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17333"/>
