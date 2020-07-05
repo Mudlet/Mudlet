@@ -81,7 +81,6 @@ jobs:
         - qt512gamepad
         - qt512speech
         - qt512translations
-         libqt5texttospeech5-dev qtspeech5-flite-plugin qtspeech5-speechd-plugin
 
   - os: linux
     compiler: gcc
