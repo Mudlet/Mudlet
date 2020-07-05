@@ -357,18 +357,7 @@ target_compile_definitions(mudlet
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QT5KEYCHAIN)
-    # An extra definition is needed if we are using our own QtKeyChain to not
-    # export symbols from our self-built library and we are NOT on Windows;
-    # if we ARE on Windows this is not to be defined so that a header file
-    # "qkeychain_export.h" is created and set up so that the functions are
-    # marked for export from the ".dll" during their compilation but not later
-    # on, when instead they are marked for import by the Windows dynamic linker:
-    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN)
-    if(WIN32)
-        target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN)
-    else()
-        target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
-    endif()
+    target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
 if(WIN32 AND NOT USE_MAIN_BUILD_SYSTEM)
