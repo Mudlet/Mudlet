@@ -78,7 +78,7 @@ function string:split(delimiter)
       from = delim_to + 1
       delim_from, delim_to = string.find( self, delimiter, from  )
     end
-    table.insert( result, string.sub( self, from  ) )
+    result[#result+1] = string.sub(self, from)
   end
   return result
 end
