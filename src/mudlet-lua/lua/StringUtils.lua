@@ -74,7 +74,7 @@ function string:split(delimiter)
     local from = 1
     local delim_from, delim_to = string.find( self, delimiter, from  )
     while delim_from do
-      table.insert( result, string.sub( self, from, delim_from - 1 ) )
+      result[#result+1] = string.sub(self, from, delim_from - 1)
       from = delim_to + 1
       delim_from, delim_to = string.find( self, delimiter, from  )
     end
