@@ -48,6 +48,12 @@ public:
 
     static const int csmNameRole{Qt::UserRole};
 
+    QString commonTexts_connectButton_enabled_accessibilityDesc;
+    QString commonTexts_loadButton_enabled_accessibilityDesc;
+    QString commonTexts_connectOrLoadButton_disabled_accessibilityDesc;
+    QString commonTexts_profile_accessibilityName;
+    QString commonTexts_profile_accessibilityDesc;
+
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
 
