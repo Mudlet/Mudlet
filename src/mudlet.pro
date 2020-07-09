@@ -299,8 +299,6 @@ unix:!macx {
     } else {
         # For users/developers building with MSYS2 on Windows:
         isEmpty( MINGW_BASE_DIR_TEST ) {
-            # As error(...) terminates the build process immediately a
-            # multi-line message must be presented as a single string!
             error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
 "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
 "application build) typically this is one of:\\n"\

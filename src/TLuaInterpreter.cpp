@@ -16963,31 +16963,36 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = toNativeSeparators([[%1/?.lua;%1/?/init.lua;]]) .. package.path").arg(nativeHomeDirectory).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = toNativeSeparators([[%1/?.dll;]]) .. package.cpath").arg(nativeHomeDirectory).toUtf8().constData());
+    QStringList additionalLuaPaths;
+    QStringList additionalCPaths;
+    const auto appPath{QCoreApplication::applicationDirPath()};
+    const auto profilePath{mudlet::getMudletPath(mudlet::profileHomePath, hostName)};
+
+    // Allow for modules or libraries placed in the profile root directory:
+    additionalLuaPaths << QStringLiteral("%1/?.lua").arg(profilePath);
+    additionalLuaPaths << QStringLiteral("%1/?/init.lua").arg(profilePath);
+#if defined(Q_OS_WIN32)
+    additionalCPaths << QStringLiteral("%1/?.dll").arg(profilePath);
+#else
+    additionalCPaths << QStringLiteral("%1/?.so").arg(profilePath);
+#endif
 
 #if defined(Q_OS_LINUX)
-    //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    // AppInstaller on Linux would like the C search path to also be set to
+    // a ./lib sub-directory of the current binary directory:
+    additionalCPaths << QStringLiteral("%1/lib/?.so").arg(appPath);
 #elif defined(Q_OS_MAC)
-    //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#elif defined(Q_OS_WIN32)
-// The following is only needed in the original powershell script based Mudlet
-// build environment - and should probably have been done via the LUA_CPATH
-// environmental variable:
-#if defined(INCLUDE_MAIN_BUILD_SYSTEM)
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
-#endif
+    // macOS app bundle would like the search path to also be set to the current
+    // binary directory for both modules and binary libraries:
+    additionalCPaths << QStringLiteral("%1/?.so").arg(appPath);
+    additionalLuaPaths << QStringLiteral("%1/?.lua").arg(appPath);
+#elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
+    // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
+    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
 #endif
 
-    QQueue<QString> modLoadMessageQueue;
-    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
-    while (!modLoadMessageQueue.isEmpty()) {
-        mpHost->postMessage(modLoadMessageQueue.dequeue());
-    }
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = toNativeSeparators([[%1;]]) .. package.cpath").arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = toNativeSeparators([[%1;]]) .. package.path").arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
 
     /*
      * For uses like this where we try more than one alternative, only include
@@ -17010,6 +17015,12 @@ void TLuaInterpreter::initLuaGlobals()
      *     case nothing is put before the "require" in that usage and the module
      *     assumes whatever Lua name it offers).
      */
+    QQueue<QString> modLoadMessageQueue;
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
     bool loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
     if (!loaded) {
         loadLuaModule(modLoadMessageQueue, QLatin1String("zip"), QString(), QStringLiteral("luazip"));
@@ -17215,10 +17226,6 @@ end)LUA");
     additionalLuaPaths << QStringLiteral("%1/../../3rdparty/?.lua").arg(appPath);
     // 5 CMake shadow builds
     //    "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
-    // NOTE: In the cmake case the shadow build directory is alongside the base
-    // directory of the extracted source package so the source code MUST be
-    // extracted into a known directory name which is assumed here to be
-    // "mudlet"!
     additionalLuaPaths << QStringLiteral("%1/../../mudlet/3rdparty/?.lua").arg(appPath);
 
     int error = luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([[%1;]] .. package.path)")
@@ -17302,11 +17309,9 @@ void TLuaInterpreter::loadGlobal()
     // so leave checking for it's contents to run-time - this one is the one
     // for Linux/FreeBSD where the read-only shared Lua files go into the
     // /usr/share part of the file-system:
-#if defined(LUA_DEFAULT_PATH)
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths <<  QDir::toNativeSeparators(QStringLiteral(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
     };
-#endif
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
