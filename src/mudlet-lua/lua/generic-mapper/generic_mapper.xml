@@ -1092,7 +1092,7 @@ map.help.recall = [[
         is stored in map.save.recall[map.character], and is remembered between
         sessions.
 ]]
-map.help.configs = [[
+map.help.config = [[
     &lt;cyan&gt;Map Config&lt;reset&gt;
         syntax: &lt;yellow&gt;map config &lt;setting&gt; &lt;optional value&gt;&lt;reset&gt;
 
