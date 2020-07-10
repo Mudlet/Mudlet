@@ -1452,7 +1452,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1644"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Pre-Map importing(1) report</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1667"/>
@@ -1471,23 +1471,24 @@ rooms:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1682"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Map file located and opened, now parsing it...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importing map(1) &quot;%1&quot; at %2 report</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1692"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1695"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (filename used: 
+&quot;%1&quot; could not be opened for reading).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2381"/>
@@ -1508,7 +1509,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2809"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Map reload request received from system...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2814"/>
