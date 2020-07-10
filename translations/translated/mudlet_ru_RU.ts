@@ -8903,7 +8903,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
       <source>Dutch (Netherlands Antilles)</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Нидерландские Антильские острова)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="810"/>
@@ -8923,7 +8923,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="813"/>
       <source>Dutch (Suriname)</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Суринам)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
