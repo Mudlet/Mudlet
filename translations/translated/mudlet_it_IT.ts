@@ -7787,7 +7787,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nascondi / mostra l'area di ricerca e i bottoni nella parte inferiore dello schermo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
@@ -8888,7 +8888,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
       <source>Dutch (Netherlands Antilles)</source>
-      <translation type="unfinished"/>
+      <translation>Olandese (Antille Olandesi)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="810"/>
@@ -8908,7 +8908,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/mudlet.cpp" line="813"/>
       <source>Dutch (Suriname)</source>
-      <translation type="unfinished"/>
+      <translation>Olandese (Suriname)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
