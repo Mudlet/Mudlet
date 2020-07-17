@@ -714,7 +714,7 @@ private:
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

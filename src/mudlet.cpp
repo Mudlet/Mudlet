@@ -3877,7 +3877,7 @@ void mudlet::updateMudletDiscordInvite()
     manager->setCache(diskCache);
 
 
-    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
