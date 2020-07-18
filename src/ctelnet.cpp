@@ -989,10 +989,22 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            enableCHARSET = true;
-            sendTelnetOption(TN_WILL, OPT_CHARSET);
-            qDebug() << "CHARSET enabled";
-            raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We DONT welcome the WILL
+                sendTelnetOption(TN_DONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because FORCE CHARSET NEGOTIATION OFF is checked.";
+            } else {
+                sendTelnetOption(TN_DO, OPT_CHARSET);
+                enableCHARSET = true; // We negotiated, either side is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
             break;
         }
 
@@ -1281,11 +1293,25 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
 #endif
+
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            enableCHARSET = true;
-            sendTelnetOption(TN_DO, OPT_CHARSET);
-            raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We WONT welcome the DO
+                sendTelnetOption(TN_WONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because FORCE CHARSET NEGOTIATION OFF is checked.";
+            } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
+                sendTelnetOption(TN_WILL, OPT_CHARSET);
+                enableCHARSET = true; // Both sides have negotiated, either side is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
             break;
         }
 
@@ -1448,41 +1474,23 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 return;
             }
 
-            // payload is in the Mud Server's encoding, trim off the Telnet suboption
-            // bytes from beginning (3) and end (2):
+            // Trim off the Telnet suboption bytes from beginning (3) and end (2)
             payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
-
-            QString transcodedMsg;
-
-            if (mpOutOfBandDataIncomingCodec) {
-                // Message is encoded
-                transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-            } else {
-                // Message is in ASCII (though this can handle Utf-8):
-                transcodedMsg = QString::fromUtf8(payload);
-            }
-
-            // remove \r and \n from the data.
-            transcodedMsg.remove(QChar::CarriageReturn);
-            transcodedMsg.remove(QChar::LineFeed);
-            // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-            transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
             // CHARSET support per https://tools.ietf.org/html/rfc2066
             if (command[3] == CHARSET_REQUEST) {
                 // No translate table support.  Discard. 
-                if (transcodedMsg.startsWith(QStringLiteral("[TTABLE]1"))) {
-                    transcodedMsg.remove(QStringLiteral("[TTABLE]1"));
+                if (payload.startsWith("[TTABLE]1")) {
+                    payload.remove(0, 9);
                 }
 
                 // Second character is the separator.
-                QChar separator = transcodedMsg[1];
-                QStringList characterSetList = transcodedMsg.split(separator);
-                QString acceptedCharacterSet;
+                QList<QByteArray> characterSetList = payload.split(payload[1]);
+                QByteArray acceptedCharacterSet;
 
                 if (characterSetList.size() > 0) {
                     for (int i = 1; i < characterSetList.size(); ++i) {
-                        if (mAcceptableEncodings.contains(characterSetList[i].toLatin1()) || mAcceptableEncodings.contains(("M_" + characterSetList[i]).toLatin1())) {
+                        if (mAcceptableEncodings.contains(characterSetList[i]) || mAcceptableEncodings.contains(("M_" + characterSetList[i]))) {
                             acceptedCharacterSet = characterSetList[i];
                             break;
                         }
@@ -1495,7 +1503,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += OPT_CHARSET;
 
                 if (!acceptedCharacterSet.isEmpty()) {
-                    setEncoding(acceptedCharacterSet.toLatin1(), true);
+                    setEncoding(acceptedCharacterSet, true);
 
                     output += CHARSET_ACCEPTED;
                     output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
