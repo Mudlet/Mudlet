@@ -1506,6 +1506,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     setEncoding(acceptedCharacterSet, true);
 
                     output += CHARSET_ACCEPTED;
+                    output += payload[1]; // Separator
                     output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
                 } else {
                     output += CHARSET_REJECTED;
