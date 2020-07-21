@@ -67,7 +67,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         # Installing packages might fail as the github image becomes outdated
-        # sudo apt update
+        sudo apt update
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
@@ -77,7 +77,7 @@ jobs:
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v2
