@@ -58,7 +58,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
       yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
 
       if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
-        echo "== No new commit, aborting public test build generation =="
+        echo "== No new commits, aborting public test build generation =="
         exit 0
       fi
 
@@ -145,4 +145,3 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   fi
   export DEPLOY_URL
 fi
-

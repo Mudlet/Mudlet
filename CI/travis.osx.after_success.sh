@@ -56,7 +56,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
 
       if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
-        echo "== No new commit, aborting public test build generation =="
+        echo "== No new commits, aborting public test build generation =="
         exit 0
       fi
 
@@ -131,4 +131,3 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   export DEPLOY_URL
 fi
-
