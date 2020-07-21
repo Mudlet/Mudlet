@@ -1404,13 +1404,13 @@ if rex then
       else
         local colorNumber = ctable[fore]
         if colorNumber then
-          result = string.format("%s\27[38;5;%sm", result, colorNumber)
+          result = string.format("%s\27[38:5:%sm", result, colorNumber)
         end
       end
     end
     if back then
       local colorNumber = ctable[back]
-      result = string.format("%s\27[48;5;%sm", result, colorNumber)
+      result = string.format("%s\27[48:5:%sm", result, colorNumber)
     end
     return result
   end
@@ -1423,11 +1423,11 @@ if rex then
     local back = cols[2]
     if fore ~= "" then
       local components = fore:split(",")
-      result = string.format("%s\27[38;2;%s;%s;%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
     end
     if back then
       local components = back:split(",")
-      result = string.format("%s\27[48;2;%s;%s;%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
     end
     return result
   end
@@ -1444,7 +1444,7 @@ if rex then
         tonumber(fore:sub(3,4),16),
         tonumber(fore:sub(5,6),16)
       }
-      result = string.format("%s\27[38;2;%s;%s;%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
     end
     if back then
       local components = {
@@ -1452,7 +1452,7 @@ if rex then
         tonumber(back:sub(3,4),16),
         tonumber(back:sub(5,6),16)
       }
-      result = string.format("%s\27[48;2;%s;%s;%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
     end
     return result
   end
