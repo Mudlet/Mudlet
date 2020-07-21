@@ -124,6 +124,7 @@ public:
     QRectF mMapInfoRect;
     int mFontHeight;
     bool mShowRoomID;
+    bool mShowRoomName;
     QMap<int, QPixmap> mPixMap;
     int gzoom;
     double rSize;

@@ -98,6 +98,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mMapInfoRect()
 , mFontHeight(20)
 , mShowRoomID(false)
+, mShowRoomName(false)
 , gzoom(20)
 , rSize(0.5)
 , eSize(3.0)
@@ -706,11 +707,19 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
     QRectF roomRectangle;
+    QRectF roomNameRectangle;
     if (isGridMode) {
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
     } else {
         roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
+
+    roomNameRectangle = roomRectangle.adjusted(-2000, mRoomHeight, 2000, mRoomHeight);
+    painter.save();
+    painter.setFont(roomVNumFont);
+    roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
+    painter.restore();
+
     // We should be using the full area for testing for clicks even though
     // we only show a smaller one if the user has dialed down the room size
     // on NON-grid mode areas:
@@ -899,6 +908,15 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
             painter.restore();
         }
 
+    }
+    // Do we need to draw the room name:
+    if (mShowRoomName && areRoomIdsLegible) {
+        painter.save();
+        QColor roomIdColor;
+        painter.setPen(QPen(QColor(Qt::white)));
+        painter.setFont(roomVNumFont);
+        painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
+        painter.restore();
     }
 
     // Change these from const to static to tweak them whilst running in a debugger...!

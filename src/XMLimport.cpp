@@ -921,6 +921,7 @@ void XMLimport::readHostPackage(Host* pHost)
     }
     pHost->mBubbleMode = (attributes().value("mBubbleMode") == "yes");
     pHost->mShowRoomID = (attributes().value("mShowRoomIDs") == "yes");
+    pHost->mShowRoomName = (attributes().value("mShowRoomNames") == "yes");
     pHost->mShowPanel = (attributes().value("mShowPanel") == "yes");
     pHost->mHaveMapperScript = (attributes().value("mHaveMapperScript") == "yes");
     QStringRef ignore = attributes().value("mDoubleClickIgnore");

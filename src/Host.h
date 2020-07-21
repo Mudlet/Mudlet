@@ -529,6 +529,7 @@ public:
     bool mShowInfo;
     bool mBubbleMode;
     bool mShowRoomID;
+    bool mShowRoomName;
     bool mShowPanel;
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
