@@ -32,9 +32,17 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
   if ($Script:PublicTestBuild) {
+
+    $commitDate = Get-Date -date $(git show -s --format=%as)
+    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
+    if ($commitDate -lt $yesterdaysDate) {
+      Write-Output "=== No new commits, aborting public test build generation ==="
+      exit 0
+    }
+
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"

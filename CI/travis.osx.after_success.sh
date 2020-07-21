@@ -51,6 +51,15 @@ if [ "${DEPLOY}" = "deploy" ]; then
   else # ptb/release build
     app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
+
+      commitDate=$(git show -s --format=%as | tr -d '-')
+      yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
+
+      if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
+        echo "== No new commits, aborting public test build generation =="
+        exit 0
+      fi
+
       echo "== Creating a public test build =="
       mv "$app" "source/build/Mudlet PTB.app"
       app="source/build/Mudlet PTB.app"
@@ -122,4 +131,3 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   export DEPLOY_URL
 fi
-
