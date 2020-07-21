@@ -565,7 +565,6 @@ private slots:
     void show_action_dialog();
     void show_key_dialog();
     void show_variable_dialog();
-    void slot_update_shortcuts();
     void slot_show_options_dialog();
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
