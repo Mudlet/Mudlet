@@ -41,7 +41,7 @@ const QString Discord::mMudletApplicationId = QStringLiteral("450571881909583884
 Discord::Discord(QObject* parent)
 : QObject(parent)
 , mLoaded{}
-// For details see https://discordapp.com/developers/docs/rich-presence/how-to#initialization
+// For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
 // N. B. for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
