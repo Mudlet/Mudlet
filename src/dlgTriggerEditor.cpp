@@ -538,7 +538,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
     connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
-    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("errors"), this);
+    QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("Errors"), this);
     viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
     connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
 
