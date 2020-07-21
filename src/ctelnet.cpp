@@ -1307,7 +1307,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 qDebug() << "Rejecting CHARSET, because FORCE CHARSET NEGOTIATION OFF is checked.";
             } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_CHARSET);
-                enableCHARSET = true; // Both sides have negotiated, either side is welcome to REQUEST now
+                enableCHARSET = true; // We negotiated, either side is welcome to REQUEST now
                 qDebug() << "CHARSET enabled";
                 raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
             }
@@ -1479,13 +1479,11 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
             // CHARSET support per https://tools.ietf.org/html/rfc2066
             if (command[3] == CHARSET_REQUEST) {
-                // No translate table support.  Discard. 
-                if (payload.startsWith("[TTABLE]1")) {
+                if (payload.startsWith("[TTABLE]1")) { // No translate table support.  Discard.
                     payload.remove(0, 9);
                 }
 
-                // Second character is the separator.
-                QList<QByteArray> characterSetList = payload.split(payload[1]);
+                QList<QByteArray> characterSetList = payload.split(payload[1]); // Second character is the separator.
                 QByteArray acceptedCharacterSet;
 
                 if (characterSetList.size() > 0) {
