@@ -103,6 +103,7 @@ const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
+const char OPT_CHARSET = 42;
 const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
 const char OPT_COMPRESS = 85;
@@ -113,6 +114,14 @@ const char OPT_102 = 102;
 const char OPT_ATCP = static_cast<char>(200);
 const char OPT_GMCP = static_cast<char>(201);
 
+const char CHARSET_REQUEST = 1;
+const char CHARSET_ACCEPTED = 2;
+const char CHARSET_REJECTED = 3;
+const char CHARSET_TTABLE_IS = 4;
+const char CHARSET_TTABLE_REJECTED = 5;
+const char CHARSET_TTABLE_ACK = 6;
+const char CHARSET_TTABLE_NAK = 7;
+
 const char MSSP_VAR = 1;
 const char MSSP_VAL = 2;
 
@@ -122,7 +131,6 @@ const char MSDP_TABLE_OPEN = 3;
 const char MSDP_TABLE_CLOSE = 4;
 const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
-
 
 class cTelnet : public QObject
 {
@@ -167,6 +175,7 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isMSSPEnabled() const { return enableMSSP; }
@@ -284,6 +293,7 @@ private:
     QTime timeOffset;
     QTime mConnectionTime;
     int lastTimeOffset;
+    bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
     bool enableMSSP;

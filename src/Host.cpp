@@ -346,6 +346,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())

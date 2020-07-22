@@ -538,6 +538,7 @@ public:
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
     bool mFORCE_MXP_NEGOTIATION_OFF;
+    bool mFORCE_CHARSET_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
