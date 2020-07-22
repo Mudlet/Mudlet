@@ -997,10 +997,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because FORCE CHARSET NEGOTIATION OFF is checked.";
+                qDebug() << "Rejecting CHARSET option negotiation because it is disabled by Host::mFORCE_CHARSET_NEGOTIATION_OFF";
             } else {
                 sendTelnetOption(TN_DO, OPT_CHARSET);
-                enableCHARSET = true; // We negotiated, either side is welcome to REQUEST now
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
                 qDebug() << "CHARSET enabled";
                 raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
             }
@@ -1304,10 +1304,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET, because FORCE CHARSET NEGOTIATION OFF is checked.";
+                qDebug() << "Rejecting CHARSET option negotiation because it is disabled by Host::mFORCE_CHARSET_NEGOTIATION_OFF";
             } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_CHARSET);
-                enableCHARSET = true; // We negotiated, either side is welcome to REQUEST now
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
                 qDebug() << "CHARSET enabled";
                 raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
             }
@@ -1483,13 +1483,15 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     payload.remove(0, 9);
                 }
 
-                QList<QByteArray> characterSetList = payload.split(payload[1]); // Second character is the separator.
+                auto characterSetList = payload.split(payload[1]); // Second character is the separator.
                 QByteArray acceptedCharacterSet;
 
-                if (characterSetList.size() > 0) {
+                if (!characterSetList.isEmpty()) {
                     for (int i = 1; i < characterSetList.size(); ++i) {
-                        if (mAcceptableEncodings.contains(characterSetList[i]) || mAcceptableEncodings.contains(("M_" + characterSetList[i]))) {
-                            acceptedCharacterSet = characterSetList[i];
+                        QByteArray characterSet = characterSetList.at(i).toUpper();
+
+                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))) {
+                            acceptedCharacterSet = characterSet;
                             break;
                         }
                     }
