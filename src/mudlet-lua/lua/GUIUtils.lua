@@ -1358,6 +1358,170 @@ if rex then
   -- Backwards compatibility
   checho = cecho
 
+  -- table to facilitate converting color names to ansi escapes
+  local ctable =
+  {
+    black = "0",
+    red = "1",
+    green = "2",
+    yellow = "3",
+    blue = "4",
+    magenta = "5",
+    cyan = "6",
+    white = "7",
+    light_black = "8",
+    light_red = "9",
+    light_green = "10",
+    light_yellow = "11",
+    light_blue = "12",
+    light_magenta = "13",
+    light_cyan = "14",
+    light_white = "15",
+    lightBlack = "8",
+    lightRed = "9",
+    lightGreen = "10",
+    lightYellow = "11",
+    lightBlue = "12",
+    lightMagenta = "13",
+    lightCyan = "14",
+    lightWhite = "15",
+  }
+  for i = 0, 255 do
+    local key = tostring(i)
+    ctable[key] = key
+    ctable["ansi_" .. key] = key
+  end
+
+  -- take a color name and turn it into an ANSI escape string
+  local function colorToAnsi(colorName)
+    local result = ""
+    local cols = colorName:split(":")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      if fore == "r" or fore == "reset" then
+        result = result .. "\27[39;49m"
+      else
+        local colorNumber = ctable[fore]
+        if colorNumber then
+          result = string.format("%s\27[38:5:%sm", result, colorNumber)
+        end
+      end
+    end
+    if back then
+      local colorNumber = ctable[back]
+      result = string.format("%s\27[48:5:%sm", result, colorNumber)
+    end
+    return result
+  end
+
+  -- converts decho color information to ansi escape sequences
+  local function rgbToAnsi(rgb)
+    local result = ""
+    local cols = rgb:split(":")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      local components = fore:split(",")
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    if back then
+      local components = back:split(",")
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    return result
+  end
+
+  -- converts a 6 digit hex color code to ansi escape sequence
+  local function hexToAnsi(hexcode)
+    local result = ""
+    local cols = hexcode:split(",")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      local components = {
+        tonumber(fore:sub(1,2),16),
+        tonumber(fore:sub(3,4),16),
+        tonumber(fore:sub(5,6),16)
+      }
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    if back then
+      local components = {
+        tonumber(back:sub(1,2),16),
+        tonumber(back:sub(3,4),16),
+        tonumber(back:sub(5,6),16)
+      }
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    return result
+  end
+
+  --- feedTriggers with cecho style color information.
+  -- Valid colors are  black,red,green,yellow,blue,magenta,cyan,white and light_* versions of same
+  -- Can also pass in a number between 0 and 255 to use the expanded ansi 255 colors. IE <124> will set foreground to the color ANSI124
+  -- Will also take ansi colors as ansi_#, IE <ansi_124>
+  -- Reset using <r> or <reset>
+  --@param text the text to pump into feedTriggers
+  --@see cecho
+  --@see cinsertText
+  function cfeedTriggers(text)
+    local colorPattern = _Echos.Patterns.Color[1]
+    local result = ""
+    for str, color in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. colorToAnsi(color:match("<(.+)>"))
+      end
+    end
+    feedTriggers(result .. "\n")
+    echo("")
+  end
+
+  --- feedTriggers with decho style color information.
+  -- IE <128,0,0> for red, <0,128,0> for green, <0,128,0:128,0,0> for green on red background.
+  -- <r> to reset
+  --@param text the text to pump into feedTriggers
+  --@see decho
+  --@see dinsertText
+  function dfeedTriggers(text)
+    local colorPattern = _Echos.Patterns.Decimal[1]
+    local result = ""
+    for str, color, res in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. rgbToAnsi(color:match("<(.+)>"))
+      end
+      if res then
+        result = result .. "\27[39;49m"
+      end
+    end
+    feedTriggers(result .. "\n")
+    echo("")
+  end
+
+  --- feedTriggers with hecho style color information.
+  -- IE #800000 for red, #008000 for green, #008000,800000 for green on red background
+  -- #r to reset
+  --@param text the text to pump into feedTriggers
+  --@see hecho
+  --@see hinsertText
+  function hfeedTriggers(text)
+    local colorPattern = _Echos.Patterns.Hex[1]
+    local result = ""
+    for str, color, res in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        if color:sub(1,1) == "|" then color = color:gsub("|c", "#") end
+        result = result .. hexToAnsi(color:sub(2,-1))
+      end
+      if res then
+        result = result .. "\27[39;49m"
+      end
+    end
+    feedTriggers(result .. "\n")
+    echo("")
+  end
 
 else
   -- NOT using rex module:
