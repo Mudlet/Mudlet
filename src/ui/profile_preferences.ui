@@ -2640,7 +2640,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="disableCharsetNegotiation">
+           <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
             <property name="text">
              <string>Force CHARSET negotiation off</string>
             </property>
@@ -5339,7 +5339,7 @@
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
-  <tabstop>disableCharsetNegotiation</tabstop>
+  <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
   <tabstop>checkBox_discordServerAccessToDetail</tabstop>
   <tabstop>comboBox_discordSmallIconPrivacy</tabstop>

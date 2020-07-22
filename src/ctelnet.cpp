@@ -997,7 +997,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET option negotiation because it is disabled by Host::mFORCE_CHARSET_NEGOTIATION_OFF";
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else {
                 sendTelnetOption(TN_DO, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
@@ -1304,7 +1304,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 }
 
                 enableCHARSET = false;
-                qDebug() << "Rejecting CHARSET option negotiation because it is disabled by Host::mFORCE_CHARSET_NEGOTIATION_OFF";
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
             } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_CHARSET);
                 enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
