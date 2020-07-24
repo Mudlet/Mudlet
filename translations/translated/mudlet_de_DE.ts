@@ -30,19 +30,19 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="805"/>
+      <location filename="../src/Host.cpp" line="806"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ] - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="806"/>
+      <location filename="../src/Host.cpp" line="807"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ] - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1529"/>
+      <location filename="../src/Host.cpp" line="1530"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -51,7 +51,7 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1531"/>
+      <location filename="../src/Host.cpp" line="1532"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -60,24 +60,24 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1535"/>
+      <location filename="../src/Host.cpp" line="1536"/>
       <source>Unpacking</source>
       <translation>Entpacke</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2143"/>
+      <location filename="../src/Host.cpp" line="2144"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2145"/>
-      <location filename="../src/Host.cpp" line="2151"/>
+      <location filename="../src/Host.cpp" line="2146"/>
+      <location filename="../src/Host.cpp" line="2152"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 bei %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2550"/>
+      <location filename="../src/Host.cpp" line="2551"/>
       <source>Map - %1</source>
       <translation>Karte - %1</translation>
     </message>
@@ -3780,35 +3780,35 @@ or your nameservers are not working properly.</source>
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1486"/>
-      <location filename="../src/ctelnet.cpp" line="1853"/>
+      <location filename="../src/ctelnet.cpp" line="1608"/>
+      <location filename="../src/ctelnet.cpp" line="1975"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
       <translation>[ INFO ]  - Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. 
 Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1497"/>
-      <location filename="../src/ctelnet.cpp" line="1864"/>
+      <location filename="../src/ctelnet.cpp" line="1619"/>
+      <location filename="../src/ctelnet.cpp" line="1986"/>
       <source>[  OK  ]  - Package is already installed.</source>
       <translation>[  OK  ]  - Paket  ist bereits installiert.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1506"/>
-      <location filename="../src/ctelnet.cpp" line="1873"/>
+      <location filename="../src/ctelnet.cpp" line="1628"/>
+      <location filename="../src/ctelnet.cpp" line="1995"/>
       <source>downloading game GUI from server</source>
       <translation>Spiel-GUI wird vom Server geladen</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1506"/>
-      <location filename="../src/ctelnet.cpp" line="1873"/>
+      <location filename="../src/ctelnet.cpp" line="1628"/>
+      <location filename="../src/ctelnet.cpp" line="1995"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
       <translation>Abbrechen</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1495"/>
-      <location filename="../src/ctelnet.cpp" line="1862"/>
+      <location filename="../src/ctelnet.cpp" line="1617"/>
+      <location filename="../src/ctelnet.cpp" line="1984"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
       <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;).</translation>
     </message>
@@ -3851,73 +3851,73 @@ changed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2150"/>
+      <location filename="../src/ctelnet.cpp" line="2272"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>FEHLER</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2162"/>
+      <location filename="../src/ctelnet.cpp" line="2284"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>LUA</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2173"/>
+      <location filename="../src/ctelnet.cpp" line="2295"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>WARNUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2184"/>
+      <location filename="../src/ctelnet.cpp" line="2306"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>ACHTUNG</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2195"/>
+      <location filename="../src/ctelnet.cpp" line="2317"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>INFO</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2206"/>
+      <location filename="../src/ctelnet.cpp" line="2328"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2389"/>
+      <location filename="../src/ctelnet.cpp" line="2511"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ INFO ]  - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2408"/>
+      <location filename="../src/ctelnet.cpp" line="2530"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>Kann Wiederholung nicht anzeigen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2410"/>
+      <location filename="../src/ctelnet.cpp" line="2532"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ WARNUNG ]  - Kann Wiederholung nicht ausführen. Eine andere könnte 
 bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2418"/>
+      <location filename="../src/ctelnet.cpp" line="2540"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>Kann Datei &quot;%1&quot; nicht lesen, Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2421"/>
+      <location filename="../src/ctelnet.cpp" line="2543"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[FEHLER] - Kann Datei &quot;%1&quot; nicht lesen,
 Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2449"/>
+      <location filename="../src/ctelnet.cpp" line="2571"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[  OK  ]  - Wiederholung beendet.</translation>
     </message>
@@ -5486,150 +5486,150 @@ Nutzungen</translation>
       <translation>Alle Kennwörter wurden in den Profilspeicher migriert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="722"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="723"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="724"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="725"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="725"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="726"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="728"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="729"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="729"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="730"/>
       <source>Named file (concatenate logs in one file)</source>
       <translation>Benannte Datei (Logs in einer Datei aneinander hängen)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="762"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="763"/>
       <source>Other profiles to Map to:</source>
       <translation>Andere Profile für die Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="802"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>%1 {Default, recommended}</source>
       <translation>%1 {Standard, empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
       <translation>%1 {Neuere Version, experimentell/testweise, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="815"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="816"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
       <translation>%1 {Ältere Version, zum Austausch mit anderen Benutzern, NICHT empfohlen}</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="824"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="825"/>
       <source>2D Map Room Symbol scaling factor:</source>
       <translation>Skalierungsfaktor des Symbols für Räume der 2D Karte:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="844"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="845"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
       <translation>Zeige &quot;%1&quot; in der Auswahl der Kartengebiete</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="882"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="883"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
       <translation>%1 (*Fehler, bitte an Mudlet-Entwickler melden*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="996"/>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3724"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="997"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3727"/>
       <source>Profile preferences - %1</source>
       <translation>Profil-Einstellungen - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1266"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1268"/>
       <source>Profile preferences</source>
       <translation>Profil-Einstellungen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1971"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1973"/>
       <source>Load Mudlet map</source>
       <translation>Mudlet Karte laden</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1986"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1988"/>
       <source>Importing map - please wait...</source>
       <translation>Karte wird importiert, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1990"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1992"/>
       <source>Imported map from %1.</source>
       <translation>Karte importiert von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1992"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1994"/>
       <source>Could not import map from %1.</source>
       <translation>Karte konnte nicht importiert werden von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1995"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1997"/>
       <source>Loading map - please wait...</source>
       <translation>Karte wird geladen, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2000"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2002"/>
       <source>Loaded map from %1.</source>
       <translation>Karte geladen von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2002"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2004"/>
       <source>Could not load map from %1.</source>
       <translation>Karte konnte nicht geladen werden von %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2021"/>
       <source>Save Mudlet map</source>
       <translation>Mudlet Karte speichern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2021"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
       <translation>Mudlet Karte (*.dat)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2029"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2031"/>
       <source>Saving map - please wait...</source>
       <translation>Karte wird gespeichert, bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2039"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2041"/>
       <source>Saved map to %1.</source>
       <translation>Karte gespeichert nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2041"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2043"/>
       <source>Could not save map to %1.</source>
       <translation>Konnte die Karte nicht nach %1 speichern.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2063"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2065"/>
       <source>Migrating passwords to secure storage...</source>
       <translation>Alle Kennwörter werden in den sicheren Speicher migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2070"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2072"/>
       <source>Migrating passwords to profiles...</source>
       <translation>Kennwörter werden in die Profile migriert...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2102"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2104"/>
       <source>[ ERROR ] - Unable to use or create directory to store map for other profile &quot;%1&quot;.
 Please check that you have permissions/access to:
 &quot;%2&quot;
@@ -5641,107 +5641,107 @@ Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
 und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2109"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2111"/>
       <source>Creating a destination directory failed...</source>
       <translation>Erstellen eines Ziel-Verzeichnisses ist fehlgeschlagen...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2201"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2203"/>
       <source>Backing up current map - please wait...</source>
       <translation>Sichern der aktuellen Karte - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2211"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2213"/>
       <source>Could not backup the map - saving it failed.</source>
       <translation>Karte konnte nicht gesichert werden - Speichern schlug fehl.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2236"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2238"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
       <translation>Konnte Karte nicht kopieren - Wusste nicht mehr, als welche Datei die Karte gerade gespeichert wurde.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2248"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2250"/>
       <source>Copying over map to %1 - please wait...</source>
       <translation>Kopiere Karte herüber nach %1 - bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2254"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2256"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
       <translation>Konnte Karte nicht kopieren nach %1.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2258"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2260"/>
       <source>Map copied successfully to other profile %1.</source>
       <translation>Karte erfolgreich in das andere Profil %1 kopiert.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2270"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2272"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
       <translation>Karte kopiert. Signalisiere den anderen Profilen, sie neu zu laden.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2306"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2308"/>
       <source>Where should Mudlet save log files?</source>
       <translation>Wo soll Mudlet Protokolldateien speichern?</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2683"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2686"/>
       <source>%1 selected - press to change</source>
       <translation>%1 gewählt - drücken zum ändern</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2686"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2689"/>
       <source>Press to pick destination(s)</source>
       <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2923"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2926"/>
       <source>Could not update themes: %1</source>
       <translation>Designs konnten nicht aktualisiert werden: %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="2926"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="2929"/>
       <source>Updating themes from colorsublime.github.io...</source>
       <translation>Aktualisiere Designs von colorsublime.github.io...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3043"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3046"/>
       <source>{missing, possibly recently deleted trigger item}</source>
       <translation>(Fehlender Trigger, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3046"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3049"/>
       <source>{missing, possibly recently deleted alias item}</source>
       <translation>(Fehlendes Alias, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3049"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3052"/>
       <source>{missing, possibly recently deleted script item}</source>
       <translation>(Fehlendes Skript, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3052"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3055"/>
       <source>{missing, possibly recently deleted timer item}</source>
       <translation>(Fehlender Timer, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3055"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3058"/>
       <source>{missing, possibly recently deleted key item}</source>
       <translation>(Fehlende Taste, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3058"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3061"/>
       <source>{missing, possibly recently deleted button item}</source>
       <translation>(Fehlender Button, vermutlich zwischenzeitlich gelöscht)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3856"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3859"/>
       <source>Set outer color of player room mark.</source>
       <translation>Wähle die äußere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3857"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3860"/>
       <source>Set inner color of player room mark.</source>
       <translation>Wähle die innere Farbe der Markierung des Spielerraums.</translation>
     </message>
@@ -5796,172 +5796,172 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="557"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="558"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
       <translation>Mudlet-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="559"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="560"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
       <translation>System-Wörterbücher:</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="590"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
       <translation>&lt;p&gt;Aus der Wörterbuchdatei &lt;tt&gt;%1.dic&lt;/tt&gt; (und der begleitenden Affix &lt;tt&gt;.aff&lt;/tt&gt; Datei).&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="592"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="593"/>
       <source>%1 - not recognised</source>
       <translation>%1 - nicht erkannt</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="593"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="594"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;/p&gt;&lt;p&gt;Die Datei &lt;tt&gt;%2.dic&lt;/tt&gt; (und die zugehörige &lt;tt&gt;.aff&lt;/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="618"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="619"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
       <translation>Es wurden keine Hunspell-Wörterbuchdateien gefunden. Rechtschreibprüfung ist nicht verfügbar.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="1973"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="1975"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
       <translation>Mudlet Karte (*.dat);;Xml Kartendaten (*.xml);;Beliebige Datei (*)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3183"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3186"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3189"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3192"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3218"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3221"/>
       <source>&lt;p&gt;These are the sequence of hexadecimal numbers that are used by the Unicode consortium to identify the graphemes needed to create the symbol.  These numbers can be utilised to determine precisely what is to be drawn even if some fonts have glyphs that are the same for different codepoints or combination of codepoints.&lt;/p&gt;&lt;p&gt;Character entry utilities such as &lt;i&gt;charmap.exe&lt;/i&gt; on &lt;i&gt;Windows&lt;/i&gt; or &lt;i&gt;gucharmap&lt;/i&gt; on many Unix type operating systems will also use these numbers which cover everything from U+0020 {Space} to U+10FFFD the last usable number in the &lt;i&gt;Private Use Plane 16&lt;/i&gt; via most of the written marks that humanity has ever made.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3231"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3234"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
       <translation>&lt;p&gt;Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3243"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3246"/>
       <source>more - not shown...</source>
       <translation>mehr - nicht angezeigt...</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3250"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3253"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3259"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3262"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3269"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3272"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Das Symbol kann nicht vollständig aus Glypthen der gewählten Schriftart erstellt werden, aber mit anderen Schriftarten geht es. Bitte deaktiviere entweder die Einstellung &lt;i&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/i&gt; oder versuche eine andere Schriftart mit den benötigten Glyphen.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Du brauchst diese Tabelle nicht zu schließen, um eine andere Schriftart auszuprobieren. Wenn du sie in den Einstellungen änderst, wird sich diese Tabelle kurz darauf aktualisieren.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3279"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3282"/>
       <source>&lt;p&gt;The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3368"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3371"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
       <translation>Großes Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3369"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3372"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
       <translation>Detail</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3371"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3374"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
       <translation>Kleines Symbol</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3372"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3375"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
       <translation>Zustand</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3374"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3377"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
       <translation>Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3375"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3378"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
       <translation>Maximale Gruppengröße</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3376"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3379"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
       <translation>Zeit</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3411"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3414"/>
       <source>Map symbol usage - %1</source>
       <translation>Benutzung des Kartensymbols - %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3488"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3491"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3489"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3492"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3490"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3493"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3491"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3494"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.html)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3494"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3497"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
       <translation>yyyy-MM-dd#HH-mm-ss (z.B., 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3495"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3498"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
       <translation>yyyy-MM-ddTHH-mm-ss (z.B., 1970-01-01T00-00-00.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3496"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3499"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
       <translation>yyyy-MM-dd (Logs eines Tages aneinander hängen, z.B. 1970-01-01.txt)</translation>
     </message>
     <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="3497"/>
+      <location filename="../src/dlgProfilePreferences.cpp" line="3500"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
       <translation>yyyy-MM (Logs eines Monats aneinander hängen, z.B. 1970-01.txt)</translation>
     </message>
@@ -6563,11 +6563,6 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="538"/>
       <source>Generates a statistics summary display on the main profile console.</source>
       <translation>Erstellt zusammenfassende Statistiken im Hauptfenster.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
-      <source>errors</source>
-      <translation>Fehler</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="542"/>
@@ -7188,6 +7183,11 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="239"/>
       <source>-- add your Lua code here</source>
       <translation>-- Gib hier deinen Lua-Code ein</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
+      <source>Errors</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -10014,7 +10014,7 @@ try again when it has finished.</source>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="317"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2656"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2663"/>
       <source>Please reconnect to your game for the change to take effect</source>
       <translation>Bitte neu mit dem Spiel verbinden, damit die Änderungen aktiv werden.</translation>
     </message>
@@ -10874,77 +10874,82 @@ try again when it has finished.</source>
       <translation>Spezielle Optionen für einige ältere Spiel-Treiber (Aktivierung benötigt Neustart des Client)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2936"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2645"/>
+      <source>Force CHARSET negotiation off</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="2943"/>
       <source>the computer&apos;s password manager (secure)</source>
       <translation>im Kennwort-Manager des Computers (sicher)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2941"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2948"/>
       <source>plaintext with the profile (portable)</source>
       <translation>als Klartext mit dem Profil (protabel)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2949"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2956"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2952"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2959"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
       <translation>Erwarte Farbraum-ID in SGR... (3|4)8;2;... m-Codes</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2975"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2982"/>
       <source>Store character login passwords in:</source>
       <translation>Kennwörter für Charakteranmeldung speichern in:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2987"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2994"/>
       <source>TextLabel</source>
       <translation>Text</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3017"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3024"/>
       <source>TLS/SSL secure connection</source>
       <translation>Sichere TLS/SSL-Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5045"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5052"/>
       <source>Accept self-signed certificates</source>
       <translation>Akzeptiere selbstsignierte Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5055"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5062"/>
       <source>Accept expired certificates</source>
       <translation>Akzeptiere abgelaufene Zertifikate</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3035"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3042"/>
       <source>Certificate</source>
       <translation>Zertifikat</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3095"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3102"/>
       <source>Serial:</source>
       <translation>Seriennummer:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3044"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3051"/>
       <source>Issuer:</source>
       <translation>Aussteller:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3061"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3068"/>
       <source>Issued to:</source>
       <translation>Ausgestellt für:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3078"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3085"/>
       <source>Expires:</source>
       <translation>Läuft ab:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5065"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5072"/>
       <source>Accept all certificate errors       (unsecure)</source>
       <translation>Akzeptiere alle Zertifikatsfehler (unsicher)</translation>
     </message>
@@ -11113,200 +11118,200 @@ try again when it has finished.</source>
       <translation>MXP Verhandlungen zwingend abschalten</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2672"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2679"/>
       <source>Discord privacy</source>
       <translation>Discord Privatsphäre</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2705"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2712"/>
       <source>Don&apos;t hide small icon or tooltip</source>
       <translation>Tooltipp und kleines Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2710"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2717"/>
       <source>Hide small icon tooltip</source>
       <translation>Tooltip am kleinen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2715"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <source>Hide small icon and tooltip</source>
       <translation>Tooltipp und kleines Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2737"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2744"/>
       <source>Hide timer</source>
       <translation>Timer ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2760"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2773"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2789"/>
-      <location filename="../src/ui/profile_preferences.ui" line="2805"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2767"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2780"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2796"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2812"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2766"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2773"/>
       <source>Restrict to:</source>
       <translation>Beschränken auf:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2679"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2686"/>
       <source>Don&apos;t hide large icon or tooltip</source>
       <translation>Tooltipp und großes Symbol einblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2684"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2691"/>
       <source>Hide large icon tooltip</source>
       <translation>Tooltip am großen Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2689"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2696"/>
       <source>Hide large icon and tooltip</source>
       <translation>Tooltipp und großes Symbol ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2744"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2751"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
       <translation>&lt;p&gt;Erlaube Lua, den Status des Discord zu setzen&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2747"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2754"/>
       <source>Enable Lua API</source>
       <translation>Lua API aktivieren</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2779"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2786"/>
       <source>specific Discord username</source>
       <translation>bestimmter Discord-Benutzername</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2723"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2730"/>
       <source>Hide state</source>
       <translation>Zustand ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2730"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2737"/>
       <source>Hide party details</source>
       <translation>Gruppendetails ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2697"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2704"/>
       <source>Hide detail</source>
       <translation>Detail ausblenden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2830"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2837"/>
       <source>IRC client options</source>
       <translation>IRC-Client-Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2846"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2853"/>
       <source>irc.example.net</source>
       <translation>irc.beispiel.net</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2853"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2860"/>
       <source>Port:</source>
       <translation>Port:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2891"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2898"/>
       <source>#channel1 #channel2 #etc...</source>
       <translation>#kanal1 #kanal2 #usw...</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2877"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2884"/>
       <source>MudletUser123</source>
       <translation>MudletNutzer123</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2836"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2843"/>
       <source>Server address:</source>
       <translation>Server-Adresse:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2884"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2891"/>
       <source>Auto-join channels: </source>
       <translation>Automatisch betretene Kanäle: </translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2870"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2877"/>
       <source>Nickname:</source>
       <translation>Spitzname:</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2863"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2870"/>
       <source>6667</source>
       <translation>6667</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2917"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2924"/>
       <source>Search Engine</source>
       <translation>Suchmaschine</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2901"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2908"/>
       <source>Mudlet updates</source>
       <translation>Mudlet Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2907"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2914"/>
       <source>Disable automatic updates</source>
       <translation>Deaktiviere automatische Aktualisierungen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2929"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2936"/>
       <source>Other Special options</source>
       <translation>Andere spezielle Optionen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="2959"/>
+      <location filename="../src/ui/profile_preferences.ui" line="2966"/>
       <source>Show icons on menus</source>
       <translation>Symbole in Menüs anzeigen</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="3011"/>
+      <location filename="../src/ui/profile_preferences.ui" line="3018"/>
       <source>Connection</source>
       <translation>Verbindung</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5075"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5082"/>
       <source>Connect to the game via proxy</source>
       <translation>Mit dem Spiel über Proxy verbinden</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5090"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5097"/>
       <source>Address</source>
       <translation>Adresse</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5110"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5117"/>
       <source>port</source>
       <translation>port</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5120"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5127"/>
       <source>Username for logging into the proxy if requred</source>
       <translation>Benutzername für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5126"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5133"/>
       <source>username (optional)</source>
       <translation>Benutzername (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5136"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5143"/>
       <source>Password for logging into the proxy if requred</source>
       <translation>Passwort für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5142"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5149"/>
       <source>password (optional)</source>
       <translation>Passwort (optional)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="5200"/>
+      <location filename="../src/ui/profile_preferences.ui" line="5207"/>
       <source>Save</source>
       <translation>Speichern</translation>
     </message>
