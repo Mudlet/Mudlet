@@ -11784,6 +11784,74 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomNameOffset
+int TLuaInterpreter::setRoomNameOffset(lua_State* L)
+{
+    int id;
+    qreal x, y;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "setRoomNameOffset: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tointeger(L, 1);
+    }
+
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setRoomNameOffset: bad argument #2 type (room offset X as float expected, got %s!)",
+                       luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        x = lua_tonumber(L, 2);
+    }
+
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "setRoomNameOffset: bad argument #3 type (room offset X as float expected, got %s!)",
+                       luaL_typename(L, 3));
+        return lua_error(L);
+    } else {
+        y = lua_tonumber(L, 3);
+    }
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        pR->nameOffset.setX(x);
+        pR->nameOffset.setY(y);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomNameOffset
+int TLuaInterpreter::getRoomNameOffset(lua_State* L)
+{
+    int id;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getRoomNameOffset: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        id = lua_tointeger(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        lua_pushnumber(L, pR->nameOffset.x());
+        lua_pushnumber(L, pR->nameOffset.y());
+        return 2;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
@@ -16851,6 +16919,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom);
     lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar);
     lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomChar);
+    lua_register(pGlobalLua, "setRoomNameOffset", TLuaInterpreter::setRoomNameOffset);
+    lua_register(pGlobalLua, "getRoomNameOffset", TLuaInterpreter::getRoomNameOffset);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);

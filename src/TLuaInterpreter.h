@@ -191,6 +191,8 @@ public:
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
     static int getRoomChar(lua_State*);
+    static int setRoomNameOffset(lua_State*);
+    static int getRoomNameOffset(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);
@@ -237,6 +239,7 @@ public:
     static int tempBeginOfLineTrigger(lua_State*);
     static int tempExactMatchTrigger(lua_State*);
     static int centerview(lua_State* L);
+    static int updateMapView(lua_State* L);
     static int getAreaTable(lua_State* L);
     static int getAreaTableSwap(lua_State* L);
     static int getPath(lua_State*);

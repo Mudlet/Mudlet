@@ -145,6 +145,7 @@ public:
     qreal max_y;
     QString mSymbol;
     QString name;
+    QPointF nameOffset; // where to draw the name. 0,0 = centered below
     QVector3D v;
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;

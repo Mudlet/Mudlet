@@ -915,6 +915,10 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
         QColor roomNameColor;
         roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
                                ? Qt::black : Qt::white);
+        roomNameRectangle.adjust(mRoomWidth * pRoom->nameOffset.x(),
+                                 mRoomHeight * pRoom->nameOffset.y(),
+                                 mRoomWidth * pRoom->nameOffset.x(),
+                                 mRoomHeight * pRoom->nameOffset.y());
         painter.setPen(QPen(QColor(roomNameColor)));
         painter.setFont(roomVNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
