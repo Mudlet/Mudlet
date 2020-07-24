@@ -912,8 +912,10 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
     // Do we need to draw the room name:
     if (mShowRoomName && areRoomIdsLegible) {
         painter.save();
-        QColor roomIdColor;
-        painter.setPen(QPen(QColor(Qt::white)));
+        QColor roomNameColor;
+        roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
+                               ? Qt::black : Qt::white);
+        painter.setPen(QPen(QColor(roomNameColor)));
         painter.setFont(roomVNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
         painter.restore();
