@@ -3109,61 +3109,61 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1704"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1705"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1706"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1707"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1708"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1709"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1710"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1711"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1712"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1713"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1714"/>
@@ -3175,7 +3175,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1720"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1721"/>
@@ -3187,25 +3187,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1722"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1723"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1735"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1737"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1746"/>
@@ -3241,7 +3241,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1754"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2027"/>
@@ -3349,18 +3349,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>A new version of %APPNAME% is available!</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="110"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
+Would you like to update now?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="145"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Changelog for %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="152"/>
