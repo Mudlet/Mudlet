@@ -60,7 +60,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(20)
+, mMaxVersion(21)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -1085,6 +1085,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mMapSymbolFontFudgeFactor;
         ofs << mIsOnlyMapSymbolFontToBeUsed;
         // TODO save the room name font
+        if (mSaveVersion >= 21) {
+            ofs << mMapNameFont;
+            ofs << mMapNamesSizeAdj;
+        }
     }
 
     ofs << mpRoomDB->getAreaMap().size();
@@ -1219,6 +1223,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->customLinesArrow;
             ofs << pR->customLinesColor;
             ofs << pR->customLinesStyle;
+            if (mSaveVersion >= 21) {
+                ofs << pR->nameOffset.x();
+                ofs << pR->nameOffset.y();
+            }
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
             QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
@@ -1433,8 +1441,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
                 // TODO load the room name font
-                mMapNameFont = mMapSymbolFont;
-                mMapNamesSizeAdj = 0;
+                if (mVersion >= 21) {
+                    ifs >> mMapNameFont;
+                    ifs >> mMapNamesSizeAdj;
+                } else {
+                    mMapNameFont = mMapSymbolFont;
+                    mMapNamesSizeAdj = 0;
+                }
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:

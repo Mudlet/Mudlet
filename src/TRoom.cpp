@@ -800,6 +800,12 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             ifs >> customLinesArrow;
             ifs >> customLinesColor;
             ifs >> customLinesStyle;
+            if (version >= 21) {
+                qreal x, y;
+                ifs >> x;
+                ifs >> y;
+                nameOffset = QPointF(x, y);
+            }
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
             ifs >> oldLinesData;
