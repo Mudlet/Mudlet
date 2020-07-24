@@ -138,6 +138,8 @@ private slots:
     void slot_theme_selected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
+    void slot_setMapNameFont(const QFont&);
+    void slot_setMapNamesSizeAdj(int);
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
     void slot_changeEditorTextOptions(const QTextOption::Flags);

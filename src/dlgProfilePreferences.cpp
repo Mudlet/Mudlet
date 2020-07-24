@@ -189,6 +189,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
     fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
                                            "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+    fontComboBox_mapNames->setToolTip(tr("<p>Select the font used to show the 2D mapper room names.</p>"));
+    spinBox_mapNamesSizeAdj->setToolTip(tr("<p>Adjust the font size of the room names.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
                                                         "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
                                                         "does not have a needed glyph (a font's individual character/symbol) to represent "
@@ -408,6 +410,10 @@ void dlgProfilePreferences::disableHostDetails()
     hidePasswordMigrationLabel();
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
+    label_mapNamesFont->setEnabled(false);
+    fontComboBox_mapNames->setEnabled(false);
+    label_nameSizeAdjust->setEnabled(false);
+    spinBox_mapNamesSizeAdj->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
     pushButton_showGlyphUsage->setEnabled(false);
 
@@ -839,6 +845,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         label_mapSymbolsFont->setEnabled(true);
         fontComboBox_mapSymbols->setEnabled(true);
+        label_mapNamesFont->setEnabled(true);
+        fontComboBox_mapNames->setEnabled(true);
+        label_nameSizeAdjust->setEnabled(true);
+        spinBox_mapNamesSizeAdj->setEnabled(true);
         checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
 
         checkBox_showDefaultArea->show();
@@ -847,9 +857,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         pushButton_showGlyphUsage->setEnabled(true);
         fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
+        fontComboBox_mapNames->setCurrentFont(pHost->mpMap->mMapNameFont);
+        spinBox_mapNamesSizeAdj->setValue(pHost->mpMap->mMapNamesSizeAdj);
         checkBox_isOnlyMapSymbolFontToBeUsed->setChecked(pHost->mpMap->mIsOnlyMapSymbolFontToBeUsed);
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
+        connect(fontComboBox_mapNames, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapNameFont, Qt::UniqueConnection);
+        connect(spinBox_mapNamesSizeAdj, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setMapNamesSizeAdj, Qt::UniqueConnection);
+
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
 
         widget_playerRoomStyle->show();
@@ -871,6 +886,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
+        label_mapNamesFont->setEnabled(false);
+        fontComboBox_mapNames->setEnabled(false);
+        label_nameSizeAdjust->setEnabled(false);
+        spinBox_mapNamesSizeAdj->setEnabled(false);
         checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
         pushButton_showGlyphUsage->setEnabled(false);
 
@@ -3460,6 +3479,40 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
         if (mpDialogMapGlyphUsage) {
             generateMapGlyphDisplay();
         }
+    }
+}
+
+void dlgProfilePreferences::slot_setMapNameFont(const QFont & font)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    double pointSize = pHost->mpMap->mMapNameFont.pointSizeF();
+    if (pHost->mpMap->mMapNameFont != font) {
+        pHost->mpMap->mMapNameFont = font;
+        pHost->mpMap->mMapNameFont.setPointSizeF(pointSize);
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
+    }
+}
+
+void dlgProfilePreferences::slot_setMapNamesSizeAdj(int adj)
+{
+    Host* pHost = mpHost;
+    if (!pHost ||!pHost->mpMap) {
+        return;
+    }
+
+    double pointSize = pHost->mpMap->mMapNameFont.pointSizeF();
+    if (pHost->mpMap->mMapNamesSizeAdj != adj) {
+        pointSize /= pow(1.2, pHost->mpMap->mMapNamesSizeAdj);
+        pointSize *= pow(1.2, adj);
+        pHost->mpMap->mMapNameFont.setPointSizeF(pointSize);
+        pHost->mpMap->mMapNamesSizeAdj = adj;
+        pHost->mpMap->mpMapper->mp2dMap->repaint();
+        pHost->mpMap->mpMapper->update();
     }
 }
 

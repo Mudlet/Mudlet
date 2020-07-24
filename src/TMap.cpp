@@ -66,6 +66,8 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 , mMapSymbolFontFudgeFactor(1.0)
 , mIsOnlyMapSymbolFontToBeUsed(false)
+, mMapNameFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
+, mMapNamesSizeAdj(0)
 // These three are actually set to values from the Host class but initialising
 // them to the same defaults here keeps Coverity happy:
 , mPlayerRoomStyle(0)
@@ -1082,6 +1084,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mMapSymbolFont;
         ofs << mMapSymbolFontFudgeFactor;
         ofs << mIsOnlyMapSymbolFontToBeUsed;
+        // TODO save the room name font
     }
 
     ofs << mpRoomDB->getAreaMap().size();
@@ -1429,6 +1432,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> mMapSymbolFont;
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
+                // TODO load the room name font
+                mMapNameFont = mMapSymbolFont;
+                mMapNamesSizeAdj = 0;
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
@@ -1437,6 +1443,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
                     mMapSymbolFont = QFont(fontString);
+                    mMapNameFont = QFont(fontString);
+                    mMapNamesSizeAdj = 0;
                 }
                 if (!fontFudgeFactorString.isEmpty()) {
                     mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
@@ -1451,6 +1459,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                                                                           |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
                                                                           |QFont::PreferNoShaping
                                                                           ));
+        mMapNameFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+                                                                        |QFont::PreferNoShaping));
 
         if (mVersion >= 14) {
             int areaSize;

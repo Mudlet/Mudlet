@@ -234,6 +234,10 @@ public:
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
 
+    // Font for room names on the 2D map
+    QFont mMapNameFont;
+    qint8 mMapNamesSizeAdj;
+
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 

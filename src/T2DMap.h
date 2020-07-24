@@ -216,7 +216,7 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
-    void drawRoom(QPainter&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const int, const float, const float, const bool);
+    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const int, const float, const float, const bool);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
     void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
     void initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
@@ -246,11 +246,16 @@ private:
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
     QCache<QString, QPixmap> mSymbolPixmapCache;
-    ushort mSymbolFontSize;
-    QFont mMapSymbolFont;
     QPointer<QAction> mpCreateRoomAction;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits;
+
+    // Room symbols
+    QFont mMapSymbolFont;
+    ushort mSymbolFontSize;
+
+    // Room names
+    QFont mMapNameFont;
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;

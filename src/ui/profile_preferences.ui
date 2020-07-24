@@ -2084,31 +2084,67 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_mapSymbolsFont">
-            <property name="text">
-             <string>2D Map Room Symbol Font</string>
-            </property>
+          <item row="1" column="0" colspan="2">
+           <widget class="QWidget" name="widget_playerRoomFonts" native="true">
+            <layout class="QGridLayout" name="gridLayout_playerRoomFonts">
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_mapSymbolsFont">
+               <property name="text">
+                <string>2D Map Room Symbol Font</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QFontComboBox" name="fontComboBox_mapNames"/>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_mapNamesFont">
+               <property name="text">
+                <string>Room Name Font</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2" alignment="Qt::AlignRight">
+              <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+               <property name="text">
+                <string>only from this font</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+             </item>
+             <item row="1" column="3">
+              <widget class="QPushButton" name="pushButton_showGlyphUsage">
+               <property name="text">
+                <string>Show symbol usage...</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2" alignment="Qt::AlignRight">
+              <widget class="QLabel" name="label_nameSizeAdjust">
+               <property name="text">
+                <string>Tweak name size by</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3" alignment="Qt::AlignLeft">
+              <widget class="QSpinBox" name="spinBox_mapNamesSizeAdj">
+               <property name="minimum">
+                <number>-9</number>
+               </property>
+               <property name="maximum">
+                <number>9</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
-          <item row="1" column="1" alignment="Qt::AlignLeft">
-           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
-            <property name="text">
-             <string>Only use symbols (glyphs) from chosen font</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="pushButton_showGlyphUsage">
-            <property name="text">
-             <string>Show symbol usage...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="2">
+          <item row="2" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomStyle" native="true">
             <layout class="QGridLayout" name="gridLayout_playerRoomStyle">
              <property name="leftMargin">
@@ -5313,9 +5349,6 @@
   <tabstop>comboBox</tabstop>
   <tabstop>mMapperUseAntiAlias</tabstop>
   <tabstop>checkBox_showDefaultArea</tabstop>
-  <tabstop>fontComboBox_mapSymbols</tabstop>
-  <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
-  <tabstop>pushButton_showGlyphUsage</tabstop>
   <tabstop>pushButton_foreground_color_2</tabstop>
   <tabstop>pushButton_background_color_2</tabstop>
   <tabstop>pushButton_black_2</tabstop>
