@@ -7186,7 +7186,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>Errori</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -10883,7 +10883,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Force CHARSET negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Forza la negoziazione del CHARSET disattiva</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2943"/>
