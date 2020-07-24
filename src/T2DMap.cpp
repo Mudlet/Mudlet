@@ -640,27 +640,28 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
         return false;
     }
 
-    qreal fontSize = font.pointSizeF();
+    qreal fontSize = qMax(minFontSize, font.pointSizeF());  // protect against too-small initial value
     QRectF testRect(boundaryRect.width() * (100 - percentageMargin) / 200.0,
                     boundaryRect.height() * (100 - percentageMargin) / 200.0,
                     boundaryRect.width() * (100 - percentageMargin) / 100.0,
                     boundaryRect.height() * (100 - percentageMargin) / 100.);
-    // Increase the test font, then check to see that it does NOT fit
+
+    // Increase the test font (using somewhat-large steps) until it does not fit any more
     QRectF neededRect;
     QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
     QPainter _painter(&_pixmap);
     do {
-        fontSize = fontSize * 1.2;
+        fontSize *= 1.2;
         _font.setPointSizeF(fontSize);
         _painter.setFont(_font);
 
         neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
     } while (testRect.contains(neededRect));
 
-    // Now decrease until it does
+    // Now decrease (using smaller steps) until it fits again
     bool isSizeTooSmall = false;
     do {
-        fontSize = fontSize / 1.05;
+        fontSize /= 1.05;
         _font.setPointSizeF(fontSize);
         if (fontSize < minFontSize) {
             isSizeTooSmall = true;
@@ -1317,7 +1318,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QFont roomVNumFont = mpMap->mMapSymbolFont;
     QFont roomVNameFont = mpMap->mMapNameFont;
     bool isFontBigEnoughToShowRoomVnum = false;
-    bool isFontBigEnoughToShowRoomVname = false;
     if (mShowRoomID) {
         /*
          * If we are to show the room Id numbers - find out the number of digits
@@ -1351,22 +1351,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
         isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin, 7.0);
     }
 
-    bool isFontBigEnoughToShowRoomName = false;
+    bool isFontBigEnoughToShowRoomVname = false;
     if (mShowRoomName) {
         /*
-         * Like above, except that we use a static "88" string to scale the
-         * font for the room names.
+         * Like above, except that we use the room height as the font size.
          */
-        QRectF roomTestRect;
-        roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
-        static quint8 roomVnumMargin = 10;
         roomVNameFont.setBold(true);
 
         roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
 
-        isFontBigEnoughToShowRoomVname = sizeFontToFitTextInRect(roomVNameFont, roomTestRect, QStringLiteral("88"), roomVnumMargin, 4.0);
-        if (mMapNamesSizeAdj)
-          roomVNameFont.setPointSizeF(pow(roomVNameFont.pointSizeF(), mMapNamesSizeAdj));
+        roomVNameFont.setPointSizeF(static_cast<qreal>(mRoomWidth) * rSize * pow(1.1, mpHost->mpMap->mMapNamesSizeAdj) / 2.0);
+        isFontBigEnoughToShowRoomVname = (roomVNameFont.pointSizeF() > 3.0);
     }
 
     TArea* pArea = playerArea;

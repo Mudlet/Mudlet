@@ -3507,9 +3507,6 @@ void dlgProfilePreferences::slot_setMapNamesSizeAdj(int adj)
 
     double pointSize = pHost->mpMap->mMapNameFont.pointSizeF();
     if (pHost->mpMap->mMapNamesSizeAdj != adj) {
-        pointSize /= pow(1.2, pHost->mpMap->mMapNamesSizeAdj);
-        pointSize *= pow(1.2, adj);
-        pHost->mpMap->mMapNameFont.setPointSizeF(pointSize);
         pHost->mpMap->mMapNamesSizeAdj = adj;
         pHost->mpMap->mpMapper->mp2dMap->repaint();
         pHost->mpMap->mpMapper->update();
