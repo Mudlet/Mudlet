@@ -1575,7 +1575,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17071"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Some functions may not be available.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16559"/>
@@ -1796,7 +1796,7 @@ map with others relying on the original format.</translation>
     <message>
       <location filename="../src/TMap.cpp" line="445"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Map audit starting...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1034"/>
@@ -1934,7 +1934,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2131"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>End of report</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2137"/>
@@ -2001,7 +2001,7 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2297"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Importing XML map file for use in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
@@ -2012,7 +2012,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2360"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map download was cancelled, on user&apos;s request.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2379"/>
@@ -2237,17 +2237,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1346"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (open)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (closed)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1352"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (locked)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1355"/>
@@ -2274,7 +2274,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1389"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1405"/>
@@ -2285,7 +2285,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1412"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1491"/>
@@ -2377,12 +2377,13 @@ It had a weight, this is recorded as user data with key:
       <location filename="../src/TRoom.cpp" line="1717"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - There was a custom exit line associated with the invalid exit but
+it has not been possible to salvage this, it has been lost!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1722"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</translation>
     </message>
   </context>
   <context>
@@ -2410,7 +2411,7 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>An area called %1 already exists!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="610"/>
@@ -2418,12 +2419,15 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Problem with data structure associated with room id: %1 - that
+room&apos;s data has been lost so the id is now being deleted.  This
+suggests serious problems with the currently running version of
+Mudlet - is your system running out of memory?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="618"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="686"/>
@@ -2530,7 +2534,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="882"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - This room with the bad id was renumbered to: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="883"/>
@@ -2719,7 +2723,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1080"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Search on %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1098"/>
@@ -7099,7 +7103,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>Errors</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -10776,7 +10780,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Force CHARSET negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Force CHARSET negotiation off</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2943"/>
