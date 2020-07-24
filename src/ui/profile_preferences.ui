@@ -928,9 +928,6 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
-         </property>
          <property name="title">
           <string>Word wrapping</string>
          </property>
@@ -3080,9 +3077,6 @@
             <layout class="QGridLayout" name="gridLayout_groupBox_ssl_certificate" columnstretch="0,1">
              <item row="0" column="0">
               <widget class="QLabel" name="label">
-               <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
-               </property>
                <property name="text">
                 <string>Issuer:</string>
                </property>
