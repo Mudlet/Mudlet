@@ -628,7 +628,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
  * reduced by the margin (0-40) as a percentage). This margin is defaulted to
  * 10%.
  */
-bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin )
+bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin, qreal minFontSize )
 {
     QFont _font = font;
 
@@ -645,12 +645,12 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
                     boundaryRect.height() * (100 - percentageMargin) / 200.0,
                     boundaryRect.width() * (100 - percentageMargin) / 100.0,
                     boundaryRect.height() * (100 - percentageMargin) / 100.);
-    // Increase the test font by one, then check to see that it does NOT fit
+    // Increase the test font, then check to see that it does NOT fit
     QRectF neededRect;
     QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
     QPainter _painter(&_pixmap);
     do {
-        fontSize = fontSize + 1.0;
+        fontSize = fontSize * 1.2;
         _font.setPointSizeF(fontSize);
         _painter.setFont(_font);
 
@@ -659,9 +659,8 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 
     // Now decrease until it does
     bool isSizeTooSmall = false;
-    static qreal minFontSize = 7.0;
     do {
-        fontSize = fontSize - 1.0;
+        fontSize = fontSize / 1.05;
         _font.setPointSizeF(fontSize);
         if (fontSize < minFontSize) {
             isSizeTooSmall = true;
@@ -702,7 +701,7 @@ void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWal
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& roomVNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& roomVNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, const bool areRoomNamesLegible, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -910,7 +909,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
 
     }
     // Do we need to draw the room name:
-    if (mShowRoomName && areRoomIdsLegible) {
+    if (mShowRoomName && areRoomNamesLegible) {
         painter.save();
         QColor roomNameColor;
         roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
@@ -1318,6 +1317,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QFont roomVNumFont = mpMap->mMapSymbolFont;
     QFont roomVNameFont = mpMap->mMapNameFont;
     bool isFontBigEnoughToShowRoomVnum = false;
+    bool isFontBigEnoughToShowRoomVname = false;
     if (mShowRoomID) {
         /*
          * If we are to show the room Id numbers - find out the number of digits
@@ -1348,7 +1348,25 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // sizes (but we prevent that by checking in the method call afterwards):
         roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
 
-        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
+        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin, 7.0);
+    }
+
+    bool isFontBigEnoughToShowRoomName = false;
+    if (mShowRoomName) {
+        /*
+         * Like above, except that we use a static "88" string to scale the
+         * font for the room names.
+         */
+        QRectF roomTestRect;
+        roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
+        static quint8 roomVnumMargin = 10;
+        roomVNameFont.setBold(true);
+
+        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
+
+        isFontBigEnoughToShowRoomVname = sizeFontToFitTextInRect(roomVNameFont, roomTestRect, QStringLiteral("88"), roomVnumMargin, 4.0);
+        if (mMapNamesSizeAdj)
+          roomVNameFont.setPointSizeF(pow(roomVNameFont.pointSizeF(), mMapNamesSizeAdj));
     }
 
     TArea* pArea = playerArea;
@@ -1448,12 +1466,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, roomVNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, roomVNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, isFontBigEnoughToShowRoomVname, playerRoomId, rx, ry, __Pick);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, roomVNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, roomVNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, isFontBigEnoughToShowRoomVname, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
