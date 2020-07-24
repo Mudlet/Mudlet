@@ -704,16 +704,6 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
-            </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="0" colspan="4">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
@@ -723,6 +713,16 @@
             </property>
             <property name="text">
              <string>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="mNoAntiAlias">
+            <property name="toolTip">
+             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
             </property>
            </widget>
           </item>
@@ -2084,6 +2084,36 @@
           <item row="1" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomFonts" native="true">
             <layout class="QGridLayout" name="gridLayout_playerRoomFonts">
+             <item row="0" column="0">
+             <widget class="QLabel" name="label_mapNamesFont">
+              <property name="text">
+               <string>Room Name Font</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+             <item row="0" column="1">
+             <widget class="QFontComboBox" name="fontComboBox_mapNames"/>
+            </item>
+             <item row="0" column="2" alignment="Qt::AlignRight">
+             <widget class="QLabel" name="label_nameSizeAdjust">
+              <property name="text">
+               <string>Adjust name size by</string>
+              </property>
+             </widget>
+            </item>
+             <item row="0" column="3" alignment="Qt::AlignLeft">
+             <widget class="QSpinBox" name="spinBox_mapNamesSizeAdj">
+              <property name="minimum">
+               <number>-9</number>
+              </property>
+              <property name="maximum">
+               <number>20</number>
+              </property>
+             </widget>
+            </item>
              <item row="1" column="0">
               <widget class="QLabel" name="label_mapSymbolsFont">
                <property name="text">
@@ -2091,18 +2121,8 @@
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
-              <widget class="QFontComboBox" name="fontComboBox_mapNames"/>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_mapNamesFont">
-               <property name="text">
-                <string>Room Name Font</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-               </property>
-              </widget>
+             <item row="1" column="1">
+              <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
              </item>
              <item row="1" column="2" alignment="Qt::AlignRight">
               <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
@@ -2111,30 +2131,10 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
-              <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
-             </item>
              <item row="1" column="3">
               <widget class="QPushButton" name="pushButton_showGlyphUsage">
                <property name="text">
                 <string>Show symbol usage...</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="2" alignment="Qt::AlignRight">
-              <widget class="QLabel" name="label_nameSizeAdjust">
-               <property name="text">
-                <string>Adjust name size by</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="3" alignment="Qt::AlignLeft">
-              <widget class="QSpinBox" name="spinBox_mapNamesSizeAdj">
-               <property name="minimum">
-                <number>-9</number>
-               </property>
-               <property name="maximum">
-                <number>20</number>
                </property>
               </widget>
              </item>
@@ -2969,20 +2969,6 @@
           <string>Other Special options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_debug">
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboBox_store_passwords_in">
-            <item>
-             <property name="text">
-              <string>the computer's password manager (secure)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>plaintext with the profile (portable)</string>
-             </property>
-            </item>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
             <property name="toolTip">
@@ -3014,6 +3000,20 @@
             <property name="text">
              <string>Store character login passwords in:</string>
             </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_store_passwords_in">
+            <item>
+             <property name="text">
+              <string>the computer's password manager (secure)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>plaintext with the profile (portable)</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item row="2" column="0" colspan="2">
@@ -3144,6 +3144,36 @@
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept self-signed certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept expired certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
            </widget>
           </item>
           <item row="3" column="0" colspan="2">
@@ -5071,36 +5101,6 @@
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_self_signed">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept self-signed certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_expired">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept expired certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Accept all certificate errors       (unsecure)</string>
-            </property>
            </widget>
           </item>
          </layout>
