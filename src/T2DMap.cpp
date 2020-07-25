@@ -1242,8 +1242,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    int ox;
-    int oy;
+    qreal ox;
+    qreal oy;
     if (mRoomID != playerRoomId && mShiftMode) {
         mShiftMode = false;
     }
@@ -4617,7 +4617,33 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         mPick = false;
         int oldZoom = xyzoom;
         xyzoom = qMax(3, xyzoom + delta);
+
+
         if (oldZoom != xyzoom) {
+            const float widgetWidth = width();
+            const float widgetHeight = height();
+            float xs = 1.0;
+            float ys = 1.0;
+            if (widgetWidth > 10 && widgetHeight > 10) {
+                if (widgetWidth > widgetHeight)
+                    xs = (widgetWidth / widgetHeight);
+                else
+                    ys = (widgetHeight / widgetWidth);
+            }
+
+            // mouse pos within the widget
+            QPointF pos = e->position();
+
+            // Position of the mouse within the map, scaled -1 .. +1
+            // i.e. if the mouse is in the center, nothing changes
+            const float dx = 2.0 * pos.x() / widgetWidth - 1.0;
+            const float dy = 2.0 * pos.y() / widgetHeight - 1.0;
+
+            // now shift the origin by that, scaled by the difference in
+            // zoom factors. Thus the point under the mouse stays in place.
+            mOx += dx * (oldZoom - xyzoom) / 2.0 * xs;
+            mOy += dy * (oldZoom - xyzoom) / 2.0 * ys;
+
             flushSymbolPixmapCache();
             update();
         }

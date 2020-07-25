@@ -130,8 +130,8 @@ public:
     double eSize;
     int mRoomID;
     int mAreaID;
-    int mOx;
-    int mOy;
+    qreal mOx;
+    qreal mOy;
     int mOz;
     bool mShiftMode;
     bool mShowInfo;
