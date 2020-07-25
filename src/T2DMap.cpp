@@ -4608,16 +4608,15 @@ void T2DMap::wheelEvent(QWheelEvent* e)
 
     // int delta = e->delta() / 8 / 15; // Deprecated in Qt 5.x ...!
     int delta = e->angleDelta().y() / (8 * 15);
-    if (e->modifiers() & Qt::ControlModifier) { // Increase rate 10-fold if control key down - it makes scrolling through
+    if (e->modifiers() & Qt::ControlModifier) { // Increase rate if control key down - it makes scrolling through
                                                 // a large number of items in a listwidget's contents easier AND this make it
                                                 // easier to zoom in and out on LARGE area maps
-        delta *= 10;
+        delta *= 5;
     }
     if (delta != 0) {
         mPick = false;
-        int oldZoom = xyzoom;
-        xyzoom = qMax(3, xyzoom + delta);
-
+        qreal oldZoom = xyzoom;
+        xyzoom = qMax(3.0, xyzoom * pow(1.07, delta));
 
         if (oldZoom != xyzoom) {
             const float widgetWidth = width();
@@ -4658,10 +4657,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     return;
 }
 
-void T2DMap::setMapZoom(int zoom)
+void T2DMap::setMapZoom(qreal zoom)
 {
-    int oldZoom = xyzoom;
-    xyzoom = qMax(3, zoom);
+    qreal oldZoom = xyzoom;
+    xyzoom = qMax(3.0, zoom);
     if (oldZoom != xyzoom) {
         flushSymbolPixmapCache();
         update();
