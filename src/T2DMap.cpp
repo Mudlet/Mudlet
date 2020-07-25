@@ -4632,7 +4632,11 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             }
 
             // mouse pos within the widget
-            QPointF pos = e->position();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+            const QPointF pos = e->position();
+#else
+            const QPoint pos = mapFromGlobal(e->globalPos());
+#endif
 
             // Position of the mouse within the map, scaled -1 .. +1
             // i.e. if the mouse is in the center, nothing changes
