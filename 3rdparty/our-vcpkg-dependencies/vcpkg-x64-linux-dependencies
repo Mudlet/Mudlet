@@ -1,6 +1,5 @@
 --triplet
 x64-linux
-yajl
 hunspell
 pugixml
 --overlay-ports=../our-vcpkg-dependencies/lua

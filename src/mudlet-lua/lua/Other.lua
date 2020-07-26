@@ -961,7 +961,7 @@ local function readJsonFile(input)
   if str == "" then
     return {}
   end
-  return yajl.to_value(str)
+  return cjson.decode(str)
 end
 
 --- loads Translations located in the /translations folder

@@ -247,27 +247,6 @@ function InstallHunspell() {
   RunMakeInstall
 }
 
-function InstallYajl() {
-  $Env:Path = $NoShPath
-  DownloadFile "https://github.com/lloyd/yajl/tarball/2.1.0" "yajl-2.1.0.tar.gz"
-  ExtractTar "yajl-2.1.0.tar.gz" "yajl-2.1.0"
-  Set-Location "yajl-2.1.0\lloyd-yajl-66cb08c"
-  Step "changing CMakeLists.txt"
-  (Get-Content CMakeLists.txt -Raw) -replace '\/W4' -replace '(?<=SET\(linkFlags)[^\)]+' -replace '\/wd4996 \/wd4255 \/wd4130 \/wd4100 \/wd4711' -replace '(?<=SET\(CMAKE_C_FLAGS_DEBUG .)\/D \DEBUG \/Od \/Z7', '-g' -replace '(?<=SET\(CMAKE_C_FLAGS_RELEASE .)\/D NDEBUG \/O2', '-O2' | Out-File -encoding ASCII CMakeLists.txt >> "$logFile" 2>&1
-  if (!(Test-Path -Path "build" -PathType Container)) {
-    Step "Creating yajl build path"
-    New-Item build -ItemType Directory >> "$logFile" 2>&1
-  }
-  Set-Location build
-  Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "..")
-  RunMake
-  Step "installing"
-  Copy-Item "yajl-2.1.0\lib\*" "$Env:MINGW_BASE_DIR\bin"
-  exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
-  $Env:Path = $ShPath
-}
-
 function InstallLua() {
   DownloadFile "http://www.lua.org/ftp/lua-5.1.5.tar.gz" "lua-5.1.5.tar.gz"
   ExtractTar "lua-5.1.5.tar.gz" "lua-5.1.5"
@@ -405,10 +384,10 @@ function InstallLuaArgparse() {
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
 }
 
-function InstallLuaYajl() {
+function InstallLuaCjson() {
   Set-Location \LuaRocks
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-cjson", "CJSON_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "CJSON_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 }
 
 function InstallLuaZip () {
@@ -433,7 +412,7 @@ function InstallLuaModules(){
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
   CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
-  CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
+  CheckAndInstall "lua-cjson" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\cjson.dll" { InstallLuaCjson }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
@@ -473,10 +452,6 @@ function CheckAndInstallOpenSSL(){
 
 function CheckAndInstallHunspell(){
     CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll" { InstallHunspell }
-}
-
-function CheckAndInstallYajl(){
-    CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\bin\libyajl.dll" { InstallYajl }
 }
 
 function CheckAndInstallLua(){

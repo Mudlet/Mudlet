@@ -306,7 +306,6 @@ find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
-find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
@@ -378,7 +377,6 @@ target_link_libraries(
   Qt5::OpenGL
   Qt5::UiTools
   Qt5::Widgets
-  YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
   qt5keychain)

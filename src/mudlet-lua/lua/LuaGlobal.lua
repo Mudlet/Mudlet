@@ -36,7 +36,7 @@ end
 -- TODO this is required by DB.lua, so we might load it all at one place
 --if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
 
-json_to_value = yajl.to_value
+json_to_value = cjson.decode
 gmcp = {}
 mssp = {}
 

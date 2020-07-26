@@ -841,9 +841,9 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString luaHeader(tr("<h2><u>lua - Lua 5.1</u></h2>"
                          "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
 
-    QString luaYajlHeader(tr("<h2><u>lua_yajl - Lua 5.1 interface to yajl</u></h2>"
-                             "<h3>Author: Brian Maher &lt;maherb at brimworks dot com&gt;<br>"
-                             "Copyright © 2009 Brian Maher</h3>"));
+    QString luaCjson(tr("<h2><u>lua_cjson - Lua 5.1 codec for JSON</u></h2>"
+                             "<h3>Author: Mark Pulford &lt;mark@kyne.com-au&gt;<br>"
+                             "Copyright © 2012 Mark Pulford</h3>"));
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
@@ -923,11 +923,6 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                             QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                                communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
-    license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
-                                          .arg(luaHeader,                      //  6 - lua header - translatable
-                                               MIT_Body,                       //  7 - lua body MIT - not translatable
-                                               luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                               MIT_Body));                     //  9 - lua_yajl body MIT - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("%10%11<hr>")
                                           .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable

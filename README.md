@@ -115,7 +115,7 @@ This software wouldnt've been possible without these open source packages:
 - [DBLSQD](https://www.dblsqd.com/)
 - [Communi](https://communi.github.io/)
 - [PCRE](https://www.pcre.org/)
-- [lua-yajl](https://github.com/brimworks/lua-yajl)
+- [lua-cjson](https://github.com/mpx/lua-cjson)
 - [Hunspell](https://hunspell.github.io/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.

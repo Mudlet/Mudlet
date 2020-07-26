@@ -97,7 +97,7 @@ function gmod.reenableModules()
     list[#list + 1] = module .. " 1"
   end
   if list[1] then
-    sendGMCP("Core.Supports.Add " .. yajl.to_string(list))
+    sendGMCP("Core.Supports.Add " .. cjson.encode(list))
   end
 end
 registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)

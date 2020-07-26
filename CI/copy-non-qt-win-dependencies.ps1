@@ -1,4 +1,3 @@
-COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libcrypto-1_1.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libssl-1_1.dll .

@@ -4479,7 +4479,7 @@ end
 
 local keys = {}; for k,_ in pairs(mmp.ferry_rooms) do keys[#keys+1] = k end
 
-setRoomUserData(1, "ferry rooms", yajl.to_string(keys))</script>
+setRoomUserData(1, "ferry rooms", cjson.encode(keys))</script>
 					<command></command>
 					<packageName></packageName>
 					<regex>^fr (\d+) (add|remove)$</regex>
@@ -4695,7 +4695,7 @@ centerview(mmp.currentroom)</script>
 end
 mmp.wipingcontinents = nil
 
-local toserialize = yajl.to_string{}
+local toserialize = cjson.encode{}
 setRoomUserData(1, "areaContinents", toserialize)
 mmp.echo("Wiped all continents data.")</script>
 					<command></command>
@@ -4896,7 +4896,7 @@ tempTimer(10, [[disableTrigger'Parse wholist']])</script>
 local maptable = {}
 
 if tmp ~= "" then
-  maptable = yajl.to_value(tmp)
+  maptable = cjson.decode(tmp)
 end
 
 local location, markname
@@ -4909,13 +4909,13 @@ else
   location = matches[3]; markname = matches[2]
 end
 
--- can't allow mark name to ne a number - yajl then generates a giant table of null's
+-- can't allow mark name to be a number - cjson then generates a giant table of null's
 if tonumber(markname) then
   mmp.echo("The mark name can't be a number.") return
 end
 
 maptable[markname] = location
-local tmp2 = yajl.to_string(maptable)
+local tmp2 = cjson.encode(maptable)
 
 if not mmp.roomexists(1) then
   addRoom(1)
@@ -4931,11 +4931,11 @@ mmp.echo(string.format("Room mark for '%s' set to room %s.", markname, location)
 				<name>Remove Room Mark</name>
 				<script>local tmp= getRoomUserData(1, "gotoMapping")
 if tmp~="" then
-  local maptable=yajl.to_value(tmp)
+  local maptable=cjson.decode(tmp)
   if not maptable[matches[2]] then mmp.echo("Don't have such a mark in the db.") return end
 
   maptable[matches[2]]=nil
-  local tmp2=yajl.to_string(maptable)
+  local tmp2=cjson.encode(maptable)
   setRoomUserData(1, "gotoMapping", tmp2)
   mmp.echo("Removed the "..matches[2].." mark.")
 else
@@ -4949,7 +4949,7 @@ end</script>
 				<name>Display Room Marks</name>
 				<script>local tmp= getRoomUserData(1, "gotoMapping")
 if tmp~="" then
-	local maptable = yajl.to_value(tmp) or {}
+	local maptable = cjson.decode(tmp) or {}
     local sortedkeys = {}
     for k in pairs(maptable) do sortedkeys[#sortedkeys+1] = k end
     table.sort(sortedkeys)
@@ -5786,7 +5786,7 @@ function mmp.gotoArea(where, number, dashtype, exact)
   if not tmp or tmp == '' then
     tmp = "[]"
   end
-  local temp, maptable = yajl.to_value(tmp), {}
+  local temp, maptable = cjson.decode(tmp), {}
   for k, v in pairs(temp) do
     maptable[k:lower()] = v
   end
@@ -8891,7 +8891,7 @@ function mmp.getcontinents()
   local tmp = getRoomUserData(1, "areaContinents")
   if tmp == "" then return {} end
 
-  return yajl.to_value(tmp)
+  return cjson.decode(tmp)
 end
 
 -- patches welcome to finish this function.
@@ -8904,7 +8904,7 @@ function mmp.removecontinent(area, continent)
   local index = mmp.indexof_valueonly(continents[continent], area)
   if not index then return nil, "this area is not on that continent" end
   table.remove(continents[continent], index)
-  local tmp = yajl.to_string(continents)
+  local tmp = cjson.encode(continents)
   setRoomUserData(1, "areaContinents", tmp)
   return true
 end
@@ -8918,7 +8918,7 @@ function mmp.addcontinent(areaid, continent)
   local index = mmp.indexof_valueonly(continents[continent], areaid)
   if index then return nil, "this area is already on that continent" end
   continents[continent][#continents[continent] + 1] = areaid
-  local tmp = yajl.to_string(continents)
+  local tmp = cjson.encode(continents)
   setRoomUserData(1, "areaContinents", tmp)
   return true
 end
@@ -9272,7 +9272,7 @@ end</script>
   if table.is_empty(mmp.ferry_rooms) then
     local tmp = getRoomUserData(1, "ferry rooms")
     if tmp ~= "" then
-      for _, i in ipairs(yajl.to_value(tmp)) do
+      for _, i in ipairs(cjson.decode(tmp)) do
         mmp.ferry_rooms[i] = true
       end
     end
@@ -11255,7 +11255,7 @@ end</script>
     local oldmaptable = {}
 
     if tmp ~= "" then
-      oldmaptable = yajl.to_value(tmp)
+      oldmaptable = cjson.decode(tmp)
     end
 
     local ok = loadMap(filename)
@@ -11279,11 +11279,11 @@ end</script>
       local newmaptable = {}
 
       if tmp ~= "" then
-        newmaptable = yajl.to_value(tmp)
+        newmaptable = cjson.decode(tmp)
       end
 
       for k,v in pairs(oldmaptable) do newmaptable[k] = v end
-      setRoomUserData(1, "gotoMapping", yajl.to_string(newmaptable))
+      setRoomUserData(1, "gotoMapping", cjson.encode(newmaptable))
       mmp.echo("Marks from the old map migrated successfully.")
 
       raiseEvent("mmapper updated map")
@@ -11293,7 +11293,7 @@ end</script>
         local tmp = getRoomUserData(1, "gotoMapping")
         local oldmaptable = {}
         if tmp ~= "" then
-          oldmaptable = yajl.to_value(tmp)
+          oldmaptable = cjson.decode(tmp)
         end
 
         local ok = loadMap(']]..filename..[[')
@@ -11313,10 +11313,10 @@ end</script>
           tmp = getRoomUserData(1, "gotoMapping")
           local newmaptable = {}
           if tmp ~= "" then
-            newmaptable = yajl.to_value(tmp)
+            newmaptable = cjson.decode(tmp)
           end
           for k,v in pairs(oldmaptable) do newmaptable[k] = v end
-          setRoomUserData(1, "gotoMapping", yajl.to_string(newmaptable))
+          setRoomUserData(1, "gotoMapping", cjson.encode(newmaptable))
           mmp.echo("Marks from the old map migrated successfully.")
           raiseEvent("mmapper updated map")
         else mmp.echo("Nope, didn't work. Open the map and try again?") end
@@ -11632,7 +11632,7 @@ local function loadMapFeatures()
   local mapFeaturesString = getMapUserData("mapFeatures")
   local mapFeatures
   if mapFeaturesString and mapFeaturesString ~= "" then
-    mapFeatures = yajl.to_value(mapFeaturesString)
+    mapFeatures = cjson.decode(mapFeaturesString)
   else
     mapFeatures = {}
   end
@@ -11640,7 +11640,7 @@ local function loadMapFeatures()
 end
 
 local function saveMapFeatures(mapFeaturesToSave)
-  local mapFeaturesString = yajl.to_string(mapFeaturesToSave)
+  local mapFeaturesString = cjson.encode(mapFeaturesToSave)
   setMapUserData("mapFeatures", mapFeaturesString)
 end
 

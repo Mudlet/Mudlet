@@ -23,13 +23,13 @@ addons:
     - zlib1g-dbg
     - libzip-dev
     - libpulse-dev
-    - libyajl-dev
     - gcc-7
     - g++-7
     - luarocks
     - lua-rex-pcre
     - lua-filesystem
     - lua-zip
+    - lua-cjson
     - lua-sql-sqlite3
     - libpugixml-dev
     - xz-utils

@@ -80,7 +80,7 @@ const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
 
 
 extern "C" {
-int luaopen_yajl(lua_State*);
+int luaopen_cjson(lua_State*);
 }
 
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -17086,7 +17086,7 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    loadLuaModule(modLoadMessageQueue, QLatin1String("cjson"), tr("cjson.* Lua functions won't be available."), QString(), QLatin1String("cjson"));
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -17098,7 +17098,30 @@ void TLuaInterpreter::initLuaGlobals()
     tn = "channel102";
     set_lua_table(tn, args);
 
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+    // create a "yajl" table with to_string/to_value entries
+    // for backwards compatiblity
+    if(! lua_checkstack(pGlobalLua, 5)) {
+        lua_settop(pGlobalLua, 0);
+        qDebug() << "CRITICAL ERROR: no memory?";
+        return;
+    }
+    lua_createtable(pGlobalLua, 0, 2);  // yajl
+
+    lua_getglobal (pGlobalLua, "cjson");  // yail cjson
+
+    lua_pushstring(pGlobalLua, "to_string");  // yail cjson "to_"
+    lua_getfield(pGlobalLua, -2, "encode");   // yail cjson "to_" enc
+    lua_settable(pGlobalLua, -4);
+
+    lua_pushstring(pGlobalLua, "to_value");
+    lua_getfield(pGlobalLua, -2, "decode");
+    lua_settable(pGlobalLua, -4);
+
+    lua_pop(pGlobalLua, 1); // yail
+    lua_setglobal (pGlobalLua, "yajl");
+
+    // clear the stack
+    lua_settop(pGlobalLua, 0);
 
     //FIXME make function call in destructor lua_close(L);
 }

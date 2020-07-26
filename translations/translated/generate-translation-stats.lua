@@ -22,16 +22,16 @@
  ############################################################################
 ]]
 
-local status, result = pcall(require, 'yajl')
+local status, result = pcall(require, 'cjson')
 if not status then
-  print("warning: lua-yajl not available - translation statistics in settings won't be shown.")
+  print("warning: lua-cjson not available - translation statistics in settings won't be shown.")
   io.output("translation-stats.json")
   io.write("{}")
 
   return
 end
 
-local yajl = result
+local cjson = result
 
 -- see if the file exists
 function file_exists(file)
@@ -123,4 +123,4 @@ for _, stat in ipairs(stats) do
 end
 
 io.output("translation-stats.json")
-io.write(yajl.to_string(serialise_stats))
+io.write(cjson.encode(serialise_stats))

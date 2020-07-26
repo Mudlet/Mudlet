@@ -2003,7 +2003,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     // trying a different way of specifying the escape character
     data.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
+    // remove \r's from the data, as JSON generally doesn't like them
     data.remove(QChar::CarriageReturn);
 
     if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
@@ -2033,7 +2033,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     transcodedMsg.remove(QChar::LineFeed);
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
+    // remove \r's from the data, as JSON generally doesn't like them
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
