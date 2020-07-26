@@ -545,6 +545,7 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int getHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
