@@ -7187,7 +7187,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="541"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>Fehler</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="680"/>
@@ -10876,7 +10876,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2645"/>
       <source>Force CHARSET negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>CHARSET Verhandlungen ausschalten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2943"/>
@@ -11115,7 +11115,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2638"/>
       <source>Force MXP negotiation off</source>
-      <translation>MXP Verhandlungen zwingend abschalten</translation>
+      <translation>MXP Verhandlungen ausschalten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2679"/>
