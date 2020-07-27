@@ -16380,7 +16380,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
@@ -16392,7 +16392,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
-                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
                                 luaL_typename(L, -2),
                                 luaL_typename(L, -1));
                 return lua_error(L);
