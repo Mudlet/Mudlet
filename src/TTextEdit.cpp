@@ -645,28 +645,27 @@ void TTextEdit::highlightSelection()
 
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
-    int startY = mPA.y();
-    auto totalY = static_cast<int>(mpBuffer->buffer.size());
-    for (int currentY = startY, total = mPB.y(); currentY <= total; ++currentY) {
-        int currentX = 0;
-        int maxX = static_cast<int>(mpBuffer->buffer.at(currentY).size());
-        if (currentY == startY) {
-            currentX = mPA.x();
-        }
+    // mpA represents the first (zero-based) line/row (y) and position/column
+    // (x) that IS to be selected, mpB represents the last (zero-based) line and
+    // column that IS to be selected - which means that in the traditional 'for'
+    // loop construct where the test is a '<' based one, the test limit is
+    // mpB.y() + 1 for the row and mpB.x() + 1 for the column:
+    // clang-format off
+    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
+         y < endY;
+         ++y) {
 
-        if (currentY >= totalY) {
-            break;
-        }
+        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
+                 endX = (y == (mPB.y()))
+                        ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                        : static_cast<int>(mpBuffer->buffer.at(y).size());
+             x < endX;
+             ++x) {
 
-        for (; currentX < maxX; ++currentX) {
-            if ((currentY == mPB.y()) && (currentX > mPB.x())) {
-                break;
-            }
-            if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
-                mpBuffer->buffer.at(currentY).at(currentX).select();
-            }
+            mpBuffer->buffer.at(y).at(x).select();
         }
     }
+    // clang-format on
 
     update(mSelectedRegion.boundingRect());
     update(newRegion);
@@ -676,23 +675,24 @@ void TTextEdit::highlightSelection()
 void TTextEdit::unHighlight()
 {
     normaliseSelection();
-    int y1 = mPA.y();
 
-    if (y1 < 0) {
-        return;
-    }
-    for (int y = y1, total = mPB.y(); y <= total; ++y) {
-        int x = 0;
+    // clang-format off
+    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
+         y < endY;
+         ++y) {
 
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            break;
+        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
+                 endX = (y == (mPB.y()))
+                        ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                        : static_cast<int>(mpBuffer->buffer.at(y).size());
+             x < endX;
+             ++x) {
+
+            mpBuffer->buffer.at(y).at(x).deselect();
         }
-
-        for (; x < static_cast<int>(mpBuffer->buffer.at(y).size()); ++x)
-            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                mpBuffer->buffer.at(y).at(x).deselect();
-            }
     }
+    // clang-format on
+
     forceUpdate();
 }
 
