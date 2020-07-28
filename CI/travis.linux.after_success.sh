@@ -32,7 +32,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     exit
   fi
 
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/smurfix/Mudlet-Installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
 
