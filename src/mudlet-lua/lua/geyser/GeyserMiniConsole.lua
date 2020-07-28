@@ -296,6 +296,19 @@ function Geyser.MiniConsole:resetAutoWrap()
   setWindowWrap(self.name, self.wrapAt)
 end
 
+--- The same as Mudlet's base display(), but outputs to the miniconsole instead of the main window.
+function Geyser.MiniConsole:display(...)
+  local arg = {...}
+  arg.n = table.maxn(arg)
+  if arg.n > 1 then
+    for i = 1, arg.n do
+      self:display(arg[i])
+    end
+  else
+    self:echo((prettywrite(arg[1], '  ') or 'nil') .. '\n')
+  end
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
