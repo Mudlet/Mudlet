@@ -31,7 +31,6 @@ $NoShPath = filterPathForSh
 
 CheckAndInstallOpenSSL
 CheckAndInstallHunspell
-CheckAndInstallYajl
 CheckAndInstallLua
 CheckAndInstallPcre
 CheckAndInstallSqlite
