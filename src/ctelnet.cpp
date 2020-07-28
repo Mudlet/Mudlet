@@ -734,7 +734,7 @@ bool cTelnet::socketOutRaw(std::string& data)
 
 void cTelnet::setDisplayDimensions()
 {
-    int x = mpHost->mWrapAt;
+    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
         std::string s;
