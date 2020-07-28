@@ -923,6 +923,11 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                             QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
                                                communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
+    license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
+                                          .arg(luaHeader,                      //  6 - lua header - translatable
+                                               MIT_Body,                       //  7 - lua body MIT - not translatable
+                                               luaCjson,                       //  8 - lua_cjson header - translatable
+                                               MIT_Body));                     //  9 - lua_sjson body MIT - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("%10%11<hr>")
                                           .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable
