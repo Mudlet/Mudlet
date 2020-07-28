@@ -131,6 +131,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
+        QString localFileName;
+
         switch (reply->operation()) {
         case QNetworkAccessManager::PostOperation:
             event.mArgumentList << QStringLiteral("sysPostHttpError");
@@ -151,13 +153,18 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::GetOperation:
-            event.mArgumentList << (downloadMap.value(reply).isEmpty()
+            localFileName = downloadMap.value(reply);
+            event.mArgumentList << (localFileName.isEmpty()
                                    ? QStringLiteral("sysGetHttpError")
                                    : QStringLiteral("sysDownloadError"));
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << downloadMap.value(reply);
+            if (!localFileName.isEmpty()) {
+                event.mArgumentList << localFileName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             downloadMap.remove(reply);
