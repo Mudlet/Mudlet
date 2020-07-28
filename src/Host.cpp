@@ -1378,8 +1378,16 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
+    static QString star = QString("*");
+
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
+        for (auto& script : scriptList) {
+            script->callEventHandler(pE);
+        }
+    }
+    if (mEventHandlerMap.contains(star)) {
+        QList<TScript*> scriptList = mEventHandlerMap.value(star);
         for (auto& script : scriptList) {
             script->callEventHandler(pE);
         }
@@ -1387,6 +1395,12 @@ void Host::raiseEvent(const TEvent& pE)
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
         QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+        for (int i = 0, total = functionsList.size(); i < total; ++i) {
+            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        }
+    }
+    if (mAnonymousEventHandlerFunctions.contains(star)) {
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
         for (int i = 0, total = functionsList.size(); i < total; ++i) {
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
