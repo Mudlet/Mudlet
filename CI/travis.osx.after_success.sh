@@ -2,6 +2,8 @@
 
 set -e
 
+export USE_CJSON=Y
+
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
