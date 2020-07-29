@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; then
   exit 0
 fi
