@@ -255,12 +255,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         downloadMap.remove(reply);
 
         // If the user did not give us a file path, we're not going to
-        // consider this an error, we're just going attach the reply
+        // consider this an error, we're just going to attach the reply
         // directly. Another way this could happen is the user made a POST
         // request, and it redirected to a GET. In the case of POST requests,
         // we don't ask the user for a file path.
-        if (localFileName.isEmpty())
-        {
+        if (localFileName.isEmpty()) {
             event.mArgumentList << QLatin1String("sysGetHttpDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
