@@ -1428,10 +1428,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
     // mPB QPoint where selection ended
 
     int startLine = std::max(0, mPA.y());
-    int endLine = std::min(mPB.y(), mpBuffer->lineBuffer.size());
+    int endLine = std::min(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
     int offset = endLine - startLine;
     int startPos = std::max(0, mPA.x());
-    int endPos = std::min(mPB.x(), mpBuffer->lineBuffer.at(endLine).size());
+    int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     qDebug() << "1 selection, buffer size" << mpBuffer->lineBuffer.size() << "startline" << startLine << "endline - startline+1" << endLine - startLine + 1;
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
