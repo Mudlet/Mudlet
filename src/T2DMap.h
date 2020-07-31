@@ -56,7 +56,7 @@ public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
     void paintMap();
-    void setMapZoom(int zoom);
+    void setMapZoom(qreal zoom);
     QColor getColor(int id);
     void init();
     void exportAreaImage(int);
@@ -86,7 +86,7 @@ public:
 
     TMap* mpMap;
     QPointer<Host> mpHost;
-    int xyzoom;
+    qreal xyzoom;
     int mRX;
     int mRY;
     QPoint mPHighlight;
@@ -130,8 +130,8 @@ public:
     double eSize;
     int mRoomID;
     int mAreaID;
-    int mOx;
-    int mOy;
+    qreal mOx;
+    qreal mOy;
     int mOz;
     bool mShiftMode;
     bool mShowInfo;
