@@ -1242,8 +1242,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    int ox;
-    int oy;
+    qreal ox;
+    qreal oy;
     if (mRoomID != playerRoomId && mShiftMode) {
         mShiftMode = false;
     }
@@ -4608,16 +4608,45 @@ void T2DMap::wheelEvent(QWheelEvent* e)
 
     // int delta = e->delta() / 8 / 15; // Deprecated in Qt 5.x ...!
     int delta = e->angleDelta().y() / (8 * 15);
-    if (e->modifiers() & Qt::ControlModifier) { // Increase rate 10-fold if control key down - it makes scrolling through
+    if (e->modifiers() & Qt::ControlModifier) { // Increase rate if control key down - it makes scrolling through
                                                 // a large number of items in a listwidget's contents easier AND this make it
                                                 // easier to zoom in and out on LARGE area maps
-        delta *= 10;
+        delta *= 5;
     }
     if (delta != 0) {
         mPick = false;
-        int oldZoom = xyzoom;
-        xyzoom = qMax(3, xyzoom + delta);
+        qreal oldZoom = xyzoom;
+        xyzoom = qMax(3.0, xyzoom * pow(1.07, delta));
+
         if (oldZoom != xyzoom) {
+            const float widgetWidth = width();
+            const float widgetHeight = height();
+            float xs = 1.0;
+            float ys = 1.0;
+            if (widgetWidth > 10 && widgetHeight > 10) {
+                if (widgetWidth > widgetHeight)
+                    xs = (widgetWidth / widgetHeight);
+                else
+                    ys = (widgetHeight / widgetWidth);
+            }
+
+            // mouse pos within the widget
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+            const QPointF pos = e->position();
+#else
+            const QPoint pos = mapFromGlobal(e->globalPos());
+#endif
+
+            // Position of the mouse within the map, scaled -1 .. +1
+            // i.e. if the mouse is in the center, nothing changes
+            const float dx = 2.0 * pos.x() / widgetWidth - 1.0;
+            const float dy = 2.0 * pos.y() / widgetHeight - 1.0;
+
+            // now shift the origin by that, scaled by the difference in
+            // zoom factors. Thus the point under the mouse stays in place.
+            mOx += dx * (oldZoom - xyzoom) / 2.0 * xs;
+            mOy += dy * (oldZoom - xyzoom) / 2.0 * ys;
+
             flushSymbolPixmapCache();
             update();
         }
@@ -4628,10 +4657,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     return;
 }
 
-void T2DMap::setMapZoom(int zoom)
+void T2DMap::setMapZoom(qreal zoom)
 {
-    int oldZoom = xyzoom;
-    xyzoom = qMax(3, zoom);
+    qreal oldZoom = xyzoom;
+    xyzoom = qMax(3.0, zoom);
     if (oldZoom != xyzoom) {
         flushSymbolPixmapCache();
         update();

@@ -9845,13 +9845,13 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    int zoom = 3;
+    qreal zoom = 3.0;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMapZoom: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        zoom = lua_tointeger(L, 1);
+        zoom = lua_tonumber(L, 1);
     }
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
