@@ -269,7 +269,7 @@
     "raiseWindow": "raiseWindow(labelName)",
     "receiveMSP": "receiveMSP(command)",
     "reconnect": "reconnect()",
-    "registerAnonymousEventHandler": "id = registerAnonymousEventHandler(event name, functionReference, [one shot])",
+    "registerAnonymousEventHandler": "registerAnonymousEventHandler(event name, functionReference, [one shot])",
     "reloadModule": "reloadModule(module name)",
     "remainingTime": "remainingTime(timer id number or name)",
     "removeCustomLine": "removeCustomLine(roomID, direction)",
