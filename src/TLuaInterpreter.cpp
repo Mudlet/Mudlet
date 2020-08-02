@@ -131,6 +131,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
+        QString localFileName;
+
         switch (reply->operation()) {
         case QNetworkAccessManager::PostOperation:
             event.mArgumentList << QStringLiteral("sysPostHttpError");
@@ -151,11 +153,18 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::GetOperation:
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            localFileName = downloadMap.value(reply);
+            event.mArgumentList << (localFileName.isEmpty()
+                                   ? QStringLiteral("sysGetHttpError")
+                                   : QStringLiteral("sysDownloadError"));
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << downloadMap.value(reply);
+            if (!localFileName.isEmpty()) {
+                event.mArgumentList << localFileName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             downloadMap.remove(reply);
@@ -245,20 +254,22 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         QString localFileName = downloadMap.value(reply);
         downloadMap.remove(reply);
 
-        // If the user forgot to give us a file path, we're not going to
-        // consider this an error, we're just going to skip downloading the
-        // response. Another way this could happen is the user made a POST
+        // If the user did not give us a file path, we're not going to
+        // consider this an error, we're just going to attach the reply
+        // directly. Another way this could happen is the user made a POST
         // request, and it redirected to a GET. In the case of POST requests,
-        // we don't ask the user for a file path, and so here too we will just
-        // skip downloading the response.
-        if (localFileName.isEmpty())
-        {
-            event.mArgumentList << QLatin1String("sysDownloadDone");
+        // we don't ask the user for a file path.
+        if (localFileName.isEmpty()) {
+            event.mArgumentList << QLatin1String("sysGetHttpDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << localFileName;
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QString::number(0);
-            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+
+                // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+                event.mArgumentList << replyText;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
             break;
         }
 
@@ -16197,6 +16208,67 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
+int TLuaInterpreter::getHTTP(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString urlString;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "getHTTP: bad argument #1 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
+        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (lua_istable(L, 2)) {
+        lua_pushnil(L);
+        while (lua_next(L, 2) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
@@ -16314,7 +16386,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
@@ -16326,7 +16398,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
-                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
                                 luaL_typename(L, -2),
                                 luaL_typename(L, -1));
                 return lua_error(L);
@@ -17003,6 +17075,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
+    lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
