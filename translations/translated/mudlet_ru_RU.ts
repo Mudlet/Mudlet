@@ -4663,13 +4663,13 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="159"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>Дизайн графического интерфейса и первоначальное планирование функций. Он отвечает за домашнюю страницу проекта и руководство пользователя. Мейнтейнер инсталляторов Windows, macOS, Ubuntu и общих Linux. Поддерживает Mudlet wiki, Lua API, и обрабатывает управление проектами, связи с общественностью &amp; помощь пользователей. С самого начала работы над проектом и является официальным представителем проекта. После ухода на пенсию Хайко стал руководителем проекта Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="166"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
-      <translation type="unfinished"/>
+      <translation>После присоединения в 2013 году он тыкает различные биты кода C ++ и графического интерфейса с острой палкой; впоследствии пытается залатать некоторые из дыр, сделанных или найденных. Совсем недавно он работал над I18n и L10n для Mudlet 4.0.0 так что если вы играете в Mudlet на языке, отличном от американского английского, вы увидите результаты его устали от различий в написании между тем, что было использовано, и британским английским его мозг хотел видеть.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="173"/>
