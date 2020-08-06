@@ -907,6 +907,7 @@ void XMLimport::readHostPackage(Host* pHost)
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
+    pHost->mFORCE_CHARSET_NEGOTIATION_OFF = (attributes().value("mFORCE_CHARSET_NEGOTIATION_OFF") == "yes");
     pHost->mEnableTextAnalyzer = (attributes().value("enableTextAnalyzer") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {

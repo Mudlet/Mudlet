@@ -806,9 +806,11 @@ void mudlet::loadMaps()
                                   {QStringLiteral("ne"), tr("Nepali")},
                                   {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
                                   {QStringLiteral("nl"), tr("Dutch")},
+                                  {QStringLiteral("nl_an"), tr("Dutch (Netherlands Antilles)")},
                                   {QStringLiteral("nl_aw"), tr("Dutch (Aruba)")},
                                   {QStringLiteral("nl_be"), tr("Dutch (Belgium)")},
                                   {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
+                                  {QStringLiteral("nl_sr"), tr("Dutch (Suriname)")},
                                   {QStringLiteral("nn"), tr("Norwegian Nynorsk")},
                                   {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
                                   {QStringLiteral("oc"), tr("Occitan")},
@@ -3258,6 +3260,12 @@ void mudlet::readEarlySettings(const QSettings& settings)
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
+    mUserLocale = QLocale(mInterfaceLanguage);
+    if (mUserLocale == QLocale::c()) {
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
+    } else {
+        qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    }
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3427,13 +3435,16 @@ void mudlet::writeSettings()
 
 void mudlet::slot_show_connection_dialog()
 {
-    auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
-    pDlg->fillout_form();
+    if (mConnectionDialog) {
+        return;
+    }
+    mConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
+    mConnectionDialog->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
-    pDlg->setAttribute(Qt::WA_DeleteOnClose);
-    pDlg->show();
+    connect(mConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    mConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mConnectionDialog->show();
 }
 
 void mudlet::show_editor_dialog()
@@ -3840,7 +3851,6 @@ void mudlet::slot_irc()
 
     if (!mpIrcClientMap.contains(pHost)) {
         QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        dlg->setDefaultHostClient(false);
         mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
@@ -3867,7 +3877,7 @@ void mudlet::updateMudletDiscordInvite()
     manager->setCache(diskCache);
 
 
-    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
@@ -4121,30 +4131,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->mTelnet.sendData(login);
-}
-
-void mudlet::slot_send_pass()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->mTelnet.sendData(pass);
-}
-//////////////////////////////////////////////////////////////////////////////
-
-
 void mudlet::processEventLoopHack()
 {
     QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
@@ -4239,8 +4225,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
 
-    tempHostQueue.enqueue(pHost);
-    tempHostQueue.enqueue(pHost);
     if (connect) {
         pHost->connectToServer();
     } else {
@@ -5398,6 +5382,14 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     if (mInterfaceLanguage != languageCode) {
         mInterfaceLanguage = languageCode;
+        mUserLocale = QLocale(mInterfaceLanguage);
+        if (mUserLocale == QLocale::c()) {
+            qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                           << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+        }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
         // would also need a call here to do the same in this class that the

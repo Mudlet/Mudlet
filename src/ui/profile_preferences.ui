@@ -2561,12 +2561,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="ircNick">
-            <property name="placeholderText">
-             <string>MudletUser123</string>
-            </property>
-           </widget>
           </item>
           <item row="1" column="2">
            <widget class="QLabel" name="lblIrcChannels">
@@ -4962,7 +4956,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
+            <property name="text">
+             <string>Force CHARSET negotiation off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
              <bool>true</bool>

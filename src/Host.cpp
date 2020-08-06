@@ -346,6 +346,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
@@ -1389,6 +1390,11 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
+
+    // After the event has been raised but before 'event' goes out of scope,
+    // we need to safely dereference the members of 'event' that point to
+    // values in the Lua registry
+    mLuaInterpreter.freeAllInLuaRegistry(pE);
 }
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)

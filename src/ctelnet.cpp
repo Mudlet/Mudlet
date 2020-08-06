@@ -450,7 +450,7 @@ void cTelnet::slot_send_login()
 void cTelnet::slot_send_pass()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
-        sendData(mpHost->getPass());
+        sendData(mpHost->getPass(), false);
     }
 }
 
@@ -613,16 +613,18 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event {};
-    event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(data);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    if (Q_LIKELY(permitDataSendRequestEvent)) {
+        TEvent event{};
+        event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(data);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
@@ -732,7 +734,7 @@ bool cTelnet::socketOutRaw(std::string& data)
 
 void cTelnet::setDisplayDimensions()
 {
-    int x = mpHost->mWrapAt;
+    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
         std::string s;
@@ -981,9 +983,30 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #endif
 
         if (option == OPT_EOR) {
-            //EOR support (END OF RECORD=TN_GA
+            //EOR support (END OF RECORD=TN_GA)
             qDebug() << "EOR enabled";
             sendTelnetOption(TN_DO, OPT_EOR);
+            break;
+        }
+
+        if (option == OPT_CHARSET) {
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We DONT welcome the WILL
+                sendTelnetOption(TN_DONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
+            } else {
+                sendTelnetOption(TN_DO, OPT_CHARSET);
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
             break;
         }
 
@@ -1194,6 +1217,11 @@ void cTelnet::processTelnetCommand(const std::string& command)
             triedToEnable[idxOption] = false;
             heAnnouncedState[idxOption] = true;
         } else {
+            if (option == OPT_CHARSET) {
+                // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
+                enableCHARSET = false;
+                raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+            }
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
@@ -1267,6 +1295,28 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
 #endif
+
+        if (option == OPT_CHARSET) {
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We WONT welcome the DO
+                sendTelnetOption(TN_WONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
+            } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
+                sendTelnetOption(TN_WILL, OPT_CHARSET);
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
+            break;
+        }
+
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
             sendTelnetOption(TN_WILL, OPT_MSDP);
@@ -1362,6 +1412,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
 #endif
+        if (option == OPT_CHARSET) {
+            // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
+            enableCHARSET = false;
+            raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+        }
+
         if (option == OPT_MSDP) {
             // MSDP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
@@ -1412,6 +1468,74 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
     case TN_SB: {
         option = command[2];
+
+        // CHARSET
+        if (option == OPT_CHARSET && enableCHARSET) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
+                return;
+            }
+
+            // Trim off the Telnet suboption bytes from beginning (3) and end (2)
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (command[3] == CHARSET_REQUEST) {
+                if (payload.startsWith("[TTABLE]1")) { // No translate table support.  Discard.
+                    payload.remove(0, 9);
+                }
+
+                auto characterSetList = payload.split(payload[1]); // Second character is the separator.
+                QByteArray acceptedCharacterSet;
+
+                if (!characterSetList.isEmpty()) {
+                    for (int i = 1; i < characterSetList.size(); ++i) {
+                        QByteArray characterSet = characterSetList.at(i).toUpper();
+
+                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))) {
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+                    }
+                }
+
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_CHARSET;
+
+                if (!acceptedCharacterSet.isEmpty()) {
+                    setEncoding(acceptedCharacterSet, true);
+
+                    output += CHARSET_ACCEPTED;
+                    output += payload[1]; // Separator
+                    output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
+                } else {
+                    output += CHARSET_REJECTED;
+                }
+
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
+            } else if (command[3] == CHARSET_ACCEPTED) {
+                // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
+            } else if (command[3] == CHARSET_REJECTED) {
+                // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
+            } else if (command[3] == CHARSET_TTABLE_IS) {
+                // Mudlet does not support translate tables
+                // Required to respond per the specification
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_CHARSET;
+                output += CHARSET_TTABLE_REJECTED;
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
+            }
+
+            return;
+        }
 
         // MSDP
         if (option == OPT_MSDP) {
@@ -2387,9 +2511,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             postMessage(tr("[ INFO ]  - Loading replay file:\n"
                            "\"%1\".")
                         .arg(name));
-            mIsReplayRunFromLua = true;
-        } else {
             mIsReplayRunFromLua = false;
+        } else {
+            mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
         if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
