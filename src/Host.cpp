@@ -346,6 +346,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
@@ -379,6 +380,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1388,6 +1390,11 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
+
+    // After the event has been raised but before 'event' goes out of scope,
+    // we need to safely dereference the members of 'event' that point to
+    // values in the Lua registry
+    mLuaInterpreter.freeAllInLuaRegistry(pE);
 }
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
@@ -2552,4 +2559,18 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     }
 
     return {true, QString()};
+}
+
+void Host::setCompactInputLine(const bool state)
+{
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        // When the profile is being loaded and the previously saved data is
+        // read from the XML file the main TConsole has not been instatiated
+        // yet - so must check for it existing first - and ensure the read
+        // setting is applied in the constructor for it:
+        if (mpConsole && mpConsole->mpButtonMainLayer) {
+            mpConsole->mpButtonMainLayer->setVisible(!state);
+        }
+    }
 }

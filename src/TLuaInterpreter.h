@@ -31,6 +31,8 @@
 #include <QEvent>
 #include <QMutex>
 #include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
+#include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
@@ -116,6 +118,9 @@ public:
     static int dirToNumber(lua_State*, int);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
+    int createHttpResponseTable(QNetworkReply*);
+    void createHttpHeadersTable(lua_State*, QNetworkReply*);
+    void createCookiesTable(lua_State*, QNetworkReply*);
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -512,6 +517,8 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getClipboardText(lua_State*);
+    static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
@@ -543,6 +550,7 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int getHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
@@ -555,6 +563,7 @@ public:
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
+    void freeAllInLuaRegistry(TEvent);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -581,6 +590,8 @@ private:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+
+    const int LUA_FUNCTION_MAX_ARGS = 50;
 
 
     QNetworkAccessManager* mpFileDownloader;

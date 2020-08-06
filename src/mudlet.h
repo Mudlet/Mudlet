@@ -111,6 +111,7 @@ class TTimer;
 class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
+class dlgConnectionProfiles;
 class dlgProfilePreferences;
 
 class translation;
@@ -286,6 +287,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
+    QPointer<dlgConnectionProfiles> mConnectionDialog;
     QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -323,8 +325,6 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
-    bool compactInputLine() const { return mCompactInputLine; }
-    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
 
@@ -426,6 +426,7 @@ public:
     void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
+    const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
@@ -506,8 +507,6 @@ public slots:
     void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
-    void slot_send_login();
-    void slot_send_pass();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
@@ -582,6 +581,7 @@ private slots:
     void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
+    void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
 
@@ -595,7 +595,6 @@ private:
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
     void check_for_mappingscript();
-    void set_compact_input_line();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadMaps();
@@ -606,9 +605,6 @@ private:
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QQueue<QString> tempLoginQueue;
-    QQueue<QString> tempPassQueue;
-    QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
@@ -691,8 +687,6 @@ private:
 
     bool mshowMapAuditErrors;
 
-    bool mCompactInputLine;
-
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
@@ -701,6 +695,10 @@ private:
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
     QString mInterfaceLanguage {};
+    // An encapsulation of the above in a form that Qt uses to hold all the
+    // details:
+    QLocale mUserLocale {};
+
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call
@@ -716,7 +714,7 @@ private:
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

@@ -1,6 +1,34 @@
 {
+  "AdjustableContainer.attach": {
+    "message": "附加到：",
+    "description": "attaches your container to a border"
+  },
+  "AdjustableContainer.bottom": {
+    "message": "底部",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.top": {
+    "message": "頂部",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.left": {
+    "message": "左側",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "右側",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "自訂：",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
   "AdjustableContainer.lock": {
-    "message": "锁定",
+    "message": "鎖定",
     "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.standard": {
+    "message": "標準",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
   }
 }
