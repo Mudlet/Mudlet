@@ -21,6 +21,7 @@
 
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
+#include "TMedia.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
 
@@ -96,6 +97,8 @@ public:
 
     void enqueueMxpEvent(MxpStartTag* tag);
     TLinkStore& getLinkStore();
+
+    void playMedia(TMediaData& mediaData);
 };
 
 #endif //MUDLET_TMXPMUDLET_H

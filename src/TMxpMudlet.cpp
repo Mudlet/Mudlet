@@ -105,3 +105,8 @@ TLinkStore& TMxpMudlet::getLinkStore()
 {
     return mpHost->mpConsole->getLinkStore();
 }
+
+void TMxpMudlet::playMedia(TMediaData& mediaData)
+{
+    mpHost->mpMedia->playMedia(mediaData);
+}

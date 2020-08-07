@@ -542,6 +542,7 @@ SOURCES += \
     TMxpNodeBuilder.cpp \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
+    TMxpSoundTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
     MxpTag.cpp \
     TMxpTagHandler.cpp \
@@ -647,6 +648,7 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
+    TMxpSoundTagHandler.h \
     MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
