@@ -2565,7 +2565,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          </item>
           <item row="1" column="2">
            <widget class="QLabel" name="lblIrcChannels">
             <property name="text">
