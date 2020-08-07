@@ -2565,6 +2565,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="ircNick">
+            <property name="placeholderText">
+             <string>MudletUser123</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="2">
            <widget class="QLabel" name="lblIrcChannels">
             <property name="text">
@@ -5115,7 +5122,7 @@ you can use it but there could be issues with aligning columns of text</string>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
                </property>
-               <property name="tooltip">
+               <property name="toolTip">
                 <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
