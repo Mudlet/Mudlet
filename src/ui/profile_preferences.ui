@@ -226,8 +226,10 @@
           <item row="0" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
-             <string comment="This text is a bit long so it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Toolbar notification if Mudlet is
-minimized and new data arrives</string>
+             <string>Notify on new data</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -248,8 +250,10 @@ minimized and new data arrives</string>
           <item row="1" column="1">
            <widget class="QCheckBox" name="acceptServerMedia">
             <property name="text">
-             <string comment="This text is a bit long so it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Allow server to download and play media
-(requires GMCP enabled below)</string>
+             <string>Allow server to download and play media</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -724,7 +728,7 @@ minimized and new data arrives</string>
              </font>
             </property>
             <property name="text">
-             <string>This font is not monospace, which may not be ideal for playing some text games:
+             <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
@@ -5107,11 +5111,13 @@ you can use it but there could be issues with aligning columns of text</string>
                 </sizepolicy>
                </property>
                <property name="text">
-                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match translations in the glossary - assuming they have been put in there! Also, as this text is a bit long it is probably advisable to split it into two lines for most locales so that it does not force the whole form/dialog to be too wide.">Show 'LUA OK' messages for Timers with
-minimum interval of (h:mm:ss.zzz):</string>
+                <string>Show debug messages for timers not smaller than:</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
+               </property>
+               <property name="tooltip">
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
              </item>
