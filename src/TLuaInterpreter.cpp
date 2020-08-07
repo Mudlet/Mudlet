@@ -17289,12 +17289,9 @@ void TLuaInterpreter::initIndenterGlobals()
     // PLACEMARKER: End of indenter Lua interpreter functions registration
 
     /*
-     * Additional paths for the lua/C package search path - ? is the "package"
-     * name though in the case for the lua code formatter it itself includes
-     * leading path elements of "lcf" and "workshop" in the
-     * require("lcf.workshop.base") case - the lua script being sought is the
-     * "base.lua" file but our paths must give the location of the "lcf"
-     * directory two parent directories up:
+     * Additional paths for the lua/C package search paths - '?' (and any '.'s,
+     * in the file name, apart from the one before the filename extension) are
+     * handled specially! See: https://stackoverflow.com/q/31904392/4805858 :
      */
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
