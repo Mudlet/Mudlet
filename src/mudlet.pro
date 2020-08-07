@@ -538,6 +538,8 @@ SOURCES += \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
     TMxpLinkTagHandler.cpp \
+    TMxpMusicTagHandler.cpp \
+    TMxpSoundTagHandler.cpp \
     TMxpMudlet.cpp \
     TMxpNodeBuilder.cpp \
     TMxpProcessor.cpp \
@@ -638,6 +640,8 @@ HEADERS += \
     TMxpCustomElementTagHandler.h \
     TMxpFontTagHandler.h \
     TMxpLinkTagHandler.h \
+    TMxpMusicTagHandler.h \
+    TMxpSoundTagHandler.h \
     TMxpElementDefinitionHandler.h \
     TMxpElementRegistry.h \
     TMxpEntityTagHandler.h \

@@ -23,6 +23,7 @@
 #include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
+#include "TMedia.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -76,6 +77,9 @@ public:
     int setLink(const QStringList& links, const QStringList& hints) override;
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
+
+    void doMedia(TMediaData& mediaData) override {}
+    void stopMedia(TMediaData& mediaData) override {}
 
     bool isBold, isItalic, isUnderline;
 

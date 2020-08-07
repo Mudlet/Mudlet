@@ -77,6 +77,16 @@ bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
     return true;
 }
 
+void TMxpMudlet::doMedia(TMediaData& mediaData)
+{
+    mpHost->mpMedia->playMedia(mediaData);
+}
+
+void TMxpMudlet::stopMedia(TMediaData& mediaData)
+{
+    mpHost->mpMedia->stopMedia(mediaData);
+}
+
 TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult result)
 {
     if (tag->isStartTag()) {
