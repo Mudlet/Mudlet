@@ -86,7 +86,7 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(TMxpFeatureOptions({"color", {"fore", "back"}}), new TMxpColorTagHandler());
     registerHandler(TMxpFeatureOptions({"font", {"color", "back"}}), new TMxpFontTagHandler());
     registerHandler(TMxpFeatureOptions({"sound", {"v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());
-    registerHandler(TMxpFeatureOptions({"music", {"v", "l", "c", "t", "u"}}), new TMxpMusicTagHandler());
+    registerHandler(TMxpFeatureOptions({"music", {"v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
 
     mSupportedMxpElements["b"] = QVector<QString>();
     mSupportedMxpElements["i"] = QVector<QString>();
