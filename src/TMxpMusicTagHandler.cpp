@@ -25,59 +25,78 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 {
     TMediaData mediaData {};
 
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
+    mediaData.setMediaType(TMediaData::MediaTypeSound);
     mediaData.setMediaFileName(tag->getAttributeValue("FName"));
-    mediaData.setMediaType(TMediaData::MediaTypeMusic);
 
-    QString volume = tag->getAttributeValue("V");
-    if (!volume.isEmpty()) {
-        mediaData.setMediaVolume(volume.toInt());
+    if (tag->hasAttribute("V")) {
+        QString volume = tag->getAttributeValue("V");
 
-        if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-            // Support preloading
-        } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-            mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-        } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-            mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
+        if (!volume.isEmpty()) {
+            mediaData.setMediaVolume(volume.toInt());
+
+            if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
+                // Support preloading
+            } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
+                mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
+            } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
+                mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
+            }
         }
     }
 
-    QString loops = tag->getAttributeValue("L");
-    if (!loops.isEmpty()) {
-        mediaData.setMediaLoops(loops.toInt());
+    if (tag->hasAttribute("L")) {
+        QString loops = tag->getAttributeValue("L");
 
-        if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
-            mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
+        if (!loops.isEmpty()) {
+            mediaData.setMediaLoops(loops.toInt());
+
+            if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
+            }
         }
     }
 
-    QString priority = tag->getAttributeValue("P");
-    if (!priority.isEmpty()) {
-        mediaData.setMediaPriority(priority.toInt());
+    if (tag->hasAttribute("P")) {
+        QString priority = tag->getAttributeValue("P");
 
-        if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
-            mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-        } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
-            mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
+        if (!priority.isEmpty()) {
+            mediaData.setMediaPriority(priority.toInt());
+
+            if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
+            } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
+            }
         }
     }
 
-    QString musicContinue = tag->getAttributeValue("C");
-    if (!musicContinue.isEmpty()) {
-        if (musicContinue.toInt() == 0) {
-            mediaData.setMediaContinue(TMediaData::MediaContinueRestart);
-        } else {
-            mediaData.setMediaContinue(TMediaData::MediaContinueDefault);
+    if (tag->hasAttribute("C")) {
+        QString musicContinue = tag->getAttributeValue("C");
+
+        if (!musicContinue.isEmpty()) {
+            if (musicContinue.toInt() == 0) {
+                mediaData.setMediaContinue(TMediaData::MediaContinueRestart);
+            } else {
+                mediaData.setMediaContinue(TMediaData::MediaContinueDefault);
+            }
         }
     }
 
-    QString type = tag->getAttributeValue("T");
-    if (!type.isEmpty()) {
-        mediaData.setMediaTag(type.toLower());
+    if (tag->hasAttribute("T")) {
+        QString type = tag->getAttributeValue("T");
+
+        if (!type.isEmpty()) {
+            mediaData.setMediaTag(type.toLower());
+        }
     }
 
-    QString url = tag->getAttributeValue("U");
-    if (!url.isEmpty()) {
-        mediaData.setMediaUrl(url);
+    if (tag->hasAttribute("U")) {
+        QString url = tag->getAttributeValue("U");
+
+        if (!url.isEmpty()) {
+            mediaData.setMediaUrl(url);
+        }
     }
 
     if (mediaData.getMediaFileName() == "Off") {
