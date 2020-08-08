@@ -30,62 +30,62 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     mediaData.setMediaFileName(tag->getAttributeValue("FName"));
 
     if (tag->hasAttribute("V")) {
-	    QString volume = tag->getAttributeValue("V");
+        QString volume = tag->getAttributeValue("V");
 
-	    if (!volume.isEmpty()) {
-	        mediaData.setMediaVolume(volume.toInt());
+        if (!volume.isEmpty()) {
+            mediaData.setMediaVolume(volume.toInt());
 
-	        if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-	            // Support preloading
-	        } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-	            mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-	        } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-	            mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-	        }
-	    }
-	}
+            if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
+                // Support preloading
+            } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
+                mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
+            } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
+                mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
+            }
+        }
+    }
 
     if (tag->hasAttribute("L")) {
-	    QString loops = tag->getAttributeValue("L");
+        QString loops = tag->getAttributeValue("L");
 
-	    if (!loops.isEmpty()) {
-	        mediaData.setMediaLoops(loops.toInt());
+        if (!loops.isEmpty()) {
+            mediaData.setMediaLoops(loops.toInt());
 
-	        if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
-	            mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
-	        }
-	    }
-	}
+            if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
+            }
+        }
+    }
 
     if (tag->hasAttribute("P")) {
-	    QString priority = tag->getAttributeValue("P");
+        QString priority = tag->getAttributeValue("P");
 
-	    if (!priority.isEmpty()) {
-	        mediaData.setMediaPriority(priority.toInt());
+        if (!priority.isEmpty()) {
+            mediaData.setMediaPriority(priority.toInt());
 
-	        if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
-	            mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
-	        } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
-	            mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
-	        }
-	    }
-	}
+            if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
+            } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
+            }
+        }
+    }
 
     if (tag->hasAttribute("T")) {
-	    QString type = tag->getAttributeValue("T");
+        QString type = tag->getAttributeValue("T");
 
-	    if (!type.isEmpty()) {
-	        mediaData.setMediaTag(type.toLower());
-	    }
-	}
+        if (!type.isEmpty()) {
+            mediaData.setMediaTag(type.toLower());
+        }
+    }
 
     if (tag->hasAttribute("U")) {
-	    QString url = tag->getAttributeValue("U");
+        QString url = tag->getAttributeValue("U");
 
-	    if (!url.isEmpty()) {
-	        mediaData.setMediaUrl(url);
-	    }
-	}
+        if (!url.isEmpty()) {
+            mediaData.setMediaUrl(url);
+        }
+    }
 
     if (mediaData.getMediaFileName() == "Off") {
         client.stopMedia(mediaData);
