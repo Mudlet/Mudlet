@@ -23,7 +23,8 @@
 #include "MxpTag.h"
 #include "TMxpContext.h"
 #include "TMxpTagHandlerResult.h"
-#include "TMedia.h"
+
+class TMediaData;
 
 class TMxpClient
 {
@@ -60,7 +61,7 @@ public:
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;
 
-    virtual void doMedia(TMediaData& mediaData) = 0;
+    virtual void playMedia(TMediaData& mediaData) = 0;
     virtual void stopMedia(TMediaData& mediaData) = 0;
 
     virtual bool tagReceived(MxpTag* tag) { return tag->isStartTag() ? startTagReceived(tag->asStartTag()) : endTagReceived(tag->asEndTag()); }

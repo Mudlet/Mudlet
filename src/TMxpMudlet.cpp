@@ -19,6 +19,7 @@
 
 #include "TMxpMudlet.h"
 #include "Host.h"
+#include "TMedia.h"
 #include "TConsole.h"
 #include "TLinkStore.h"
 
@@ -77,7 +78,7 @@ bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)
     return true;
 }
 
-void TMxpMudlet::doMedia(TMediaData& mediaData)
+void TMxpMudlet::playMedia(TMediaData& mediaData)
 {
     mpHost->mpMedia->playMedia(mediaData);
 }

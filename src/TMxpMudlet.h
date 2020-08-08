@@ -23,7 +23,6 @@
 #include "TLinkStore.h"
 #include "TMxpClient.h"
 #include "TMxpEvent.h"
-#include "TMedia.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -31,6 +30,7 @@
 #include "post_guard.h"
 
 class Host;
+class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
@@ -78,8 +78,8 @@ public:
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
 
-    void doMedia(TMediaData& mediaData) override {}
-    void stopMedia(TMediaData& mediaData) override {}
+    void playMedia(TMediaData& mediaData) override;
+    void stopMedia(TMediaData& mediaData) override;
 
     bool isBold, isItalic, isUnderline;
 

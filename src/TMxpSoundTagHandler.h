@@ -23,11 +23,10 @@
 #include "TMxpTagHandler.h"
 
 // <sound FName="mm_door_close1.*" [V=100] [L=1] [P=50] [T="misc"] [U="https://www.example.com/sounds/"]>
-// <music FName="mm_door_close1.*" [V=100] [L=1] [C=1] [T="misc"] [U="https://www.example.com/sounds/"]>
-class TMxpSoundTagHandler : public TMxpTagHandler
+class TMxpSoundTagHandler : public TMxpSingleTagHandler
 {
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
+    TMxpSoundTagHandler() : TMxpSingleTagHandler("SOUND") {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };

@@ -17,9 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TMedia.h"
 #include "TMxpSoundTagHandler.h"
 #include "TMxpClient.h"
-#include "TMedia.h"
 
 TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -74,7 +74,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     if (mediaData.getMediaFileName() == "Off") {
         client.stopMedia(mediaData);
     } else {
-        client.doMedia(mediaData);
+        client.playMedia(mediaData);
     }
 
     return MXP_TAG_HANDLED;
