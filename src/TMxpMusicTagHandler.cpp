@@ -26,7 +26,7 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
+    mediaData.setMediaType(TMediaData::MediaTypeMusic);
     mediaData.setMediaFileName(tag->getAttributeValue("FName"));
 
     if (tag->hasAttribute("V")) {
