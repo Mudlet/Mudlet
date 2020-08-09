@@ -87,7 +87,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         }
     }
 
-    if (mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
         client.stopMedia(mediaData);
     } else {
         client.playMedia(mediaData);
