@@ -182,7 +182,12 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
         if (QChar(ch).isSpace()) {
             mHasSequence = true;
             return false;
-        } else if (ch == '>' || ch == '/' || ch == '=') {
+        } else if (ch == '/') {
+            // Special case for end tags in the format <a given prefix/tag_name> used in MateriaMagica
+            mCurrentTagName.clear();
+            resetCurrentAttribute();
+            return true;
+        } else if (ch == '>' || ch == '=') {
             return true;
         }
     }
