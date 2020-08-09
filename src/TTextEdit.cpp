@@ -1029,8 +1029,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
-                    QStringList command = mpHost->mpConsole->getLinkStore().getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QStringList hint = mpHost->mpConsole->getLinkStore().getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0, total = command.size(); i < total; ++i) {
