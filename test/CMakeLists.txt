@@ -31,7 +31,7 @@ link_libraries(
         Qt5::Widgets)
 
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib/edbee")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
