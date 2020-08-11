@@ -1478,13 +1478,13 @@ if rex then
     echo("")
   end
 
-  --- feedTriggers with decho style color information.
+  --- Returns a string with decho style color codes converted to ANSI color
   -- IE <128,0,0> for red, <0,128,0> for green, <0,128,0:128,0,0> for green on red background.
   -- <r> to reset
-  --@param text the text to pump into feedTriggers
+  --@param text the text to convert to ansi colors
   --@see decho
   --@see dinsertText
-  function dfeedTriggers(text)
+  function decho2ansi(text)
     local colorPattern = _Echos.Patterns.Decimal[1]
     local result = ""
     for str, color, res in rex.split(text, colorPattern) do
@@ -1496,17 +1496,27 @@ if rex then
         result = result .. "\27[39;49m"
       end
     end
-    feedTriggers(result .. "\n")
+    return result
+  end
+
+  --- feedTriggers with decho style color information.
+  -- IE <128,0,0> for red, <0,128,0> for green, <0,128,0:128,0,0> for green on red background.
+  -- <r> to reset
+  --@param text the text to pump into feedTriggers
+  --@see decho
+  --@see dinsertText
+  function dfeedTriggers(text)
+    feedTriggers(decho2ansi(text) .. "\n")
     echo("")
   end
 
-  --- feedTriggers with hecho style color information.
+  --- turn hecho style color information into an ANSI color string
   -- IE #800000 for red, #008000 for green, #008000,800000 for green on red background
   -- #r to reset
-  --@param text the text to pump into feedTriggers
+  --@param text the text convert to ansi colors
   --@see hecho
   --@see hinsertText
-  function hfeedTriggers(text)
+  function hecho2ansi(text)
     local colorPattern = _Echos.Patterns.Hex[1]
     local result = ""
     for str, color, res in rex.split(text, colorPattern) do
@@ -1519,7 +1529,17 @@ if rex then
         result = result .. "\27[39;49m"
       end
     end
-    feedTriggers(result .. "\n")
+    return result
+  end
+
+  --- feedTriggers with hecho style color information.
+  -- IE #800000 for red, #008000 for green, #008000,800000 for green on red background
+  -- #r to reset
+  --@param text the text to pump into feedTriggers
+  --@see hecho
+  --@see hinsertText
+  function hfeedTriggers(text)
+    feedTriggers(hecho2ansi(text) .. "\n")
     echo("")
   end
 
