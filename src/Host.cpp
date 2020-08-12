@@ -650,6 +650,11 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.loadGlobal();
     mBlockScriptCompile = false;
 
+    mAliasUnit.reenableAllTriggers();
+    mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
+
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
@@ -657,11 +662,6 @@ void Host::resetProfile_phase2()
     getScriptUnit()->compileAll();
     // All the Timers are NOT compiled here;
     mResetProfile = false;
-
-    mAliasUnit.reenableAllTriggers();
-    mTimerUnit.reenableAllTriggers();
-    mTriggerUnit.reenableAllTriggers();
-    mKeyUnit.reenableAllTriggers();
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
