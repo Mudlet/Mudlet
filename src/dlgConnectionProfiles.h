@@ -48,6 +48,12 @@ public:
 
     static const int csmNameRole{Qt::UserRole};
 
+    QString btn_connect_enabled_accessDesc;
+    QString btn_load_enabled_accessDesc;
+    QString btn_connOrLoad_disabled_accessDesc;
+    QString item_profile_accessName;
+    QString item_profile_accessDesc;
+
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
 
