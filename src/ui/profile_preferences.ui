@@ -1575,7 +1575,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="3">
+          <item row="8" column="3">
            <widget class="QPushButton" name="pushButton_lYellow">
             <property name="toolTip">
              <string>ANSI Color Number 11</string>
@@ -5093,7 +5093,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
              <property name="leftMargin">
@@ -5268,8 +5268,8 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>fontComboBox</tabstop>
-  <tabstop>fontSize</tabstop>
   <tabstop>mNoAntiAlias</tabstop>
+  <tabstop>fontSize</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -5371,6 +5371,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPassword</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
+  <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
