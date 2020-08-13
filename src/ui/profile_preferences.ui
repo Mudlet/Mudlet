@@ -5081,7 +5081,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
+          <item row="2" column="0" colspan="2">
+           <widget class="QLabel" name="label_password_migration_notification">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>TextLabel</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_customLoginText">
             <property name="text">
              <string>Custom login text:</string>
@@ -5091,14 +5103,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QComboBox" name="comboBox_customLoginText">
             <property name="sizeAdjustPolicy">
              <enum>QComboBox::AdjustToContents</enum>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
              <property name="leftMargin">
@@ -5164,18 +5176,6 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="QLabel" name="label_password_migration_notification">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>TextLabel</string>
-            </property>
            </widget>
           </item>
          </layout>
