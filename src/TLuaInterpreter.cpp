@@ -131,6 +131,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
+        QString localFileName;
+
         switch (reply->operation()) {
         case QNetworkAccessManager::PostOperation:
             event.mArgumentList << QStringLiteral("sysPostHttpError");
@@ -151,11 +153,18 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::GetOperation:
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            localFileName = downloadMap.value(reply);
+            event.mArgumentList << (localFileName.isEmpty()
+                                   ? QStringLiteral("sysGetHttpError")
+                                   : QStringLiteral("sysDownloadError"));
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << downloadMap.value(reply);
+            if (!localFileName.isEmpty()) {
+                event.mArgumentList << localFileName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             downloadMap.remove(reply);
@@ -177,6 +186,9 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         case QNetworkAccessManager::UnknownOperation:
             break;
         }
+
+        event.mArgumentList << QString::number(createHttpResponseTable(reply));
+        event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -245,20 +257,22 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         QString localFileName = downloadMap.value(reply);
         downloadMap.remove(reply);
 
-        // If the user forgot to give us a file path, we're not going to
-        // consider this an error, we're just going to skip downloading the
-        // response. Another way this could happen is the user made a POST
+        // If the user did not give us a file path, we're not going to
+        // consider this an error, we're just going to attach the reply
+        // directly. Another way this could happen is the user made a POST
         // request, and it redirected to a GET. In the case of POST requests,
-        // we don't ask the user for a file path, and so here too we will just
-        // skip downloading the response.
-        if (localFileName.isEmpty())
-        {
-            event.mArgumentList << QLatin1String("sysDownloadDone");
+        // we don't ask the user for a file path.
+        if (localFileName.isEmpty()) {
+            event.mArgumentList << QLatin1String("sysGetHttpDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << localFileName;
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QString::number(0);
-            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+
+                // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+                event.mArgumentList << replyText;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
             break;
         }
 
@@ -312,6 +326,9 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         break;
 
     }
+
+    event.mArgumentList << QString::number(createHttpResponseTable(reply));
+    event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
 
     reply->deleteLater();
@@ -548,14 +565,6 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     }
 
     host.raiseEvent(event);
-
-    // After the event has been raised but before 'event' goes out of scope,
-    // we need to safely dereference the members of 'event' that point to
-    // values in the Lua registry
-    for (int i = 0; i < event.mArgumentList.size(); i++) {
-        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-             host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
-    }
 
     return 0;
 }
@@ -918,7 +927,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
@@ -939,7 +948,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
@@ -9845,13 +9854,13 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    int zoom = 3;
+    qreal zoom = 3.0;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMapZoom: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        zoom = lua_tointeger(L, 1);
+        zoom = lua_tonumber(L, 1);
     }
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
@@ -16197,6 +16206,67 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
+int TLuaInterpreter::getHTTP(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString urlString;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "getHTTP: bad argument #1 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
+        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (lua_istable(L, 2)) {
+        lua_pushnil(L);
+        while (lua_next(L, 2) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
@@ -16314,7 +16384,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
@@ -16326,7 +16396,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
-                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
                                 luaL_typename(L, -2),
                                 luaL_typename(L, -1));
                 return lua_error(L);
@@ -17008,6 +17078,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getCustomLoginTextId", TLuaInterpreter::getCustomLoginTextId);
     lua_register(pGlobalLua, "sendCustomLoginText", TLuaInterpreter::sendCustomLoginText);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
+    lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
@@ -18011,6 +18082,18 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
+// Internal function - Looks for argument types in an 'event' that have stored
+// data in the lua registry, and frees this data.
+void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
+{
+    for (int i = 0; i < event.mArgumentList.size(); i++) {
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
+        {
+             freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
+        }
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {
@@ -18639,4 +18722,87 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         lua_settable(L, -3);
         lua_pop(L, 1);
     }
+}
+
+// Internal function - Creates a table for useful information from the http
+// response. It creates an empty table, calls upon other functions to
+// add things to it, and then returns a key to where it is in the lua registery.
+int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return {};
+    }
+
+    // Push empty table onto stack
+    lua_newtable(L);
+    // Add "headers" table to table
+    createHttpHeadersTable(L, reply);
+    // Add "cookies" table to table
+    createCookiesTable(L, reply);
+    // Pop table from stack, store it in registry, return key to it
+    return luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+// Internal function - Adds an empty table to a "headers" key to the table for
+// tracking useful information from the http response. If there are any headers
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
+    }
+
+    // Push "headers" key and empty table value onto stack
+    lua_pushstring(L, "headers");
+    lua_newtable(L);
+
+    // Parse headers, add them as key-value pairs to the empty table
+    const QList<QByteArray> headerList = reply->rawHeaderList();
+    for (QByteArray header : headerList) {
+        // Push header key onto stack
+        lua_pushstring(L, header.constData());
+        // Push header value onto stack
+        lua_pushstring(L,  reply->rawHeader(header).constData());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+
+    // Put "headers" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
+}
+
+// Internal function - Adds an empty table to a "cookies" key to the table for
+// tracking useful information from the http response. If there are any cookies
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
+    }
+
+    // Push "cookies" key and empty table value onto stack
+    lua_pushstring(L, "cookies");
+    lua_newtable(L);
+
+    // Parse cookies, add them as key-value pairs to the empty table
+    Host& host = getHostFromLua(L);
+    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
+    for (QNetworkCookie cookie : cookies) {
+        // Push cookie name onto stack
+        lua_pushstring(L, cookie.name().constData());
+        // Push cookie value onto stack
+        lua_pushstring(L,  cookie.value().constData());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+
+    // Put "cookies" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
 }

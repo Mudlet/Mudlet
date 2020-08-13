@@ -31,6 +31,8 @@
 #include <QEvent>
 #include <QMutex>
 #include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
+#include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
@@ -116,6 +118,9 @@ public:
     static int dirToNumber(lua_State*, int);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
+    int createHttpResponseTable(QNetworkReply*);
+    void createHttpHeadersTable(lua_State*, QNetworkReply*);
+    void createCookiesTable(lua_State*, QNetworkReply*);
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -550,6 +555,7 @@ public:
     static int getCustomLoginTextId(lua_State*);
     static int sendCustomLoginText(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int getHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
@@ -562,6 +568,7 @@ public:
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
+    void freeAllInLuaRegistry(TEvent);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);

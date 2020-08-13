@@ -412,7 +412,7 @@ map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 				<name>Map Config Alias</name>
 				<script>-- adjust pattern to allow no argument, if no argument show general help about configs
 if not matches[2] then
-	cecho(map.help.configs)
+	cecho(map.help.config)
 else
   local startStr, endStr = string.match(matches[2],"(.*) ([%w%.]+)")
   local vals = {'on', 'off', 'true', 'false'}

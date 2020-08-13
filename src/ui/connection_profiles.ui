@@ -2220,6 +2220,12 @@
                 <pointsize>9</pointsize>
                </font>
               </property>
+              <property name="accessibleName">
+               <string>Profile name</string>
+              </property>
+              <property name="accessibleDescription">
+               <string comment="Using lower case letters for 'ASCII' may make speech synthesisers say 'askey' which is quicker than 'Aay Ess Cee Eye Eye'!">A unique name for the profile but which is limited to a subset of ascii characters only.</string>
+              </property>
               <property name="readOnly">
                <bool>false</bool>
               </property>
@@ -2248,6 +2254,12 @@
                 <family>Bitstream Charter</family>
                 <pointsize>9</pointsize>
                </font>
+              </property>
+              <property name="accessibleName">
+               <string>Game server URL</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>The Internet host name or IP address</string>
               </property>
              </widget>
             </item>
@@ -2281,6 +2293,12 @@
                 <pointsize>9</pointsize>
                </font>
               </property>
+              <property name="accessibleName">
+               <string>Game server port</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</string>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -2297,6 +2315,12 @@
             </item>
             <item row="2" column="2">
              <widget class="QCheckBox" name="port_ssl_tsl">
+              <property name="accessibleName">
+               <string>Connect via a secure protocol</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</string>
+              </property>
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
               </property>
@@ -2387,6 +2411,12 @@
               <property name="toolTip">
                <string>The characters name</string>
               </property>
+              <property name="accessibleName">
+               <string>Character name</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>If provided will be sent, along with password to identify the user in the game.</string>
+              </property>
               <property name="echoMode">
                <enum>QLineEdit::Normal</enum>
               </property>
@@ -2403,6 +2433,12 @@
               <property name="toolTip">
                <string>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</string>
               </property>
+              <property name="accessibleName">
+               <string>Auto-open profile</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>Automatically start this profile when Mudlet is run</string>
+              </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
               </property>
@@ -2413,6 +2449,12 @@
             </item>
             <item row="4" column="0" colspan="2">
              <widget class="QCheckBox" name="auto_reconnect">
+              <property name="accessibleName">
+               <string>Auto-reconnect</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</string>
+              </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
               </property>
@@ -2425,6 +2467,12 @@
              <widget class="QLineEdit" name="character_password_entry">
               <property name="toolTip">
                <string>Characters password. Note that the password isn't encrypted in storage</string>
+              </property>
+              <property name="accessibleName">
+               <string>Password</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>If provided will be sent, along with the character name to identify the user in the game.</string>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::Password</enum>
@@ -2441,6 +2489,9 @@
               </property>
               <property name="accessibleName">
                <string>Discord integration</string>
+              </property>
+              <property name="accessibleDescription">
+               <string>Allow this profile to use Mudlet's Discord &quot;Rich Presence&quot;  features</string>
               </property>
               <property name="text">
                <string/>
