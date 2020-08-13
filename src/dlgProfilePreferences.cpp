@@ -517,6 +517,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
@@ -1165,6 +1166,7 @@ void dlgProfilePreferences::clearHostDetails()
     edbeePreviewWidget->textDocument()->setText(QString());
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
@@ -2385,6 +2387,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
+        pHost->adjustNAWS();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
@@ -2432,6 +2435,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mBorderRightWidth = rightBorderWidth->value();
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
+        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -2451,7 +2455,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
-
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();

@@ -806,9 +806,11 @@ void mudlet::loadMaps()
                                   {QStringLiteral("ne"), tr("Nepali")},
                                   {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
                                   {QStringLiteral("nl"), tr("Dutch")},
+                                  {QStringLiteral("nl_an"), tr("Dutch (Netherlands Antilles)")},
                                   {QStringLiteral("nl_aw"), tr("Dutch (Aruba)")},
                                   {QStringLiteral("nl_be"), tr("Dutch (Belgium)")},
                                   {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
+                                  {QStringLiteral("nl_sr"), tr("Dutch (Suriname)")},
                                   {QStringLiteral("nn"), tr("Norwegian Nynorsk")},
                                   {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
                                   {QStringLiteral("oc"), tr("Occitan")},
@@ -3875,7 +3877,7 @@ void mudlet::updateMudletDiscordInvite()
     manager->setCache(diskCache);
 
 
-    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
