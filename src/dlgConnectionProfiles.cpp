@@ -266,7 +266,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     btn_load_enabled_accessDesc = tr("Click to load but not connect the selected profile.");
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
     btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
-    item_profile_accessName = tr("mud name: %1");
+    item_profile_accessName = tr("Game name: %1");
     item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.",
                                  // Intentional comment to separate arguments
                                  "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
