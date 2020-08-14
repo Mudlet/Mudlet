@@ -4091,12 +4091,12 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2259"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>URL des Spielservers</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2262"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>Hostname oder IP-Adresse</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2269"/>
@@ -4106,7 +4106,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2297"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>Port des Spielservers</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
@@ -4161,7 +4161,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>Charaktername</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4171,17 +4171,17 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil automatisch öffnen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>Dieses Profil automatisch starten, wenn Mudlet ausgeführt wird</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2453"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Automatische Wiederverbindung</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2456"/>
@@ -4191,7 +4191,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>Passwort</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -5157,7 +5157,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="127"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil kopieren</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="128"/>
@@ -5167,7 +5167,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="132"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>Profileinstellungen kopieren</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="133"/>
