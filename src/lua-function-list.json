@@ -102,7 +102,7 @@
     "getAllRoomEntrances": "exitsTable = getAllRoomEntrances(roomID)",
     "getAllRoomUserData": "dataTable = getAllRoomUserData(roomID)",
     "getAreaExits": "roomTable = getAreaExits(areaID, showExits)",
-    "getAreaRooms": "areaTable = getAreaRooms(area id)",
+    "getAreaRooms": "getAreaRooms(area id)",
     "getAreaTable": "areaTable = getAreaTable()",
     "getAreaTableSwap": "areaTable = getAreaTableSwap()",
     "getAreaUserData": "dataValue = getAreaUserData(areaID, key)",
