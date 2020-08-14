@@ -4089,7 +4089,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>Un nome univoco per il profilo, limitato ad un sottoinsieme di caratteri ascii.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
@@ -4174,7 +4174,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation>Se fornito sarà inviato, insieme alla password per identificare il personaggio nel gioco.</translation>
+      <translation>Se fornito sarà inviato, insieme alla password per identificare il giocatore nel gioco.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
@@ -4204,7 +4204,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Se fornito sarà inviato, insieme al nome del personaggio per identificare il giocatore nel gioco.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2488"/>
@@ -5208,7 +5208,7 @@ Utilizzi</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="270"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <comment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</comment>
-      <translation type="unfinished"/>
+      <translation>Bottone per selezionare un gioco da avviare, fare doppio clic per connettersi e iniziare a giocare.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="509"/>
@@ -10646,7 +10646,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostra una notifica sulla barra degli strumenti se Mudlet è ridotto a icona e arrivano nuovi dati.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
