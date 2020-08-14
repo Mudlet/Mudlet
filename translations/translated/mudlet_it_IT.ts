@@ -4129,7 +4129,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2322"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>Fai in modo che Mudlet utilizzi un protocollo sicuro SSL/TLS</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2328"/>
@@ -4174,7 +4174,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Se fornito sarà inviato, insieme alla password per identificare il personaggio nel gioco.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
@@ -4214,7 +4214,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2494"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>Permetti a questo profilo di utilizzare le funzione Discord &quot;Rich Presence&quot; di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2600"/>
@@ -5162,7 +5162,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="128"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>copia l'intero profilo in uno nuovo indicandone un nome differente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="132"/>
@@ -5187,7 +5187,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Fare clic su per caricare, ma NON collegarsi al profilo selezionato.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
@@ -10656,7 +10656,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Richiede anche che GMCP sia abilitato nel gruppo sottostante.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="731"/>
