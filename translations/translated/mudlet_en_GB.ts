@@ -4009,13 +4009,13 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Profile name</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>A unique name for the profile but which is limited to a subset of ascii characters only.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
@@ -4025,12 +4025,12 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2259"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>Game server URL</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2262"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>The Internet host name or IP address</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2269"/>
@@ -4040,22 +4040,22 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2297"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>Game server port</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>Connect via a secure protocol</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2322"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2328"/>
@@ -4095,7 +4095,7 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>Character name</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4110,12 +4110,12 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>Automatically start this profile when Mudlet is run</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2453"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Auto-reconnect</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2456"/>
@@ -4125,7 +4125,7 @@ error message was: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>Password</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -5089,7 +5089,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="127"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>copy profile</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="128"/>
@@ -5099,7 +5099,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="132"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>copy profile settings</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="133"/>
@@ -5119,17 +5119,17 @@ Count</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Click to load but not connect the selected profile.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Click to load and connect the selected profile.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Need to have a valid profile name, game server address and port before this button can be enabled.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
@@ -10539,7 +10539,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>Notify on new data</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -10549,7 +10549,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Allow server to download and play media</source>
-      <translation type="unfinished"/>
+      <translation>Allow server to download and play media</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
@@ -10914,7 +10914,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2518"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4934"/>
@@ -11345,7 +11345,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation type="unfinished"/>
+      <translation>Show debug messages for timers not smaller than:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5126"/>
