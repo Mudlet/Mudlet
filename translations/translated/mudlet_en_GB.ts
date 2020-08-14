@@ -6668,7 +6668,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="730"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Type</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="731"/>
@@ -10994,7 +10994,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2837"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Expires:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4824"/>
