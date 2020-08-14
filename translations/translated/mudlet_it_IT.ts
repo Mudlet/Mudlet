@@ -4119,7 +4119,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>La porta che viene utilizzata insieme al nome host per effettuare la connessione al server di gioco. Se non è specificato, viene utilizzato il valore predefinito di 23 per le connessioni &quot;Telnet&quot;. Le connessioni sicure possono richiedere un numero di porta diverso.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
@@ -4194,7 +4194,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2456"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>Ricollega automaticamente questo profilo in caso si dovesse scollegare per qualsiasi motivo che non sia la disconnessione dell'utente dal server di gioco.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
@@ -5172,7 +5172,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="133"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>copia le impostazioni e alcune parti del profilo in uno nuovo indicandone un nome differente.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="197"/>
@@ -5197,7 +5197,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Per abilitare questo bottone è necessario inserire un nome di profilo valido, l'indirizzo del server di gioco e la porta.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
@@ -10663,7 +10663,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>Questo font non è monospaziato, perciò potrebbe non essere l'ideale per alcuni giochi testuali: è possibile utilizzarlo, ma potrebbero esserci problemi con l'allineamento delle colonne del testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1258"/>
@@ -11454,7 +11454,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="5126"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostra il messaggio &apos;LUA OK&apos; per Timer con l'intervallo minimo (h:mm:ss.zzz). Il valore minimo (predefinito) mostra tutti questi messaggi, ma può rendere inutilizzabile la &lt;i&gt;Console Centrale di Debug&lt;/i&gt; se c'è un timer con intervallo molto piccolo in funzione.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5215"/>
