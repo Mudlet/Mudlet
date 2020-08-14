@@ -4118,13 +4118,13 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Имя профиля</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>Уникальное имя для профиля, но которое ограничено только подмножеством символов ascii.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
@@ -4134,7 +4134,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2259"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>Адрес игрового сервера</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2262"/>
