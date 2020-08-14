@@ -4075,7 +4075,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Profilname</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
