@@ -302,7 +302,7 @@
              <string>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</string>
+             <string>Enable MSP  (Mud Sound Protocol)</string>
             </property>
            </widget>
           </item>

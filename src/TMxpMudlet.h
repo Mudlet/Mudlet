@@ -30,6 +30,7 @@
 #include "post_guard.h"
 
 class Host;
+class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
@@ -76,6 +77,9 @@ public:
     int setLink(const QStringList& links, const QStringList& hints) override;
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
+
+    void playMedia(TMediaData& mediaData) override;
+    void stopMedia(TMediaData& mediaData) override;
 
     bool isBold, isItalic, isUnderline;
 

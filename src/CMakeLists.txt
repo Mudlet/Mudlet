@@ -102,10 +102,12 @@ set(mudlet_SRCS
     TMxpEntityTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpLinkTagHandler.cpp
+    TMxpMusicTagHandler.cpp
     TMxpNodeBuilder.cpp
     TMxpMudlet.cpp
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
+    TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
     MxpTag.cpp
     TMxpTagHandler.cpp
@@ -230,6 +232,8 @@ set(mudlet_HDRS
     TMxpEntityTagHandler.h
     TMxpFontTagHandler.h
     TMxpLinkTagHandler.h
+    TMxpMusicTagHandler.h
+    TMxpSoundTagHandler.h
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpContext.h

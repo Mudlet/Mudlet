@@ -30,7 +30,9 @@
 #include "TMxpFontTagHandler.h"
 #include "TMxpFormattingTagsHandler.h"
 #include "TMxpLinkTagHandler.h"
+#include "TMxpMusicTagHandler.h"
 #include "TMxpSendTagHandler.h"
+#include "TMxpSoundTagHandler.h"
 #include "TMxpSupportTagHandler.h"
 #include "TMxpTagHandlerResult.h"
 #include "TMxpTagParser.h"
@@ -83,6 +85,8 @@ TMxpTagProcessor::TMxpTagProcessor()
     registerHandler(TMxpFeatureOptions({"a", {"href", "hint"}}), new TMxpLinkTagHandler());
     registerHandler(TMxpFeatureOptions({"color", {"fore", "back"}}), new TMxpColorTagHandler());
     registerHandler(TMxpFeatureOptions({"font", {"color", "back"}}), new TMxpFontTagHandler());
+    registerHandler(TMxpFeatureOptions({"sound", {"fname", "v", "l", "p", "t", "u"}}), new TMxpSoundTagHandler());
+    registerHandler(TMxpFeatureOptions({"music", {"fname", "v", "l", "p", "c", "t", "u"}}), new TMxpMusicTagHandler());
 
     mSupportedMxpElements["b"] = QVector<QString>();
     mSupportedMxpElements["i"] = QVector<QString>();
