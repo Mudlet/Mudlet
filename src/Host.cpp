@@ -1951,17 +1951,17 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
     bool needToEmit = false;
-    const QString encoding(mTelnet.getEncoding());
+    const QByteArray encoding(mTelnet.getEncoding());
 
     QMutexLocker locker(& mLock);
     if (state == Qt::PartiallyChecked) {
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == QLatin1String("GBK")
-            || encoding == QLatin1String("GB18030")
-            || encoding == QLatin1String("Big5")
-            || encoding == QLatin1String("Big5-HKSCS")) {
+        if (encoding == "GBK"
+            || encoding == "GB18030"
+            || encoding == "BIG5"
+            || encoding == "BIG5-HKSCS") {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
