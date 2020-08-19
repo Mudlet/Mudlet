@@ -130,6 +130,9 @@ bool TScript::compileScript()
     if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
+        if (mpHost->mResetProfile) {
+            setEventHandlerList(getEventHandlerList());
+        }
         return true;
     } else {
         mOK_code = false;
