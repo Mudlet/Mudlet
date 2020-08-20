@@ -256,16 +256,23 @@ function Adjustable.Container:adjustBorder()
         where = self.attached:lower()
         if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then self:detach()
         else
-            if        where == "right"   then setBorderRight(winw-self.get_x())
-            elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x())
-            elseif  where == "bottom"  then setBorderBottom(winh-self.get_y())
-            elseif  where == "top"     then setBorderTop(self.get_height()+self.get_y())
+            if        where == "right"   then setBorderRight(winw+self.attachedMargin-self.get_x())
+            elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x()+self.attachedMargin)
+            elseif  where == "bottom"  then setBorderBottom(winh+self.attachedMargin-self.get_y())
+            elseif  where == "top"     then setBorderTop(self.get_height()+self.get_y()+self.attachedMargin)
             else self.attached= false
             end
         end
     else
         return false
     end
+end
+
+--- gives your borders a margin
+-- @param margin in pixel
+function Adjustable.Container:setBorderMargin(margin)
+    self.attachedMargin = margin
+    self:adjustBorder()
 end
 
 -- internal function to resize the border automatically if the window size changes
@@ -618,6 +625,7 @@ function Adjustable.Container:save()
     mytable.attached = self.attached
     mytable.lockStyle = self.lockStyle
     mytable.padding = self.padding
+    mytable.attachedMargin = self.attachedMargin
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
     if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
@@ -635,6 +643,7 @@ function Adjustable.Container:load()
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
     self.padding = mytable.padding or self.padding
+    self.attachedMargin = mytable.attachedMargin or self.attachedMargin
 
     if mytable.x then
         self:move(mytable.x, mytable.y)
@@ -850,6 +859,7 @@ function Adjustable.Container:new(cons,container)
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
     me.padding = me.padding or 10
+    me.attachedMargin = me.attachedMargin or 5
 
     me.adjLabelstyle = me.adjLabelstyle or [[
     background-color: rgba(0,0,0,100%);
