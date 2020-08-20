@@ -268,7 +268,7 @@ function Adjustable.Container:adjustBorder()
     end
 end
 
---- gives your borders a margin
+--- gives your MainWindow borders a margin
 -- @param margin in pixel
 function Adjustable.Container:setBorderMargin(margin)
     self.attachedMargin = margin
@@ -825,6 +825,7 @@ end
 --@param[opt="15"] cons.buttonsize  size of the minimize and close buttons
 --@param[opt="8"] cons.buttonFontSize  font size of the minimize and close buttons
 --@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting)
+--@param[opt="5"] cons.attachedMargin  margin for the MainWindow border if an adjustable container is attached
 --@param cons.adjLabelstyle  style of the main Label where all elements are in
 --@param cons.menustyle  menu items style
 --@param cons.buttonstyle close and minimize buttons style
