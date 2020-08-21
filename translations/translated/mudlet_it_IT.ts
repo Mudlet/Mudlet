@@ -5111,7 +5111,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nome del gioco: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1241"/>
@@ -10656,7 +10656,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSP  (Mud Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="731"/>
