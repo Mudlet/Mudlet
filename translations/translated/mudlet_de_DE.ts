@@ -30,19 +30,19 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="806"/>
+      <location filename="../src/Host.cpp" line="807"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ] - %1 Vielen Dank für die Nutzung der öffentlichen Testversion!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="807"/>
+      <location filename="../src/Host.cpp" line="808"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>[  OK  ] - %1 Hilf uns, Mudlet zu verbessern, indem Du Probleme meldest.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1535"/>
+      <location filename="../src/Host.cpp" line="1536"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -51,7 +51,7 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1537"/>
+      <location filename="../src/Host.cpp" line="1538"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -60,24 +60,24 @@ please wait...</source>
 Bitte warten...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1541"/>
+      <location filename="../src/Host.cpp" line="1542"/>
       <source>Unpacking</source>
       <translation>Entpacke</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2149"/>
+      <location filename="../src/Host.cpp" line="2150"/>
       <source>Playing %1</source>
       <translation>Spielt %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2151"/>
-      <location filename="../src/Host.cpp" line="2157"/>
+      <location filename="../src/Host.cpp" line="2152"/>
+      <location filename="../src/Host.cpp" line="2158"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 bei %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2556"/>
+      <location filename="../src/Host.cpp" line="2557"/>
       <source>Map - %1</source>
       <translation>Karte - %1</translation>
     </message>
@@ -5109,6 +5109,11 @@ Nutzungen</translation>
       <translation>Verbinden</translation>
     </message>
     <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
+      <source>Game name: %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1241"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
       <translation>Dieses Profil ist momentan geladen - Beende es, bevor die Verbindungsparameter geändert werden.</translation>
@@ -5197,11 +5202,6 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
-      <source>mud name: %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -10492,11 +10492,6 @@ try again when it has finished.</source>
       <translation>MSSP aktivieren (Mud Server Status Protokoll)</translation>
     </message>
     <message>
-      <location filename="../src/ui/profile_preferences.ui" line="305"/>
-      <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation>MSP aktivieren (Mud Sound Protocol, experimentell in Mudlet)</translation>
-    </message>
-    <message>
       <location filename="../src/ui/profile_preferences.ui" line="491"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Zeigt den Text, den du sendest, in der Anzeigebox an.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Dies kann vom Spielserver deaktiviert werden, wenn er die Telnet-ECHO-Option verwendet.&lt;/i&gt;&lt;/p&gt;</translation>
@@ -10649,6 +10644,11 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="305"/>
+      <source>Enable MSP  (Mud Sound Protocol)</source>
       <translation type="unfinished"/>
     </message>
     <message>
