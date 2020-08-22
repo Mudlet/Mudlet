@@ -3680,6 +3680,107 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setupMapSymbolFont
+int TLuaInterpreter::setupMapSymbolFont(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no map present or loaded");
+        return 2;
+    }
+
+    QString fontName;
+    int s = 0;
+    if (!(lua_isnil(L, ++s) || lua_isstring(L, s))) {
+        lua_pushfstring(L, "setupMapSymbolFont: bad argument #%d type (symbol font name as string is optional {use nil for no change, empty string for default}, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else if (lua_isstring(L, s)) {
+        fontName = QString::fromUtf8(lua_tostring(L, s));
+    }
+
+    bool fontForcingPresent = false;
+    bool fontForcingRequired = false;
+    if (lua_gettop(L) > 1) {
+        if (!(lua_isnil(L, ++s) || lua_isboolean(L, s))) {
+            lua_pushfstring(L, "setupMapSymbolFont: bad argument #%d type (only use specified font as boolean is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else if (lua_isboolean(L, s)) {
+            fontForcingPresent = true;
+            fontForcingRequired = lua_toboolean(L, s);
+        }
+    }
+
+    bool fontFactorPresent = false;
+    float fontFactorRequired = 1.0;
+    if (lua_gettop(L) > 2) {
+        if (!(lua_isnumber(L, ++s))) {
+            lua_pushfstring(L, "setupMapSymbolFont: bad argument #%d type (symbol font scaling factor as number is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+        fontFactorPresent = true;
+        // Round the given factor to 2 decimal places to match the resolution of
+        // the preferences' setting:
+        fontFactorRequired = qRound(100 * lua_tonumber(L, s)) / 100.0;
+        if (fontFactorRequired < 0.5 || fontFactorRequired > 2.0) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "font adjustment factor %f is outside of acceptable range (0.5 to 2.0, default 1.0)", fontFactorRequired);
+            return 2;
+        }
+    }
+
+    // The null case is if a nil argument was provided (for no change case):
+    if (!fontName.isNull()) {
+        if (fontName.isEmpty()) {
+            // Value as was set in the TMap constructor:
+            host.mpMap->mMapSymbolFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal);
+        } else {
+            host.mpMap->mMapSymbolFont = QFont(fontName, 12, QFont::Normal);
+        }
+    }
+
+    if (fontForcingPresent) {
+        host.mpMap->mIsOnlyMapSymbolFontToBeUsed = fontForcingRequired;
+    }
+
+    if (fontFactorPresent) {
+        host.mpMap->mMapSymbolFontFudgeFactor = fontFactorRequired;
+    }
+
+    // Ensure the room symbols get redrawn in the new font by clearing the cache:
+    host.mpMap->mpMapper->mp2dMap->flushSymbolPixmapCache();
+    // Now force the redraw:
+    updateMap(L);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#mapSymbolFontInfo
+int TLuaInterpreter::mapSymbolFontInfo(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no map present or loaded");
+        return 2;
+    }
+
+    lua_newtable(L);
+    lua_pushstring(L, "symbolFontName");
+    lua_pushstring(L, host.mpMap->mMapSymbolFont.family().toUtf8().constData());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "onlyUseThisFont");
+    lua_pushboolean(L, host.mpMap->mIsOnlyMapSymbolFontToBeUsed);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "scalingFactor");
+    lua_pushnumber(L, qRound(100 * host.mpMap->mMapSymbolFontFudgeFactor) / 100.0);
+    lua_settable(L, -3);
+
+    return 1;
+}
+
 int TLuaInterpreter::getMudletInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -17081,6 +17182,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
+    lua_register(pGlobalLua, "setupMapSymbolFont", TLuaInterpreter::setupMapSymbolFont);
+    lua_register(pGlobalLua, "mapSymbolFontInfo", TLuaInterpreter::mapSymbolFontInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     const auto separator = QDir::separator();
