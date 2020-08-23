@@ -1966,8 +1966,15 @@ void mudlet::commitLayoutUpdates()
     while (itHostToolbarsList.hasNext()) {
         itHostToolbarsList.next();
         for (auto pToolBar : itHostToolbarsList.value()) {
-            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_LIKELY(pToolBar)) {
+                if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                    qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                } else if (pToolBar->property("layoutChanged").toBool()) {
+                    pToolBar->setProperty("layoutChanged", QVariant(false));
+                }
             }
         }
         itHostToolbarsList.remove();
