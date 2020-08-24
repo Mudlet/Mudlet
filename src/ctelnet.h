@@ -151,6 +151,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool purgeAllMediaFiles();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
