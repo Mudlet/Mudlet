@@ -203,13 +203,13 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     }
 }
 
-bool TMedia::purgeAllMediaFiles()
+bool TMedia::purgeMediaCache()
 {
     QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << QStringLiteral("TMedia::purgeAllMediaFiles() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        qWarning() << QStringLiteral("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
         return false;
     }
 

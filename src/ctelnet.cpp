@@ -2155,9 +2155,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     mpHost->mpMedia->playMedia(mediaData);
 }
 
-bool cTelnet::purgeAllMediaFiles()
+bool cTelnet::purgeMediaCache()
 {
-    return mpHost->mpMedia->purgeAllMediaFiles();
+    return mpHost->mpMedia->purgeMediaCache();
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

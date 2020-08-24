@@ -127,7 +127,7 @@ public:
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
-    bool purgeAllMediaFiles();
+    bool purgeMediaCache();
 
 private:
     void stopAllMediaPlayers();

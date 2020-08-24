@@ -7263,11 +7263,11 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#purgeAllMediaFiles
-int TLuaInterpreter::purgeAllMediaFiles(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#purgeMediaCache
+int TLuaInterpreter::purgeMediaCache(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mTelnet.purgeAllMediaFiles();
+    host.mTelnet.purgeMediaCache();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -16885,7 +16885,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
-    lua_register(pGlobalLua, "purgeAllMediaFiles", TLuaInterpreter::purgeAllMediaFiles);
+    lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP);
     lua_register(pGlobalLua, "roomExists", TLuaInterpreter::roomExists);
     lua_register(pGlobalLua, "addRoom", TLuaInterpreter::addRoom);
