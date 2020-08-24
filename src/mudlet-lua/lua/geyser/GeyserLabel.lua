@@ -54,8 +54,13 @@ function Geyser.Label:echo(message, color, format)
   if not fs then
     fs = tostring(self.fontSize)
   end
+  if color == "nocolor" then
+    color = [[ style=" ]]
+  else
+    color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; "
+  end
   fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
+  message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
 end
