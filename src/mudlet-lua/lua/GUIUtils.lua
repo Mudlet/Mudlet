@@ -2061,7 +2061,7 @@ local function copy2color(name,win,str,inst)
   if not start then
     error(name..": string not found",3)
   end
-  local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   if name == "copy2html" then
     style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
