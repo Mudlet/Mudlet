@@ -213,7 +213,7 @@ bool TMedia::purgeMediaCache()
         return false;
     }
 
-    TMedia::stopAllMediaPlayers();
+    stopAllMediaPlayers();
     mediaDir.removeRecursively();
     return true;
 }
