@@ -360,42 +360,26 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
-if(WIN32 AND NOT USE_MAIN_BUILD_SYSTEM)
-  # For this combination the use of an INTERFACE definition (with the library
-  # name listed twice with "::" separators of some libraries) causes build
-  # failures with an obscure error message of the form:
-  # "src/CMakeFiles/mudlet.dir/build.make:1954: *** target pattern contains no '%'.  Stop."
-  target_link_libraries(
-    mudlet
-    HUNSPELL
-    PCRE
-    YAJL
-    ZIP)
-else()
-  target_link_libraries(
-    mudlet
-    HUNSPELL::HUNSPELL
-    PCRE::PCRE
-    YAJL::YAJL
-    ZIP::ZIP)
-endif()
-
 target_link_libraries(
-    mudlet
-    communi
-    edbee-lib
-    Boost::boost
-    LUA51::LUA51
-    PUGIXML::PUGIXML
-    Qt5::Concurrent
-    Qt5::Core
-    Qt5::Network
-    Qt5::Multimedia
-    Qt5::OpenGL
-    Qt5::UiTools
-    Qt5::Widgets
-    ZLIB::ZLIB
-    qt5keychain)
+  mudlet
+  communi
+  edbee-lib
+  Boost::boost
+  HUNSPELL::HUNSPELL
+  LUA51::LUA51
+  PCRE::PCRE
+  PUGIXML::PUGIXML
+  Qt5::Concurrent
+  Qt5::Core
+  Qt5::Network
+  Qt5::Multimedia
+  Qt5::OpenGL
+  Qt5::UiTools
+  Qt5::Widgets
+  YAJL::YAJL
+  ZIP::ZIP
+  ZLIB::ZLIB
+  qt5keychain)
 
 if(Qt5TextToSpeech_FOUND)
   target_link_libraries(mudlet Qt5::TextToSpeech)
