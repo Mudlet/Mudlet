@@ -21,7 +21,7 @@ Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
--- @param color The color to use.
+-- @param color The color to use. If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
@@ -54,9 +54,20 @@ function Geyser.Label:echo(message, color, format)
   if not fs then
     fs = tostring(self.fontSize)
   end
+  if color == "nocolor" then
+    color = [[ style=" ]]
+  else
+    color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
+  end
   fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
+  message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
+  echo(self.name, message)
+end
+
+--- raw Echo without formatting/handholding stuff that Geyser.Label:echo() does
+-- @param message The message to print. Can contain html formatting.
+function Geyser.Label:rawEcho(message)
   echo(self.name, message)
 end
 
