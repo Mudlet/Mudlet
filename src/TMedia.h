@@ -127,8 +127,10 @@ public:
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
+    bool purgeMediaCache();
 
 private:
+    void stopAllMediaPlayers();
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
