@@ -264,6 +264,7 @@
     "prefix": "prefix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])",
     "print": "print(text, some more text, ...)",
     "printCmdLine": "printCmdLine(text)",
+    "purgeMediaCache": "purgeMediaCache()",
     "putHTTP": "putHTTP(dataToSend, url, headersTable, file)",
     "raiseEvent": "raiseEvent(event_name, arg-1, … arg-n)",
     "raiseGlobalEvent": "raiseGlobalEvent(event_name, arg-1, … arg-n)",

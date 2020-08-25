@@ -2011,7 +2011,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media").toLower())) {
+    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2153,6 +2153,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::purgeMediaCache()
+{
+    return mpHost->mpMedia->purgeMediaCache();
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
