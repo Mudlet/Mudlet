@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -386,7 +386,7 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  * @param charStyle
  * @return Return the display width of the grapheme
  */
-int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
+int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, const TChar& charStyle) const
 {
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
@@ -402,13 +402,13 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    QFont font = painter.font();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
             || (painter.font().strikeOut() != isStrikeOut)
             || (painter.font().underline() != isUnderline)) {
 
-        QFont font = painter.font();
         font.setBold(isBold);
         font.setItalic(isItalics);
         font.setOverline(isOverline);
@@ -420,11 +420,11 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     QColor bgColor;
     QColor fgColor;
     if (static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) {
-        fgColor = charStyle.background();
-        bgColor = charStyle.foreground();
+        fgColor = charStyle.splitFormatted() ? charStyle.secondary().background() : charStyle.background();
+        bgColor = charStyle.splitFormatted() ? charStyle.secondary().foreground() : charStyle.foreground();
     } else {
-        fgColor = charStyle.foreground();
-        bgColor = charStyle.background();
+        fgColor = charStyle.splitFormatted() ? charStyle.secondary().foreground() : charStyle.foreground();
+        bgColor = charStyle.splitFormatted() ? charStyle.secondary().background() : charStyle.background();
     }
 
     auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
@@ -433,8 +433,27 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-
     painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
+    if (!charStyle.splitFormatted()) {
+        return charWidth;
+    }
+
+    // Now produce another copy in the main TChar colours and copy and paint
+    // just the right half of that.
+    QPixmap rightSidePixMap{textRect.size()};
+    rightSidePixMap.fill((static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) ? charStyle.foreground() : charStyle.background());
+    auto rightSideColor = (static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) ? charStyle.background() : charStyle.foreground();
+    QPainter rightSidePainter(&rightSidePixMap);
+    rightSidePainter.setFont(font);
+    rightSidePainter.setPen(rightSideColor);
+    rightSidePainter.drawText(0, mFontHeight - mFontDescent - 1, grapheme);
+    rightSidePainter.end();
+    painter.drawPixmap(textRect.x() + (textRect.width() / 2), textRect.y(),
+                       rightSidePixMap,
+                       (textRect.width() / 2), 0, textRect.width(), textRect.height());
+    if (painter.pen().color() != rightSideColor) {
+        painter.setPen(rightSideColor);
+    }
     return charWidth;
 }
 

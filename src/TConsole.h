@@ -132,8 +132,14 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
+    std::pair<bool, QString> setSplitFgColor(const QString&, const QColor&);
+    std::pair<bool, QString> setSplitFgColor(const QColor&);
     void setBgColor(int, int, int);
     void setBgColor(const QColor&);
+    std::pair<bool, QString> setSplitBgColor(const QString&, const QColor&);
+    std::pair<bool, QString> setSplitBgColor(const QColor&);
+    std::pair<bool, QString> resetSplitFormat(const QString&);
+    std::pair<bool, QString> resetSplitFormat();
     void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);

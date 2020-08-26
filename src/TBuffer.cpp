@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -58,6 +59,7 @@ TChar::TChar()
 , mFlags(None)
 , mIsSelected(false)
 , mLinkIndex(0)
+, mpSecondary(nullptr)
 {
 }
 
@@ -67,6 +69,7 @@ TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags fla
 , mFlags(flags)
 , mIsSelected(false)
 , mLinkIndex(linkIndex)
+, mpSecondary(nullptr)
 {
 }
 
@@ -74,6 +77,7 @@ TChar::TChar(Host* pH)
 : mFlags(None)
 , mIsSelected(false)
 , mLinkIndex(0)
+, mpSecondary(nullptr)
 {
     if (pH) {
         mFgColor = pH->mFgColor;
@@ -85,7 +89,10 @@ TChar::TChar(Host* pH)
 }
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
-// not be wanted in every case:
+// not be wanted in every case - with the addition of the mpSecondary member it
+// means that this equality check is no good for detecting a change in format
+// betweeen adjectent TChars - we will need something that considers the
+// relevent half of a split format one to the adjacent (half?) of it's neighbour:
 bool TChar::operator==(const TChar& other)
 {
     if (mIsSelected != other.mIsSelected) {
@@ -103,6 +110,11 @@ bool TChar::operator==(const TChar& other)
     if (mFlags != other.mFlags) {
         return false;
     }
+    if ((mpSecondary && !other.mpSecondary) || (!mpSecondary && other.mpSecondary )) {
+        return false;
+    } else if (mpSecondary && other.mpSecondary) {
+        return (*mpSecondary == *other.mpSecondary);
+    }
     return true;
 }
 
@@ -114,7 +126,123 @@ TChar::TChar(const TChar& copy)
 , mIsSelected(false)
 , mLinkIndex(copy.mLinkIndex)
 {
+    if (copy.mpSecondary) {
+        mpSecondary = new TChar(copy.mpSecondary->mFgColor, copy.mpSecondary->mBgColor, copy.mpSecondary->mFlags, copy.mpSecondary->mLinkIndex);
+        mpSecondary->mIsSelected = false;
+    } else {
+        mpSecondary = nullptr;
+    }
 }
+
+TChar::~TChar()
+{
+    if (mpSecondary) {
+        delete mpSecondary;
+        mpSecondary = nullptr;
+    }
+}
+
+void TChar::insertSplitFormat(const TChar &leftSide)
+{
+    if (mpSecondary) {
+        delete mpSecondary;
+    }
+    mpSecondary = new TChar(leftSide.mFgColor, leftSide.mBgColor, leftSide.mFlags | TChar::SplitFormat, leftSide.mLinkIndex);
+    mFlags |= TChar::SplitFormat;
+}
+
+bool TChar::removeSplitFormat()
+{
+    if (mpSecondary) {
+        delete mpSecondary;
+        mFlags &= ~(TChar::SplitFormat);
+        mpSecondary = nullptr;
+        return true;
+    }
+
+    return false;
+}
+
+// These next 2 methods don't seem to be needed after all:
+//bool TChar::isSameFormatAsPrevious(const TChar& previousFormat) const
+//{
+//    if (mIsSelected != previousFormat.mIsSelected) {
+//        return false;
+//    }
+
+//    if (mLinkIndex != previousFormat.mLinkIndex) {
+//        return false;
+//    }
+
+//    if (mpSecondary) {
+//        // Compare the secondary details as appropriate against the supplied argument
+//        if (mpSecondary->mFgColor != previousFormat.mFgColor) {
+//            return false;
+//        }
+
+//        if (mpSecondary->mBgColor != previousFormat.mBgColor) {
+//            return false;
+//        }
+
+//        if ((mpSecondary->mFlags & TestMask) != (previousFormat.mFlags & TestMask)) {
+//            return false;
+//        }
+
+//    } else {
+//        if (mFgColor != previousFormat.mFgColor) {
+//            return false;
+//        }
+
+//        if (mBgColor != previousFormat.mBgColor) {
+//            return false;
+//        }
+
+//        if ((mFlags & TestMask) != (previousFormat.mFlags & TestMask)) {
+//            return false;
+//        }
+//    }
+//    return true;
+//}
+
+//bool TChar::isSameFormatAsNext(const TChar& nextFormat) const
+//{
+//    if (mIsSelected != nextFormat.mIsSelected) {
+//        return false;
+//    }
+
+//    if (mLinkIndex != nextFormat.mLinkIndex) {
+//        return false;
+//    }
+
+//    if (nextFormat.mpSecondary) {
+//        // Compare the secondary details as appropriate against the supplied argument
+//        if (mFgColor != nextFormat.mpSecondary->mFgColor) {
+//            return false;
+//        }
+
+//        if (mBgColor != nextFormat.mpSecondary->mBgColor) {
+//            return false;
+//        }
+
+//        if ((mFlags & TestMask) != (nextFormat.mpSecondary->mFlags & TestMask)) {
+//            return false;
+//        }
+
+//    } else {
+//        if (mFgColor != nextFormat.mFgColor) {
+//            return false;
+//        }
+
+//        if (mBgColor != nextFormat.mBgColor) {
+//            return false;
+//        }
+
+//        if ((mFlags & TestMask) != (nextFormat.mFlags & TestMask)) {
+//            return false;
+//        }
+//    }
+//    return true;
+//}
 
 const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = QStringLiteral("------------ ");
@@ -3140,6 +3268,81 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
     } else {
         return false;
     }
+}
+
+bool TBuffer::applySplitBgColor(const QPoint& P, const QColor& newColor)
+{
+    int x = P.x();
+    int y = P.y();
+
+    // clang-format off
+    if ((x >= 0)
+        && ((y >= 0) && (y < static_cast<int>(buffer.size())))
+            && (x < static_cast<int>(buffer.at(y).size()))) {
+        // clang-format on
+
+        if (buffer.at(y).at(x).splitFormatted()) {
+            // This TChar already has a secondary/split format:
+            buffer.at(y).at(x).mpSecondary->setBackground(newColor);
+            return true;
+        }
+
+        TChar additionalAttributes{buffer.at(y).at(x)};
+        additionalAttributes.setBackground(newColor);
+        buffer.at(y).at(x).insertSplitFormat(additionalAttributes);
+        return true;
+    }
+
+    return false;
+}
+
+bool TBuffer::applySplitFgColor(const QPoint& P, const QColor& newColor)
+{
+    int x = P.x();
+    int y = P.y();
+
+    // clang-format off
+    if ((x >= 0)
+        && ((y >= 0) && (y < static_cast<int>(buffer.size())))
+            && (x < static_cast<int>(buffer.at(y).size()))) {
+        // clang-format on
+
+        if (buffer.at(y).at(x).splitFormatted()) {
+            // This TChar already has a secondary/split format:
+            buffer.at(y).at(x).mpSecondary->setForeground(newColor);
+            return true;
+        }
+
+        TChar additionalAttributes{buffer.at(y).at(x)};
+        additionalAttributes.setForeground(newColor);
+        buffer.at(y).at(x).insertSplitFormat(additionalAttributes);
+        return true;
+    }
+
+    return false;
+}
+
+std::pair<bool, QString> TBuffer::resetSplitFormat(const QPoint& P)
+{
+    int x = P.x();
+    int y = P.y();
+
+    // clang-format off
+    if ((x >= 0)
+        && ((y >= 0) && (y < static_cast<int>(buffer.size())))
+            && (x < static_cast<int>(buffer.at(y).size()))) {
+        // clang-format on
+
+        if (buffer.at(y).at(x).splitFormatted()) {
+            // This TChar has a secondary/split format:
+            buffer.at(y).at(x).removeSplitFormat();
+            return {true, QString()};
+        }
+
+        return {false, QLatin1String("character does not have a split format")};
+    }
+
+    return {false, QStringLiteral("position line %1, column %2 is not valid").arg(QString::number(x), QString::number(y))};
 }
 
 QStringList TBuffer::getEndLines(int n)

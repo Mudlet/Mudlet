@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -78,11 +78,14 @@ public:
         // consider in HTML generation:
         TestMask = 0x3f,
         // Replaces TCHAR_ECHO 16
-        Echo = 0x100
+        Echo = 0x100,
+        // The color format is split in half across the width of the grapheme
+        SplitFormat = 0x200
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
     TChar();
+    ~TChar();
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     TChar(Host*);
     TChar(const TChar&);
@@ -109,6 +112,13 @@ public:
     void deselect() { mIsSelected = false; }
     bool isSelected() const { return mIsSelected; }
     int linkIndex () const { return mLinkIndex; }
+    bool const splitFormatted() const { return static_cast<bool>(mpSecondary); }
+    void insertSplitFormat(const TChar& leftSide);
+    bool removeSplitFormat();
+// Not needed (?):
+//    bool isSameFormatAsPrevious(const TChar& previousFormat) const;
+//    bool isSameFormatAsNext(const TChar& nextFormat) const;
+    const TChar& secondary() const { return *mpSecondary; }
 
 private:
     QColor mFgColor;
@@ -117,6 +127,16 @@ private:
     // Kept as a separate flag because it must often be handled separately
     bool mIsSelected;
     int mLinkIndex;
+    // Used only for the split colors that some Far Eastern DBSC encodings seem
+    // to interpose between the two bytes that encode a single wide glyph, and
+    // being on the BMP they likely only transcode to a single QChar - so a
+    // only a single TChar is availible to carry the formatting. To minimise the
+    // code changes the secondary colour stored here is for the LEFT (first)
+    // half of the glyph - so that the following characters are correctly
+    // coloured. Also it means that, without extra Lua API functions that are
+    // aware of this color split the colour that will be reported back to the
+    // User/Packages/Scripts is the RIGHT (second half):
+    TChar* mpSecondary;
 
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
@@ -156,6 +176,8 @@ public:
     bool applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHist);
     bool applyFgColor(const QPoint&, const QPoint&, const QColor&);
     bool applyBgColor(const QPoint&, const QPoint&, const QColor&);
+    bool applySplitFgColor(const QPoint&, const QColor&);
+    bool applySplitBgColor(const QPoint&, const QColor&);
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
@@ -181,6 +203,7 @@ public:
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
     static int lengthInGraphemes(const QString& text);
+    std::pair<bool, QString> resetSplitFormat(const QPoint& P);
 
 
     std::deque<TChar> bufferLine;

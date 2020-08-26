@@ -1049,6 +1049,50 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_settable(L, -3);
     lua_settable(L, -3);
 
+    if (result.second.splitFormatted()) {
+        lua_pushstring(L, "splitFormat");
+        lua_newtable(L);
+        // Not sure if this is needed or not:
+//        const TChar additionalAttributes{result.second.secondary()};
+//        const TChar::AttributeFlags additionalFormat{additionalAttributes.allDisplayAttributes()};
+//        lua_pushstring(L, "bold");
+//        lua_pushboolean(L, additionalFormat & TChar::Bold);
+//        lua_settable(L, -3);
+
+        QColor leftForeground(result.second.secondary().foreground());
+        lua_pushstring(L, "foreground");
+        lua_newtable(L);
+        lua_pushnumber(L, 1);
+        lua_pushnumber(L, leftForeground.red());
+        lua_settable(L, -3);
+
+        lua_pushnumber(L, 2);
+        lua_pushnumber(L, leftForeground.green());
+        lua_settable(L, -3);
+
+        lua_pushnumber(L, 3);
+        lua_pushnumber(L, leftForeground.blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3);
+
+        QColor leftBackground(result.second.secondary().background());
+        lua_pushstring(L, "background");
+        lua_newtable(L);
+        lua_pushnumber(L, 1);
+        lua_pushnumber(L, leftBackground.red());
+        lua_settable(L, -3);
+
+        lua_pushnumber(L, 2);
+        lua_pushnumber(L, leftBackground.green());
+        lua_settable(L, -3);
+
+        lua_pushnumber(L, 3);
+        lua_pushnumber(L, leftBackground.blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3);
+        lua_settable(L, -3);
+    }
+
     return 1;
 }
 
@@ -11988,6 +12032,63 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     return 0;
 }
 
+// Documentation (pending): https://wiki.mudlet.org/w/Manual:Lua_Functions#setSplitFgColor
+int TLuaInterpreter::setSplitFgColor(lua_State* L)
+{
+    int s = 0;
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n > 3) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setSplitFgColor: bad argument #%d type (window name as string is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+        windowName = QString::fromUtf8(lua_tostring(L, s));
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitFgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int red = lua_tointeger(L, s);
+    if (red < 0 || red >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", red);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitFgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int green = lua_tointeger(L, s);
+    if (green < 0 || green >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", green);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitFgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int blue = lua_tointeger(L, s);
+    if (blue < 0 || blue >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", blue);
+        return 2;
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->setSplitFgColor(windowName, QColor(red, green, blue)); !success) {
+        lua_pushnil(L);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBgColor
 int TLuaInterpreter::setBgColor(lua_State* L)
 {
@@ -12049,6 +12150,85 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
     }
     return 0;
+}
+
+// Documentation (pending): https://wiki.mudlet.org/w/Manual:Lua_Functions#setSplitBgColor
+int TLuaInterpreter::setSplitBgColor(lua_State* L)
+{
+    int s = 0;
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n > 3) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setSplitBgColor: bad argument #%d type (window name as string is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+        windowName = QString::fromUtf8(lua_tostring(L, s));
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitBgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int red = lua_tointeger(L, s);
+    if (red < 0 || red >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", red);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitBgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int green = lua_tointeger(L, s);
+    if (green < 0 || green >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", green);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setSplitBgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int blue = lua_tointeger(L, s);
+    if (blue < 0 || blue >  255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", blue);
+        return 2;
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->setSplitBgColor(windowName, QColor(red, green, blue)); !success) {
+        lua_pushnil(L);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation (pending): https://wiki.mudlet.org/w/Manual:Lua_Functions#resetSplitFormat
+int TLuaInterpreter::resetSplitFormat(lua_State* L)
+{
+    QString windowName;
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "resetSplitFormat: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->resetSplitFormat(windowName); !success) {
+        lua_pushnil(L);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
@@ -16708,6 +16888,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "replace", TLuaInterpreter::replace);
     lua_register(pGlobalLua, "setBgColor", TLuaInterpreter::setBgColor);
     lua_register(pGlobalLua, "setFgColor", TLuaInterpreter::setFgColor);
+    lua_register(pGlobalLua, "setSplitBgColor", TLuaInterpreter::setSplitBgColor);
+    lua_register(pGlobalLua, "setSplitFgColor", TLuaInterpreter::setSplitFgColor);
+    lua_register(pGlobalLua, "resetSplitFormat", TLuaInterpreter::resetSplitFormat);
     lua_register(pGlobalLua, "tempTimer", TLuaInterpreter::tempTimer);
     lua_register(pGlobalLua, "tempTrigger", TLuaInterpreter::tempTrigger);
     lua_register(pGlobalLua, "tempRegexTrigger", TLuaInterpreter::tempRegexTrigger);

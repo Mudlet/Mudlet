@@ -2100,12 +2100,84 @@ void TConsole::setBgColor(const QColor& newColor)
     mLowerPane->forceUpdate();
 }
 
+std::pair<bool, QString> TConsole::setSplitBgColor(const QString& name, const QColor& newColor)
+{
+    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
+        return setSplitBgColor(newColor);
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->setSplitBgColor(newColor);
+    }
+
+    return {false, QStringLiteral("mini-console, user window or buffer \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setSplitBgColor(const QColor& newColor)
+{
+    if (buffer.applySplitBgColor(P_begin, newColor)) {
+        mUpperPane->forceUpdate();
+        mLowerPane->forceUpdate();
+        return {true, QString()};
+    }
+    return {false, QLatin1String("invalid character position")};
+}
+
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     buffer.applyFgColor(P_begin, P_end, newColor);
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
+}
+
+std::pair<bool, QString> TConsole::setSplitFgColor(const QString& name, const QColor& newColor)
+{
+    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
+        return setSplitFgColor(newColor);
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->setSplitFgColor(newColor);
+    }
+
+    return {false, QStringLiteral("mini-console, user window or buffer \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setSplitFgColor(const QColor& newColor)
+{
+    if (buffer.applySplitFgColor(P_begin, newColor)) {
+        mUpperPane->forceUpdate();
+        mLowerPane->forceUpdate();
+        return {true, QString()};
+    }
+    return {false, QLatin1String("invalid character position")};
+}
+
+std::pair<bool, QString> TConsole::resetSplitFormat(const QString& name)
+{
+    if (name.isEmpty() || !name.compare(QLatin1String("main"))) {
+        return resetSplitFormat();
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->resetSplitFormat();
+    }
+
+    return {false, QStringLiteral("mini-console, user window or buffer \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::resetSplitFormat()
+{
+    auto result = buffer.resetSplitFormat(P_begin);
+    if (result.first) {
+        mUpperPane->forceUpdate();
+        mLowerPane->forceUpdate();
+    }
+    return result;
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)
