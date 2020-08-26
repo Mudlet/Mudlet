@@ -622,6 +622,20 @@ void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
     }
 }
 
+std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a userwindow cannot have an empty string as its name")};
+    }
+
+    auto pW = mDockWidgetMap.value(name);
+    if (pW) {
+        pW->setStyleSheet(userWindowStyleSheet);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
+}
+
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
