@@ -1640,12 +1640,12 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17461"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (ist keine Datei oder ein Symlink auf eine Datei)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17470"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (ist keine lesbare Datei oder ein Symlink auf eine lesbare Datei)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17488"/>
