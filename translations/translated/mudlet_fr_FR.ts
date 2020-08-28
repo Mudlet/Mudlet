@@ -9691,7 +9691,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3738"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Carte - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3754"/>
