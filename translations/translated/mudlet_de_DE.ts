@@ -1616,12 +1616,12 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17375"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Keine Fehlermeldung von Lua verfügbar.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17377"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Lua-Fehler: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17379"/>
