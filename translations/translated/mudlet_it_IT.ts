@@ -1623,12 +1623,12 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17461"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (non è un file o un collegamento simbolico ad un file)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17470"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (non è un file leggibile o un collegamento simbolico ad un file leggibile)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17488"/>
