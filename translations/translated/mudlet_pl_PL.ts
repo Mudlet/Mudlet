@@ -1576,12 +1576,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17461"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (nie ma pliku lub symlinku do pliku)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17470"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (nie ma pliku do odczytu lub symlinku do pliku do odczytu)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17488"/>
