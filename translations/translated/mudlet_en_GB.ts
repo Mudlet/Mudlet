@@ -1612,12 +1612,12 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17375"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>No error message available from Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17377"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Lua error: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17379"/>
@@ -1635,12 +1635,12 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17461"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (isn&apos;t a file or symlink to a file)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17470"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (isn&apos;t a readable file or symlink to a readable file)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17488"/>
