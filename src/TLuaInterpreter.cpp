@@ -16661,6 +16661,24 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::insertNativeSeparatorsFunction(lua_State* L)
+{
+    // This is likely only needed for Windows but should not be harmful for
+    // other OSes and it keeps things simpler if they all use it:
+    // clang-format off
+    luaL_dostring(L, R"LUA(function toNativeSeparators(rawPath)
+  if package.config:sub(1,1) == '\\' then
+    return string.gsub(rawPath, '/', '\\')
+  end
+
+  assert((package.config:sub(1,1) == '/'), "package path directory separator is neither '\\' nor '/' and cannot be handled")
+
+  return string.gsub(rawPath, '\\', '/')
+end)LUA");
+    // clang-format on
+}
+
+// No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
@@ -17121,6 +17139,8 @@ void TLuaInterpreter::initLuaGlobals()
     additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
 #endif
 
+    insertNativeSeparatorsFunction(pGlobalLua);
+
     luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = toNativeSeparators([[%1;]]) .. package.cpath").arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
     luaL_dostring(pGlobalLua, QStringLiteral("package.path = toNativeSeparators([[%1;]]) .. package.path").arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
 
@@ -17317,21 +17337,7 @@ void TLuaInterpreter::initIndenterGlobals()
     additionalCPaths << QStringLiteral("%1/lib/?.so").arg(appPath);
 #endif
 
-    // Insert the same function that got put into "luaGlobal.lua" in order to
-    // make the paths cleaner (and conform to what the package handler is
-    // expecting) - it is only needed for Windows but should not be harmful for
-    // other OSes and it keeps things simpler if they all use it:
-    // clang-format off
-    luaL_dostring(pIndenterState.get(), R"LUA(function toNativeSeparators(rawPath)
-  if package.config:sub(1,1) == '\\' then
-    return string.gsub(rawPath, '/', '\\')
-  end
-
-  assert((package.config:sub(1,1) == '/'), "package path directory separator is neither '\\' nor '/' and cannot be handled")
-
-  return string.gsub(rawPath, '\\', '/')
-end)LUA");
-    // clang-format on
+    insertNativeSeparatorsFunction(pIndenterState.get());
 
     // 1 installed *nix case - probably not applicable to Windows
     //     "LUA_DEFAULT_PATH/?.lua" (if defined and not empty)

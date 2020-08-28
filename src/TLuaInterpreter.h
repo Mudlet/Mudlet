@@ -591,6 +591,7 @@ private:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    void insertNativeSeparatorsFunction(lua_State* L);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
