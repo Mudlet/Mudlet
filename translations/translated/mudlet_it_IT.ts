@@ -1600,12 +1600,12 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17375"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Nessun messaggio di errore disponibile da Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17377"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Errore Lua: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17379"/>
