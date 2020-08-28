@@ -605,8 +605,12 @@ end
 --- saves your container settings
 -- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
 -- to be reliable it is important that the Adjustable.Container has an unique 'name'
+-- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines save directory [optional]
 -- @see Adjustable.Container:load
-function Adjustable.Container:save()
+function Adjustable.Container:save(slot, dir)
+    assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.save: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
+    assert(dir == nil or type(dir) == "string" , "Adjustable.Container.save: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
     local mytable = {}
     mytable.x = self.x
     mytable.y = self.y
@@ -620,17 +624,30 @@ function Adjustable.Container:save()
     mytable.padding = self.padding
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
-    if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
-    table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
+
+    dir = dir or getMudletHomeDir().."/AdjustableContainer/"
+    slot = slot or ""
+    local saveDir = string.format("%s%s%s.lua", dir, self.name, slot)
+    if not(io.exists(dir)) then lfs.mkdir(dir) end
+    table.save(saveDir, mytable)
 end
 
 --- restores/loads the before saved settings 
+-- @param slot defines a load slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines load directory [optional]
 -- @see Adjustable.Container:save
-function Adjustable.Container:load()
+function Adjustable.Container:load(slot, dir)
     local mytable = {}
 
-    if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
-        table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
+    assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.load: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
+    assert(dir == nil or type(dir) == "string" , "Adjustable.Container.load: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
+    dir = dir or getMudletHomeDir().."/AdjustableContainer/"
+    slot = slot or ""
+    local loadDir = string.format("%s%s%s.lua", dir, self.name, slot)
+    if io.exists(loadDir) then
+        table.load(loadDir, mytable)
+    else
+        return "Adjustable.Container.load: Couldn't find load settings from " .. loadDir
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
@@ -669,18 +686,22 @@ function Adjustable.Container:reposition()
 end
 
 --- saves all your adjustable containers at once
+-- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines save directory [optional]
 -- @see Adjustable.Container:save
-function Adjustable.Container:saveAll()
+function Adjustable.Container:saveAll(slot, dir)
     for  k,v in pairs(Adjustable.Container.all) do
-        v:save()
+        v:save(slot, dir)
     end
 end
 
 --- loads all your adjustable containers at once
+-- @param slot defines a load slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines load directory [optional]
 -- @see Adjustable.Container:load
-function Adjustable.Container:loadAll()
+function Adjustable.Container:loadAll(slot, dir)
     for  k,v in pairs(Adjustable.Container.all) do
-        v:load()
+        v:load(slot, dir)
     end
 end
 
