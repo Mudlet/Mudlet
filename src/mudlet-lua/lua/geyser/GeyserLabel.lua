@@ -885,6 +885,175 @@ function Geyser.Label:disableClickthrough()
   self.clickthrough = false
 end
 
+-- internal function to change the layout of the rightClick menu if we are at the right edge
+-- @param labelNest Nested Labels
+-- @param fdir flying direction of the label
+
+local function changeMenuLayout(labelNest, fdir)
+  if not labelNest then
+    return
+  end
+  for k, v in pairs(labelNest) do
+    v.flyDir = fdir
+    changeMenuLayout(v.nestedLabels, fdir)
+  end
+end
+
+-- internal function to create/restyle the right click Menu Labels
+function Geyser.Label:createMenuItems(MenuItems, configLabel, myMenu, depth)
+  
+  depth = depth or 1
+  MenuItems = MenuItems or self.MenuItems
+  self.MenuItems = MenuItems
+  myMenu = myMenu or self.rightClickMenu
+  configLabel = configLabel or myMenu
+  myMenu.MenuLabels = myMenu.MenuLabels or {}
+  
+  for i = 1, #MenuItems do
+    if type(MenuItems[i]) == "string" then
+      myMenu.MenuLabels[MenuItems[i]] = myMenu.MenuLabels[MenuItems[i]] or
+      myMenu:addChild(
+      {
+        depth = depth,
+        menuName = MenuItems[i],
+        width = configLabel["MenuWidth"..depth] or configLabel["MenuWidth"],
+        height = configLabel["MenuHeight"..depth] or configLabel["MenuHeight"],
+        name = self.name.. "RightClickMenu." .. MenuItems[i]..i,
+        format = configLabel["MenuFormat"..depth] or configLabel["MenuFormat"],
+        font = configLabel["MenuFont"..depth] or configLabel["MenuFont"],
+        fgColor = "nocolor",
+        message = MenuItems[i],
+        color = "red",
+        layoutDir = "RV",
+        flyOut = true,
+        nestable = true,
+      }
+    )
+    local Style = configLabel["Style"..depth] or configLabel["Style"]
+    local MenuStyle = configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+    MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+    myMenu.MenuLabels[MenuItems[i]]:setStyleSheet(MenuStyle)
+  end
+  if type(MenuItems[i]) == "table" then
+    myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
+  end
+end
+end
+
+-- internal function to handle the onRightClick event
+-- @param oldClickCallBack previous clickcallback function
+-- @param oldClickArgs previous clickcallback args
+-- @param event the onClick event
+
+function Geyser.Label:onRightClick(oldClickCallBack, oldClickArgs, event)
+  closeAllLevels(self.rightClickMenu)
+  if event.button == "RightButton" then
+    local winw = getUserWindowSize(self.windowname)
+    local mousepos = self:get_x() + event.x
+    local maxdiff = self.rightClickMenu.MenuWidth
+    local diff = winw - mousepos
+    local flyDir = self.rightClickMenu.nestedLabels[1].flyDir
+    if diff <= maxdiff and flyDir == "R" then
+      changeMenuLayout(self.rightClickMenu.nestedLabels, "L")
+    elseif diff > maxdiff and flyDir == "L" then
+      changeMenuLayout(self.rightClickMenu.nestedLabels, "R")
+    end
+    self.rightClickMenu:move(event.x, event.y)
+    doNestShow(self.rightClickMenu)
+  else
+    
+    if not(oldClickCallBack) then 
+      return 
+    end
+    
+    if type(oldClickCallBack) == "string" then
+      oldClickCallBack = loadstring("return "..oldClickCallBack.."(...)")
+    end
+    local oldArgs = table.deepcopy(oldClickArgs)
+    oldArgs[#oldArgs + 1] = event
+    oldClickCallBack(unpack(oldArgs))    
+  end
+end
+
+--internal function to find right click menu labels by name 
+-- if label has a parent the parent needs also to be specified
+local function findMenuElement(parent, name)
+  local menu = menu or parent.MenuItems
+  local parentName = parent.menuName
+  for i = 1, #menu do
+    local item = menu[i]
+    if type(item) == "string" then
+      item = parentName and parentName.."."..item or item
+      if item == name then
+        return parent.MenuLabels[menu[i]]
+      end
+    end
+    if type(item) == "table" then
+      local itemParent = menu[i-1]
+      local element = findMenuElement(parent.MenuLabels[itemParent], name)
+      if element then
+        return element
+      end
+    end
+  end
+end
+
+--- Sets a action to be used when this label from the right click menu is clicked
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param ... Parameters to pass to the function. Will be passed directly to the setClickCallback function.
+-- @see Geyser.Label:setClickCallback
+function Geyser.Label:setMenuAction(name, ...)
+  local menuElement = findMenuElement(self.rightClickMenu, name)
+  if not menuElement then
+    error ("setMenuAction: Couldn't find menu element "..name)
+  end
+  menuElement:setClickCallback(...)
+end
+
+--- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param func The function to use as string (can be any Geyser.Label function)
+-- @param ... Parameters to pass to the function.
+function Geyser.Label:configMenuLabel(name, func, ...)
+  local menuElement = findMenuElement(self.rightClickMenu, name)
+  if not menuElement then
+    error ("configMenuLabel: Couldn't find menu element "..name)
+  end
+  menuElement[func](menuElement, ...)
+end
+
+--- create a right click menu for your Label
+---@param cons different parameters controlling the size and style of the right click menu elements
+--@param[opt="140" ] cons.MenuWidth  default menu width of your right click menu. to give levels different width add a number at the end per level usage MenuWidth1
+--@param[opt="25" ] cons.MenuWidth default menu height of your right click menu. to give levels different height add a number at the end per level usage MenuHeight1
+--@param[opt="c10"] cons.MenuFormat default font/echo format of your right click menu. different levels can use different formating. usage MenuFormat1 MenuFormat2
+--@param[opt="light"] cons.Style default styling mode of your right click menu. 2 possible modes "light" and "dark". different levels can also have different styling modes
+--@param cons.MenuStyle default style of your menu. if this is given cons.Style will be ignored. different levels can also have different MenuStyles
+--@param cons.MenuItems list of right click menu items/elements. usage example: MenuItems = {"First", "Second", {"First"},"Third"} 
+function Geyser.Label:createRightClickMenu(cons)
+  cons.width = "0"
+  cons.height = "0"
+  cons.nestable = true
+  cons.name = self.name .. "rightClickMenu"
+  cons.MenuWidth = cons.MenuWidth or 140
+  cons.MenuHeight = cons.MenuHeight or 25
+  cons.MenuFormat = cons.MenuFormat or "c10"
+  cons.MenuStyleMode = {}
+  cons.MenuStyleMode["light"] = [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} ]]
+  cons.MenuStyleMode["dark"] = [[QLabel::hover{ background-color: #282828;  color: #808080;} QLabel::!hover{color: #707070; background-color:#181818;}]]
+  
+  cons.Style = cons.Style or "light"
+  
+  if not(self.rightClickMenu) then
+    local oldClickCallBack = self.clickCallback
+    local oldClickArgs = self.clickArgs
+    self:setClickCallback(self.onRightClick, self, oldClickCallBack, oldClickArgs)
+  end
+  
+  -- create a label with a nestable=true property to say that it can nest labels
+  self.rightClickMenu = Geyser.Label:new(cons, self)
+  self:createMenuItems(cons.MenuItems)
+end
+
 ---
 -- The table returned by @{setClickCallback}
 -- @field x The x coordinate of the click local to the label
