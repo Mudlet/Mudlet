@@ -59,6 +59,7 @@ public:
     CommandLineType getType() const { return mType; }
 
     QPalette mRegularPalette;
+    QString mCommandLineName;
 
 
 private:

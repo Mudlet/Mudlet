@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TEvent.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -50,6 +51,7 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
 , mType(type)
+, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -584,6 +586,7 @@ void TCommandLine::adjustHeight()
     }
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
+
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -849,9 +852,22 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionTyped.clear();
 
     QStringList _l = _t.split(QChar::LineFeed);
-    for (int i = 0; i < _l.size(); i++) {
-        mpHost->send(_l[i]);
-    }
+
+        for (int i = 0; i < _l.size(); i++) {
+            if (mType != SubCommandLine) {
+            mpHost->send(_l[i]);
+            } else {
+                TEvent mudletEvent{};
+                mudletEvent.mArgumentList.append(QLatin1String("sysCmdLineEvent"));
+                mudletEvent.mArgumentList.append(mCommandLineName);
+                mudletEvent.mArgumentList.append(_l[i]);
+                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                mpHost->raiseEvent(mudletEvent);
+            }
+        }
+
     if (!toPlainText().isEmpty()) {
         mHistoryBuffer = 0;
         setPalette(mRegularPalette);

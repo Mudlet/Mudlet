@@ -2423,25 +2423,27 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     return {true, QString()};
 }
 
-std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name,int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
     }
 
-    auto pC = mSubCommandLineMap.value(name);
+    auto pN = mSubCommandLineMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
-    if (!pC) {
+
+    if (!pN) {
         if (!pW) {
-            pC = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
         } else {
-            pC = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
         }
-        mSubCommandLineMap[name] = pC;
-        pC->setObjectName(name);
-        pC->resize(width, height);
-        pC->move(x, y);
-        pC->show();
+        mSubCommandLineMap[name] = pN;
+        pN->mCommandLineName = name;
+        pN->setObjectName(name);
+        pN->resize(width, height);
+        pN->move(x, y);
+        pN->show();
         return {true, QString()};
     }
     return {false, QLatin1String("couldn't create commandLine")};

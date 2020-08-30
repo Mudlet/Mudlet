@@ -2149,7 +2149,7 @@ end
 --These functions ensure backward compatibility for the setLabelCallback functions
 --unpack function which also returns the nil values
 -- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
-local function unpack_w_nil (arg_table, counter)
+function unpack_w_nil (arg_table, counter)
   counter = counter or 1
   if counter >= arg_table.n then
     return arg_table[counter]

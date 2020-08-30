@@ -5,31 +5,81 @@
 -- --
 --------------------------------------
 
---- Represents a commandLine primitive
+--- Represents a (sub)commandLine primitive
 -- @class table
 -- @name Geyser.CommandLine
--- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.CommandLine = Geyser.Window:new({
   name = "CommandLineClass"
 })
 
-
 -- Save a reference to our parent constructor
 Geyser.CommandLine.parent = Geyser.Window
+
+--- Clears the cmdLine
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
+function Geyser.CommandLine:clear()
+  clearCmdLine(self.name)
+end
+
+--- prints text to the commandline and clears text if there was one previously
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine(text)
+function Geyser.CommandLine:print(text)
+  printCmdLine(self.name, text)
+end
+
+--- appends text to the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
+function Geyser.CommandLine:append(text)
+  appendCmdLine(self.name, text)
+end
+
+--- returns the text in the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
+function Geyser.CommandLine:getText()
+  return getCmdLine(self.name)
+end
+
+--- Sets an action to be used when text is send in this commandline. When this
+-- function is called by the event system, text the commandline sends will be 
+-- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
+-- the setClickCallback events
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function. Must be strings or numbers.
+function Geyser.CommandLine:setAction(func, ...)
+  arg.n = arg.n + 1
+  local oldarg = arg
+  if self.actionId then
+    killAnonymousEventHandler(self.actionId)
+  end
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+  end
+  
+  local actionFunc = function (event, name, text) 
+    if self.name == name then 
+      arg[arg.n] = text
+      func(unpack_w_nil(arg))
+    end 
+  end
+  
+  self.actionId = registerAnonymousEventHandler("sysCmdLineEvent", actionFunc)
+  self.action = func
+  self.actionArgs = { oldarg }
+end
 
 -- Overridden constructor
 function Geyser.CommandLine:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "commandLine"
-
+  
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
   me.windowname = me.windowname or me.container.windowname or "main"
-
+  
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
+  
   createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
   return me
 end
