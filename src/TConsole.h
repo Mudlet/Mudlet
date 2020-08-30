@@ -109,6 +109,7 @@ public:
 
     int getColumnNumber();
     std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -257,6 +258,7 @@ public:
     int mIndentCount;
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;

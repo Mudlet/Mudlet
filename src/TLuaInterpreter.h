@@ -251,6 +251,7 @@ public:
     static int searchRoom(lua_State*);
     static int resetProfile(lua_State*);
     static int createMapper(lua_State*);
+    static int createCommandLine(lua_State*);
     static int sendTelnetChannel102(lua_State* L);
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);

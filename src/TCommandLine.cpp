@@ -35,7 +35,7 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mpHost(pHost)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -49,6 +49,7 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
+, mType(type)
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -570,6 +571,9 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::adjustHeight()
 {
+    if (mType == SubCommandLine) {
+        return;
+    }
     int lines = document()->size().height();
     int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {

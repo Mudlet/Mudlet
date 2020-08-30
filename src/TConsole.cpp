@@ -263,7 +263,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setMargin(0);
 
     if (mType == MainConsole) {
-        mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
+        mpCommandLine = new TCommandLine(pH, mpCommandLine->MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
@@ -2187,6 +2187,13 @@ void TConsole::resetMainConsole()
         itDockWidget.remove();
     }
 
+    QMutableMapIterator<QString, TCommandLine*> itCommandLine(mSubCommandLineMap);
+    while (itCommandLine.hasNext()) {
+        itCommandLine.next();
+        itCommandLine.value()->deleteLater();
+        itCommandLine.remove();
+    }
+
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
@@ -2416,6 +2423,30 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     return {true, QString()};
 }
 
+std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
+    }
+
+    auto pC = mSubCommandLineMap.value(name);
+    auto pW = mDockWidgetMap.value(windowname);
+    if (!pC) {
+        if (!pW) {
+            pC = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
+        } else {
+            pC = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+        }
+        mSubCommandLineMap[name] = pC;
+        pC->setObjectName(name);
+        pC->resize(width, height);
+        pC->move(x, y);
+        pC->show();
+        return {true, QString()};
+    }
+    return {false, QLatin1String("couldn't create commandLine")};
+}
+
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
@@ -2462,6 +2493,8 @@ bool TConsole::raiseWindow(const QString& name)
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
+    auto pN = mSubCommandLineMap.value(name);
+
     if (pC) {
         pC->raise();
         return true;
@@ -2474,6 +2507,10 @@ bool TConsole::raiseWindow(const QString& name)
         pM->raise();
         return true;
     }
+    if (pN) {
+        pN->raise();
+        return true;
+    }
 
     return false;
 }
@@ -2483,6 +2520,8 @@ bool TConsole::lowerWindow(const QString& name)
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
+    auto pN = mSubCommandLineMap.value(name);
+
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
@@ -2496,6 +2535,10 @@ bool TConsole::lowerWindow(const QString& name)
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
         mpMainDisplay->lower();
+        return true;
+    }
+    if (pN) {
+        pN->lower();
         return true;
     }
     return false;

@@ -2305,7 +2305,7 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         // Set or reset all the specified attributes (but leave others unchanged)
-        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
+        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (state ? attributes : TChar::None));
         pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
@@ -2351,6 +2351,7 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -2365,6 +2366,11 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
         } else {
             return pHost->mpConsole->showWindow(name);
         }
+    }
+
+    if (pN) {
+        pN->show();
+        return true;
     }
 
     return false;
@@ -2393,6 +2399,8 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->hide();
@@ -2404,6 +2412,11 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
+    }
+
+    if (pN) {
+        pN->hide();
+        return true;
     }
 
     return false;
@@ -2418,25 +2431,35 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->resize(x1, y1);
         return true;
-    } else if (pC) {
-        if (pD) {
-            if (!pD->isFloating()) {
-                // Can't resize a docked window...?
-                return false;
-            } else {
-                pD->resize(x1, y1);
-                return true;
-            }
-        } else {
-            pC->resize(x1, y1);
-            return true;
-        }
-    } else {
-        return false;
     }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->resize(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->resize(x1, y1);
+        return true;
+    }
+
+    return false;
 }
 
 bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1)
@@ -2498,6 +2521,8 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->move(x1, y1);
         return true;
@@ -2521,6 +2546,11 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pN) {
+        pN->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -2535,6 +2565,7 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
     auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
     auto pW = pHost->mpConsole->mpMainFrame;
     auto pM = pHost->mpConsole->mpMapper;
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
         return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
@@ -2558,6 +2589,13 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pN) {
+        pN->setParent(pN);
+        pN->move(x1, y1);
+        if (show) {
+            pN->show();
         }
         return {true, QString()};
     } else if (pM && name.toLower() == QLatin1String("mapper")) {

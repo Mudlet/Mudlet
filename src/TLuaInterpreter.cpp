@@ -4138,6 +4138,76 @@ int TLuaInterpreter::createMapper(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createCommandLine
+int TLuaInterpreter::createCommandLine(lua_State* L)
+{
+    QString commandLineName;
+    QString windowName = QLatin1String("main");
+    int n = lua_gettop(L);
+    int x, y, width, height, counter;
+    counter = 1;
+
+    if (n > 5 && lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n > 5 && lua_type(L, 1) == LUA_TSTRING) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        counter++;
+        if (windowName == "main") {
+            // QString::compare is zero for a match on the "default"
+            // case so clear the variable - to flag this as the main
+            // window case - as is the case for an empty string
+            windowName.clear();
+        }
+    }
+
+    if (lua_type(L, counter) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        commandLineName = QString::fromUtf8(lua_tostring(L, counter));
+        counter++;
+    }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        x = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        y = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline width as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        width = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline height as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        height = lua_tonumber(L, counter);
+    }
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
 int TLuaInterpreter::createBuffer(lua_State* L)
 {
@@ -16889,6 +16959,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);
     lua_register(pGlobalLua, "createMapper", TLuaInterpreter::createMapper);
+    lua_register(pGlobalLua, "createCommandLine", TLuaInterpreter::createCommandLine);
     lua_register(pGlobalLua, "getMainConsoleWidth", TLuaInterpreter::getMainConsoleWidth);
     lua_register(pGlobalLua, "resetProfile", TLuaInterpreter::resetProfile);
     lua_register(pGlobalLua, "printCmdLine", TLuaInterpreter::printCmdLine);
