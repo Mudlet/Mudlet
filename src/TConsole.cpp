@@ -2423,7 +2423,7 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     return {true, QString()};
 }
 
-std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name,int x, int y, int width, int height)
+std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};

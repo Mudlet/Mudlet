@@ -2592,7 +2592,7 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
         }
         return {true, QString()};
     } else if (pN) {
-        pN->setParent(pN);
+        pN->setParent(pW);
         pN->move(x1, y1);
         if (show) {
             pN->show();
