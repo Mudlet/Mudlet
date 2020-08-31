@@ -2716,6 +2716,32 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
     return false;
 }
 
+bool mudlet::setCmdLineAction(Host* pHost, const QString& name, const int func)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setAction(func);
+        return true;
+    }
+    return false;
+}
+
+bool mudlet::resetCmdLineAction(Host* pHost, const QString& name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->resetAction();
+        return true;
+    }
+    return false;
+}
+
 bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const int func)
 {
     if (!pHost || !pHost->mpConsole) {

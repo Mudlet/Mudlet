@@ -5002,6 +5002,72 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
+int TLuaInterpreter::setCmdLineAction(lua_State* L){
+    Host& host = getHostFromLua(L);
+
+    QString name;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 1));
+        if (name.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+            return 2;
+        }
+        lua_remove(L, 1);
+    }
+
+    int func;
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L, "setCmdLineAction: bad argument #2 type (function expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    func = luaL_ref(L, LUA_REGISTRYINDEX);
+    bool lua_result = false;
+    lua_result = mudlet::self()->setCmdLineAction(&host, name, func);
+
+    if (lua_result) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("setCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
+        return 2;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
+int TLuaInterpreter::resetCmdLineAction(lua_State* L){
+    Host& host = getHostFromLua(L);
+
+    QString name;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "resetCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 1));
+        if (name.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "resetCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    bool lua_result = false;
+    lua_result = mudlet::self()->resetCmdLineAction(&host, name);
+    if (lua_result) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("resetCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
+        return 2;
+    }
+}
+
 // No documentation available in wiki - internal function
 int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 {
@@ -16025,6 +16091,31 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 }
 
 // No documentation available in wiki - internal function
+bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
+{
+    lua_State* L = pGlobalLua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func);
+    int error = 0;
+    lua_pushstring(L, text.toUtf8().constData());
+    error = lua_pcall(L, 1, LUA_MULTRET, 0);
+    if (error) {
+        std::string err = "";
+        if (lua_isstring(L, -1)) {
+            err += lua_tostring(L, -1);
+        }
+
+        QString function = "setCmdLineAction";
+        QString name = "cmd line Action";
+        logError(err, name, function);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    return !error;
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
@@ -16973,6 +17064,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
+    lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
+    lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
     lua_register(pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback);
     lua_register(pGlobalLua, "setLabelDoubleClickCallback", TLuaInterpreter::setLabelDoubleClickCallback);
     lua_register(pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback);

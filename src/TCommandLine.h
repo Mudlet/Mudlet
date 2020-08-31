@@ -57,8 +57,12 @@ public:
     void focusOutEvent(QFocusEvent*) override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
+    void setAction(const int);
+    void resetAction();
+    void releaseFunc(const int, const int );
     CommandLineType getType() const { return mType; }
 
+    int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
 

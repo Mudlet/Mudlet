@@ -116,27 +116,17 @@ end
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function.
 function Geyser.MiniConsole:setCmdAction(func, ...)
-  arg.n = arg.n + 1
-  local oldarg = arg
-  if self.actionId then
-    killAnonymousEventHandler(self.actionId)
-  end
-  if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
-  end
-  
-  local actionFunc = function (event, name, text) 
-    if self.name == name then 
-      arg[arg.n] = text
-      func(unpack_w_nil(arg))
-    end
-  end
-  
-  self.actionId = registerAnonymousEventHandler("sysCmdLineEvent", actionFunc)
-  self.action = func
-  self.actionArgs = {unpack_w_nil(oldarg)}
+  setCmdLineAction(self.name, func, ...)
+  self.actionFunc = func
+  self.actionArgs = { ... }
 end
 
+--- Resets the action the command will be send to the game
+function Geyser.MiniConsole:resetCmdAction()
+  resetCmdLineAction(self.name)
+  self.actionFunc = nil
+  self.actionArgs = nil
+end
 
 --- Clears the cmdLine
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine

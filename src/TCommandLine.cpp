@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "TConsole.h"
-#include "TEvent.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -861,20 +860,17 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     QStringList _l = _t.split(QChar::LineFeed);
 
-        for (int i = 0; i < _l.size(); i++) {
-            if (mType == MainCommandLine) {
+    for (int i = 0; i < _l.size(); i++) {
+        if (mType != MainCommandLine && mActionFunction) {
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+        } else {
             mpHost->send(_l[i]);
-            } else {
-                TEvent mudletEvent{};
-                mudletEvent.mArgumentList.append(QLatin1String("sysCmdLineEvent"));
-                mudletEvent.mArgumentList.append(mCommandLineName);
-                mudletEvent.mArgumentList.append(_l[i]);
-                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                mpHost->raiseEvent(mudletEvent);
-            }
         }
+        // send command to your MiniConsole
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+            mpConsole->printCommand(_l[i]);
+        }
+    }
 
     if (!toPlainText().isEmpty()) {
         mHistoryBuffer = 0;
@@ -1183,4 +1179,26 @@ void TCommandLine::clearMarksOnWholeLine()
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
+}
+
+void TCommandLine::setAction(const int func){
+    releaseFunc(mActionFunction, func);
+    mActionFunction = func;
+}
+
+void TCommandLine::resetAction()
+{
+    if (mActionFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mActionFunction);
+        mActionFunction = 0;
+    }
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TCommandLine::releaseFunc(const int existingFunction, const int newFunction)
+{
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
+    }
 }
