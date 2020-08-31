@@ -473,31 +473,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3205"/>
       <location filename="../src/T2DMap.cpp" line="4910"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>實心線條</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3206"/>
       <location filename="../src/T2DMap.cpp" line="4911"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>點組成線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3207"/>
       <location filename="../src/T2DMap.cpp" line="4912"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>虛線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3208"/>
       <location filename="../src/T2DMap.cpp" line="4913"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>線點交錯</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3209"/>
       <location filename="../src/T2DMap.cpp" line="4914"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>虛點點線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3474"/>
@@ -691,13 +691,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>屬性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2798"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>屬性...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2799"/>
@@ -1003,13 +1003,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3001"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>屬性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3005"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>屬性...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
@@ -1168,7 +1168,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4166"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>載入 Mudlet 地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4168"/>
