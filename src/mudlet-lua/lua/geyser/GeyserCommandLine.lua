@@ -44,7 +44,7 @@ end
 -- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
 -- the setClickCallback events
 -- @param func The function to use.
--- @param ... Parameters to pass to the function. Must be strings or numbers.
+-- @param ... Parameters to pass to the function.
 function Geyser.CommandLine:setAction(func, ...)
   arg.n = arg.n + 1
   local oldarg = arg
@@ -59,12 +59,12 @@ function Geyser.CommandLine:setAction(func, ...)
     if self.name == name then 
       arg[arg.n] = text
       func(unpack_w_nil(arg))
-    end 
+    end
   end
   
   self.actionId = registerAnonymousEventHandler("sysCmdLineEvent", actionFunc)
   self.action = func
-  self.actionArgs = { oldarg }
+  self.actionArgs = {unpack_w_nil(oldarg)}
 end
 
 -- Overridden constructor

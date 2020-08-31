@@ -96,6 +96,72 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Start commandLine functions
+--- Enables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:enableCommandLine()
+  enableCommandLine(self.name)
+end
+
+--- Disables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:disableCommandLine()
+  disableCommandLine(self.name)
+end
+
+--- Sets an action to be used when text is send in this commandline. When this
+-- function is called by the event system, text the commandline sends will be 
+-- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
+-- the setClickCallback events
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function.
+function Geyser.MiniConsole:setCmdAction(func, ...)
+  arg.n = arg.n + 1
+  local oldarg = arg
+  if self.actionId then
+    killAnonymousEventHandler(self.actionId)
+  end
+  if type(func) == "string" then
+    func = loadstring("return "..func.."(...)")
+  end
+  
+  local actionFunc = function (event, name, text) 
+    if self.name == name then 
+      arg[arg.n] = text
+      func(unpack_w_nil(arg))
+    end
+  end
+  
+  self.actionId = registerAnonymousEventHandler("sysCmdLineEvent", actionFunc)
+  self.action = func
+  self.actionArgs = {unpack_w_nil(oldarg)}
+end
+
+
+--- Clears the cmdLine
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
+function Geyser.MiniConsole:clearCmd()
+  clearCmdLine(self.name)
+end
+
+--- prints text to the commandline and clears text if there was one previously
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine(text)
+function Geyser.MiniConsole:printCmd(text)
+  printCmdLine(self.name, text)
+end
+
+--- appends text to the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
+function Geyser.MiniConsole:appendCmd(text)
+  appendCmdLine(self.name, text)
+end
+
+--- returns the text in the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
+function Geyser.MiniConsole:getCmdLine()
+  return getCmdLine(self.name)
+end
+
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
@@ -324,7 +390,6 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".*Class") then

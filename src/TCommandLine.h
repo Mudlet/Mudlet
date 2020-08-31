@@ -46,12 +46,13 @@ public:
         UnknownType = 0x0,     // Should not be encountered but left as a trap value
         MainCommandLine = 0x1, // One per profile
         SubCommandLine = 0x2,  // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4,  // Integrated in MiniConsoles
     };
 
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
 
     Q_DISABLE_COPY(TCommandLine)
-    TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void recheckWholeLine();

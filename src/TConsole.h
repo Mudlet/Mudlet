@@ -32,6 +32,7 @@
 
 #include "pre_guard.h"
 #include <QDataStream>
+#include <QHBoxLayout>
 #include <QFile>
 #include <QPointer>
 #include <QTextStream>
@@ -136,6 +137,7 @@ public:
     void setBgColor(int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -237,6 +239,7 @@ public:
     QToolButton* emergencyStop;
     QWidget* layer;
     QWidget* layerCommandLine;
+    QHBoxLayout* layoutLayer2;
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;

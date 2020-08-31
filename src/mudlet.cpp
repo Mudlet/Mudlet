@@ -2497,6 +2497,21 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
     }
 }
 
+bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setMiniConsoleCmdVisible(isVisible);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool mudlet::resetFormat(Host* pHost, QString& name)
 {
     if (!pHost || !pHost->mpConsole) {

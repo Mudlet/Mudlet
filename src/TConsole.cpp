@@ -330,7 +330,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setMaximumHeight(31);
     layerCommandLine->setMinimumHeight(31);
 
-    auto layoutLayer2 = new QHBoxLayout(layerCommandLine);
+    layoutLayer2 = new QHBoxLayout(layerCommandLine);
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
@@ -1904,6 +1904,27 @@ bool TConsole::setMiniConsoleFontSize(int size)
 
     refreshMiniConsole();
     return true;
+}
+
+void TConsole::setMiniConsoleCmdVisible(bool isVisible)
+{
+    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    // create MiniConsole commandline if it's not existing
+    if (!mpCommandLine) {
+        mpCommandLine = new TCommandLine(mpHost, mpCommandLine->ConsoleCommandLine, this, mpMainDisplay);
+        mpCommandLine->setContentsMargins(0, 0, 0, 0);
+        mpCommandLine->setSizePolicy(sizePolicy);
+        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+        // put this CommandLine in the mainConsoles SubCommandLineMap
+        // name is the console name
+        mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLine;
+        mpCommandLine->mCommandLineName = mConsoleName;
+        mpCommandLine->setObjectName(mConsoleName);
+        layoutLayer2->addWidget(mpCommandLine);
+    }
+    mpButtonMainLayer->setVisible(false);
+    layerCommandLine->setVisible(isVisible);
+    mpCommandLine->setVisible(isVisible);
 }
 
 void TConsole::refreshMiniConsole() const

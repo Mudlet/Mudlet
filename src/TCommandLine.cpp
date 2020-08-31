@@ -34,6 +34,7 @@
 #include "pre_guard.h"
 #include <QKeyEvent>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -573,10 +574,15 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::adjustHeight()
 {
+    int lines = document()->size().height();
+    // Workaround for SubCommandLines textCursor not visible in some situations
+    // SubCommandLines cannot autoresize
     if (mType == SubCommandLine) {
+        if (lines <= 1) {
+            verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
+        }
         return;
     }
-    int lines = document()->size().height();
     int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
@@ -593,11 +599,13 @@ void TCommandLine::adjustHeight()
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int x = mpConsole->width();
-        int y = mpConsole->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mpConsole, &event);
+        if (mType == MainCommandLine) {
+            int x = mpConsole->width();
+            int y = mpConsole->height();
+            QSize s = QSize(x, y);
+            QResizeEvent event(s, s);
+            QApplication::sendEvent(mpConsole, &event);
+        }
     }
 }
 
@@ -854,7 +862,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     QStringList _l = _t.split(QChar::LineFeed);
 
         for (int i = 0; i < _l.size(); i++) {
-            if (mType != SubCommandLine) {
+            if (mType == MainCommandLine) {
             mpHost->send(_l[i]);
             } else {
                 TEvent mudletEvent{};

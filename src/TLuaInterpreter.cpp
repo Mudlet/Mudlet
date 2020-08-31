@@ -2618,6 +2618,48 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
+int TLuaInterpreter::enableCommandLine(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableCommandLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setMiniConsoleCmdVisible(&host, windowName, true);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
+int TLuaInterpreter::disableCommandLine(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableCommandLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setMiniConsoleCmdVisible(&host, windowName, false);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
 int TLuaInterpreter::replace(lua_State* L)
 {
@@ -16992,6 +17034,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
+    lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
+    lua_register(pGlobalLua, "disableCommandLine", TLuaInterpreter::disableCommandLine);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
