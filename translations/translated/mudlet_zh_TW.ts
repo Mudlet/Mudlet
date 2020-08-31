@@ -1549,7 +1549,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17375"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>沒有來自 Lua 的錯誤訊息。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17377"/>
@@ -3269,7 +3269,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2107"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua 字元或代碼</translation>
     </message>
   </context>
   <context>
@@ -3285,7 +3285,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="178"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>錯誤：這則觸發並未定義匹配模式。請添加後再嘗試啟用。</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="209"/>
@@ -3540,7 +3540,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
       <source>no rotation</source>
-      <translation type="unfinished"/>
+      <translation>無旋轉</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
