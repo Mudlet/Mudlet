@@ -59,7 +59,7 @@ public:
     void clearMarksOnWholeLine();
     void setAction(const int);
     void resetAction();
-    void releaseFunc(const int, const int );
+    void releaseFunc(const int, const int);
     CommandLineType getType() const { return mType; }
 
     int mActionFunction = 0;
