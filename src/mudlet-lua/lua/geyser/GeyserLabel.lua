@@ -537,23 +537,37 @@ function Geyser.Label:displayNest()
     yOffset = parY - (maxDim["V"] - layout["V"])
   end
   local flyIndex = { R = 0, L = 0, T = 0, B = 0 }
+  local yOffsetT = 0
   for i, v in pairs(nestedLabels["V"]) do
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["V"]
-
+    
     if v.flyDir == "L" then
       v.x = parX + flyMap[v.flyDir][1] * width
     else
       v.x = parX + flyMap[v.flyDir][1] * parW
     end
-
+    
+    -- T and B use their own offset values
     if v.flyDir == "T" then
-      v.y = parY + flyMap[v.flyDir][2] * height * ( number - flyIndex[v.flyDir] - yOffset)
+      v.y = parY + flyMap[v.flyDir][2] * height * (number - flyIndex[v.flyDir]) + yOffsetT
+      if v.y < 0 then
+        yOffsetT = v.y * -1
+        v.y = 0
+      end
     else
-      v.y = parY + flyMap[v.flyDir][2] * parH - yOffset + height * flyIndex[v.flyDir]
+      
+      local edge = parY + parH + (number * height)
+      if edge > maxDim["V"]  and v.flyDir == "B" then
+        yOffsetT = edge - maxDim["V"]
+      else
+        yOffsetT = yOffset
+      end
+      
+      v.y = parY + flyMap[v.flyDir][2] * parH - yOffsetT + height * flyIndex[v.flyDir]
     end
-
+    
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -561,22 +575,34 @@ function Geyser.Label:displayNest()
     flyIndex[v.flyDir] = flyIndex[v.flyDir] + 1
   end
   local flyIndex = { R = 0, L = 0, T = 0, B = 0 }
+  local xOffsetL = 0
   for i, v in pairs(nestedLabels["H"]) do
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["H"]
+    -- L and H use their own offset values
     if v.flyDir == "L" then
-      v.x = parX + flyMap[v.flyDir][1] * width * (number - flyIndex[v.flyDir] - xOffset)
+      v.x = parX + flyMap[v.flyDir][1] * width * (number - flyIndex[v.flyDir]) + xOffsetL
+      if v.x < 0 then
+        xOffsetL = v.x * -1
+        v.x = 0
+      end
     else
-      v.x = parX + flyMap[v.flyDir][1] * parW - xOffset + width * flyIndex[v.flyDir]
+      local edge = parX + parW + (number * width)
+      if edge > maxDim["H"]  and v.flyDir == "R" then
+        xOffsetL = edge - maxDim["H"]
+      else
+        xOffsetL = xOffset
+      end
+      v.x = parX + flyMap[v.flyDir][1] * parW - xOffsetL + width * flyIndex[v.flyDir]
     end
-
+    
     if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height
     else
       v.y = parY + flyMap[v.flyDir][2] * parH
     end
-
+    
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -796,22 +822,28 @@ end
 function Geyser.Label:addScrollbars(parent, layout)
   local label = parent.nestedLabels[1]
   local flyDir, layoutDir
+
   flyDir = string.sub(layout, 1, 1)
   layoutDir = string.sub(layout, 2, 2)
-  cons = { name = "forScroll" .. label.name .. layout, x = label:get_x(), y = label:get_y(),
+
+  local cons = { name = "forScroll" .. label.name .. layout, x = label:get_x(), y = label:get_y(),
     width = label:get_width(), layoutDir = layoutDir, flyDir = flyDir, height = label:get_height(), message = "More..." }
-  local forward = Geyser.Label:new(cons, parent.container)
+
+  local forward = Geyser.Label:new(cons, label.container)
+
   forward.nestParent = parent
   forward.maxScroll = #parent.nestedLabels + 1
   forward:setOnEnter("doNestEnter", forward)
   forward:setOnLeave("doNestLeave", forward)
   forward:setClickCallback("doNestScroll", forward)
   cons.name = "backScroll" .. label.name .. layout
+
   local backward = Geyser.Label:new(cons, label.container)
   backward.nestParent = parent
   backward:setOnEnter("doNestEnter", backward)
   backward:setOnLeave("doNestLeave", backward)
   backward:setClickCallback("doNestScroll", backward)
+
   return { backward, forward }
 end
 
