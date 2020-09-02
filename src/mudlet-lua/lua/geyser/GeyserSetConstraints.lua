@@ -18,6 +18,10 @@ function Geyser.set_constraints (window, cons, container)
   os.setlocale("C", "numeric")
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
+  local con_x = container.get_x()
+  local con_y = container.get_y()
+  local con_width = container.get_width()
+  local con_height = container.get_height()
 
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get
@@ -27,75 +31,82 @@ function Geyser.set_constraints (window, cons, container)
   -- needed by width and height.
   for _, v in ipairs { "x", "y", "width", "height" } do
     local getter = "get_" .. v -- name of the function to calculate the
-
+    local num
     -- if passed a number assume pixels are meant
     if type(cons[v]) == "number" then
       cons[v] = string.format("%dpx", cons[v])
     end
 
+    -- if passed as function which returns numbers assume pixels are meant
+    if type(cons[v]) == "function" then
+      num = string.format("%dpx", cons[v]())
+    end    
+    num = num or cons[v]
+
     -- Parse the constraint
-    if string.find(cons[v], "%%") then
+    if string.find(num, "%%") then
       -- This handles dimensions as a percentage of the container.
       -- Negative percentages are converted to the equivalent positive.
       --------------------------------------------------------------
 
       -- scale is a value between 0 and 1
-      local scale = tonumber((string.gsub(cons[v], "%%", ""))) / 100.0
-      if scale < 0 then
+      -- offset is always in pixel
+      local scale, offset = string.match(num,"([%+%-%d%p]+)%%%s*([%+%-%d%p]*)")
+      local negative = string.find(scale, "-") or false -- detect "negative" 0
+      scale = tonumber(scale) / 100.0
+      offset = tonumber(offset) or 0
+      if negative then
         scale = 1 + scale
       end
       local dim = ""
       local min, max = 0, 0
 
       if v == "x" then
-        min = "container.get_x()"
-        max = "container.get_width()"
+        min = con_x
+        max = con_width
       elseif v == "width" then
-        max = "container.get_width()"
+        max = con_width
       elseif v == "y" then
-        min = "container.get_y()"
-        max = "container.get_height()"
+        min = con_y
+        max = con_height
       else
-        max = "container.get_height()"
+        max = con_height
       end
 
       -- Define the getter function
       -- Heiko: on European locales this leads to compile errors because
       --        scale will be "0,5" instead of "0.5"-> syntax error
-      --        Need to find out if there's more such cases in Geyse
       --        Need to find out if there's more such cases in Geyser
-      h_scale = tostring(scale)
-      local src = "local self,container = ...  return function () return " .. min .. " + (" .. h_scale .. " * " .. max .. ") end"
 
       -- compile the getter
-      window[getter] = assert(loadstring(src, "getter for " .. v))(window, container)
+      window[getter] = function() return min + (scale * max) + offset end
 
     else
       -- This handles absolute positioning and character positioning
       -- Negative values indicated positioning from the anti-origin.
-      -- Pre: cons[v] must contain "px" or "c"
+      -- Pre: num must contain "px" or "c"
       --------------------------------------------------------------
 
       -- Create default values
       local x_mult, y_mult = 1, 1 -- by default assume not "c"
-      local negative = string.find(cons[v], "-") or false -- detect "negative" 0
+      local negative = string.find(num, "-") or false -- detect "negative" 0
 
       -- As is, font size is considered a constraint
-      if string.find(cons[v], "c") then
+      if string.find(num, "c") then
         x_mult, y_mult = calcFontSize(window.fontSize)
       end
 
-      local pos = tonumber((string.gsub(cons[v], "%a", "")))
+      local pos = tonumber((string.gsub(num, "%a", "")))
       local max = 0
       local min = 0
 
       if v == "x" then
-        min = "container.get_x()"
+        min = con_x
         pos = x_mult * pos
       elseif v == "width" then
         pos = x_mult * pos
       elseif v == "y" then
-        min = "container.get_y()"
+        min = con_y
         pos = y_mult * pos
       else
         pos = y_mult * pos
@@ -104,27 +115,24 @@ function Geyser.set_constraints (window, cons, container)
       -- Treat negative values differently
       if negative then
         if v == "x" then
-          min = "container.get_x()"
-          max = "container.get_width()"
+          min = con_x
+          max = con_width
         elseif v == "width" then
-          min = "container.get_x()"
-          max = "container.get_width()"
-          pos = string.format("(%d - self:get_x())", pos)
+          min = con_x
+          max = con_width
+          pos = pos - window:get_x()
         elseif v == "y" then
-          min = "container.get_y()"
-          max = "container.get_height()"
+          min = con_y
+          max = con_height
         else -- v == "height"
-          min = "container.get_y()"
-          max = "container.get_height()"
-          pos = string.format("(%d - self:get_y())", pos)
+          min = con_y
+          max = con_height
+          pos = pos - window:get_y()
         end
       end
 
-      -- Define the getter function
-      local src = "local self, container = ... return function () return " .. max .. " + " .. min .. " + " .. pos .. " end"
-
       -- compile the getter
-      window[getter] = assert(loadstring(src, "getter for " .. v))(window, container)
+      window[getter] = function() return max + min + pos end
     end
 
     -- Here the actual value of the dimension is set according to the
