@@ -75,7 +75,7 @@ function Geyser:base_add (window, cons)
   self.windowList[window.name] = window
 
   window.windowname = window.windowname or window.container.windowname or "main"
-  Geyser.set_constraints(window, cons, self)
+  Geyser.Container.set_constraints(window, cons)
   if not self.defer_updates then
     window:reposition()
   end
