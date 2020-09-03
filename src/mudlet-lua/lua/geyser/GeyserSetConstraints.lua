@@ -36,8 +36,9 @@ function Geyser.set_constraints (window, cons, container)
     end
     
     -- if passed as function which returns numbers assume pixels are meant
+    -- give num the value 0 and let the function define the value
     if type(cons[v]) == "function" then
-      num = string.format("%dpx", cons[v]())
+      num = 0
     end    
     num = num or cons[v]
     
@@ -56,7 +57,7 @@ function Geyser.set_constraints (window, cons, container)
       if negative then
         scale = 1 + scale
       end
-
+      
       local min, max = "return_zero", "return_zero"
       
       if v == "x" then
@@ -98,10 +99,16 @@ function Geyser.set_constraints (window, cons, container)
         x_mult, y_mult = calcFontSize(window.fontSize)
       end
       
-      local pos = tonumber((string.gsub(num, "%a", "")))
       local pos_func = "return_zero"
       local max = "return_zero"
       local min = "return_zero"
+      local func = function() return 0 end
+      local pos = tonumber((string.gsub(num, "%a", "")))
+      
+      -- give func the function value if a function is given
+      if type(cons[v]) == "function" then
+        func = cons[v]
+      end
       
       if v == "x" then
         min = "get_x"
@@ -138,7 +145,7 @@ function Geyser.set_constraints (window, cons, container)
       window[getter] = function(self, my_container)
         my_container = container
         self = window
-        return my_container[max]() + my_container[min]() + pos - self[pos_func]()
+        return my_container[max]() + my_container[min]() + pos + func() - self[pos_func]()
       end
     end
     
