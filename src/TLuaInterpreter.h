@@ -269,6 +269,9 @@ public:
     static int hasFocus(lua_State* L);
     static int setFgColor(lua_State* L);
     static int setBgColor(lua_State* L);
+    static int setSplitFgColor(lua_State*);
+    static int setSplitBgColor(lua_State*);
+    static int resetSplitFormat(lua_State*);
     static int tempTimer(lua_State* L);
     static int closeMudlet(lua_State* L);
     static int loadWindowLayout(lua_State* L);
