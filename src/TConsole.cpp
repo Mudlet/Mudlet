@@ -2234,6 +2234,8 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
 
         pC->setMiniConsoleFontSize(12);
         pC->show();
+
+        pC->mpMainFrame->setStyleSheet("background-image: url(:/Mudlet_splashscreen_main.png);");
         return pC;
     } else {
         return nullptr;

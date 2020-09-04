@@ -99,7 +99,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     QCursor cursor;
     cursor.setShape(Qt::IBeamCursor);
     setCursor(cursor);
-    setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
+    setAttribute(Qt::WA_OpaquePaintEvent, false); //was disabled
     setAttribute(Qt::WA_DeleteOnClose);
 
     QPalette palette;
@@ -481,7 +481,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QPixmap screenPixmap;
     QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
     pixmap.setDevicePixelRatio(dpr);
-    pixmap.fill(palette().base().color());
+    pixmap.fill(Qt::transparent);
 
     QPainter p(&pixmap);
     p.setCompositionMode(QPainter::CompositionMode_Source);
@@ -566,7 +566,8 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         drawLine(p, i + lineOffset, i);
     }
     p.end();
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setBackgroundMode(Qt::BGMode::TransparentMode);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceAtop);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
         mScreenMap = pixmap.copy();
