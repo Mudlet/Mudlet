@@ -132,7 +132,7 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
-    void setBgColor(int, int, int);
+    void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void changeColors();
@@ -167,6 +167,7 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
+    bool setMiniConsoleBackgroundImage(const QString&);
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -175,7 +176,7 @@ public:
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    void setConsoleBgColor(int, int, int);
+    void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();

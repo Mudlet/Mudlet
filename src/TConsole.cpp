@@ -1208,11 +1208,11 @@ void TConsole::changeColors()
     }
 }
 
-void TConsole::setConsoleBgColor(int r, int g, int b)
+void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 {
-    mBgColor = QColor(r, g, b);
-    mUpperPane->setConsoleBgColor(r, g, b);
-    mLowerPane->setConsoleBgColor(r, g, b);
+    mBgColor = QColor(r, g, b, a);
+    mUpperPane->setConsoleBgColor(r, g, b, a);
+    mLowerPane->setConsoleBgColor(r, g, b, a);
     changeColors();
 }
 
@@ -1906,6 +1906,12 @@ bool TConsole::setMiniConsoleFontSize(int size)
     return true;
 }
 
+bool TConsole::setMiniConsoleBackgroundImage(const QString& imgPath)
+{
+    mpMainFrame->setStyleSheet(QStringLiteral("border-image: url(%1);").arg(imgPath));
+    return true;
+}
+
 void TConsole::refreshMiniConsole() const
 {
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
@@ -2085,9 +2091,9 @@ void TConsole::setFgColor(int r, int g, int b)
     mLowerPane->forceUpdate();
 }
 
-void TConsole::setBgColor(int r, int g, int b)
+void TConsole::setBgColor(int r, int g, int b, int a)
 {
-    setBgColor(QColor(r, g, b));
+    setBgColor(QColor(r, g, b, a));
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }
@@ -2235,7 +2241,6 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
         pC->setMiniConsoleFontSize(12);
         pC->show();
 
-        pC->mpMainFrame->setStyleSheet("background-image: url(:/Mudlet_splashscreen_main.png);");
         return pC;
     } else {
         return nullptr;
@@ -2719,7 +2724,7 @@ void TConsole::slot_searchBufferUp()
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
                 selectSection(begin, length);
-                setBgColor(255, 255, 0);
+                setBgColor(255, 255, 0, 255);
                 setFgColor(0, 0, 0);
                 deselect();
                 reset();
@@ -2758,7 +2763,7 @@ void TConsole::slot_searchBufferDown()
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
                 selectSection(begin, length);
-                setBgColor(255, 255, 0);
+                setBgColor(255, 255, 0, 255);
                 setFgColor(0, 0, 0);
                 deselect();
                 reset();

@@ -1974,6 +1974,21 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
+bool mudlet::setWindowBackgroundImage(Host *pHost, const QString &name, const QString &imgPath)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setMiniConsoleBackgroundImage(imgPath);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2263,7 +2278,7 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pC) {
-        pC->setConsoleBgColor(r, g, b);
+        pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
         QPalette mainPalette;
@@ -2933,18 +2948,20 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
+bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
 {
     if (!pHost || !pHost->mpConsole) {
-        return;
+        return false;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setBgColor(r, g, b);
+        pC->setBgColor(r, g, b, a);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
+        return true;
     }
+    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
