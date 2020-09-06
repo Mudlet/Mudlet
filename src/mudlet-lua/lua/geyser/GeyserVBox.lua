@@ -26,21 +26,20 @@ end
 --- Responsible for organizing the elements inside the VBox
 -- Called when a new element is added
 function Geyser.VBox:organize()
+  local self_height = self:get_height()
+  local self_width = self:get_width()
   -- Workaround for issue with width/height being 0 at creation
-  if self:get_width() == 0 then
-    self:resize("0.9px", nil)
-  end
-  if self:get_height() == 0 then
-    self:resize(nil, "0.9px")
-  end
-  local window_height = (self:calculate_dynamic_window_size().height / self:get_height()) * 100
+  self_height = self_height <= 0 and 0.9 or self_height
+  self_width = self_width <= 0 and 0.9 or self_width
+  
+  local window_height = (self:calculate_dynamic_window_size().height / self_height) * 100
   local start_y = 0
   self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
     window:move("0%", start_y.."%")
-    local width = (window:get_width() / self:get_width()) * 100
-    local height = (window:get_height() / self:get_height()) * 100
+    local width = (window:get_width() / self_width) * 100
+    local height = (window:get_height() / self_height) * 100
     if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
       self.contains_fixed = true
     end
