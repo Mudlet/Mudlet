@@ -868,7 +868,11 @@ function Geyser.Label:addChild(cons, container)
       break
     end
   end
-  table.insert(self.nestedLabels, me)
+  if me.index then
+    table.insert(self.nestedLabels, me.index, me)
+  else
+    self.nestedLabels[#self.nestedLabels + 1] = me
+  end
   me:hide()
   return me
 end
@@ -899,6 +903,41 @@ local function changeMenuLayout(labelNest, fdir)
   end
 end
 
+local function addElement(self, name, configLabel, myMenu, depth, index)
+  myMenu.MenuLabels[name] = myMenu.MenuLabels[name] or
+  myMenu:addChild(
+  {
+    index = index,
+    depth = depth,
+    menuName = name,
+    width = configLabel["MenuWidth"..depth] or configLabel["MenuWidth"],
+    height = configLabel["MenuHeight"..depth] or configLabel["MenuHeight"],
+    name = myMenu.name..name,
+    format = configLabel["MenuFormat"..depth] or configLabel["MenuFormat"],
+    font = configLabel["MenuFont"..depth] or configLabel["MenuFont"],
+    fgColor = "nocolor",
+    message = name,
+    color = "red",
+    layoutDir = "RV",
+    flyOut = true,
+    nestable = true,
+  }
+)
+-- ensure Labels are on the same parent window
+if self.windowname ~= myMenu.MenuLabels[name].windowname then
+  if self.windowname == "main" then
+    myMenu.MenuLabels[name]:changeContainer(Geyser)
+  else
+    myMenu.MenuLabels[name]:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
+  end
+end
+
+local Style = configLabel["Style"..depth] or configLabel["Style"]
+local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+end
+
 -- internal function to create/restyle the right click Menu Labels
 function Geyser.Label:createMenuItems(MenuItems, configLabel, myMenu, depth)
   
@@ -908,36 +947,22 @@ function Geyser.Label:createMenuItems(MenuItems, configLabel, myMenu, depth)
   myMenu = myMenu or self.rightClickMenu
   configLabel = configLabel or myMenu
   myMenu.MenuLabels = myMenu.MenuLabels or {}
+  local index = 1
   
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" then
-      myMenu.MenuLabels[MenuItems[i]] = myMenu.MenuLabels[MenuItems[i]] or
-      myMenu:addChild(
-      {
-        depth = depth,
-        menuName = MenuItems[i],
-        width = configLabel["MenuWidth"..depth] or configLabel["MenuWidth"],
-        height = configLabel["MenuHeight"..depth] or configLabel["MenuHeight"],
-        name = self.name.. "RightClickMenu." .. MenuItems[i]..i,
-        format = configLabel["MenuFormat"..depth] or configLabel["MenuFormat"],
-        font = configLabel["MenuFont"..depth] or configLabel["MenuFont"],
-        fgColor = "nocolor",
-        message = MenuItems[i],
-        color = "red",
-        layoutDir = "RV",
-        flyOut = true,
-        nestable = true,
-      }
-    )
-    local Style = configLabel["Style"..depth] or configLabel["Style"]
-    local MenuStyle = configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
-    MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
-    myMenu.MenuLabels[MenuItems[i]]:setStyleSheet(MenuStyle)
+    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
+      addElement(self, MenuItems[i], configLabel, myMenu, depth, index)
+      myMenu.MenuLabels[MenuItems[i]].index = index
+      myMenu.MenuLabels[MenuItems[i]].tblIndex = i
+      index = index + 1
+    end
+    
+    --Ignore all children if parent is hidden
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
+      myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
+    end
   end
-  if type(MenuItems[i]) == "table" then
-    myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
-  end
-end
 end
 
 -- internal function to handle the onRightClick event
@@ -945,7 +970,7 @@ end
 -- @param oldClickArgs previous clickcallback args
 -- @param event the onClick event
 
-function Geyser.Label:onRightClick(oldClickCallBack, oldClickArgs, event)
+function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
     local winw = getUserWindowSize(self.windowname)
@@ -960,39 +985,31 @@ function Geyser.Label:onRightClick(oldClickCallBack, oldClickArgs, event)
     end
     self.rightClickMenu:move(event.x, event.y)
     doNestShow(self.rightClickMenu)
-  else
-    
-    if not(oldClickCallBack) then 
-      return 
-    end
-    
-    if type(oldClickCallBack) == "string" then
-      oldClickCallBack = loadstring("return "..oldClickCallBack.."(...)")
-    end
-    local oldArgs = table.deepcopy(oldClickArgs)
-    oldArgs[#oldArgs + 1] = event
-    oldClickCallBack(unpack(oldArgs))    
   end
 end
 
 --internal function to find right click menu labels by name 
 -- if label has a parent the parent needs also to be specified
-local function findMenuElement(parent, name)
+-- findParent to return a Parent
+function Geyser.Label:findMenuElement(parent, name, findParent)
   local menu = menu or parent.MenuItems
   local parentName = parent.menuName
   for i = 1, #menu do
     local item = menu[i]
     if type(item) == "string" then
       item = parentName and parentName.."."..item or item
-      if item == name then
-        return parent.MenuLabels[menu[i]]
+      if item == name and not findParent then
+        return parent.MenuLabels[menu[i]], menu
+      end
+      if findParent and item == name and type(menu[i + 1]) == "table" then
+        return parent.MenuLabels[menu[i]], menu[i + 1]
       end
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element = findMenuElement(parent.MenuLabels[itemParent], name)
+      local element, menuTable = self:findMenuElement(parent.MenuLabels[itemParent], name)
       if element then
-        return element
+        return element, menuTable
       end
     end
   end
@@ -1003,7 +1020,7 @@ end
 -- @param ... Parameters to pass to the function. Will be passed directly to the setClickCallback function.
 -- @see Geyser.Label:setClickCallback
 function Geyser.Label:setMenuAction(name, ...)
-  local menuElement = findMenuElement(self.rightClickMenu, name)
+  local menuElement = self:findMenuElement(self.rightClickMenu, name)
   if not menuElement then
     error ("setMenuAction: Couldn't find menu element "..name)
   end
@@ -1014,11 +1031,126 @@ end
 -- @param func The function to use as string (can be any Geyser.Label function)
 -- @param ... Parameters to pass to the function.
 function Geyser.Label:configMenuLabel(name, func, ...)
-  local menuElement = findMenuElement(self.rightClickMenu, name)
+  local menuElement = self:findMenuElement(self.rightClickMenu, name)
   if not menuElement then
     error ("configMenuLabel: Couldn't find menu element "..name)
   end
   menuElement[func](menuElement, ...)
+end
+
+--- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param func The function to use as string (can be any Geyser.Label function)
+-- @param ... Parameters to pass to the function.
+function Geyser.Label:hideMenuLabel(name)
+  local menuElement = self:findMenuElement(self.rightClickMenu, name)
+  if not menuElement then
+    error ("hideMenuLabel: Couldn't find menu element "..name)
+  end
+  local nestTable = menuElement.nestParent.nestedLabels
+  local index = table.index_of(menuElement.nestParent.nestedLabels, menuElement)
+  -- If it's already hidden do nothing
+  if menuElement.ignore then 
+    return 
+  end
+  menuElement.MenuIndex = index
+  menuElement.MenuNestTable = nestTable
+  menuElement.ignore = true
+  menuElement:hide()
+  table.remove(nestTable, index)
+  self:createMenuItems()
+end
+
+--- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param func The function to use as string (can be any Geyser.Label function)
+-- @param ... Parameters to pass to the function.
+function Geyser.Label:showMenuLabel(name)
+  local menuElement = self:findMenuElement(self.rightClickMenu, name)
+  if not menuElement then
+    error ("showMenuLabel: Couldn't find menu element "..name)
+  end
+  -- If it's already shown do nothing
+  if not menuElement.ignore then 
+    return 
+  end
+  menuElement.ignore = false
+  table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
+  self:createMenuItems()
+end
+
+--- adds a new item to the menu
+-- @param func The function to use as string (can be any Geyser.Label function)
+-- @param ... Parameters to pass to the function.
+function Geyser.Label:addMenuLabel(name, parent, index)
+  local menuElement, menuParent = self:findMenuElement(self.rightClickMenu, parent, true)
+  
+  if parent and not menuParent then
+    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  end
+  
+  menuElement = menuElement or self.rightClickMenu
+  menuParent = menuParent or self.rightClickMenu.MenuItems
+  
+  if parent then
+    parent = parent.."."
+  else
+    parent = ""
+  end
+  
+  if not menuElement.MenuLabels[name] then
+    menuParent[#menuParent + 1] = name
+  elseif menuElement.MenuLabels[name].ignore then
+    self:showMenuLabel(parent..name)
+  end
+  
+  self:createMenuItems()
+  
+  if index then
+    self:changeMenuIndex(parent..name, index)
+  end
+end
+
+--- adds a new item to the menu
+-- @param func The function to use as string (can be any Geyser.Label function)
+-- @param ... Parameters to pass to the function.
+function Geyser.Label:changeMenuIndex(name, index)
+  local menuElement, menuTable = self:findMenuElement(self.rightClickMenu, name)
+  
+  if not menuElement then
+    error ("changeMenuIndex: Couldn't find menu element "..name)
+  end
+  
+  local nestTable = menuElement.nestParent.nestedLabels
+  local newindex = nestTable[index].tblIndex
+  
+  -- table index is not the same as index
+  -- if element is parent behave differently
+  if nestTable[index].isParent then
+    if newindex > menuElement.tblIndex then
+      newindex = newindex + 1
+    end
+  end
+  --nestTable
+  table.remove(nestTable, menuElement.index)
+  table.insert(nestTable, index, menuElement)
+  
+  menuElement.index = index
+  
+  -- MenuItems Table
+  -- parents need to bring also their children to their index
+  if menuElement.isParent then
+    local child = menuTable[menuElement.tblIndex + 1]
+    if newindex > menuElement.tblIndex then
+      newindex = newindex - 1
+    end
+    table.remove(menuTable, menuElement.tblIndex + 1)
+    table.remove(menuTable, menuElement.tblIndex)
+    table.insert(menuTable, newindex, child)
+    table.insert(menuTable, newindex, menuElement.menuName)
+  else
+    table.remove(menuTable, menuElement.tblIndex)
+    table.insert(menuTable, newindex, menuElement.menuName)
+  end
+  self:createMenuItems()
 end
 
 --- create a right click menu for your Label
@@ -1044,9 +1176,7 @@ function Geyser.Label:createRightClickMenu(cons)
   cons.Style = cons.Style or "light"
   
   if not(self.rightClickMenu) then
-    local oldClickCallBack = self.clickCallback
-    local oldClickArgs = self.clickArgs
-    self:setClickCallback(self.onRightClick, self, oldClickCallBack, oldClickArgs)
+    self:setClickCallback(self.onRightClick, self)
   end
   
   -- create a label with a nestable=true property to say that it can nest labels
