@@ -1365,7 +1365,7 @@ int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
         return 1;
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, R"(miniconsole "%s" not found)", windowName.toUtf8().constData());
+        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
         return 2;
     }
     return 0;
