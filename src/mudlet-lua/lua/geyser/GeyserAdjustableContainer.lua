@@ -463,6 +463,7 @@ end
 function Adjustable.Container:createRightClickMenu()
     self.adjLabel:createRightClickMenu(
         {MenuItems = {"lockLabel", "minLabel", "saveLabel", "loadLabel", "attLabel", {"att1","att2","att3","att4"}, "lockStylesLabel",{}, "customItemsLabel",{}},
+        Style = self.menuStyleMode,
         MenuStyle = self.menustyle,
         MenuWidth = self.ParentMenuWidth,
         MenuWidth2 = self.ChildMenuWidth,
@@ -486,6 +487,11 @@ function Adjustable.Container:echoRightClickMenu()
             self[v]:echo(self[v].txt, "nocolor")
         end
     end
+end
+
+function Adjustable.Container:changeMenuStyle(mode)
+    self.menuStyleMode = mode
+    self.adjLabel:styleMenuItems(self.menuStyleMode)
 end
 
 -- overriden add function to put every new window to the Inside container
@@ -756,19 +762,19 @@ function Adjustable.Container:new(cons,container)
     local me = self.parent:new(cons, container)
     setmetatable(me, self)
     self.__index = self
-    me.ParentMenuWidth = me.ParentMenuWidth or 102
-    me.ChildMenuWidth = me.ChildMenuWidth or 82
-    me.MenuHeight = me.MenuHeight or 22
-    me.MenuFontSize = me.MenuFontSize or 8
-    me.buttonsize = me.buttonsize or 15
-    me.buttonFontSize = me.buttonFontSize or 8
+    me.ParentMenuWidth = me.ParentMenuWidth or "102"
+    me.ChildMenuWidth = me.ChildMenuWidth or "82"
+    me.MenuHeight = me.MenuHeight or "22"
+    me.MenuFontSize = me.MenuFontSize or "8"
+    me.buttonsize = me.buttonsize or "15"
+    me.buttonFontSize = me.buttonFontSize or "8"
     me.padding = me.padding or 10
 
     me.adjLabelstyle = me.adjLabelstyle or [[
     background-color: rgba(0,0,0,100%);
     border: 4px double green;
     border-radius: 4px;]]
-    me.menustyle = me.menustyle or [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} QLabel{ font-size:]]..me.MenuFontSize..[[pt;}]]
+    me.menuStyleMode = "light"
     me.buttonstyle= me.buttonstyle or [[
     QLabel{ border-radius: 7px; background-color: rgba(255,30,30,100%);}
     QLabel::hover{ background-color: rgba(255,0,0,50%);}

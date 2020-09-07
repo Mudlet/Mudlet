@@ -903,7 +903,8 @@ local function changeMenuLayout(labelNest, fdir)
   end
 end
 
-local function addElement(self, name, configLabel, myMenu, depth, index)
+-- internal function to add or restyle an element
+local function addElement(self, name, configLabel, myMenu, depth, index, restyle)
   myMenu.MenuLabels[name] = myMenu.MenuLabels[name] or
   myMenu:addChild(
   {
@@ -932,14 +933,18 @@ if self.windowname ~= myMenu.MenuLabels[name].windowname then
   end
 end
 
+if restyle then
+  myMenu.MenuLabels[name].stylesheet = nil
+end
+
 local Style = configLabel["Style"..depth] or configLabel["Style"]
 local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
 MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
 myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
 end
 
--- internal function to create/restyle the right click Menu Labels
-function Geyser.Label:createMenuItems(MenuItems, configLabel, myMenu, depth)
+-- internal function to create the right click Menu Labels
+function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, depth)
   
   depth = depth or 1
   MenuItems = MenuItems or self.MenuItems
@@ -951,18 +956,26 @@ function Geyser.Label:createMenuItems(MenuItems, configLabel, myMenu, depth)
   
   for i = 1, #MenuItems do
     if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
-      addElement(self, MenuItems[i], configLabel, myMenu, depth, index)
+      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
       myMenu.MenuLabels[MenuItems[i]].index = index
       myMenu.MenuLabels[MenuItems[i]].tblIndex = i
       index = index + 1
     end
-    
     --Ignore all children if parent is hidden
     if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
-      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
+      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end
   end
+end
+
+function Geyser.Label:styleMenuItems(mode, css)
+  local menu = self.rightClickMenu
+  mode = mode or menu.Style
+  menu.Style = mode
+  css = css or menu.MenuStyle
+  menu.MenuStyle = css
+  self:createMenuItems(true)
 end
 
 -- internal function to handle the onRightClick event
@@ -975,7 +988,7 @@ function Geyser.Label:onRightClick(event)
   if event.button == "RightButton" then
     local winw = getUserWindowSize(self.windowname)
     local mousepos = self:get_x() + event.x
-    local maxdiff = self.rightClickMenu.MenuWidth
+    local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos
     local flyDir = self.rightClickMenu.nestedLabels[1].flyDir
     if diff <= maxdiff and flyDir == "R" then
@@ -1181,7 +1194,7 @@ function Geyser.Label:createRightClickMenu(cons)
   
   -- create a label with a nestable=true property to say that it can nest labels
   self.rightClickMenu = Geyser.Label:new(cons, self)
-  self:createMenuItems(cons.MenuItems)
+  self:createMenuItems(nil, cons.MenuItems)
 end
 
 ---
