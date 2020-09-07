@@ -84,6 +84,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
+, mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
 , mRecordReplay(false)
@@ -244,12 +245,16 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->setMargin(0);
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpMainFrame->show();
     mpMainDisplay->show();
+    mpBackground->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
+    mpBackground->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
     mpMainDisplay->setLayout(layout);
+    mpBackground->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
@@ -515,6 +520,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         layerCommandLine->hide();
         mpMainFrame->move(0, 0);
         mpMainDisplay->move(0, 0);
+        mpBackground->move(0, 0);
     }
     if (mType & CentralDebugConsole) {
         layerCommandLine->hide();
@@ -642,11 +648,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
         x = x - mpLeftToolBar->width() - mpRightToolBar->width();
         y = y - mpTopToolBar->height();
         mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
 
     if (mType & (CentralDebugConsole|ErrorConsole|SubConsole|UserWindow)) {
         layerCommandLine->hide();
@@ -723,8 +732,10 @@ void TConsole::refresh()
     }
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+    mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
 
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
     y = height();
     QSize s = QSize(x, y);
@@ -1154,6 +1165,8 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
+        mpBackground->setStyleSheet(style_sheet);
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
             QPalette pal;
@@ -1181,6 +1194,8 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
+        mpBackground->setStyleSheet(style_sheet);
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
@@ -1906,9 +1921,9 @@ bool TConsole::setMiniConsoleFontSize(int size)
     return true;
 }
 
-bool TConsole::setMiniConsoleBackgroundImage(const QString& imgPath)
+bool TConsole::setConsoleBackgroundImage(const QString& imgPath)
 {
-    mpMainFrame->setStyleSheet(QStringLiteral("border-image: url(%1);").arg(imgPath));
+    mpBackground->setStyleSheet(QStringLiteral("QLabel {border-image: url(%1);}").arg(imgPath));
     return true;
 }
 

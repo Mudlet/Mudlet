@@ -484,7 +484,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     pixmap.fill(Qt::transparent);
 
     QPainter p(&pixmap);
-    p.setCompositionMode(QPainter::CompositionMode_Source);
+    p.setCompositionMode(QPainter::CompositionMode_SourceOver);
     if (mpConsole->getType() == TConsole::MainConsole) {
         p.setFont(mpHost->getDisplayFont());
         p.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
@@ -557,8 +557,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             y2 = abs(mScrollVector);
         }
     }
-    QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
-    drawBackground(p, deleteRect, mBgColor);
     for (int i = from; i <= y2; ++i) {
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
@@ -567,7 +565,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     p.end();
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
-    painter.setCompositionMode(QPainter::CompositionMode_SourceAtop);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawPixmap(0, 0, pixmap);
     if (!noCopy) {
         mScreenMap = pixmap.copy();
@@ -597,11 +595,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!painter.isActive()) {
         return;
     }
-
-    QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
-    drawBackground(painter, borderRect, mBgColor);
-    QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
-    drawBackground(painter, borderRect2, mBgColor);
     drawForeground(painter, rect);
 }
 

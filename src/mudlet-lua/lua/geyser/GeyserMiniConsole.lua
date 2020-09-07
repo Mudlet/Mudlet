@@ -148,7 +148,7 @@ end
 --- sets the background image of this miniconsole
 function Geyser.MiniConsole:setBackgroundImage(imgPath)
   self:setColor("transparent")
-  setMiniConsoleBackgroundImage(self.name, imgPath)
+  setConsoleBackgroundImage(self.name, imgPath)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.

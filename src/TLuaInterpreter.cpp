@@ -1335,22 +1335,29 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleBackgroundImage
-int TLuaInterpreter::setMiniConsoleBackgroundImage(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
+int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 {
-    QString windowName;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setMiniConsoleBackgroundImage: bad argument #1 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    } else {
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    QString windowName = "main";
+    int n = lua_gettop(L);
+    if (n > 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
     }
     QString imgPath;
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setMiniConsoleBackgroundImage: bad argument #2 type (image path as string expected, got %s!)", luaL_typename(L, 2));
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", n, luaL_typename(L, n));
         return lua_error(L);
     } else {
-        imgPath = QString::fromUtf8(lua_tostring(L, 2));
+        imgPath = QString::fromUtf8(lua_tostring(L, n));
+    }
+    if (n > 2) {
+        lua_pushfstring(L, "setConsoleBackgroundImage: too many arguments. only 2 arguments expected, console name and image path ");
+        return lua_error(L);
     }
     Host* host = &getHostFromLua(L);
     if (mudlet::self()->setWindowBackgroundImage(host, windowName, imgPath)) {
@@ -16870,7 +16877,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
-    lua_register(pGlobalLua, "setMiniConsoleBackgroundImage", TLuaInterpreter::setMiniConsoleBackgroundImage);
+    lua_register(pGlobalLua, "setConsoleBackgroundImage", TLuaInterpreter::setConsoleBackgroundImage);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
     lua_register(pGlobalLua, "spawn", TLuaInterpreter::spawn);
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);

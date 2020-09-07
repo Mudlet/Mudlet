@@ -1980,9 +1980,14 @@ bool mudlet::setWindowBackgroundImage(Host *pHost, const QString &name, const QS
         return false;
     }
 
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath);
+        return true;
+    }
+
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setMiniConsoleBackgroundImage(imgPath);
+        pC->setConsoleBackgroundImage(imgPath);
         return true;
     } else {
         return false;

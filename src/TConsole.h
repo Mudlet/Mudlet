@@ -33,6 +33,7 @@
 #include "pre_guard.h"
 #include <QDataStream>
 #include <QFile>
+#include <QLabel>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
@@ -167,7 +168,7 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
-    bool setMiniConsoleBackgroundImage(const QString&);
+    bool setConsoleBackgroundImage(const QString&);
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -280,6 +281,7 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
+    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
