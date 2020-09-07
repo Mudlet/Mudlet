@@ -509,7 +509,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
 
-    if (mType & (ErrorConsole|SubConsole|UserWindow)) {
+    if (mType & (SubConsole|UserWindow)) {
         mpScrollBar->hide();
         mLowerPane->hide();
         layerCommandLine->hide();
