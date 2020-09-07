@@ -1165,6 +1165,7 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        splitter->setPalette(palette);
         auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
         mpBackground->setStyleSheet(style_sheet);
     } else if (mType == MainConsole) {
@@ -1194,6 +1195,7 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        splitter->setPalette(palette);
         auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
         mpBackground->setStyleSheet(style_sheet);
         mCommandFgColor = mpHost->mCommandFgColor;
