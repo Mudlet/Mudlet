@@ -283,6 +283,7 @@ public:
     dlgMapper* mpMapper;
 
     QScrollBar* mpScrollBar;
+    QScrollBar* mpHScrollBar;
 
 
     QTime mProcessingTime;

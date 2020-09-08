@@ -51,6 +51,7 @@
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
+, mCursorX(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
@@ -62,11 +63,13 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpConsole(pC)
 , mpHost(pH)
 , mpScrollBar(nullptr)
+, mpHScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
 , mTimeStampWidth(13) // Should be the same as the size of the timeStampFormat constant in the TBuffer class
 {
+    mScreenOffset = 10;
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
         const auto hostFont = mpHost->getDisplayFont();
@@ -175,6 +178,19 @@ void TTextEdit::slot_scrollBarMoved(int line)
     }
 }
 
+void TTextEdit::slot_hScrollBarMoved(int offset)
+{
+    if (mpConsole->mpHScrollBar) {
+        disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+        mpConsole->mpHScrollBar->setRange(0, mScreenOffset);
+        mpConsole->mpHScrollBar->setSingleStep(1);
+        mpConsole->mpHScrollBar->setPageStep(100);
+        mpConsole->mpHScrollBar->setValue(offset);
+        scrollH(offset);
+        connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+    }
+}
+
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192, 192, 192);
@@ -260,6 +276,22 @@ void TTextEdit::showNewLines()
             }
             connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
         }
+        if (mpConsole->mpHScrollBar && mOldScrollPos > 1) {
+            QString& lineText = mpBuffer->lineBuffer[mOldScrollPos - 1];
+            int size = lineText.size() - mScreenWidth;
+            if (mShowTimeStamps) {
+                size += mTimeStampWidth;
+            }
+            if (size > mScreenOffset) {
+                mScreenOffset = size;
+            }
+            disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+            mpConsole->mpHScrollBar->setRange(0, mScreenOffset);
+            mpConsole->mpHScrollBar->setSingleStep(1);
+            mpConsole->mpHScrollBar->setPageStep(100);
+            mpConsole->mpHScrollBar->setValue(mCursorX);
+            connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+        }
     }
     update();
 }
@@ -289,6 +321,12 @@ void TTextEdit::scrollTo(int line)
         mScrollVector = 0;
         update();
     }
+}
+
+void TTextEdit::scrollH(int offset)
+{
+    mCursorX = offset;
+    update();
 }
 
 void TTextEdit::scrollUp(int lines)
@@ -353,7 +391,7 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
-    QPoint cursor(0, lineOfScreen);
+    QPoint cursor(-mCursorX, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
@@ -596,7 +634,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!painter.isActive()) {
         return;
     }
-
     QRect borderRect = QRect(0, mScreenHeight * mFontHeight, rect.width(), rect.height());
     drawBackground(painter, borderRect, mBgColor);
     QRect borderRect2 = QRect(rect.width() - mScreenWidth, 0, rect.width(), rect.height());
