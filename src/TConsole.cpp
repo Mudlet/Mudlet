@@ -293,7 +293,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    splitter->setPalette(splitterPalette);
+    auto style_sheet = QStringLiteral("background-color: rgba(0,0,0,0)");
+    splitter->setStyleSheet(style_sheet);
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
@@ -1165,7 +1166,6 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
-        splitter->setPalette(palette);
         auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
         mpBackground->setStyleSheet(style_sheet);
     } else if (mType == MainConsole) {
@@ -1195,7 +1195,6 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
-        splitter->setPalette(palette);
         auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
         mpBackground->setStyleSheet(style_sheet);
         mCommandFgColor = mpHost->mCommandFgColor;
