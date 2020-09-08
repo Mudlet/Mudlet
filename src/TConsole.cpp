@@ -2509,16 +2509,19 @@ bool TConsole::lowerWindow(const QString& name)
     if (pC) {
         pC->lower();
         mpMainDisplay->lower();
+        mpBackground->lower();
         return true;
     }
     if (pL) {
         pL->lower();
         mpMainDisplay->lower();
+        mpBackground->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
         mpMainDisplay->lower();
+        mpBackground->lower();
         return true;
     }
     return false;
