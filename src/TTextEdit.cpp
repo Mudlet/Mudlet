@@ -69,7 +69,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mTabStopwidth(8)
 , mTimeStampWidth(13) // Should be the same as the size of the timeStampFormat constant in the TBuffer class
 {
-    mScreenOffset = 10;
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
         const auto hostFont = mpHost->getDisplayFont();
@@ -181,13 +180,8 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mpHScrollBar) {
-        disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
-        mpConsole->mpHScrollBar->setRange(0, mScreenOffset);
-        mpConsole->mpHScrollBar->setSingleStep(1);
-        mpConsole->mpHScrollBar->setPageStep(100);
-        mpConsole->mpHScrollBar->setValue(offset);
+        updateHorizontalScrollBar();
         scrollH(offset);
-        connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
     }
 }
 
@@ -200,6 +194,47 @@ void TTextEdit::initDefaultSettings()
     setFont(mDisplayFont);
     mWrapAt = 100;
     mWrapIndentCount = 5;
+}
+
+void TTextEdit::updateHorizontalScrollBar()
+{
+    mOldScrollPos = mpBuffer->getLastLineNumber();
+
+    if (!mIsLowerPane) {
+        // This is ONLY for the upper pane
+        if (mpConsole->mpHScrollBar && mOldScrollPos > 1) {
+            int columnCount = getColumnCount();
+            QString& lineText = mpBuffer->lineBuffer[mOldScrollPos - 1];
+            int currentSize = lineText.size();
+
+            if (mShowTimeStamps) {
+                currentSize += mTimeStampWidth;
+            }
+
+            if (currentSize > mScreenOffset) {
+                mScreenOffset = currentSize;
+            }
+
+            int maxRange = mScreenOffset - columnCount;
+            if (maxRange < 1) {
+                mpConsole->mpHScrollBar->hide();
+                mCursorX = 0;
+            } else {
+                mpConsole->mpHScrollBar->show();
+                if (mCursorX > maxRange){
+                    mCursorX = maxRange;
+                }
+
+            }
+
+            disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+            mpConsole->mpHScrollBar->setRange(0, maxRange);
+            mpConsole->mpHScrollBar->setSingleStep(1);
+            mpConsole->mpHScrollBar->setPageStep(columnCount);
+            mpConsole->mpHScrollBar->setValue(mCursorX);
+            connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+        }
+    }
 }
 
 void TTextEdit::updateScreenView()
@@ -237,6 +272,10 @@ void TTextEdit::updateScreenView()
         mpHost->mScreenHeight = mScreenHeight;
     } else {
         mScreenWidth = currentScreenWidth;
+    }
+
+    if (mpConsole->getType() == TConsole::ErrorConsole) {
+        updateHorizontalScrollBar();
     }
 }
 
@@ -276,21 +315,8 @@ void TTextEdit::showNewLines()
             }
             connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
         }
-        if (mpConsole->mpHScrollBar && mOldScrollPos > 1) {
-            QString& lineText = mpBuffer->lineBuffer[mOldScrollPos - 1];
-            int size = lineText.size() - mScreenWidth;
-            if (mShowTimeStamps) {
-                size += mTimeStampWidth;
-            }
-            if (size > mScreenOffset) {
-                mScreenOffset = size;
-            }
-            disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
-            mpConsole->mpHScrollBar->setRange(0, mScreenOffset);
-            mpConsole->mpHScrollBar->setSingleStep(1);
-            mpConsole->mpHScrollBar->setPageStep(100);
-            mpConsole->mpHScrollBar->setValue(mCursorX);
-            connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+        if (mpConsole->getType() == TConsole::ErrorConsole) {
+            updateHorizontalScrollBar();
         }
     }
     update();

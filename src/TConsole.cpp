@@ -514,14 +514,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType == ErrorConsole) {
         mpHScrollBar = new QScrollBar(Qt::Horizontal);
         mpHScrollBar->setFixedHeight(15);
-        mpHScrollBar->setRange(0, 10);
-        mpHScrollBar->setSingleStep(1);
-        mpHScrollBar->setPageStep(100);
         connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
         centralLayout->addWidget(mpHScrollBar);
         mpHScrollBar->setContentsMargins(0, 0, 0, 0);
         mpHScrollBar->setSizePolicy(sizePolicy);
-        mpHScrollBar->show();
+        mpHScrollBar->hide();
     }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
