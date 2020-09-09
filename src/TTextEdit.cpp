@@ -180,7 +180,7 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mpHScrollBar) {
-        updateHorizontalScrollBar();
+        updateHorizontalScrollBar(mpBuffer->getLastLineNumber());
         scrollH(offset);
     }
 }
@@ -196,17 +196,18 @@ void TTextEdit::initDefaultSettings()
     mWrapIndentCount = 5;
 }
 
-void TTextEdit::updateHorizontalScrollBar()
+void TTextEdit::updateHorizontalScrollBar(int lineNumber)
 {
-    mOldScrollPos = mpBuffer->getLastLineNumber();
+    if (mpConsole->getType() != TConsole::ErrorConsole) {
+        return;
+    }
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
-        if (mpConsole->mpHScrollBar && mOldScrollPos > 1) {
+        if (mpConsole->mpHScrollBar && lineNumber > 1) {
             int columnCount = getColumnCount();
-            QString& lineText = mpBuffer->lineBuffer[mOldScrollPos - 1];
+            QString& lineText = mpBuffer->lineBuffer[lineNumber];
             int currentSize = lineText.size();
-
             if (mShowTimeStamps) {
                 currentSize += mTimeStampWidth;
             }
@@ -273,10 +274,6 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
-
-    if (mpConsole->getType() == TConsole::ErrorConsole) {
-        updateHorizontalScrollBar();
-    }
 }
 
 void TTextEdit::showNewLines()
@@ -314,9 +311,6 @@ void TTextEdit::showNewLines()
                 mpConsole->mpScrollBar->setValue(mpBuffer->mCursorY);
             }
             connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
-        }
-        if (mpConsole->getType() == TConsole::ErrorConsole) {
-            updateHorizontalScrollBar();
         }
     }
     update();
@@ -628,6 +622,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         drawLine(p, i + lineOffset, i);
+        updateHorizontalScrollBar(i + lineOffset);
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
@@ -725,8 +720,8 @@ void TTextEdit::highlightSelection()
             if ((currentY == mPB.y()) && (currentX > mPB.x())) {
                 break;
             }
-            if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
-                mpBuffer->buffer.at(currentY).at(currentX).select();
+            if (!(mpBuffer->buffer.at(currentY).size() <= currentX + mCursorX) && !(mpBuffer->buffer.at(currentY).at(currentX + mCursorX).isSelected())) {
+                mpBuffer->buffer.at(currentY).at(currentX + mCursorX).select();
             }
         }
     }
@@ -1493,8 +1488,8 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
     int startLine = std::max(0, mPA.y());
     int endLine = std::min(mPB.y(), mpBuffer->lineBuffer.size());
     int offset = endLine - startLine;
-    int startPos = std::max(0, mPA.x());
-    int endPos = std::min(mPB.x(), mpBuffer->lineBuffer.at(endLine).size());
+    int startPos = std::max(0, mPA.x() + mCursorX);
+    int endPos = std::min(mPB.x() + mCursorX, mpBuffer->lineBuffer.at(endLine).size());
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
     if (mPA.y() == mPB.y()) {

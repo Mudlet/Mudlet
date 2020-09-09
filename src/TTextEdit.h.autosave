@@ -72,7 +72,7 @@ public:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
-    void showEvent(QShowEvent* event) override;
+    void showEvent(QShowEvent* event) override;´
     void updateScreenView();
     void updateHorizontalScrollBar(int);
     void highlightSelection();
