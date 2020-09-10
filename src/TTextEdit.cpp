@@ -720,8 +720,8 @@ void TTextEdit::highlightSelection()
             if ((currentY == mPB.y()) && (currentX > mPB.x())) {
                 break;
             }
-            if (!(mpBuffer->buffer.at(currentY).size() <= currentX + mCursorX) && !(mpBuffer->buffer.at(currentY).at(currentX + mCursorX).isSelected())) {
-                mpBuffer->buffer.at(currentY).at(currentX + mCursorX).select();
+            if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
+                mpBuffer->buffer.at(currentY).at(currentX).select();
             }
         }
     }
@@ -869,6 +869,8 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
         // that buffer has reached the limit when it starts to have the
         // beginning lines deleted!
 
+        // offset will only have a value for errorwindows if they use the horizontal scrollbar (for now)
+        int offset = mCursorX * mFontWidth;
         // Count of "normal" width equivalent characters - we will multiply that
         // by the average character width to determine whether the mouse is over
         // a particular grapheme:
@@ -899,7 +901,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mShowTimeStamps && indexOfChar == 0)) {
-                if (mouseX < (mTimeStampWidth * mFontWidth)) {
+                if ((mouseX + offset) < (mTimeStampWidth * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -907,7 +909,14 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             }
 
             leftX = rightX;
-            rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            //mCursorX only relevant for horizontal scrollbars and therefore only for the ErrorConsole
+            //Otherwise the value is always 0
+            if (mShowTimeStamps) {
+                rightX = (mTimeStampWidth + column - mCursorX) * mFontWidth;
+            } else {
+                rightX = (column) * mFontWidth;
+            }
+
             // Format of display "[index of FIRST QChar in grapheme|leftX]grapheme[rightX|index of LAST QChar in grapheme (may be same as FIRST)]" ...
             // debugText << QStringLiteral("[%1|%2]%3[%4|%5]").arg(QString::number(indexOfChar), QString::number(leftX), grapheme, QString::number(rightX - 1), QString::number(nextBoundary - 1));
             if (leftX <= mouseX && mouseX < rightX) {
@@ -1488,8 +1497,8 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
     int startLine = std::max(0, mPA.y());
     int endLine = std::min(mPB.y(), mpBuffer->lineBuffer.size());
     int offset = endLine - startLine;
-    int startPos = std::max(0, mPA.x() + mCursorX);
-    int endPos = std::min(mPB.x() + mCursorX, mpBuffer->lineBuffer.at(endLine).size());
+    int startPos = std::max(0, mPA.x());
+    int endPos = std::min(mPB.x(), mpBuffer->lineBuffer.at(endLine).size());
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
     if (mPA.y() == mPB.y()) {
