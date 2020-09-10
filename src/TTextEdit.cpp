@@ -605,9 +605,12 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 }
 
 // highlights the currently selected text.
-// mPA is the top-left point of the selection and mPB is the bottom-right point
-// of the selection, regardless of the way the user is selecting (top-down,
-// bottom-up, left-right, right-left)
+// mpA represents the first (zero-based) line/row (y) and position/column
+// (x) that IS to be selected, mpB represents the last (zero-based) line and
+// column that IS to be selected regardless of the way the user is selecting
+// (top-down, bottom-up, left-right, right-left) - which means that in the
+// traditional 'for' loop construct where the test is a '<' based one, the test
+// limit is mpB.y() + 1 for the row and mpB.x() + 1 for the column:
 void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
@@ -645,20 +648,16 @@ void TTextEdit::highlightSelection()
 
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
-    // mpA represents the first (zero-based) line/row (y) and position/column
-    // (x) that IS to be selected, mpB represents the last (zero-based) line and
-    // column that IS to be selected - which means that in the traditional 'for'
-    // loop construct where the test is a '<' based one, the test limit is
-    // mpB.y() + 1 for the row and mpB.x() + 1 for the column:
     // clang-format off
-    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
+    for (int y = std::max(0, mPA.y()),
+             endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
          y < endY;
          ++y) {
 
         for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
                  endX = (y == (mPB.y()))
-                        ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                        : static_cast<int>(mpBuffer->buffer.at(y).size());
+                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                     : static_cast<int>(mpBuffer->buffer.at(y).size());
              x < endX;
              ++x) {
 
@@ -683,8 +682,8 @@ void TTextEdit::unHighlight()
 
         for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
                  endX = (y == (mPB.y()))
-                        ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                        : static_cast<int>(mpBuffer->buffer.at(y).size());
+                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                     : static_cast<int>(mpBuffer->buffer.at(y).size());
              x < endX;
              ++x) {
 
