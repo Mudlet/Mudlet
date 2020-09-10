@@ -160,14 +160,12 @@ private:
     TBuffer* mpBuffer;
     TConsole* mpConsole;
     QPointer<Host> mpHost;
-    QScrollBar* mpScrollBar;
-    QScrollBar* mpHScrollBar;
     // screen height in characters
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
-    int mScreenOffset;
+    int mScreenOffset = 0;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;

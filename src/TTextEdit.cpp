@@ -62,8 +62,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
-, mpScrollBar(nullptr)
-, mpHScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
@@ -206,7 +204,7 @@ void TTextEdit::updateHorizontalScrollBar(int lineNumber)
         // This is ONLY for the upper pane
         if (mpConsole->mpHScrollBar && lineNumber > 1) {
             int columnCount = getColumnCount();
-            QString& lineText = mpBuffer->lineBuffer[lineNumber];
+            const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
             int currentSize = lineText.size();
             if (mShowTimeStamps) {
                 currentSize += mTimeStampWidth;
@@ -227,7 +225,6 @@ void TTextEdit::updateHorizontalScrollBar(int lineNumber)
                 }
 
             }
-
             disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
             mpConsole->mpHScrollBar->setRange(0, maxRange);
             mpConsole->mpHScrollBar->setSingleStep(1);
@@ -837,6 +834,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // the left margin within the area that gets repainted...
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
+    update();
 }
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex)
