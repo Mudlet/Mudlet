@@ -2384,6 +2384,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
+        pHost->adjustNAWS();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
@@ -2451,7 +2452,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
-
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();
