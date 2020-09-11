@@ -150,7 +150,8 @@ public:
     bool setWindowFont(Host*, const QString&, const QString&);
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
-    bool setWindowBackgroundImage(Host *, const QString &, const QString &);
+    bool setWindowBackgroundImage(Host *, const QString&, const QString&, int);
+    bool resetWindowBackgroundImage(Host *, const QString&);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);

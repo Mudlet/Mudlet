@@ -60,6 +60,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , emergencyStop(new QToolButton)
 , layerCommandLine(nullptr)
 , mBgColor(QColor(Qt::black))
+, mBgImageMode(0)
+, mBgImagePath()
 , mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
@@ -293,8 +295,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    auto style_sheet = QStringLiteral("background-color: rgba(0,0,0,0)");
-    splitter->setStyleSheet(style_sheet);
+    auto styleSheet = QStringLiteral("background-color: rgba(0,0,0,0)");
+    splitter->setStyleSheet(styleSheet);
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
@@ -1139,6 +1141,11 @@ void TConsole::slot_toggleReplayRecording()
     }
 }
 
+QString getColorCode(QColor color)
+{
+    return QStringLiteral("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+}
+
 void TConsole::changeColors()
 {
     mDisplayFont.setFixedPitch(true);
@@ -1166,8 +1173,12 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
-        auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
-        mpBackground->setStyleSheet(style_sheet);
+        if (!mBgImageMode) {
+            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(palette.color(QPalette::Base)));
+            mpBackground->setStyleSheet(styleSheet);
+        } else {
+            setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
+        }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
             QPalette pal;
@@ -1195,8 +1206,12 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
-        auto style_sheet = QStringLiteral("QLabel{background-color: #%1;}").arg(palette.color(QPalette::Base).rgba(), 0, 16);
-        mpBackground->setStyleSheet(style_sheet);
+        if (!mBgImageMode) {
+            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(palette.color(QPalette::Base)));
+            mpBackground->setStyleSheet(styleSheet);
+        } else {
+            setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
+        }
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
@@ -1922,9 +1937,40 @@ bool TConsole::setMiniConsoleFontSize(int size)
     return true;
 }
 
-bool TConsole::setConsoleBackgroundImage(const QString& imgPath)
+bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
 {
-    mpBackground->setStyleSheet(QStringLiteral("QLabel {border-image: url(%1);}").arg(imgPath));
+    QColor bgColor;
+    QString styleSheet;
+
+    if (mType == MainConsole) {
+        bgColor = mpHost->mBgColor;
+    } else {
+        bgColor = mBgColor;
+    }
+
+    if (mode == 1) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else if (mode == 2) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+                             .arg(getColorCode(bgColor))
+                             .arg(imgPath);
+    } else if (mode == 3) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else if (mode == 4) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else {
+        return false;
+    }
+    mpBackground->setStyleSheet(styleSheet);
+    mBgImageMode = mode;
+    mBgImagePath = imgPath;
+    return true;
+}
+
+bool TConsole::resetConsoleBackgroundImage()
+{
+    mBgImageMode = 0;
+    changeColors();
     return true;
 }
 

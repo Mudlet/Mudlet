@@ -99,7 +99,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     QCursor cursor;
     cursor.setShape(Qt::IBeamCursor);
     setCursor(cursor);
-    setAttribute(Qt::WA_OpaquePaintEvent, false); //was disabled
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
     QPalette palette;

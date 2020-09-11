@@ -2160,6 +2160,23 @@ function setLabelCursor(labelname, cursorShape)
   return setLabelCursorLayer(labelname, cursorShape)
 end
 
+mudlet.BgImageMode ={
+  ["border"] = 1,
+  ["center"] = 2,
+  ["tile"]   = 3,
+  ["style"]  = 4,
+}
+
+local setConsoleBackgroundImageLayer = setConsoleBackgroundImage
+function setConsoleBackgroundImage(...)
+  local mode = arg[arg.n]
+  if type(mode) == "string" then
+    mode = mudlet.BgImageMode[mode] or mode
+  end
+  arg[arg.n] = mode
+  return setConsoleBackgroundImageLayer(unpack(arg))
+end
+
 
 --These functions ensure backward compatibility for the setLabelCallback functions
 --unpack function which also returns the nil values

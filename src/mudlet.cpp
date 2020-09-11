@@ -1974,20 +1974,40 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setWindowBackgroundImage(Host *pHost, const QString &name, const QString &imgPath)
+bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
     }
 
     if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->setConsoleBackgroundImage(imgPath);
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
         return true;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setConsoleBackgroundImage(imgPath);
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
         return true;
     } else {
         return false;

@@ -168,7 +168,8 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
-    bool setConsoleBackgroundImage(const QString&);
+    bool setConsoleBackgroundImage(const QString&, int);
+    bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -316,6 +317,8 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     QWidget* mpButtonMainLayer;
+    int mBgImageMode;
+    QString mBgImagePath;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
