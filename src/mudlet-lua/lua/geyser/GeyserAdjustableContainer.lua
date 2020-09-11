@@ -424,7 +424,7 @@ local function createMenus(self, parent, name, func)
     local label = self.adjLabel
     local menuTxt = self.Locale[name] and self.Locale[name].message or name
     label:addMenuLabel(name, parent)
-    label:configMenuLabel(parent.."."..name, "echo", menuTxt, "nocolor")
+    label:findMenuElement(parent.."."..name):echo(menuTxt, "nocolor")
     label:setMenuAction(parent.."."..name, func, self, name)
 end
 
@@ -460,6 +460,7 @@ function Adjustable.Container:createLabels()
     self.minimizeLabel:echo("<center>-</center>")
 end
 
+-- internal function to create the right click menu
 function Adjustable.Container:createRightClickMenu()
     self.adjLabel:createRightClickMenu(
         {MenuItems = {"lockLabel", "minLabel", "saveLabel", "loadLabel", "attLabel", {"att1","att2","att3","att4"}, "lockStylesLabel",{}, "customItemsLabel",{}},
@@ -481,6 +482,7 @@ function Adjustable.Container:createRightClickMenu()
     end
 end
 
+-- internal function to set the text on the right click menu labels
 function Adjustable.Container:echoRightClickMenu()
     for k,v in ipairs(self.adjLabel.rightClickMenu.MenuItems) do
         if type(v) == "string" then
@@ -489,6 +491,9 @@ function Adjustable.Container:echoRightClickMenu()
     end
 end
 
+--- function to change the right click menu style
+-- there are 2 styles: dark and light
+--@param mode the style mode (dark or light)
 function Adjustable.Container:changeMenuStyle(mode)
     self.menuStyleMode = mode
     self.adjLabel:styleMenuItems(self.menuStyleMode)

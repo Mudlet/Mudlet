@@ -892,7 +892,6 @@ end
 -- internal function to change the layout of the rightClick menu if we are at the right edge
 -- @param labelNest Nested Labels
 -- @param fdir flying direction of the label
-
 local function changeMenuLayout(labelNest, fdir)
   if not labelNest then
     return
@@ -982,7 +981,6 @@ end
 -- @param oldClickCallBack previous clickcallback function
 -- @param oldClickArgs previous clickcallback args
 -- @param event the onClick event
-
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
@@ -1001,11 +999,13 @@ function Geyser.Label:onRightClick(event)
   end
 end
 
---internal function to find right click menu labels by name 
--- if label has a parent the parent needs also to be specified
--- findParent to return a Parent
-function Geyser.Label:findMenuElement(parent, name, findParent)
-  local menu = menu or parent.MenuItems
+--- finds and returns a right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param only used internally the right click menu [optional]
+-- @param findParent only used internally to return a Parent [optional]
+function Geyser.Label:findMenuElement(name, parent, findParent)
+  local parent = parent or self.rightClickMenu
+  local menu = parent.MenuItems
   local parentName = parent.menuName
   for i = 1, #menu do
     local item = menu[i]
@@ -1020,12 +1020,13 @@ function Geyser.Label:findMenuElement(parent, name, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(parent.MenuLabels[itemParent], name)
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
       if element then
         return element, menuTable
       end
     end
   end
+  return nil, "findMenuElement: Couldn't find menu element "..name
 end
 
 --- Sets a action to be used when this label from the right click menu is clicked
@@ -1033,29 +1034,17 @@ end
 -- @param ... Parameters to pass to the function. Will be passed directly to the setClickCallback function.
 -- @see Geyser.Label:setClickCallback
 function Geyser.Label:setMenuAction(name, ...)
-  local menuElement = self:findMenuElement(self.rightClickMenu, name)
+  local menuElement = self:findMenuElement(name)
   if not menuElement then
     error ("setMenuAction: Couldn't find menu element "..name)
   end
   menuElement:setClickCallback(...)
 end
 
---- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param func The function to use as string (can be any Geyser.Label function)
--- @param ... Parameters to pass to the function.
-function Geyser.Label:configMenuLabel(name, func, ...)
-  local menuElement = self:findMenuElement(self.rightClickMenu, name)
-  if not menuElement then
-    error ("configMenuLabel: Couldn't find menu element "..name)
-  end
-  menuElement[func](menuElement, ...)
-end
-
---- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param func The function to use as string (can be any Geyser.Label function)
--- @param ... Parameters to pass to the function.
+--- hides a right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
 function Geyser.Label:hideMenuLabel(name)
-  local menuElement = self:findMenuElement(self.rightClickMenu, name)
+  local menuElement = self:findMenuElement(name)
   if not menuElement then
     error ("hideMenuLabel: Couldn't find menu element "..name)
   end
@@ -1073,11 +1062,10 @@ function Geyser.Label:hideMenuLabel(name)
   self:createMenuItems()
 end
 
---- finds Label with name in your rightClickMenu. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param func The function to use as string (can be any Geyser.Label function)
--- @param ... Parameters to pass to the function.
+--- shows a previously hidden right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
 function Geyser.Label:showMenuLabel(name)
-  local menuElement = self:findMenuElement(self.rightClickMenu, name)
+  local menuElement = self:findMenuElement(name)
   if not menuElement then
     error ("showMenuLabel: Couldn't find menu element "..name)
   end
@@ -1090,11 +1078,12 @@ function Geyser.Label:showMenuLabel(name)
   self:createMenuItems()
 end
 
---- adds a new item to the menu
--- @param func The function to use as string (can be any Geyser.Label function)
--- @param ... Parameters to pass to the function.
+--- adds a new item to the right click menu
+-- @param name Name of the new menu item.
+-- @param parent name of the parent where the new item will be created in (optional)
+-- @param index of the new menu item (optional)
 function Geyser.Label:addMenuLabel(name, parent, index)
-  local menuElement, menuParent = self:findMenuElement(self.rightClickMenu, parent, true)
+  local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
   
   if parent and not menuParent then
     error ("showMenuLabel: Couldn't find menu parent "..parent)
@@ -1122,11 +1111,11 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   end
 end
 
---- adds a new item to the menu
--- @param func The function to use as string (can be any Geyser.Label function)
--- @param ... Parameters to pass to the function.
+--- changes a right click menu items index
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param index the new index
 function Geyser.Label:changeMenuIndex(name, index)
-  local menuElement, menuTable = self:findMenuElement(self.rightClickMenu, name)
+  local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
   
   if not menuElement then
     error ("changeMenuIndex: Couldn't find menu element "..name)
@@ -1166,7 +1155,7 @@ function Geyser.Label:changeMenuIndex(name, index)
   self:createMenuItems()
 end
 
---- create a right click menu for your Label
+--- creates a right click menu for your Label
 ---@param cons different parameters controlling the size and style of the right click menu elements
 --@param[opt="140" ] cons.MenuWidth  default menu width of your right click menu. to give levels different width add a number at the end per level usage MenuWidth1
 --@param[opt="25" ] cons.MenuWidth default menu height of your right click menu. to give levels different height add a number at the end per level usage MenuHeight1
@@ -1192,7 +1181,7 @@ function Geyser.Label:createRightClickMenu(cons)
     self:setClickCallback(self.onRightClick, self)
   end
   
-  -- create a label with a nestable=true property to say that it can nest labels
+  -- create a label with a nestable=true property as base menu
   self.rightClickMenu = Geyser.Label:new(cons, self)
   self:createMenuItems(nil, cons.MenuItems)
 end
