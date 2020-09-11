@@ -196,43 +196,38 @@ void TTextEdit::initDefaultSettings()
 
 void TTextEdit::updateHorizontalScrollBar(int lineNumber)
 {
-    if (mpConsole->getType() != TConsole::ErrorConsole) {
+    if (mIsLowerPane || !mpConsole->mpHScrollBar || lineNumber < 1) {
         return;
     }
 
-    if (!mIsLowerPane) {
-        // This is ONLY for the upper pane
-        if (mpConsole->mpHScrollBar && lineNumber > 1) {
-            int columnCount = getColumnCount();
-            const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
-            int currentSize = lineText.size();
-            if (mShowTimeStamps) {
-                currentSize += mTimeStampWidth;
-            }
+    int columnCount = getColumnCount();
+    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+    int currentSize = lineText.size();
+    if (mShowTimeStamps) {
+        currentSize += mTimeStampWidth;
+    }
 
-            if (currentSize > mScreenOffset) {
-                mScreenOffset = currentSize;
-            }
+    if (currentSize > mScreenOffset) {
+        mScreenOffset = currentSize;
+    }
 
-            int maxRange = mScreenOffset - columnCount;
-            if (maxRange < 1) {
-                mpConsole->mpHScrollBar->hide();
-                mCursorX = 0;
-            } else {
-                mpConsole->mpHScrollBar->show();
-                if (mCursorX > maxRange){
-                    mCursorX = maxRange;
-                }
-
-            }
-            disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
-            mpConsole->mpHScrollBar->setRange(0, maxRange);
-            mpConsole->mpHScrollBar->setSingleStep(1);
-            mpConsole->mpHScrollBar->setPageStep(columnCount);
-            mpConsole->mpHScrollBar->setValue(mCursorX);
-            connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+    int maxRange = mScreenOffset - columnCount;
+    if (maxRange < 1) {
+        mpConsole->mpHScrollBar->hide();
+        mCursorX = 0;
+    } else {
+        mpConsole->mpHScrollBar->show();
+        if (mCursorX > maxRange) {
+            mCursorX = maxRange;
         }
     }
+
+    disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+    mpConsole->mpHScrollBar->setRange(0, maxRange);
+    mpConsole->mpHScrollBar->setSingleStep(1);
+    mpConsole->mpHScrollBar->setPageStep(columnCount);
+    mpConsole->mpHScrollBar->setValue(mCursorX);
+    connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
 }
 
 void TTextEdit::updateScreenView()
@@ -619,7 +614,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         drawLine(p, i + lineOffset, i);
-        updateHorizontalScrollBar(i + lineOffset);
+        if (Q_UNLIKELY(mpConsole->getType() == TConsole::ErrorConsole)) {
+            updateHorizontalScrollBar(i + lineOffset);
+        }
     }
     p.end();
     painter.setCompositionMode(QPainter::CompositionMode_Source);
