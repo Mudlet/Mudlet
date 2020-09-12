@@ -33,9 +33,10 @@
 #include "pre_guard.h"
 #include <QKeyEvent>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mpHost(pHost)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -49,6 +50,8 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
+, mType(type)
+, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -571,6 +574,14 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
+    // Workaround for SubCommandLines textCursor not visible in some situations
+    // SubCommandLines cannot autoresize
+    if (mType == SubCommandLine) {
+        if (lines <= 1) {
+            verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
+        }
+        return;
+    }
     int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
@@ -580,17 +591,20 @@ void TCommandLine::adjustHeight()
     }
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
+
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int x = mpConsole->width();
-        int y = mpConsole->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mpConsole, &event);
+        if (mType == MainCommandLine) {
+            int x = mpConsole->width();
+            int y = mpConsole->height();
+            QSize s = QSize(x, y);
+            QResizeEvent event(s, s);
+            QApplication::sendEvent(mpConsole, &event);
+        }
     }
 }
 
@@ -845,9 +859,19 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionTyped.clear();
 
     QStringList _l = _t.split(QChar::LineFeed);
+
     for (int i = 0; i < _l.size(); i++) {
-        mpHost->send(_l[i]);
+        if (mType != MainCommandLine && mActionFunction) {
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+        } else {
+            mpHost->send(_l[i]);
+        }
+        // send command to your MiniConsole
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+            mpConsole->printCommand(_l[i]);
+        }
     }
+
     if (!toPlainText().isEmpty()) {
         mHistoryBuffer = 0;
         setPalette(mRegularPalette);
@@ -1155,4 +1179,26 @@ void TCommandLine::clearMarksOnWholeLine()
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
+}
+
+void TCommandLine::setAction(const int func){
+    releaseFunc(mActionFunction, func);
+    mActionFunction = func;
+}
+
+void TCommandLine::resetAction()
+{
+    if (mActionFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mActionFunction);
+        mActionFunction = 0;
+    }
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TCommandLine::releaseFunc(const int existingFunction, const int newFunction)
+{
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
+    }
 }
