@@ -869,6 +869,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserCommandLine.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \
