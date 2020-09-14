@@ -1372,7 +1372,7 @@ int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 
     if (mode < 1 || mode > 4) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setConsoleBackgroundImage: %d is not a valid mode!)", mode);
+        lua_pushfstring(L, "setConsoleBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
         return 2;
     }
 
@@ -1393,7 +1393,7 @@ int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
 {
     QString windowName = "main";
     int n = lua_gettop(L);
-    if (n > 1) {
+    if (n > 0) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "resetConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
