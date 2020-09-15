@@ -1425,7 +1425,11 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
-
+    // try to prevent crash if buffer is batch deleted
+    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1){
+        mPA.ry() -= mpBuffer->mBatchDeleteSize;
+        mPB.ry() -= mpBuffer->mBatchDeleteSize;
+    }
     int startLine = std::max(0, mPA.y());
     int endLine = std::min(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
     int offset = endLine - startLine;
