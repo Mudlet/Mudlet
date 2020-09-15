@@ -831,7 +831,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // the left margin within the area that gets repainted...
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
-    update();
+    forceUpdate();
 }
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex)
