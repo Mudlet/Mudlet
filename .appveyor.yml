@@ -4,6 +4,10 @@ branches:
   - development    # build the default branch
   - /^release-.+/  # build release branches
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
+
+# Without a prefix commands are batch file ones
+# With cmd: prefix they are run by cmd.exe
+# With ps: prefix they are run by PowerShell
 init:
 - cmd: mkdir C:\src\
 image: Visual Studio 2019
@@ -19,22 +23,36 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.13.2\mingw73_32
-    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
+# was QT_BASE_DIR: C:\Qt\5.13.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
+  - BUILD_BITNESS: 32
+  - BUILD_BITNESS: 64
+
 install:
-- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- powershell ".\appveyor.install.ps1"
+#- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+#- powershell ".\appveyor.install.ps1"
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
 
 build_script:
-- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- powershell ".\appveyor.build.ps1"
+#- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+#- powershell ".\appveyor.build.ps1"
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
-on_failure:
-- cd C:\src
-- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+#on_failure:
+#- cd C:\src
+#- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+
+# on successful build we actually use the after_build stage as we need to do it
+# then in order to have the produced files be made available as a "artifact":
+after_build:
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 
 cache:
-  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+#  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+- C:\msys64\var\cache\pacman\pkg
+
+artifacts:
+# The current end-point of the build: an archive containing everything to run the Mudlet application
+- path: package\Mudlet*.zip
 
 notifications:
 - provider: Webhook

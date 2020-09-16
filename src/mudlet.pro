@@ -1580,12 +1580,15 @@ DISTFILES += \
     ../CI/travis.set-build-info.sh \
     ../CI/travis.validate_deployment.sh \
     ../.appveyor.yml \
-    ../CI/appveyor.validate_deployment.ps1 \
+    ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
+    ../CI/appveyor.build.sh \
+    ../CI/appveyor.functions.ps1 \
+    ../CI/appveyor.install.ps1 \
+    ../CI/appveyor.install.sh \
+    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.validate_deployment.ps1 \
     ../CI/generate-ptb-changelog.lua \
     ../CI/update-autocompletion.lua \
     mudlet-lua/lua/ldoc.css \
