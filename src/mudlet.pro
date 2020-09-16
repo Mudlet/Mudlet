@@ -1558,6 +1558,7 @@ DISTFILES += \
     ../.github/workflows/build-mudlet.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
+    ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.github/workflows/whitespace-linter.yml \
     ../CMakeLists.txt \
@@ -1567,22 +1568,26 @@ DISTFILES += \
     ../cmake/FindZIP.cmake \
     ../cmake/FindPUGIXML.cmake \
     ../.travis.yml \
+    ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
     ../CI/travis.set-build-info.sh \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.validate_deployment.sh \
     ../.appveyor.yml \
+    ../CI/appveyor.validate_deployment.ps1 \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
+    ../CI/generate-ptb-changelog.lua \
+    ../CI/update-autocompletion.lua \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \
