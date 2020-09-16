@@ -113,5 +113,9 @@ ${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
 echo " "
 echo "    ... luarocks installation done"
 echo " "
+# Collect, extract and export to the environment the Mudlet Version number
+export VERSION=$(grep "VERSION =" ./src/mudlet.pro | cut -d= -f 2)
+echo " We are building Mudlet version ${VERSION} or a derivative of it."
+echo " "
 echo "  ... appveyor.install.sh shell script finished!"
 echo " "

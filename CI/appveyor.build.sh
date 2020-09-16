@@ -38,27 +38,26 @@ cd ./build
 # MUDLET_VERSION_BUILD may be already be set in the environment by package
 # creators on some OSes - but we defined it from scratch in this situation:
 
-if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
+if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
     # The leading '-' is used to append but separate the BUILD variable from the
     # major/minor/patch numbers in the version string:
-    if [ ${APPVEYOR_SCHEDULED_BUILD} = "true" ] ; then
+    if [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ] ; then
         MUDLET_VERSION_BUILD="-ptb"
     else
         MUDLET_VERSION_BUILD="-testing"
     fi
     if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then
         COMMIT="$(git rev-parse --short ${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
-        MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
+        export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
         COMMIT="$(git rev-parse --short HEAD)"
-        if [ ${APPVEYOR_SCHEDULED_BUILD} = "true" ] ; then
+        if [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ] ; then
             DATE=$(date +%Y-%m-%d)
-            MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${COMMIT}"
+            export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${COMMIT}"
         else
-            MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+            export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
         fi
     fi
-    export ${MUDLET_VERSION_BUILD}
 fi
 
 echo " "

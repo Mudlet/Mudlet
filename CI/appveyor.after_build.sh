@@ -180,7 +180,7 @@ cp -v -p -t . \
 
 echo " "
 
-if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
+if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
     echo "Compressing all files into an archive file for distribution..."
     /usr/bin/zip -rv9 Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-win${BUILD_BITNESS}.zip ./*
 
