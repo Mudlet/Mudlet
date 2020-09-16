@@ -78,14 +78,6 @@ if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
 echo " "
-echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
-# Change the referred to makefile if we switch to a debug build:
-${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
-exit_status=$?
-if [ ${exit_status} -ne 0 ]; then
-    exit ${exit_status}
-fi
-echo " "
 echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -k -j 3
 exit_status=$?
