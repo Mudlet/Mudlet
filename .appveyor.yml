@@ -10,7 +10,9 @@ branches:
 # With ps: prefix they are run by PowerShell
 init:
 - cmd: mkdir C:\src\
+
 image: Visual Studio 2019
+
 environment:
   signing_password:
     secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
@@ -24,8 +26,12 @@ environment:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
 # was QT_BASE_DIR: C:\Qt\5.13.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
+# We are not currently using CMake for Windows builds but it might be needed in
+# the future:
   - BUILD_BITNESS: 32
+    Q_OR_C_MAKE=qmake
   - BUILD_BITNESS: 64
+    Q_OR_C_MAKE=qmake
 
 install:
 #- cd "%APPVEYOR_BUILD_FOLDER%\CI"

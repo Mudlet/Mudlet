@@ -1,5 +1,21 @@
 #!/bin/sh
 
+# Commented out things only needed for failure post-mortems:
+# echo "Initial MSYSTEM is: ${MSYSTEM}"
+# echo "Initial PATH is:"
+# echo ${PATH}
+# echo " "
+# echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
+export MSYSTEM=MINGW${BUILD_BITNESS}
+export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
+export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
+export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
+# echo " "
+# echo "PATH is now:"
+# echo ${PATH}
+# echo " "
+# echo "MSYSTEM is now: ${MSYSTEM}"
+
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ]; then
@@ -37,19 +53,3 @@ fi
 # not all systems we deal with allow uppercase ascii characters
 export MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
 export VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
-
-# Commented out things only needed for failure post-mortems:
-# echo "Initial MSYSTEM is: ${MSYSTEM}"
-# echo "Initial PATH is:"
-# echo ${PATH}
-# echo " "
-# echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
-export MSYSTEM=MINGW${BUILD_BITNESS}
-export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
-export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-# echo " "
-# echo "PATH is now:"
-# echo ${PATH}
-# echo " "
-# echo "MSYSTEM is now: ${MSYSTEM}"
