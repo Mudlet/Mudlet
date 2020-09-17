@@ -18,8 +18,11 @@ echo "  it contains:"
 ls -l
 echo " "
 
+# Since Qt 5.14 using the --release switch is broken (it now seems to be
+# assumed), --debug still seems to work.
+# https://bugreports.qt.io/browse/QTBUG-80806 seems relevant.
 echo "Running windeployqt..."
-${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt --release mudlet.exe
+${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt --no-virtualkeyboard mudlet.exe
 echo " "
 
 echo "Copying system libraries in..."
