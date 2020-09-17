@@ -17,7 +17,6 @@ export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 # echo "MSYSTEM is now: ${MSYSTEM}"
 
 MUDLET_VERSION_BUILD=""
-${APPVEYOR_REPO_TAG}
 if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         MUDLET_VERSION_BUILD="-ptb"
@@ -25,12 +24,12 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
         MUDLET_VERSION_BUILD="-testing"
     fi
 
-    if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then # building for a PR
+    # -n is test for non-zero length string - so building for a PR
+    if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
         COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}")
         MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
         COMMIT=$(git rev-parse --short HEAD)
-
         if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
             DATE=$(date +'%Y-%m-%d')
             # add a short commit to version for changelog generation know what was last released

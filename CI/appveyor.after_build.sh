@@ -45,6 +45,8 @@ fi
 # and doing the above "ldd" check revealed that "zip.dll" needed
 # "libzzip-0-13.dll" and "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
 cp -v -p -t . \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlidec.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libbz2-1.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll \
@@ -53,9 +55,9 @@ cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libhunspell-1.7-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt64.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin64.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt67.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin67.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc67.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libjasper-4.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll \
