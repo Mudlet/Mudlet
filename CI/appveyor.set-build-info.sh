@@ -26,7 +26,7 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     fi
 
     if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then # building for a PR
-        COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
+        COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}")
         MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
         COMMIT=$(git rev-parse --short HEAD)
