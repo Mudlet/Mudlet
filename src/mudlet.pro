@@ -1588,6 +1588,7 @@ DISTFILES += \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.install.sh \
     ../CI/appveyor.set-build-info.ps1 \
+    ../CI/appveyor.set-build-info.sh \
     ../CI/appveyor.validate_deployment.ps1 \
     ../CI/generate-ptb-changelog.lua \
     ../CI/update-autocompletion.lua \

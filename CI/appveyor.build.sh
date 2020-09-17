@@ -2,27 +2,8 @@
 
 echo "Running appveyor.build.sh shell script..."
 
-# Probably not required as already tested for in appveyor.install.sh
-# if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
-#    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-#    exit 1
-# fi
-
-# Commenting out things only needed for failure post-mortems
-# echo "Initial MSYSTEM is: ${MSYSTEM}"
-# echo "Initial PATH is:"
-# echo ${PATH}
-echo " "
-echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
-export MSYSTEM=MINGW${BUILD_BITNESS}
-export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
-export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-echo " "
-# echo "PATH is now:"
-# echo ${PATH}
-# echo " "
-# echo "MSYSTEM is now: ${MSYSTEM}"
+# Source/setup some variables (including PATH):
+. $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
 echo " "
 echo "Project directory is: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
@@ -66,7 +47,7 @@ echo "Now building a ${BUILD_BITNESS} bit Mudlet ${MUDLET_VERSION_BUILD}..."
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug and changing references to "release" sub-directories to "debug"...
 # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
-if [ ${BUILD_BITNESS} = "64" ] ; then
+if [ "${BUILD_BITNESS}" = "64" ] ; then
     export WITH_UPDATER=NO
 fi
 

@@ -9,27 +9,8 @@ if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
     exit 0
 fi
 
-# Probably not required as already tested for in appveyor.install.sh
-# if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
-#    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-#    exit 1
-# fi
-
-# Commented out things only needed for failure post-mortems:
-# echo "Initial MSYSTEM is: ${MSYSTEM}"
-# echo "Initial PATH is:"
-# echo ${PATH}
-echo " "
-echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
-export MSYSTEM=MINGW${BUILD_BITNESS}
-export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
-export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-# echo " "
-# echo "PATH is now:"
-# echo ${PATH}
-# echo " "
-# echo "MSYSTEM is now: ${MSYSTEM}"
+# Source/setup some variables (including PATH):
+. $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
 echo "Moving to packaging directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/package)"
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
@@ -42,7 +23,7 @@ ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt --release mudlet.exe
 echo " "
 
 echo "Copying system libraries in..."
-if [ ${BUILD_BITNESS} = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ] ; then
     cp -v -p ${MINGW_INTERNAL_BASE_DIR}/bin/libgcc_s_dw2-1.dll .
 else
     cp -v -p ${MINGW_INTERNAL_BASE_DIR}/bin/libgcc_s_seh-1.dll .
@@ -94,7 +75,7 @@ cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/zlib1.dll
 
 # The openSSL libraries has a different name depending on the bitness:
-if [ ${BUILD_BITNESS} = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ] ; then
     cp -v -p -t . \
         ${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-1_1.dll \
         ${MINGW_INTERNAL_BASE_DIR}/bin/libssl-1_1.dll
@@ -108,7 +89,7 @@ fi
 
 echo " "
 echo "Copying discord-rpc library in..."
-if [ ${BUILD_BITNESS} = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ] ; then
     cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
 else
     cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .

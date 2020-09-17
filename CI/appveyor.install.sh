@@ -2,25 +2,13 @@
 
 echo "Running appveyor.install.sh shell script..."
 
+# Source/setup some variables (including PATH):
+. $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
+
 if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
     exit 1
 fi
-
-echo "Initial MSYSTEM is: ${MSYSTEM}"
-echo "Initial PATH is:"
-echo ${PATH}
-echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
-export MSYSTEM=MINGW${BUILD_BITNESS}
-# MINGW_BASE_DIR Previously used in external (power shell) scripts
-export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
-# For use within sh scripts as it does not include a DRIVE element
-export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-echo "It is now:"
-echo ${PATH}
-echo " "
-echo "MSYSTEM is now: ${MSYSTEM}"
 
 # Options:
 # --Sy = Sync, refresh as well as installing the specified packages
@@ -31,7 +19,7 @@ echo "Updating MSYS2 packages..."
 
 # Uncomment this to use user luarocks
 # ROCKOPTARGS=--local
-if [ ${BUILD_BITNESS} = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ] ; then
     BUILDCOMPONENT="i686"
 else
     BUILDCOMPONENT="x86_64"
@@ -112,10 +100,6 @@ echo "    luasql-sqlite3"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
 echo " "
 echo "    ... luarocks installation done"
-echo " "
-# Collect, extract and export to the environment the Mudlet Version number
-export VERSION=$(grep "VERSION =" ./src/mudlet.pro | cut -d= -f 2)
-echo " We are building Mudlet version ${VERSION} or a derivative of it."
 echo " "
 echo "  ... appveyor.install.sh shell script finished!"
 echo " "
