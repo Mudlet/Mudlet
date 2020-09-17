@@ -1602,6 +1602,21 @@ DISTFILES += \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \
+    ../translations/lua/translated/mudlet-lua_de_DE.json \
+    ../translations/lua/translated/mudlet-lua_el_GR.json \
+    ../translations/lua/translated/mudlet-lua_en_GB.json \
+    ../translations/lua/translated/mudlet-lua_en_PT.json \
+    ../translations/lua/translated/mudlet-lua_es_ES.json \
+    ../translations/lua/translated/mudlet-lua_fr_FR.json \
+    ../translations/lua/translated/mudlet-lua_it_IT.json \
+    ../translations/lua/translated/mudlet-lua_nl_NL.json \
+    ../translations/lua/translated/mudlet-lua_pl_PL.json \
+    ../translations/lua/translated/mudlet-lua_pt_BR.json \
+    ../translations/lua/translated/mudlet-lua_pt_PT.json \
+    ../translations/lua/translated/mudlet-lua_ru_RU.json \
+    ../translations/lua/translated/mudlet-lua_tr_TR.json \
+    ../translations/lua/translated/mudlet-lua_zh_CN.json \
+    ../translations/lua/translated/mudlet-lua_zh_TW.json \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
     ../COMMITMENT \

@@ -133,6 +133,10 @@ echo "Copying Lua code formatter Lua files in..."
 rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/lcf/./* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/lcf/)
 echo " "
 
+echo "Copying Lua translation files in..."
+rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/translations/lua/translated/./mudlet-lua_??_??.json $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/translations/lua/translated/)
+echo " "
+
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
   $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.aff) \

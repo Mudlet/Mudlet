@@ -42,7 +42,7 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
 fi
 
 echo " "
-echo "Now building a ${BUILD_BITNESS} bit Mudlet ${MUDLET_VERSION_BUILD}..."
+echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug and changing references to "release" sub-directories to "debug"...
