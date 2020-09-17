@@ -70,6 +70,11 @@ if [ ${BUILD_BITNESS} = "64" ] ; then
     export WITH_UPDATER=NO
 fi
 
+# THIS IS REQUIRED AS IT SWITCHES SOME THINGS IN THE QMAKE (AND CMAKE) BUILDS TO
+# WORK IN A MSYS2/MINGW-W64 BUILD ENVIRONMENT - without it the lua.h and related
+# headers won't be found!
+export WITH_MAIN_BUILD_SYSTEM=NO
+
 echo " "
 echo "Running qmake:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
