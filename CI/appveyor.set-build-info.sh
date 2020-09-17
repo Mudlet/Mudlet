@@ -17,17 +17,17 @@ export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 # echo "MSYSTEM is now: ${MSYSTEM}"
 
 MUDLET_VERSION_BUILD=""
-
-if [ -z "${TRAVIS_TAG}" ]; then
-    if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+${APPVEYOR_REPO_TAG}
+if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
+    if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         MUDLET_VERSION_BUILD="-ptb"
     else
         MUDLET_VERSION_BUILD="-testing"
     fi
 
-    if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
-        COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
-        MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
+    if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then # building for a PR
+        COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
+        MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
         COMMIT=$(git rev-parse --short HEAD)
 
@@ -45,9 +45,9 @@ fi
 VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
-    VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
+    VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-    VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
+    VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
 fi
 
 # not all systems we deal with allow uppercase ascii characters
