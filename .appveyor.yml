@@ -29,9 +29,9 @@ environment:
 # We are not currently using CMake for Windows builds but it might be needed in
 # the future:
   - BUILD_BITNESS: 32
-    Q_OR_C_MAKE=qmake
+    Q_OR_C_MAKE: qmake
   - BUILD_BITNESS: 64
-    Q_OR_C_MAKE=qmake
+    Q_OR_C_MAKE: qmake
 
 install:
 #- cd "%APPVEYOR_BUILD_FOLDER%\CI"
