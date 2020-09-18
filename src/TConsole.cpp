@@ -635,7 +635,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int y = event->size().height();
 
 
-    if (mType & (MainConsole|Buffer)) {
+    if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
@@ -1926,6 +1926,10 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     mpButtonMainLayer->setVisible(false);
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
+    //resizes miniconsole if command line gets enabled/disabled
+    QSize s = QSize(width(), height());
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(this, &event);
 }
 
 void TConsole::refreshMiniConsole() const
