@@ -635,7 +635,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int y = event->size().height();
 
 
-    if (mType & (MainConsole|Buffer|SubConsole) && mpCommandLine && !mpCommandLine->isHidden()) {
+    if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
