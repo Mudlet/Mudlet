@@ -55,6 +55,7 @@ public:
     explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void hideEvent(QHideEvent*) override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
     void setAction(const int);
