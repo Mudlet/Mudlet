@@ -134,7 +134,9 @@ rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/lcf/./* 
 echo " "
 
 echo "Copying Lua translation files in..."
-rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/translations/lua/translated/./mudlet-lua_??_??.json $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/)
+mkdir -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/)
+cp -v -p -t $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/) \
+    $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/translations/lua/translated/mudlet-lua_??_??.json
 echo " "
 
 echo "Copying Hunspell dictionaries in..."
