@@ -69,37 +69,37 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 #    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/etc/luarocks/config-5.1.lua.orig > /mingw32/etc/luarocks/config-5.1.lua
 #fi
 
-echo " "
+echo ""
 echo "    .... MSYS2 Package installation completed."
-echo " "
+echo ""
 echo " Lua configuration files are: (system): $(${ROCKCOMMAND} config --system-config)"
 echo "                            and (user): $(${ROCKCOMMAND} config --user-config)"
-echo " "
+echo ""
 echo "   The system one contains:"
 /usr/bin/cat $(${ROCKCOMMAND} config --system-config)
 
-echo " "
+echo ""
 echo "  Installing needed luarocks..."
-echo " "
+echo ""
 echo "    luafilesystem"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
-echo " "
+echo ""
 echo "    lua-yajl"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install lua-yajl
-echo " "
+echo ""
 echo "    luautf8"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luautf8
-echo " "
+echo ""
 echo "    luazip"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luazip
-echo " "
+echo ""
 echo "    lrexlib-pcre"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install lrexlib-pcre
-echo " "
+echo ""
 echo "    luasql-sqlite3"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
-echo " "
+echo ""
 echo "    ... luarocks installation done"
-echo " "
+echo ""
 echo "  ... appveyor.install.sh shell script finished!"
-echo " "
+echo ""

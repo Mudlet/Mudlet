@@ -1,11 +1,13 @@
 #!/bin/sh
 
+# This assembles all the files we need into a package sub-directory
+
 echo "Running appveyor.after_build.sh shell script..."
 
 if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
-    echo " "
+    echo ""
     exit 0
 fi
 
@@ -16,14 +18,14 @@ echo "Moving to packaging directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUI
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 echo "  it contains:"
 ls -l
-echo " "
+echo ""
 
 # Since Qt 5.14 using the --release switch is broken (it now seems to be
 # assumed), --debug still seems to work.
 # https://bugreports.qt.io/browse/QTBUG-80806 seems relevant.
 echo "Running windeployqt..."
 ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt --no-virtualkeyboard mudlet.exe
-echo " "
+echo ""
 
 echo "Copying system libraries in..."
 if [ "${BUILD_BITNESS}" = "32" ] ; then
@@ -92,14 +94,14 @@ else
 
 fi
 
-echo " "
+echo ""
 echo "Copying discord-rpc library in..."
 if [ "${BUILD_BITNESS}" = "32" ] ; then
     cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
 else
     cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .
 fi
-echo " "
+echo ""
 
 # Lua libraries:
 echo "Copying lua C libraries in..."
@@ -115,7 +117,7 @@ cp -v -p -t . \
 
 mkdir ./luasql
 cp -v -p ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll ./luasql/sqlite3.dll
-echo " "
+echo ""
 
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
@@ -125,19 +127,19 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
 rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/src/mudlet-lua/./* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/mudlet-lua/)
-echo " "
+echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
 rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/lcf/./* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/lcf/)
-echo " "
+echo ""
 
 echo "Copying Lua translation files in..."
 mkdir -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/)
 cp -v -p -t $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/) \
     $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/translations/lua/translated/mudlet-lua_??_??.json
-echo " "
+echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
@@ -170,28 +172,12 @@ cp -v -p -t . \
   $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.aff) \
   $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.dic)
 
-echo " "
+echo ""
 
-if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
-    echo "Compressing all files into an archive file for distribution..."
-    /usr/bin/zip -rv9 Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-win${BUILD_BITNESS}.zip ./*
-
-    # TODO - find the way to squirt the file to:
-    # https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-win${BUILD_BITNESS}.zip
-
-else
-    # TODO - create sh script equivalent of part of the powershell script
-    # appveyor.after_success.old.ps1 that produces the squirrel update package
-    # the following is a dummy command to keep the shell happy:
-    true
-
-fi
-
-echo " "
-
-echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
-/usr/bin/ls -aRl
-echo " "
+# For debugging purposes:
+# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
+# /usr/bin/ls -aRl
+# echo ""
 
 echo "   ... appveyor.after_build.sh shell script finished!"
-echo " "
+echo ""

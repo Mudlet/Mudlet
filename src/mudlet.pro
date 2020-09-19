@@ -1582,6 +1582,7 @@ DISTFILES += \
     ../.appveyor.yml \
     ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.ps1 \
+    ../CI/appveyor.after_success.sh \
     ../CI/appveyor.build.ps1 \
     ../CI/appveyor.build.sh \
     ../CI/appveyor.functions.ps1 \

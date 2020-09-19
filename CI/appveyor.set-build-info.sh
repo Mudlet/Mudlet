@@ -4,32 +4,34 @@
 # echo "Initial MSYSTEM is: ${MSYSTEM}"
 # echo "Initial PATH is:"
 # echo ${PATH}
-# echo " "
+# echo ""
 # echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
 export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
 export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-# echo " "
+# echo ""
 # echo "PATH is now:"
 # echo ${PATH}
-# echo " "
+# echo ""
 # echo "MSYSTEM is now: ${MSYSTEM}"
 
 MUDLET_VERSION_BUILD=""
 if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         MUDLET_VERSION_BUILD="-ptb"
+        export PUBLIC_TEST_BUILD="true"
     else
         MUDLET_VERSION_BUILD="-testing"
+        export PUBLIC_TEST_BUILD="false"
     fi
 
     # -n is test for non-zero length string - so building for a PR
     if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
-        COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}")
+        export COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}")
         MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
-        COMMIT=$(git rev-parse --short HEAD)
+        export COMMIT=$(git rev-parse --short HEAD)
         if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
             DATE=$(date +'%Y-%m-%d')
             # add a short commit to version for changelog generation know what was last released
@@ -39,6 +41,9 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
             MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
         fi
     fi
+else
+    export COMMIT=""
+    export PUBLIC_TEST_BUILD="false"
 fi
 
 VERSION=""

@@ -5,7 +5,7 @@ echo "Running appveyor.build.sh shell script..."
 # Source/setup some variables (including PATH):
 . $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
-echo " "
+echo ""
 echo "Project directory is: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})
 # echo "  which contains:"
@@ -41,7 +41,7 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
     fi
 fi
 
-echo " "
+echo ""
 echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
@@ -56,29 +56,29 @@ fi
 # headers won't be found!
 export WITH_MAIN_BUILD_SYSTEM=NO
 
-echo " "
+echo ""
 echo "Running qmake:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
 exit_status=$?
 if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
-echo " "
+echo ""
 echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -k -j 3
 exit_status=$?
 if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
-echo " "
+echo ""
 echo "mingw32-make finished!"
-echo " "
+echo ""
 
 # Follow section commented out as only needed for post mortem checks:
 # echo "Project directory: ${APPVEYOR_BUILD_FOLDER}"
 # echo "  now contains:"
 # /usr/bin/ls -al ${APPVEYOR_BUILD_FOLDER}
-# echo " "
+# echo ""
 
 # # Note that the APPVEYOR_BUILD_FOLDER variable uses '\' (a single backslash)
 # # as the directory separator but that is not usable in commands (it needs doubling)
@@ -86,7 +86,7 @@ echo " "
 # echo "Project build directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build)"
 # echo "  now contains:"
 # /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
-# echo " "
+# echo ""
 # echo "Project build sub-directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/release)"
 # echo "  now contains:"
 # /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
@@ -96,10 +96,10 @@ echo " "
 
 echo "Creating packaging directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/package)"
 mkdir $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
-echo " "
+echo ""
 echo "Copying mudlet executable to it:"
 cp $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release/mudlet.exe) $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
-echo " "
+echo ""
 
 echo "   ... appveyor.build.sh shell script finished!"
-echo " "
+echo ""

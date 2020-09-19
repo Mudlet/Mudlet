@@ -27,8 +27,9 @@ echo ""
 echo "******************************************************"
 echo ""
 echo "Finished building Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
-if [ ! -z "${DEPLOY_URL}" ]; then
-  echo "Deployed the output to ${DEPLOY_URL}"
+if [ -n "${DEPLOY_URL}" ]; then
+    echo ""
+    echo "Deployed the output to ${DEPLOY_URL}"
 fi
 echo ""
 echo "******************************************************"
