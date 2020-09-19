@@ -52,7 +52,7 @@ build_script:
 after_build:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 
-after_success:
+on_success:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
 
 cache:
