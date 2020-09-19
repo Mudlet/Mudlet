@@ -12,6 +12,8 @@ fi
 # Source/setup some variables (including PATH):
 . $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
+cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
+
 if [ ${APPVEYOR_REPO_TAG} = "false" ] && [ ${PUBLIC_TEST_BUILD} != "true" ] ; then
     echo "=== Creating a snapshot build ==="
     ZIP_FILE_NAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-win${BUILD_BITNESS}.zip
