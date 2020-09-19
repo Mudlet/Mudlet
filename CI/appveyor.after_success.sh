@@ -12,7 +12,7 @@ fi
 # Source/setup some variables (including PATH):
 . $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
-if [ ${APPVEYOR_REPO_TAG} = "false" && ${PUBLIC_TEST_BUILD} != "true" ] ; then
+if [ ${APPVEYOR_REPO_TAG} = "false" ] && [ ${PUBLIC_TEST_BUILD} != "true" ] ; then
     echo "=== Creating a snapshot build ==="
     ZIP_FILE_NAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-win${BUILD_BITNESS}.zip
     mv $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/mudlet.exe) $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/Mudlet.exe)
@@ -40,6 +40,12 @@ echo "******************************************************"
 echo ""
 echo "Finished building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
 if [ -n "${DEPLOY_URL}" ]; then
+    if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ] ; then
+        PRID=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
+    else
+        PRID=""
+    fi
+    wget --post-data "message=Deployed Mudlet ``${VERSION}${MUDLET_VERSION_BUILD}`` (windows ${BUILD_BITNESS}-bit${prId}) to [appveyor]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
     echo ""
     echo "Deployed the output to ${DEPLOY_URL}"
 fi

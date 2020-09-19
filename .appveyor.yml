@@ -52,6 +52,9 @@ build_script:
 after_build:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 
+after_success:
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
+
 cache:
 #  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 - C:\msys64\var\cache\pacman\pkg

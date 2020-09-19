@@ -27,11 +27,13 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     fi
 
     # -n is test for non-zero length string - so building for a PR
+    # Shorten the Commit SHA1 produced (so that it is only 7 hex digits) so that
+    # it matches the length used in the filename for the Linux/MacOs builds:
     if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
-        export COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}")
+        export COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}" | cut -c-7)
         MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
-        export COMMIT=$(git rev-parse --short HEAD)
+        export COMMIT=$(git rev-parse --short HEAD | cut -c-7)
         if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
             DATE=$(date +'%Y-%m-%d')
             # add a short commit to version for changelog generation know what was last released
