@@ -14,7 +14,7 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 fi
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
-  prId=" ,#${TRAVIS_PULL_REQUEST}"
+  prId=", #${TRAVIS_PULL_REQUEST}"
 fi
 
 if [ ! -z "${DEPLOY_URL}" ]; then
