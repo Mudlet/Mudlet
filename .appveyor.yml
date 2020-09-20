@@ -37,13 +37,12 @@ environment:
 install:
 #- cd "%APPVEYOR_BUILD_FOLDER%\CI"
 #- powershell ".\appveyor.install.ps1"
-- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
+- cmd: c:\msys64\msys2_shell.cmd -full-path -mingw%BUILD_BITNESS% -shell sh -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
 
 build_script:
 #- cd "%APPVEYOR_BUILD_FOLDER%\CI"
 #- powershell ".\appveyor.build.ps1"
-- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
-
+- cmd: c:\msys64\msys2_shell.cmd -full-path -mingw%BUILD_BITNESS% -shell sh -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 #on_failure:
 #- cd C:\src
 #- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
@@ -51,10 +50,10 @@ build_script:
 # on successful build we actually use the after_build stage as we need to do it
 # then in order to have the produced files be made available as a "artifact":
 after_build:
-- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
+- cmd: c:\msys64\msys2_shell.cmd -full-path -mingw%BUILD_BITNESS% -shell sh -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 
 on_success:
-- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
+- cmd: c:\msys64\msys2_shell.cmd -full-path -mingw%BUILD_BITNESS% -shell sh -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
 
 cache:
 #  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
