@@ -6,6 +6,8 @@ on:
 jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
+    # From: https://stackoverflow.com/a/59775665/4805858
+    if: "!contains(github.event.commits[0].message, '[skip gha]') && !contains(github.event.commits[0].message, '[skip ci]')"
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false

@@ -5,6 +5,9 @@ echo "Running appveyor.install.sh shell script..."
 # Source/setup some variables (including PATH):
 . $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
 
+echo "  TESTING VERSION - ABORTING AFTER CONFIGURING SOME THINGS!!!"
+exit 1
+
 if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
     exit 1
