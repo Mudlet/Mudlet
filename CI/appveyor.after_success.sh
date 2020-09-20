@@ -102,7 +102,7 @@ which nuget.exe
 echo "TEMP: ensuring we have modified the nuspec file:"
 /usr/bin/diff -w ${NU_SPEC_FILE}.orig ${NU_SPEC_FILE}
 echo ""
-    }
+    fi
 
     echo "  Creating the package based on the nuspec file:"
     nuget pack "$(/usr/bin/cygpath --windows "${NU_SPEC_FILE}")" -Version "${VERSION_AND_SHA}" -BasePath "$(/usr/bin/cygpath --windows "${SQUIRRELWIN}")" -OutputDirectory "$(/usr/bin/cygpath --windows "${SQUIRRELWIN}")"
