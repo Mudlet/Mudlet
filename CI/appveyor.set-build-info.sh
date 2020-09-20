@@ -10,7 +10,7 @@ export CCACHE=/mingw${BUILD_BITNESS}/bin/ccache
 export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${PATH}${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
+export PATH=${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo ""
 echo "PATH is now:"
 echo ${PATH}
