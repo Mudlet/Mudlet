@@ -202,9 +202,35 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         TMedia::parseJSONForMediaPlay(json);
     }
 }
+
+bool TMedia::purgeMediaCache()
+{
+    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    QDir mediaDir(mediaPath);
+
+    if (!mediaDir.mkpath(mediaPath)) {
+        qWarning() << QStringLiteral("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        return false;
+    }
+
+    stopAllMediaPlayers();
+    mediaDir.removeRecursively();
+    return true;
+}
 // End Public
 
 // Private
+void TMedia::stopAllMediaPlayers()
+{
+    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList);
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer pPlayer = itTMediaPlayer.next();
+        pPlayer.getMediaPlayer()->stop();
+    }
+}
+
 QUrl TMedia::parseUrl(TMediaData& mediaData)
 {
     QUrl url;

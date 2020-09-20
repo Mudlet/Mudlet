@@ -109,7 +109,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
+    termType = QStringLiteral("Mudlet " APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QStringLiteral(APP_BUILD));
     }
@@ -2011,7 +2011,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media").toLower())) {
+    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2153,6 +2153,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::purgeMediaCache()
+{
+    return mpHost->mpMedia->purgeMediaCache();
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

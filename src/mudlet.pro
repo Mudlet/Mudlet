@@ -181,7 +181,7 @@ linux|macx|win32 {
 # don't include it either
 
 
-######################### 3D mapper toggle #######################
+############################### 3D mapper toggle ###############################
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
@@ -190,7 +190,7 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
-######################## System QtKeyChain library ###############
+######################## System QtKeyChain library #############################
 # To use a system provided QtKeyChain library set the environmental variable
 # WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be
 # useful on \*nix OSes (not MacOS nor Windows). If NOT specified, (or set to
@@ -202,6 +202,16 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 OWN_QTKEYCHAIN_TEST = $$upper($$(WITH_OWN_QTKEYCHAIN))
 isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
   DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
+}
+
+################ Alternative Windows build environment support #################
+# Developers using a full MSYS2/Mingw-w64 system, as documented at:
+# https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows_7.2B_.28MSYS2_Alternative.29
+# will need some tweaks to names/paths for some libraries/header files, do this
+# by setting an environment variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
+MAIN_BUILD_SYSTEM_TEST = $$upper($$(WITH_MAIN_BUILD_SYSTEM))
+isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
+  DEFINES += INCLUDE_MAIN_BUILD_SYSTEM
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -271,23 +281,49 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
-    isEmpty( MINGW_BASE_DIR_TEST ) {
-        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+    contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
+        # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
+        isEmpty( MINGW_BASE_DIR_TEST ) {
+            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
+        }
+        LIBS +=  \
+            -L"$${MINGW_BASE_DIR_TEST}\\bin" \
+            -llua51 \
+            -llibhunspell-1.6
+
+        INCLUDEPATH += \
+             "C:\\Libraries\\boost_1_71_0" \
+             "$${MINGW_BASE_DIR_TEST}\\include" \
+             "$${MINGW_BASE_DIR_TEST}\\lib\\include"
+
+    } else {
+        # For users/developers building with MSYS2 on Windows:
+        isEmpty( MINGW_BASE_DIR_TEST ) {
+            error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
+"the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+"application build) typically this is one of:\\n"\
+"'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+"'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+"'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+        }
+        LIBS +=  \
+            -L$${MINGW_BASE_DIR_TEST}/bin \
+            -llua5.1 \
+            -llibhunspell-1.7
+
+        INCLUDEPATH += \
+             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+             $${MINGW_BASE_DIR_TEST}/include/pugixml
     }
-    LIBS +=  \
-        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-        -llua51 \
+
+    LIBS += \
         -lpcre-1 \
-        -llibhunspell-1.6 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
         -lWs2_32
-    INCLUDEPATH += \
-         "C:\\Libraries\\boost_1_71_0" \
-         "$${MINGW_BASE_DIR_TEST}\\include" \
-         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
 }
@@ -833,6 +869,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/Geyser.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserAdjustableContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserColor.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserCommandLine.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserContainer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGauge.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserGeyser.lua \

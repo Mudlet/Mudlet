@@ -192,7 +192,7 @@ end</script>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Exit Line Trigger</name>
 					<script>map.prompt.exits = map.prompt.exits .. ", " .. string.trim(matches[2])
-setTriggerStayOpen("Multi-Line Exits Trigger",1)</script>
+setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
 					<mStayOpen>0</mStayOpen>

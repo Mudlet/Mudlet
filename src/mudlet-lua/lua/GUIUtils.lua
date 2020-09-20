@@ -2061,7 +2061,7 @@ local function copy2color(name,win,str,inst)
   if not start then
     error(name..": string not found",3)
   end
-  local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   if name == "copy2html" then
     style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
@@ -2146,10 +2146,10 @@ function setLabelCursor(labelname, cursorShape)
 end
 
 
---These functions ensure backward compatibility for the setLabelCallback functions
+--These functions ensure backward compatibility for the setActionCallback functions
 --unpack function which also returns the nil values
 -- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
-local function unpack_w_nil (arg_table, counter)
+function unpack_w_nil (arg_table, counter)
   counter = counter or 1
   if counter >= arg_table.n then
     return arg_table[counter]
@@ -2157,15 +2157,18 @@ local function unpack_w_nil (arg_table, counter)
   return arg_table[counter], unpack_w_nil(arg_table, counter + 1)
 end
 
-local function setLabelCallback(callbackFunc, labelname, func, ...)
+-- This wrapper gives callback functions the possibility to be used like
+-- setCallBackFunction (name,function as string,args)
+-- it is used by setLabelCallBack functions and setCmdLineAction
+local function setActionCallback(callbackFunc, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
   end
-  assert(type(func) == 'function', '<setLabelCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
   if nr > 1 then
-    return callbackFunc(labelname, 
+    return callbackFunc(name, 
     function(event) 
       if not event then 
         arg.n = nr - 1 
@@ -2174,42 +2177,47 @@ local function setLabelCallback(callbackFunc, labelname, func, ...)
       func(unpack_w_nil(arg)) 
     end )
   end 
-  callbackFunc(labelname, func) 
+  callbackFunc(name, func) 
 end
 
 local setLC = setLC or setLabelClickCallback
 function setLabelClickCallback (...)
-  setLabelCallback(setLC, ...)
+  setActionCallback(setLC, ...)
 end
 
 local setLDC = setLDC or setLabelDoubleClickCallback
 function setLabelDoubleClickCallback (...)
-  setLabelCallback(setLDC, ...)
+  setActionCallback(setLDC, ...)
 end
 
 local setLRC = setLRC or setLabelReleaseCallback
 function setLabelReleaseCallback(...)
-  setLabelCallback(setLRC, ...)
+  setActionCallback(setLRC, ...)
 end
 
 local setLMC = setLMC or setLabelMoveCallback
 function setLabelMoveCallback(...)
-  setLabelCallback(setLMC, ...)
+  setActionCallback(setLMC, ...)
 end
 
 local setLWC = setLWC or setLabelWheelCallback
 function setLabelWheelCallback(...)
-  setLabelCallback(setLWC, ...)
+  setActionCallback(setLWC, ...)
 end
 
 local setOnE = setOnE or setLabelOnEnter
 function setLabelOnEnter(...)
-  setLabelCallback(setOnE, ...)
+  setActionCallback(setOnE, ...)
 end
 
 local setOnL = setOnL or setLabelOnLeave
 function setLabelOnLeave(...)
-  setLabelCallback(setOnL,...)
+  setActionCallback(setOnL,...)
+end
+
+local setCmdLA = setCmdLA or setCmdLineAction
+function setCmdLineAction(...)
+  setActionCallback(setCmdLA,...)
 end
 
 function resetUserWindowTitle(windowname)
