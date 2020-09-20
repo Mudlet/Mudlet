@@ -34,8 +34,8 @@ else
     export VERSION_AND_SHA=${VERSION}-ptb${COMMIT}
     if [ "${public_test_build}" = "true" ]; then
 # TEMPORARILY BODGE THINGS FOR TESTING (2 of 2):
-#        COMMIT_DATE=$(git show -s --format=%as | tr -d '-')
-#        YESTERDAYS_DATE=$(date -v-1d '+%F' | tr -d '-')
+#        COMMIT_DATE=$(git show -s --format=%as | /usr/bin/tr -d '-')
+#        YESTERDAYS_DATE=$(date -v-1d '+%F' | /usr/bin/tr -d '-')
 #
 #        if [ "${COMMIT_DATE}" -lt "${YESTERDAYS_DATE}" ] ; then
 #            echo ""

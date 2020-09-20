@@ -63,11 +63,11 @@ export PUBLIC_TEST_BUILD="true"
 VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
-    VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-    VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
 fi
 
 # not all systems we deal with allow uppercase ascii characters
-export MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
-export VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
+export MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | /usr/bin/tr '[:upper:]' '[:lower:]')
+export VERSION=$(echo "$VERSION" | /usr/bin/tr '[:upper:]' '[:lower:]')
