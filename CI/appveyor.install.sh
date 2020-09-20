@@ -76,8 +76,8 @@ ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/gcc.exe
 ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/cc.exe
 ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/c++.exe
 ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/g++.exe
-ccache -o max_size=500M
-ccache -o compression_level=9
+${CCACHE} -o max_size=500M
+${CCACHE} -o compression_level=9
 echo "  ccache statistics at start of compilation"
 ${CCACHE} -s
 echo ""

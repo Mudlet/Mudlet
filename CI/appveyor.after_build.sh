@@ -101,9 +101,9 @@ fi
 echo ""
 echo "Copying discord-rpc library in..."
 if [ "${BUILD_BITNESS}" = "32" ] ; then
-    cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
+    cp -v -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
 else
-    cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .
+    cp -v -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .
 fi
 echo ""
 
@@ -147,34 +147,34 @@ echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.dic) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.aff) \
-  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.dic)
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.dic) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.dic)
 
 echo ""
 
