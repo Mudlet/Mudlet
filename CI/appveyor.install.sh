@@ -41,6 +41,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
     python2 \
     rsync \
     mingw-w64-${BUILDCOMPONENT}-toolchain \
+    mingw-w64-${BUILDCOMPONENT}-ccache \
     mingw-w64-${BUILDCOMPONENT}-qt5 \
     mingw-w64-${BUILDCOMPONENT}-libzip \
     mingw-w64-${BUILDCOMPONENT}-pugixml \
@@ -68,6 +69,18 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 #    cp /mingw32/etc/luarocks/config-5.1.lua /mingw32/etc/luarocks/config-5.1.lua.orig
 #    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/etc/luarocks/config-5.1.lua.orig > /mingw32/etc/luarocks/config-5.1.lua
 #fi
+
+echo "  Setting up ccache for GNU compiler"
+mkdir -p /mingw${BUILD_BITNESS}/usr/local/bin
+ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/gcc.exe
+ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/cc.exe
+ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/c++.exe
+ln -s /mingw64/bin/ccache.exe /mingw64/usr/local/bin/g++.exe
+ccache -o max_size=500M
+ccache -o compression_level=9
+echo "  ccache statistics at start of compilation"
+${CCACHE} -s
+echo ""
 
 echo ""
 echo "    .... MSYS2 Package installation completed."

@@ -4,6 +4,10 @@
 
 echo "Running appveyor.after_build.sh shell script..."
 
+echo "  ccache statistics after end of compilation"
+${CCACHE} -s
+echo ""
+
 if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
