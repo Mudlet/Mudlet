@@ -126,7 +126,9 @@ function Geyser.UserWindow:new(cons)
 
   me.restoreLayout = me.restoreLayout or false
   me.docked = me.docked or false
-  me.autoDock = me.autoDock or true
+  if not (me.autoDock == false) then
+    me.autoDock = true
+  end
   me.dockPosition = me.dockPosition or "r"
 
   if me.restoreLayout then
