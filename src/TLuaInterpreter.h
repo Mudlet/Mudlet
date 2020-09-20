@@ -443,6 +443,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);

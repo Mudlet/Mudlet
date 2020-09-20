@@ -91,6 +91,7 @@ public:
     void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     void copy();
     void cut();
     void paste();

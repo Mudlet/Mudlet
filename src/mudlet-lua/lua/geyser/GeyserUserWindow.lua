@@ -91,6 +91,14 @@ function Geyser.UserWindow:resetTitle()
   return resetUserWindowTitle(self.name)
 end
 
+--- Sets the style sheet of the UserWindows (border and title area)
+-- @param css The style sheet string
+function Geyser.UserWindow:setStyleSheet(css)
+  css = css or self.stylesheet
+  setUserWindowStyleSheet(self.name, css)
+  self.stylesheet = css
+end
+
 Geyser.UserWindow.Parent = Geyser.Window
 
 --- Geyser UserWindow constructor
@@ -165,6 +173,8 @@ function Geyser.UserWindow:new(cons)
   end
   
   me:resetWindow()
+  if me.stylesheet then me:setStyleSheet() end
+
   return me
 end
 
