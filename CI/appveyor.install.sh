@@ -70,22 +70,6 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 #    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/etc/luarocks/config-5.1.lua.orig > /mingw32/etc/luarocks/config-5.1.lua
 #fi
 
-echo "  Setting up ccache for GNU compiler"
-mkdir -p /mingw${BUILD_BITNESS}/usr/local/bin
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/gcc.exe
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/gcc
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/cc.exe
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/cc
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/c++.exe
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/c++
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/g++.exe
-ln -s /mingw${BUILD_BITNESS}/bin/ccache.exe /mingw${BUILD_BITNESS}/usr/local/bin/g++
-${CCACHE} -o max_size=500M
-${CCACHE} -o compression_level=9
-echo "  ccache statistics at start of compilation"
-${CCACHE} -s
-echo ""
-
 echo ""
 echo "    .... MSYS2 Package installation completed."
 echo ""

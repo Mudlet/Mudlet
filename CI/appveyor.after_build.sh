@@ -3,9 +3,6 @@
 # This assembles all the files we need into a package sub-directory
 
 echo "Running appveyor.after_build.sh shell script..."
-
-echo "  ccache statistics after end of compilation"
-${CCACHE} -s
 echo ""
 
 if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then

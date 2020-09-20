@@ -1,21 +1,20 @@
 #!/bin/sh
 
 # Commented out things only needed for failure post-mortems:
-echo "Initial MSYSTEM is: ${MSYSTEM}"
-echo "Initial PATH is:"
-echo ${PATH}
-echo ""
-echo "Fixing things for ${BUILD_BITNESS}-bit builds and setting up ccache:"
-export CCACHE=/mingw${BUILD_BITNESS}/bin/ccache
+#echo "Initial MSYSTEM is: ${MSYSTEM}"
+#echo "Initial PATH is:"
+#echo ${PATH}
+#echo ""
+echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
 export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
 export PATH=${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo ""
-echo "PATH is now:"
-echo ${PATH}
-echo ""
-echo "MSYSTEM is now: ${MSYSTEM}"
+#echo "PATH is now:"
+#echo ${PATH}
+#echo ""
+#echo "MSYSTEM is now: ${MSYSTEM}"
 
 # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
 if [ "${BUILD_BITNESS}" = "64" ] ; then

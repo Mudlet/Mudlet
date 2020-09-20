@@ -14,7 +14,6 @@ init:
 image: Visual Studio 2019
 
 environment:
-  CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
   signing_password:
     secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
   DEPLOY_KEY_PASS:
@@ -58,7 +57,6 @@ on_success:
 cache:
 #  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 - C:\msys64\var\cache\pacman\pkg
-- .ccache
 
 notifications:
 - provider: Webhook
