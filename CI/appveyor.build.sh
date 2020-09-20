@@ -46,10 +46,6 @@ echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUIL
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug and changing references to "release" sub-directories to "debug"...
-# Remove the following once we have the infrastructure for 64 Bit window builds sorted:
-if [ "${BUILD_BITNESS}" = "64" ] ; then
-    export WITH_UPDATER=NO
-fi
 
 # THIS IS REQUIRED AS IT SWITCHES SOME THINGS IN THE QMAKE (AND CMAKE) BUILDS TO
 # WORK IN A MSYS2/MINGW-W64 BUILD ENVIRONMENT - without it the lua.h and related
