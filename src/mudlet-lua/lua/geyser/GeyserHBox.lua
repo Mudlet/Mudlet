@@ -31,6 +31,7 @@ function Geyser.HBox:organize()
   self_height = self_height <= 0 and 0.9 or self_height
   self_width = self_width <= 0 and 0.9 or self_width
   local calculated_width = self:calculate_dynamic_window_size().width <= 0 and 1 or self:calculate_dynamic_window_size().width
+  
   local window_width = (calculated_width / self_width) * 100
   local start_x = 0
   self.contains_fixed = false
