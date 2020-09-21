@@ -29,7 +29,7 @@ function Geyser.VBox:organize()
   local self_height = self:get_height()
   local self_width = self:get_width()
   -- Workaround for issue with width/height being 0 at creation
-  self_height = self_height <= 0 and 0.9 or self_height
+  self_height = self_height <= 0 and #self.windows or self_height
   self_width = self_width <= 0 and 0.9 or self_width
   local calculated_height = self:calculate_dynamic_window_size().height <= 0 and 1 or self:calculate_dynamic_window_size().height
   
