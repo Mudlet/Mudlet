@@ -58,5 +58,9 @@
   "AdjustableContainer.min_restore": {
     "message": "Min/Ripristina",
     "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Disconnetti ",
+    "description": "disconnect your container from the border frame"
   }
 }
