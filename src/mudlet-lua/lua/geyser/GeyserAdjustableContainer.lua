@@ -591,9 +591,14 @@ function Adjustable.Container:load(slot, dir)
     end
 
     mytable.windowname = mytable.windowname or "main"
+    
     -- send Adjustable Container to a UserWindow if saved there
-    if self.windowname ~= mytable.windowname then
-        self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+    if mytable.windowname ~= self.windowname then
+        if mytable.windowname == "main" then
+            self:changeContainer(Geyser)
+        else
+            self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+        end
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
