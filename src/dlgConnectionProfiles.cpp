@@ -90,7 +90,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
+    connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
+    offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -120,6 +122,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     copy_profile_toolbutton->addAction(copyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(copyProfile);
+    auto widgetList = copyProfile->associatedWidgets();
+    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfile QAction not found.");
+    widgetList.first()->setAccessibleName(tr("copy profile"));
+    widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
+
+    widgetList = copyProfileSettings->associatedWidgets();
+    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
+    widgetList.first()->setAccessibleName(tr("copy profile settings"));
+    widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
 
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
@@ -251,6 +262,14 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
+
+    btn_load_enabled_accessDesc = tr("Click to load but not connect the selected profile.");
+    btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
+    btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
+    item_profile_accessName = tr("Game name: %1");
+    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.",
+                                 // Intentional comment to separate arguments
+                                 "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -338,8 +357,10 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
-        offline_button->setDisabled(true);
-        connect_button->setDisabled(true);
+        offline_button->setEnabled(false);
+        connect_button->setEnabled(false);
+        offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+        connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
         return;
     }
 
@@ -403,10 +424,12 @@ void dlgConnectionProfiles::slot_update_port(const QString& ignoreBlank)
     if (ignoreBlank.isEmpty()) {
         validPort = false;
         if (offline_button) {
-            offline_button->setDisabled(true);
+            offline_button->setEnabled(false);
+            offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
         }
         if (connect_button) {
-            connect_button->setDisabled(true);
+            connect_button->setEnabled(false);
+            connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
         }
         return;
     }
@@ -612,8 +635,10 @@ void dlgConnectionProfiles::slot_addProfile()
     validName = false;
     validUrl = false;
     validPort = false;
-    offline_button->setDisabled(true);
-    connect_button->setDisabled(true);
+    offline_button->setEnabled(false);
+    offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
+    connect_button->setEnabled(false);
+    connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
 }
 
 // enables the deletion button once the correct text (profile name) is entered
@@ -621,7 +646,7 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 {
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
-        delete_button->setDisabled(true);
+        delete_button->setEnabled(false);
     } else {
         delete_button->setEnabled(true);
         delete_button->setFocus();
@@ -681,7 +706,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_lineedit->setPlaceholderText(profile);
     delete_profile_lineedit->setFocus();
-    delete_button->setDisabled(true);
+    delete_button->setEnabled(false);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
 
     delete_profile_dialog->show();
@@ -1025,7 +1050,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("7680");
+            host_port = QStringLiteral("8680");
+            port_ssl_tsl->setChecked(true);
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             host_port = QStringLiteral("4000");
@@ -1264,13 +1290,13 @@ void dlgConnectionProfiles::updateDiscordStatus()
     auto discordLoaded = mudlet::self()->mDiscord.libraryLoaded();
 
     if (!discordLoaded) {
-        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
         discord_optin_checkBox->setToolTip(tr("Discord integration not available on this platform"));
     } else if (mDiscordApplicationId.isEmpty() && !mudlet::self()->mDiscord.gameIntegrationSupported(host_name_entry->text().trimmed()).first) {
         // Disable discord support if it is not recognised by name and a
         // Application Id has not been previously entered:
-        discord_optin_checkBox->setDisabled(true);
+        discord_optin_checkBox->setEnabled(false);
         discord_optin_checkBox->setChecked(false);
         discord_optin_checkBox->setToolTip(tr("Discord integration not supported by game"));
     } else {
@@ -1331,6 +1357,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             QPixmap p(QStringLiteral(":/icons/avalon.png"));
@@ -1349,6 +1378,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
@@ -1366,6 +1398,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             QPixmap pc(QStringLiteral(":/icons/3klogo.png"));
@@ -1385,6 +1420,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
@@ -1404,6 +1442,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
@@ -1421,6 +1462,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/batmud_mud.png"));
             pItem->setIcon(mi);
@@ -1438,6 +1482,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/gw2.png"));
@@ -1455,6 +1502,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
@@ -1472,6 +1522,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
@@ -1489,6 +1542,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
@@ -1506,6 +1562,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
@@ -1523,6 +1582,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
@@ -1540,6 +1602,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
@@ -1557,6 +1622,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
@@ -1574,6 +1642,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
@@ -1592,6 +1663,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
@@ -1610,6 +1684,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(
@@ -1629,6 +1706,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(
@@ -1648,6 +1728,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
@@ -1666,6 +1749,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         if (!hasCustomIcon(mudServer)) {
             profiles_tree_widget->addItem(pItem);
             mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30),
@@ -1686,6 +1772,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/fiery_mud.png"));
@@ -1703,6 +1792,9 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/carrionfields.png"));
@@ -1723,6 +1815,9 @@ void dlgConnectionProfiles::fillout_form()
         mProfileList.append(mudServer);
         pItem = new QListWidgetItem();
         pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
         profiles_tree_widget->addItem(pItem);
         description = getDescription(QStringLiteral("mudlet.org"), 0, mudServer);
         if (!description.isEmpty()) {
@@ -1741,7 +1836,7 @@ void dlgConnectionProfiles::fillout_form()
 
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
         const auto profile = profiles_tree_widget->item(i);
-        const auto profileName = profile->text();
+        const auto profileName = profile->data(csmNameRole).toString();
         if (profileName == QStringLiteral("Mudlet self-test")) {
             test_profile_row = i;
         }
@@ -1812,6 +1907,9 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
 {
     auto pItem = new QListWidgetItem();
     pItem->setData(csmNameRole, profileName);
+    pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(profileName));
+    pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
     setCustomIcon(profileName, pItem);
     auto description = getDescription(profileName, 0, profileName);
     if (!description.isEmpty()) {
@@ -1867,6 +1965,9 @@ void dlgConnectionProfiles::generateCustomProfile(int i, const QString& profileN
 {
     auto pItem = new QListWidgetItem();
     pItem->setData(csmNameRole, profileName);
+    pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(profileName));
+    pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
     profiles_tree_widget->addItem(pItem);
     QPixmap background(120, 30);
     background.fill(Qt::transparent);
@@ -2089,6 +2190,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         return false;
     }
     pItem->setData(csmNameRole, profile_name);
+    pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(profile_name));
+    pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
 
     // add the new widget in
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -2451,24 +2554,26 @@ bool dlgConnectionProfiles::validateProfile()
             if (offline_button) {
                 offline_button->setEnabled(true);
                 offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
+                offline_button->setAccessibleDescription(btn_load_enabled_accessDesc);
             }
             if (connect_button) {
                 connect_button->setEnabled(true);
                 connect_button->setToolTip(QString());
+                connect_button->setAccessibleDescription(btn_connect_enabled_accessDesc);
             }
-
             return true;
-
         } else {
             notificationArea->show();
             notificationAreaMessageBox->show();
             if (offline_button) {
-                offline_button->setDisabled(true);
+                offline_button->setEnabled(false);
                 offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
+                offline_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
             }
             if (connect_button) {
-                connect_button->setDisabled(true);
+                connect_button->setEnabled(false);
                 connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
+                connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
             }
             return false;
         }

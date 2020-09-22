@@ -72,15 +72,6 @@ local function shrink_title(lbl)
     lbl.adjLabel:echo(titleText, lbl.titleTxtColor, "l")
 end
 
--- Internal function: plain Echo which allows text manipulation by stylesheets
--- @param self the menu label itself
--- @param text the text to be shown on the menu label
-local function pEcho(self, text)
-    if text then
-        echo(self.name, text)
-    end
-end
-
 --- function to give your adjustable container a new title
 -- @param text new title text
 -- @param color title text color
@@ -91,22 +82,11 @@ function Adjustable.Container:setTitle(text, color)
     shrink_title(self)
 end
 
--- internal function to change the layout of the rightClick menu if we are at the right edge
--- @param labelNest Nested Labels
--- @param fdir flying direction of the label
-local function changeMenuLayout(labelNest, fdir)
-    if not labelNest then return end
-    for k,v in pairs (labelNest) do
-        v.flyDir  = fdir
-        changeMenuLayout(v.nestedLabels, fdir)
-    end
-end
 
 -- internal function to handle the onClick event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
 -- @param event the onClick event and its informations
 function Adjustable.Container:onClick(label, event)
-    closeAllLevels(self.rCLabel)
     if label.cursorShape == "OpenHand" then
         label:setCursor("ClosedHand")
     end
@@ -122,40 +102,19 @@ function Adjustable.Container:onClick(label, event)
     if event.button == "RightButton" then
         --if not in the Geyser main window attach Label is not needed and will be removed
         if self.container ~= Geyser and table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
-            table.remove(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.attLabel))
+            label:hideMenuLabel("attLabel")
             -- if we are back to the Geyser main window attach Label will be readded
         elseif self.container == Geyser and not table.index_of(self.rCLabel.nestedLabels, self.attLabel) then
-            table.insert(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.lockStylesLabel)-1, self.attLabel)
-            self.attLabel:changeContainer(Geyser)
+            label:showMenuLabel("attLabel") 
         end
 
         if table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel) and not self.customItemsLabel.nestedLabels then
-            table.remove(self.rCLabel.nestedLabels, table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel))
-        elseif self.rCLabel.nestedLabels[#self.rCLabel.nestedLabels] ~= self.customItemsLabel and self.customItemsLabel.nestedLabels then
-            self.rCLabel.nestedLabels[#self.rCLabel.nestedLabels + 1] = self.customItemsLabel
+            label:hideMenuLabel("customItemsLabel")
+        else
+            label:showMenuLabel("customItemsLabel") 
         end
-
-        if self.rCLabel.windowname ~= self.customItemsLabel.windowname then
-            if self.rCLabel.windowname == "main" then
-                self.customItemsLabel:changeContainer(Geyser)
-            else
-                self.customItemsLabel:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
-            end
-        end
-
-        local winw = getUserWindowSize(self.windowname)
-        local mousepos = self:get_x() + event.x
-        local maxdiff = self.ParentMenuWidth + self.ChildMenuWidth
-        local diff = winw - mousepos
-        local flyDir = self.rCLabel.nestedLabels[1].flyDir
-        if diff <= maxdiff and flyDir == "R"then
-            changeMenuLayout(self.rCLabel.nestedLabels, "L")
-        elseif diff > maxdiff and flyDir == "L" then
-            changeMenuLayout(self.rCLabel.nestedLabels, "R")
-        end
-        self.rCLabel:move(event.x, event.y)
-        doNestShow(self.rCLabel)
     end
+    label:onRightClick(event)
 end
 
 -- internal function to handle the onRelease event of main Adjustable.Container Label
@@ -457,39 +416,16 @@ function Adjustable.Container:restore()
     end
 end
 
--- internal function to style all labels in a labelnest
--- recursively iterates through all the labelNests
--- @param self the container itself
--- @param labelNest the given LabelNest
-local function recursiveStyle(self, labelNest)
-    if not labelNest then return end
-    for k,v in pairs (labelNest) do
-        v:setStyleSheet(self.menustyle)
-        pEcho(v, v.txt)
-        recursiveStyle(self, v.nestedLabels)
-    end
-end
-
 -- internal function to create the menu labels for lockstyle and custom items
 -- @param self the container itself
 -- @param menu name of the menu
 -- @param onClick function which will be executed onClick
-local function createMenus(self, menu, onClick)
-    self[menu.."l"] = {}
-    self[menu.."Nr"] = self[menu.."Nr"] or 1
-    if not self[menu] then return end
-    for i = self[menu.."Nr"], #self[menu] do
-        local name = self[menu][i][1]
-        local menuTxt = self.Locale[name] and self.Locale[name].message or name
-        self[menu.."l"][i] = self[menu.."Label"]:addChild({
-            width = self.ChildMenuWidth, height = self.MenuHeight, flyOut=true, layoutDir="RV", name = self.name..menu..name
-        })
-        self[menu.."l"][i].txt = [[<center>]]..menuTxt
-        self[menu.."l"][i]:setClickCallback(onClick, self, i, name)
-    end
-    recursiveStyle(self, self[menu.."Label"].nestedLabels)
-    self[menu.."Nr"] = #self[menu]
-
+local function createMenus(self, parent, name, func)
+    local label = self.adjLabel
+    local menuTxt = self.Locale[name] and self.Locale[name].message or name
+    label:addMenuLabel(name, parent)
+    label:findMenuElement(parent.."."..name):echo(menuTxt, "nocolor")
+    label:setMenuAction(parent.."."..name, func, self, name)
 end
 
 -- internal function: Handler for the onEnter event of the attach menu
@@ -502,7 +438,7 @@ function Adjustable.Container:onEnterAtt()
             self.att[i]:changeContainer(Geyser)
         end
         self.att[i].flyDir = self.attLabel.flyDir
-        pEcho(self.att[i], "<center>"..self.Locale[attm[i]].message)
+        self.att[i]:echo("<center>"..self.Locale[attm[i]].message, "nocolor")
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
@@ -522,57 +458,45 @@ function Adjustable.Container:createLabels()
 
     },self)
     self.minimizeLabel:echo("<center>-</center>")
-
-    -- create a label with a nestable=true property to say that it can nest labels
-    self.rCLabel = Geyser.Label:new({
-    width = "0", height = "0", nestable=true, name = self.name.."rCLabel",
-    message="<center>Clicky clicky</center>"}, self)
-
-    self.lockLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."lockLabel",
-        layoutDir="RV", flyOut=true
-    })
-
-    self.minLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."minLabel",
-        layoutDir="RV", flyOut=true
-
-    })
-
-    self.saveLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."saveLabel",
-        layoutDir="RV", flyOut=true
-    })
-
-    self.loadLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, name = self.name.."loadLabel",
-        layoutDir="RV", flyOut=true
-    })
-
-    self.attLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."attLabel"
-    })
-
-    for i=1,4 do
-        self.att[i] = self.attLabel:addChild({
-            width = self.ChildMenuWidth, height = self.MenuHeight, layoutDir="RV", name = self.name.."att"..i
-        })
-    end
-
-    self.lockStylesLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight,  nestable = true, flyOut=true, layoutDir="RV", name = self.name.."lockStylesLabel"
-    })
-    createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
-
-    self.customItemsLabel = self.rCLabel:addChild({
-        width = self.ParentMenuWidth, height = self.MenuHeight, nestable = true, flyOut=true, layoutDir="RV", name = self.name.."customItemsLabel"
-    })
-
 end
 
--- internal function to apply menustyle on all nested Labels
-function Adjustable.Container:styleLabels()
-    recursiveStyle(self, self.rCLabel.nestedLabels)
+-- internal function to create the right click menu
+function Adjustable.Container:createRightClickMenu()
+    self.adjLabel:createRightClickMenu(
+        {MenuItems = {"lockLabel", "minLabel", "saveLabel", "loadLabel", "attLabel", {"att1","att2","att3","att4"}, "lockStylesLabel",{}, "customItemsLabel",{}},
+        Style = self.menuStyleMode,
+        MenuStyle = self.menustyle,
+        MenuWidth = self.ParentMenuWidth,
+        MenuWidth2 = self.ChildMenuWidth,
+        MenuHeight = self.MenuHeight,
+        MenuFormat = "l"..self.MenuFontSize,
+        MenuFormat2 = "c"..self.MenuFontSize,
+        }
+        )
+    self.rCLabel = self.adjLabel.rightClickMenu
+    for k,v in pairs(self.rCLabel.MenuLabels) do
+        self[k] = v
+    end
+    for k,v in ipairs(self.rCLabel.MenuLabels["attLabel"].MenuItems) do
+        self.att[k] = self.rCLabel.MenuLabels["attLabel"].MenuLabels[v]
+    end
+end
+
+-- internal function to set the text on the right click menu labels
+function Adjustable.Container:echoRightClickMenu()
+    for k,v in ipairs(self.adjLabel.rightClickMenu.MenuItems) do
+        if type(v) == "string" then
+            self[v]:echo(self[v].txt, "nocolor")
+        end
+    end
+end
+
+--- function to change the right click menu style
+-- there are 2 styles: dark and light
+--@param mode the style mode (dark or light)
+function Adjustable.Container:changeMenuStyle(mode)
+    self.menuStyleMode = mode
+    self.adjLabel:styleMenuItems(self.menuStyleMode)
 end
 
 -- overriden add function to put every new window to the Inside container
@@ -777,7 +701,7 @@ function Adjustable.Container:newLockStyle(name, func)
     self.lockStyles[#self.lockStyles + 1] = {name, func}
     self.lockStyles[name] = self.lockStyles[#self.lockStyles]
     if self.lockStylesLabel then
-        createMenus(self, "lockStyles", "Adjustable.Container.lockContainer")
+        createMenus(self, "lockStylesLabel", name, "Adjustable.Container.lockContainer")
     end
 end
 
@@ -791,7 +715,7 @@ function Adjustable.Container:newCustomItem(name, func)
     end
     self.customItems[#self.customItems + 1] = {name, func}
     self.customItems[name] = self.customItems[#self.customItems]
-    createMenus(self, "customItems", "Adjustable.Container.customMenu")
+    createMenus(self, "customItemsLabel", name, "Adjustable.Container.customMenu")
 end
 --- enablesAutoSave normally only used internally
 -- only useful if autoSave was set to false before
@@ -855,16 +779,18 @@ function Adjustable.Container:new(cons,container)
     background-color: rgba(0,0,0,100%);
     border: 4px double green;
     border-radius: 4px;]]
-    me.menustyle = me.menustyle or [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} QLabel{ font-size:]]..me.MenuFontSize..[[pt;}]]
+    me.menuStyleMode = "light"
     me.buttonstyle= me.buttonstyle or [[
     QLabel{ border-radius: 7px; background-color: rgba(255,30,30,100%);}
     QLabel::hover{ background-color: rgba(255,0,0,50%);}
     ]]
 
-    me:globalLockStyles()
     me:createContainers()
     me.att = me.att or {}
     me:createLabels()
+    me:createRightClickMenu()
+
+    me:globalLockStyles()
     me.minimized =  me.minimized or false
     me.locked =  me.locked or false
 
@@ -880,14 +806,11 @@ function Adjustable.Container:new(cons,container)
     me.adjLabel:setStyleSheet(me.adjLabelstyle)
     me.exitLabel:setStyleSheet(me.buttonstyle)
     me.minimizeLabel:setStyleSheet(me.buttonstyle)
-
-    me.rCLabel:setStyleSheet([[background-color: rgba(255,255,255,0%);]])
-    me:styleLabels()
-
+    me:echoRightClickMenu()
+    
     me.adjLabel:setClickCallback("Adjustable.Container.onClick",me, me.adjLabel)
     me.adjLabel:setReleaseCallback("Adjustable.Container.onRelease",me, me.adjLabel)
     me.adjLabel:setMoveCallback("Adjustable.Container.onMove",me, me.adjLabel)
-
     me.minLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.saveLabel:setClickCallback("Adjustable.Container.onClickSave", me)
     me.lockLabel:setClickCallback("Adjustable.Container.onClickL", me)

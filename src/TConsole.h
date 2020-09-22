@@ -32,6 +32,7 @@
 
 #include "pre_guard.h"
 #include <QDataStream>
+#include <QHBoxLayout>
 #include <QFile>
 #include <QPointer>
 #include <QTextStream>
@@ -90,6 +91,7 @@ public:
     void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     void copy();
     void cut();
     void paste();
@@ -109,6 +111,7 @@ public:
 
     int getColumnNumber();
     std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -135,6 +138,7 @@ public:
     void setBgColor(int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -236,6 +240,7 @@ public:
     QToolButton* emergencyStop;
     QWidget* layer;
     QWidget* layerCommandLine;
+    QHBoxLayout* layoutLayer2;
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;
@@ -257,6 +262,7 @@ public:
     int mIndentCount;
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;

@@ -131,6 +131,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
+        QString localFileName;
+
         switch (reply->operation()) {
         case QNetworkAccessManager::PostOperation:
             event.mArgumentList << QStringLiteral("sysPostHttpError");
@@ -151,11 +153,18 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::GetOperation:
-            event.mArgumentList << QStringLiteral("sysDownloadError");
+            localFileName = downloadMap.value(reply);
+            event.mArgumentList << (localFileName.isEmpty()
+                                   ? QStringLiteral("sysGetHttpError")
+                                   : QStringLiteral("sysDownloadError"));
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << downloadMap.value(reply);
+            if (!localFileName.isEmpty()) {
+                event.mArgumentList << localFileName;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             downloadMap.remove(reply);
@@ -177,6 +186,9 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         case QNetworkAccessManager::UnknownOperation:
             break;
         }
+
+        event.mArgumentList << QString::number(createHttpResponseTable(reply));
+        event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -245,20 +257,22 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         QString localFileName = downloadMap.value(reply);
         downloadMap.remove(reply);
 
-        // If the user forgot to give us a file path, we're not going to
-        // consider this an error, we're just going to skip downloading the
-        // response. Another way this could happen is the user made a POST
+        // If the user did not give us a file path, we're not going to
+        // consider this an error, we're just going to attach the reply
+        // directly. Another way this could happen is the user made a POST
         // request, and it redirected to a GET. In the case of POST requests,
-        // we don't ask the user for a file path, and so here too we will just
-        // skip downloading the response.
-        if (localFileName.isEmpty())
-        {
-            event.mArgumentList << QLatin1String("sysDownloadDone");
+        // we don't ask the user for a file path.
+        if (localFileName.isEmpty()) {
+            event.mArgumentList << QLatin1String("sysGetHttpDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << localFileName;
+            event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QString::number(0);
-            event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+            if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+
+                // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+                event.mArgumentList << replyText;
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            }
             break;
         }
 
@@ -312,6 +326,9 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         break;
 
     }
+
+    event.mArgumentList << QString::number(createHttpResponseTable(reply));
+    event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
 
 
     reply->deleteLater();
@@ -548,14 +565,6 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     }
 
     host.raiseEvent(event);
-
-    // After the event has been raised but before 'event' goes out of scope,
-    // we need to safely dereference the members of 'event' that point to
-    // values in the Lua registry
-    for (int i = 0; i < event.mArgumentList.size(); i++) {
-        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-             host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
-    }
 
     return 0;
 }
@@ -918,7 +927,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
@@ -939,7 +948,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
@@ -2609,6 +2618,48 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
+int TLuaInterpreter::enableCommandLine(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableCommandLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setMiniConsoleCmdVisible(&host, windowName, true);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
+int TLuaInterpreter::disableCommandLine(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableCommandLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setMiniConsoleCmdVisible(&host, windowName, false);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
 int TLuaInterpreter::replace(lua_State* L)
 {
@@ -4129,6 +4180,77 @@ int TLuaInterpreter::createMapper(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createCommandLine
+int TLuaInterpreter::createCommandLine(lua_State* L)
+{
+    QString commandLineName;
+    QString windowName = QLatin1String("main");
+    int n = lua_gettop(L);
+    int x, y, width, height, counter;
+    counter = 1;
+
+    if (n > 5 && lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n > 5 && lua_type(L, 1) == LUA_TSTRING) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        counter++;
+        if (windowName == "main") {
+            // QString::compare is zero for a match on the "default"
+            // case so clear the variable - to flag this as the main
+            // window case - as is the case for an empty string
+            windowName.clear();
+        }
+    }
+
+    if (lua_type(L, counter) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        commandLineName = QString::fromUtf8(lua_tostring(L, counter));
+        counter++;
+    }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        x = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        y = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline width as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        width = lua_tonumber(L, counter);
+        counter++;
+    }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline height as number expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        height = lua_tonumber(L, counter);
+        counter++;
+    }
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
 int TLuaInterpreter::createBuffer(lua_State* L)
 {
@@ -4878,6 +5000,72 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         lua_pushfstring(L, "couldn't retrieve image size, is the location '%s' correct?", imageLocation.toUtf8().constData());
     }
     return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
+int TLuaInterpreter::setCmdLineAction(lua_State* L){
+    Host& host = getHostFromLua(L);
+
+    QString name;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 1));
+        if (name.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+            return 2;
+        }
+        lua_remove(L, 1);
+    }
+
+    int func;
+    if (!lua_isfunction(L, 1)) {
+        lua_pushfstring(L, "setCmdLineAction: bad argument #2 type (function expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    func = luaL_ref(L, LUA_REGISTRYINDEX);
+    bool lua_result = false;
+    lua_result = mudlet::self()->setCmdLineAction(&host, name, func);
+
+    if (lua_result) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("setCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
+        return 2;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
+int TLuaInterpreter::resetCmdLineAction(lua_State* L){
+    Host& host = getHostFromLua(L);
+
+    QString name;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "resetCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 1));
+        if (name.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "resetCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+            return 2;
+        }
+    }
+
+    bool lua_result = false;
+    lua_result = mudlet::self()->resetCmdLineAction(&host, name);
+    if (lua_result) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"("resetCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
+        return 2;
+    }
 }
 
 // No documentation available in wiki - internal function
@@ -7250,6 +7438,15 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     host.mTelnet.setMSPVariables(QByteArray(msg.c_str(), msg.length()));
 
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#purgeMediaCache
+int TLuaInterpreter::purgeMediaCache(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    host.mTelnet.purgeMediaCache();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9845,13 +10042,13 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    int zoom = 3;
+    qreal zoom = 3.0;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "setMapZoom: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        zoom = lua_tointeger(L, 1);
+        zoom = lua_tonumber(L, 1);
     }
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
@@ -12632,6 +12829,32 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setUserWindowStyleSheet: bad argument #1 type (userwindow name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setUserWindowStyleSheet: bad argument #2 type (StyleSheet as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    QString userWindowName{QString::fromUtf8(lua_tostring(L, 1))};
+    QString userWindowStyleSheet{QString::fromUtf8(lua_tostring(L, 2))};
+
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomEnvColorTable
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
@@ -13428,28 +13651,66 @@ int TLuaInterpreter::appendBuffer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
 int TLuaInterpreter::appendCmdLine(lua_State* L)
 {
-    std::string luaSendText;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "appendCmdLine: bad argument #1 (text to append as string expected, got %s)", luaL_typename(L, 1));
+    int n = lua_gettop(L);
+    QString name = "main";
+    QString text;
+    if (n > 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "appendCmdLine: bad argument #1 (command line name as string expected, got %s)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "appendCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
         return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        text = QString::fromUtf8(lua_tostring(L, n));
     }
+
     Host& host = getHostFromLua(L);
-    QString curText = host.mpConsole->mpCommandLine->toPlainText();
-    host.mpConsole->mpCommandLine->setPlainText(curText + QString(luaSendText.c_str()));
-    QTextCursor cur = host.mpConsole->mpCommandLine->textCursor();
+    auto pN = host.mpConsole->mSubCommandLineMap.value(name);
+    if (!pN || name == "main") {
+        pN = host.mpConsole->mpCommandLine;
+    }
+    if (!pN) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    QString curText = pN->toPlainText();
+    pN->setPlainText(curText + text);
+    QTextCursor cur = pN->textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    host.mpConsole->mpCommandLine->setTextCursor(cur);
+    pN->setTextCursor(cur);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getCmdLine: bad argument #1 (command line name as string expected, got %s)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
     Host& host = getHostFromLua(L);
-    QString curText = host.mpConsole->mpCommandLine->toPlainText();
+    auto pN = host.mpConsole->mSubCommandLineMap.value(name);
+    if (!pN || name == "main") {
+        pN = host.mpConsole->mpCommandLine;
+    }
+    if (!pN) {
+        lua_pushnil(L);
+        return 1;
+    }
+    QString curText = pN->toPlainText();
     lua_pushstring(L, curText.toUtf8().constData());
     return 1;
 }
@@ -13731,27 +13992,63 @@ int TLuaInterpreter::expandAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine
 int TLuaInterpreter::printCmdLine(lua_State* L)
 {
-    std::string luaSendText;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "printCmdLine: bad argument #1 (text to set on command line as string expected, got %s)", luaL_typename(L, 1));
+    int n = lua_gettop(L);
+    QString name = "main";
+    QString text;
+    if (n > 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "printCmdLine: bad argument #1 (command line name as string expected, got %s)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "printCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
         return lua_error(L);
     } else {
-        luaSendText = lua_tostring(L, 1);
+        text = QString::fromUtf8(lua_tostring(L, n));
     }
     Host& host = getHostFromLua(L);
-    host.mpConsole->mpCommandLine->setPlainText(QString(luaSendText.c_str()));
-    QTextCursor cur = host.mpConsole->mpCommandLine->textCursor();
+    auto pN = host.mpConsole->mSubCommandLineMap.value(name);
+    if (!pN || name == "main") {
+        pN = host.mpConsole->mpCommandLine;
+    }
+    if (!pN) {
+        lua_pushnil(L);
+        return 1;
+    }
+    pN->setPlainText(text);
+    QTextCursor cur = pN->textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    host.mpConsole->mpCommandLine->setTextCursor(cur);
+    pN->setTextCursor(cur);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
 int TLuaInterpreter::clearCmdLine(lua_State* L)
 {
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "clearCmdLine: bad argument #1 (command line name as string expected, got %s)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
     Host& host = getHostFromLua(L);
-    host.mpConsole->mpCommandLine->clear();
+    auto pN = host.mpConsole->mSubCommandLineMap.value(name);
+    if (!pN || name == "main") {
+        pN = host.mpConsole->mpCommandLine;
+    }
+    if (!pN) {
+        lua_pushnil(L);
+        return 1;
+    }
+    pN->clear();
     return 0;
 }
 
@@ -15888,6 +16185,31 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 }
 
 // No documentation available in wiki - internal function
+bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
+{
+    lua_State* L = pGlobalLua;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func);
+    int error = 0;
+    lua_pushstring(L, text.toUtf8().constData());
+    error = lua_pcall(L, 1, LUA_MULTRET, 0);
+    if (error) {
+        std::string err = "";
+        if (lua_isstring(L, -1)) {
+            err += lua_tostring(L, -1);
+        }
+
+        QString function = "setCmdLineAction";
+        QString name = "cmd line Action";
+        logError(err, name, function);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    return !error;
+}
+
+// No documentation available in wiki - internal function
 bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
@@ -16265,6 +16587,67 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHTTP
+int TLuaInterpreter::getHTTP(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString urlString;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "getHTTP: bad argument #1 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
+        lua_pushfstring(L, "getHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (lua_istable(L, 2)) {
+        lua_pushnil(L);
+        while (lua_next(L, 2) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "getHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
@@ -16382,7 +16765,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "deleteHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
@@ -16394,7 +16777,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
-                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                "deleteHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
                                 luaL_typename(L, -2),
                                 luaL_typename(L, -1));
                 return lua_error(L);
@@ -16650,6 +17033,24 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::insertNativeSeparatorsFunction(lua_State* L)
+{
+    // This is likely only needed for Windows but should not be harmful for
+    // other OSes and it keeps things simpler if they all use it:
+    // clang-format off
+    luaL_dostring(L, R"LUA(function toNativeSeparators(rawPath)
+  if package.config:sub(1,1) == '\\' then
+    return string.gsub(rawPath, '/', '\\')
+  end
+
+  assert((package.config:sub(1,1) == '/'), "package path directory separator is neither '\\' nor '/' and cannot be handled")
+
+  return string.gsub(rawPath, '\\', '/')
+end)LUA");
+    // clang-format on
+}
+
+// No documentation available in wiki - internal function
 // This function initializes the main Lua Session interpreter.
 // on initialization of a new session *or* in case of an interpreter reset by the user.
 void TLuaInterpreter::initLuaGlobals()
@@ -16757,6 +17158,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
+    lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
+    lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
     lua_register(pGlobalLua, "setLabelClickCallback", TLuaInterpreter::setLabelClickCallback);
     lua_register(pGlobalLua, "setLabelDoubleClickCallback", TLuaInterpreter::setLabelDoubleClickCallback);
     lua_register(pGlobalLua, "setLabelReleaseCallback", TLuaInterpreter::setLabelReleaseCallback);
@@ -16818,6 +17221,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
+    lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
+    lua_register(pGlobalLua, "disableCommandLine", TLuaInterpreter::disableCommandLine);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);
     lua_register(pGlobalLua, "calcFontSize", TLuaInterpreter::calcFontSize);
     lua_register(pGlobalLua, "permRegexTrigger", TLuaInterpreter::permRegexTrigger);
@@ -16838,6 +17243,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
     lua_register(pGlobalLua, "killAlias", TLuaInterpreter::killAlias);
     lua_register(pGlobalLua, "setLabelStyleSheet", TLuaInterpreter::setLabelStyleSheet);
+    lua_register(pGlobalLua, "setUserWindowStyleSheet", TLuaInterpreter::setUserWindowStyleSheet);
     lua_register(pGlobalLua, "getTime", TLuaInterpreter::getTime);
     lua_register(pGlobalLua, "getEpoch", TLuaInterpreter::getEpoch);
     lua_register(pGlobalLua, "invokeFileDialog", TLuaInterpreter::invokeFileDialog);
@@ -16860,6 +17266,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);
     lua_register(pGlobalLua, "createMapper", TLuaInterpreter::createMapper);
+    lua_register(pGlobalLua, "createCommandLine", TLuaInterpreter::createCommandLine);
     lua_register(pGlobalLua, "getMainConsoleWidth", TLuaInterpreter::getMainConsoleWidth);
     lua_register(pGlobalLua, "resetProfile", TLuaInterpreter::resetProfile);
     lua_register(pGlobalLua, "printCmdLine", TLuaInterpreter::printCmdLine);
@@ -16874,6 +17281,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
+    lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP);
     lua_register(pGlobalLua, "roomExists", TLuaInterpreter::roomExists);
     lua_register(pGlobalLua, "addRoom", TLuaInterpreter::addRoom);
@@ -17073,6 +17481,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
+    lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
@@ -17082,32 +17491,38 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    const auto separator = QDir::separator();
-    const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
+    QStringList additionalLuaPaths;
+    QStringList additionalCPaths;
+    const auto appPath{QCoreApplication::applicationDirPath()};
+    const auto profilePath{mudlet::getMudletPath(mudlet::profileHomePath, hostName)};
 
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
-
-    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
-
-#if defined(Q_OS_LINUX)
-    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
-
-    //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#elif defined(Q_OS_MAC)
-    //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-#elif defined(Q_OS_WIN32)
-    luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
+    // Allow for modules or libraries placed in the profile root directory:
+    additionalLuaPaths << QStringLiteral("%1/?.lua").arg(profilePath);
+    additionalLuaPaths << QStringLiteral("%1/?/init.lua").arg(profilePath);
+#if defined(Q_OS_WIN32)
+    additionalCPaths << QStringLiteral("%1/?.dll").arg(profilePath);
+#else
+    additionalCPaths << QStringLiteral("%1/?.so").arg(profilePath);
 #endif
 
-    QQueue<QString> modLoadMessageQueue;
-    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
-    while (!modLoadMessageQueue.isEmpty()) {
-        mpHost->postMessage(modLoadMessageQueue.dequeue());
-    }
+#if defined(Q_OS_LINUX)
+    // AppInstaller on Linux would like the C search path to also be set to
+    // a ./lib sub-directory of the current binary directory:
+    additionalCPaths << QStringLiteral("%1/lib/?.so").arg(appPath);
+#elif defined(Q_OS_MAC)
+    // macOS app bundle would like the search path to also be set to the current
+    // binary directory for both modules and binary libraries:
+    additionalCPaths << QStringLiteral("%1/?.so").arg(appPath);
+    additionalLuaPaths << QStringLiteral("%1/?.lua").arg(appPath);
+#elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
+    // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
+    additionalCPaths << QStringLiteral("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
+#endif
+
+    insertNativeSeparatorsFunction(pGlobalLua);
+
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = toNativeSeparators([[%1;]]) .. package.cpath").arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = toNativeSeparators([[%1;]]) .. package.path").arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
 
     /*
      * For uses like this where we try more than one alternative, only include
@@ -17130,6 +17545,12 @@ void TLuaInterpreter::initLuaGlobals()
      *     case nothing is put before the "require" in that usage and the module
      *     assumes whatever Lua name it offers).
      */
+    QQueue<QString> modLoadMessageQueue;
+    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    while (!modLoadMessageQueue.isEmpty()) {
+        mpHost->postMessage(modLoadMessageQueue.dequeue());
+    }
+
     bool loaded = loadLuaModule(modLoadMessageQueue, QLatin1String("brimworks.zip"), QString(), QStringLiteral("lua-zip"), QStringLiteral("zip"));
     if (!loaded) {
         loadLuaModule(modLoadMessageQueue, QLatin1String("zip"), QString(), QStringLiteral("luazip"));
@@ -17277,49 +17698,69 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_register(pIndenterState.get(), "debugc", TLuaInterpreter::debug);
     // PLACEMARKER: End of indenter Lua interpreter functions registration
 
-
+    /*
+     * Additional paths for the lua/C package search paths - '?' (and any '.'s,
+     * in the file name, apart from the one before the filename extension) are
+     * handled specially! See: https://stackoverflow.com/q/31904392/4805858 :
+     */
+    QStringList additionalLuaPaths;
+    QStringList additionalCPaths;
+    const QString appPath{QCoreApplication::applicationDirPath()};
 
 #if defined(Q_OS_MACOS)
-        //macOS app bundle would like the search path to also be set to the current binary directory
-        luaL_dostring(pIndenterState.get(), QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
-                      .arg(QCoreApplication::applicationDirPath())
-                      .toUtf8().constData());
-        luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = package.path .. ';%1/?.lua'")
-                      .arg(QCoreApplication::applicationDirPath())
-                      .toUtf8().constData());
-
-#elif defined(Q_OS_UNIX)
-    // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
-    // to allow running from a shadow build directory (both qmake and cmake).
-    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;%1/../../mudlet/3rdparty/?.lua;' .. package.path")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-
-    // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring(pIndenterState.get(), "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
-
-    //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState.get(), QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
-                  .arg(QCoreApplication::applicationDirPath())
-                  .toUtf8().constData());
-#elif defined(Q_OS_WIN32)
-    // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
-    luaL_dostring(pIndenterState.get(),
-                  QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
-                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
-                          .toUtf8().constData());
+    // macOS app bundle would like the search path for the binary modules to
+    // also be set to the current binary directory:
+    additionalCPaths << QStringLiteral("%1/?.so").arg(appPath);
+#elif defined (Q_OS_LINUX)
+    // AppInstaller on Linux would like the search path for the binary modules
+    // to also be set to a lib sub-directory of the application directory:
+    additionalCPaths << QStringLiteral("%1/lib/?.so").arg(appPath);
 #endif
 
-    int error = luaL_dostring(pIndenterState.get(), R"(
-      require('lcf.workshop.base')
-      get_ast = request('!.lua.code.get_ast')
-      get_formatted_code = request('!.lua.code.ast_as_code')
-    )");
+    insertNativeSeparatorsFunction(pIndenterState.get());
+
+    // 1 installed *nix case - probably not applicable to Windows
+    //     "LUA_DEFAULT_PATH/?.lua" (if defined and not empty)
+    if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
+        additionalLuaPaths << QStringLiteral(LUA_DEFAULT_PATH "/?.lua");
+    }
+    // 2 AppImage (directory of executable) - not needed for Wndows:
+    //     "<applicationDirectory>/?.lua"
+#if ! defined (Q_OS_WIN32)
+    additionalLuaPaths << QStringLiteral("%1/?.lua").arg(appPath);
+#endif
+    // 3 QMake shadow builds without CONFIG containing "debug_and_release" but
+    //    with "debug_and_release_target" (default on most OS but NOT Windows):
+    //     "<applicationDirectory>/../3rdparty/?.lua"
+    additionalLuaPaths << QStringLiteral("%1/../3rdparty/?.lua").arg(appPath);
+    // 4 QMake shadow builds with CONFIG containing "debug_and_release" AND
+    //   "debug_and_release_target" (usually Windows):
+    //     "<applicationDirectory>/../../3rdparty/?.lua"
+    additionalLuaPaths << QStringLiteral("%1/../../3rdparty/?.lua").arg(appPath);
+    // 5 CMake shadow builds
+    //    "<applicationDirectory>/../../mudlet/3rdparty/?.lua"
+    additionalLuaPaths << QStringLiteral("%1/../../mudlet/3rdparty/?.lua").arg(appPath);
+
+    int error = luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = toNativeSeparators([[%1;]] .. package.path)")
+                              .arg(additionalLuaPaths.join(QLatin1Char(';'))).toUtf8().constData());
+    if (!error && !additionalCPaths.isEmpty()) {
+        error = luaL_dostring(pIndenterState.get(), QStringLiteral("package.cpath = toNativeSeparators([[%1;]] .. package.cpath)")
+                              .arg(additionalCPaths.join(QLatin1Char(';'))).toUtf8().constData());
+    }
+
+    // clang-format off
+    if (!error) {
+        error = luaL_dostring(pIndenterState.get(), R"LUA(
+  require('lcf.workshop.base')
+  get_ast = request('!.lua.code.get_ast')
+  get_formatted_code = request('!.lua.code.ast_as_code')
+)LUA");
+// clang-format on
+    }
     if (error) {
-        QString e = tr("no error message available from Lua");
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pIndenterState.get(), -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pIndenterState.get(), -1);
+            e = tr("Lua error: %1.").arg(QString::fromUtf8(lua_tostring(pIndenterState.get(), -1)));
         }
         QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
         msg.append(e);
@@ -17381,11 +17822,9 @@ void TLuaInterpreter::loadGlobal()
     // so leave checking for it's contents to run-time - this one is the one
     // for Linux/FreeBSD where the read-only shared Lua files go into the
     // /usr/share part of the file-system:
-#if defined(LUA_DEFAULT_PATH)
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
         mPossiblePaths <<  QDir::toNativeSeparators(QStringLiteral(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
     };
-#endif
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
@@ -17405,7 +17844,7 @@ void TLuaInterpreter::loadGlobal()
         }
 
         if (!(QFileInfo(pathFileName).isFile())) {
-            failedMessages << tr("%1 (isn't a file or symlink to a file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            failedMessages << tr("%1 (isn't a file or symlink to a file)").arg(pathFileName);
             continue;
         }
 
@@ -17414,7 +17853,7 @@ void TLuaInterpreter::loadGlobal()
         qt_ntfs_permission_lookup++;
 #endif
         if (!(QFileInfo(pathFileName).isReadable())) {
-            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)").arg(pathFileName);
             continue;
         }
 #if defined(Q_OS_WIN32)
@@ -18076,6 +18515,18 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
+// Internal function - Looks for argument types in an 'event' that have stored
+// data in the lua registry, and frees this data.
+void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
+{
+    for (int i = 0; i < event.mArgumentList.size(); i++) {
+        if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
+        {
+             freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
+        }
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {
@@ -18615,4 +19066,87 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         lua_settable(L, -3);
         lua_pop(L, 1);
     }
+}
+
+// Internal function - Creates a table for useful information from the http
+// response. It creates an empty table, calls upon other functions to
+// add things to it, and then returns a key to where it is in the lua registery.
+int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return {};
+    }
+
+    // Push empty table onto stack
+    lua_newtable(L);
+    // Add "headers" table to table
+    createHttpHeadersTable(L, reply);
+    // Add "cookies" table to table
+    createCookiesTable(L, reply);
+    // Pop table from stack, store it in registry, return key to it
+    return luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+// Internal function - Adds an empty table to a "headers" key to the table for
+// tracking useful information from the http response. If there are any headers
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
+    }
+
+    // Push "headers" key and empty table value onto stack
+    lua_pushstring(L, "headers");
+    lua_newtable(L);
+
+    // Parse headers, add them as key-value pairs to the empty table
+    const QList<QByteArray> headerList = reply->rawHeaderList();
+    for (QByteArray header : headerList) {
+        // Push header key onto stack
+        lua_pushstring(L, header.constData());
+        // Push header value onto stack
+        lua_pushstring(L,  reply->rawHeader(header).constData());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+
+    // Put "headers" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
+}
+
+// Internal function - Adds an empty table to a "cookies" key to the table for
+// tracking useful information from the http response. If there are any cookies
+// in the http response, it adds them to this new empty table.
+void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
+{
+    // Assert table from createHttpResponseTable is where we expect it to be
+    if (!lua_istable(L, -1)) {
+        qDebug() << "Unable to find table at top of lua stack, aborting!";
+        return;
+    }
+
+    // Push "cookies" key and empty table value onto stack
+    lua_pushstring(L, "cookies");
+    lua_newtable(L);
+
+    // Parse cookies, add them as key-value pairs to the empty table
+    Host& host = getHostFromLua(L);
+    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
+    for (QNetworkCookie cookie : cookies) {
+        // Push cookie name onto stack
+        lua_pushstring(L, cookie.name().constData());
+        // Push cookie value onto stack
+        lua_pushstring(L,  cookie.value().constData());
+        // Put key-value pair into table (now 3 deep in stack), pop stack twice
+        lua_settable(L, -3);
+    }
+
+    // Put "cookies" table into table (now 3 deep in stack), pop stack twice
+    lua_settable(L, -3);
 }

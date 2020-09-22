@@ -171,6 +171,8 @@ public:
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(Host*, const QString& name, QString& path);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
+    bool setCmdLineAction(Host*, const QString&, const int);
+    bool resetCmdLineAction(Host*, const QString&);
     bool setLabelClickCallback(Host*, const QString&, const int);
     bool setLabelDoubleClickCallback(Host*, const QString&, const int);
     bool setLabelReleaseCallback(Host*, const QString&, const int);
@@ -233,6 +235,7 @@ public:
     bool replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
+    bool setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible);
     bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
     void replayOver();
     void showEvent(QShowEvent* event) override;
