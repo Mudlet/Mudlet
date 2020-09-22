@@ -1036,6 +1036,9 @@ end
 -- @param only used internally the right click menu [optional]
 -- @param findParent only used internally to return a Parent [optional]
 function Geyser.Label:findMenuElement(name, parent, findParent)
+  if not name then
+    return
+  end
   local parent = parent or self.rightClickMenu
   local menu = parent.MenuItems
   local parentName = parent.menuName

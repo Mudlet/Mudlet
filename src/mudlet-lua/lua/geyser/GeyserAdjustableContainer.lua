@@ -328,14 +328,26 @@ function Adjustable.Container:connectToBorder(border)
     end
 end
 
---- adds elements to connect containers to borders into the right click custom menu
+--- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
-    self:newCustomItem("Connect To Border: ", function() end)
-    self:newCustomItem("Top", function() self:connectToBorder("top") end)
-    self:newCustomItem("Bottom", function() self:connectToBorder("bottom") end)
-    self:newCustomItem("Left", function() self:connectToBorder("left") end)
-    self:newCustomItem("Right", function() self:connectToBorder("right") end)
-    self:newCustomItem("Disconnect", function() self:disconnect() end)
+    local label = self.adjLabel
+    local menuTxt = self.Locale.connectTo and self.Locale.connectTo.message or "Connect To:"
+    label:addMenuLabel("Connect To: ")
+    label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
+    local menuParent = self.rCLabel.MenuItems
+    menuParent[#menuParent + 1] = {"top", "bottom", "left", "right"}
+    self.rCLabel.MenuWidth3 = self.ChildMenuWidth
+    self.rCLabel.MenuFormat3 = self.rCLabel.MenuFormat2
+    label:createMenuItems()
+    for  k,v in ipairs(menuParent[#menuParent]) do
+        menuTxt = self.Locale[v] and self.Locale[v].message or v
+        label:findMenuElement("Connect To: ."..v):echo(menuTxt, "nocolor")
+        label:setMenuAction("Connect To: ."..v, function() closeAllLevels(self.rCLabel) self:connectToBorder(v) end)
+    end
+    menuTxt = self.Locale.disconnect and self.Locale.disconnect.message or "Disconnect "
+    label:addMenuLabel("Disconnect ")
+    label:setMenuAction("Disconnect ", function() closeAllLevels(self.rCLabel) self:disconnect() end)
+    label:findMenuElement("Disconnect "):echo(menuTxt, "nocolor", "c")
 end
 
 --- disconnects your container from a border
