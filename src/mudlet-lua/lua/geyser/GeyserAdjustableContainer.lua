@@ -62,6 +62,9 @@ end
 -- Internal function: hides the window title if the window gets smaller
 -- @param lbl the Label which allows the Container to be adjustable and where the title text is on
 local function shrink_title(lbl)
+    if lbl.locked and lbl.connectedContainers then
+        return
+    end
     local  w  =  lbl:get_width()
     local titleText = lbl.titleText
     if #titleText <= 15 then titleText = titleText.."   " end
@@ -90,7 +93,7 @@ function Adjustable.Container:onClick(label, event)
     if label.cursorShape == "OpenHand" then
         label:setCursor("ClosedHand")
     end
-    if event.button == "LeftButton" and not(self.locked) then
+    if event.button == "LeftButton" and not(self.locked and not self.connectedContainers) then
         if self.raiseOnClick then
             self:raiseAll()
         end
@@ -133,15 +136,26 @@ end
 -- @param label the main Adjustable.Container Label
 -- @param event the onMove event and its informations
 function Adjustable.Container:onMove (label, event)
-    if self.locked then
+    if self.locked and not self.connectedContainers then
         if label.cursorShape ~= 0 then
             label:resetCursor()
         end
         return
     end
+    
     if adjustInfo.move == nil then
         adjust_Info(self, label, event)
     end
+
+    if self.connectedToBorder then
+        for k in pairs(self.connectedToBorder) do
+            if adjustInfo[k] then
+                label:resetCursor()
+                return
+            end
+        end
+    end
+
     if adjustInfo.x and adjustInfo.name == label.name then
         self:adjustBorder()
         local x, y = getMousePosition()
@@ -153,7 +167,7 @@ function Adjustable.Container:onMove (label, event)
         end
         local dx, dy = adjustInfo.x - x, adjustInfo.y - y
         local max, min = math.max, math.min
-        if adjustInfo.move then
+        if adjustInfo.move and not self.connectedContainers then
             label:setCursor("ClosedHand")
             local tx, ty = max(0,x1-dx), max(0,y1-dy)
             tx, ty = min(tx, winw - w), min(ty, winh - h)
@@ -191,6 +205,9 @@ function Adjustable.Container:onMove (label, event)
             tw,th = make_percent(tw/winw), make_percent(th/winh)
             self:resize(tw, th)
             shrink_title(self)
+            if self.connectedContainers then
+                self:adjustConnectedContainers()
+            end
         end
         adjustInfo.x, adjustInfo.y = x, y
     end
@@ -211,20 +228,154 @@ end
 function Adjustable.Container:adjustBorder()
     local winw, winh = getMainWindowSize()
     local where = false
-    if type(self.attached) == "string" then
-        where = self.attached:lower()
-        if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then self:detach()
-        else
-            if        where == "right"   then setBorderRight(winw-self.get_x())
-            elseif  where == "left"    then setBorderLeft(self.get_width()+self.get_x())
-            elseif  where == "bottom"  then setBorderBottom(winh-self.get_y())
-            elseif  where == "top"     then setBorderTop(self.get_height()+self.get_y())
-            else self.attached= false
-            end
-        end
-    else
+
+    if type(self.attached) ~= "string" then
         return false
     end
+
+    where = self.attached:lower()
+    if table.contains(self:validAttachPositions(), where) == false or self.minimized or self.hidden then 
+        self:detach()
+        return
+    end
+
+    if  where == "right" then 
+        self.borderSize = winw+self.attachedMargin-self.get_x()
+    elseif  where == "left"    then
+        self.borderSize =  self.get_width()+self.get_x()+self.attachedMargin
+    elseif  where == "bottom"  then 
+        self.borderSize = winh+self.attachedMargin-self.get_y()
+    elseif  where == "top"     then 
+        self.borderSize = self.get_height()+self.get_y()+self.attachedMargin
+    else
+        self.attached = false
+        return
+    end
+    local borderSize = self.borderSize
+    for k,v in pairs(Adjustable.Container.Attached[where]) do
+        if v.borderSize > borderSize then
+            borderSize = v.borderSize
+        end
+    end
+    local funcname = string.format("setBorder%s", string.title(where))
+    _G[funcname](borderSize)
+end
+
+-- internal function to adjust connected containers
+function Adjustable.Container:adjustConnectedContainers()
+    local where = self.attached
+    local x, y, height, width = self.x, self.y, self.height, self.width
+    if not where or not self.connectedContainers then
+        return false
+    end
+    for k in pairs(self.connectedContainers) do
+        local container = Adjustable.Container.all[k]
+        if container then
+            if container.attached == where then
+                if where == "right" or where == "left" then
+                    height = nil
+                    y = nil
+                end
+                if where == "top" or where == "bottom" then
+                    width = nil
+                    x = nil
+                end
+                container:move(x, y)
+                container:resize(width, height)
+            else
+                if where == "right" then
+                    container:resize(self:get_x() - container:get_x(), nil)
+                end
+                if where == "left" then
+                    local right_x = container:get_x() + container:get_width()
+                    local left_x = self:get_x() + self:get_width()
+                    container:move(left_x, nil)
+                    container:resize(right_x - container:get_x(), nil)
+                end
+                if where == "bottom" then
+                    container:resize(nil, self:get_y() - container:get_y())
+                end
+                if where == "top" then
+                    local bottom_y = container:get_y() + container:get_height()
+                    local top_y = self:get_y() + self:get_height()
+                    container:move(nil, top_y)
+                    container:resize(nil, bottom_y - container:get_y())
+                end
+            end
+            container:adjustBorder()
+        end
+    end
+end
+
+--- connect your container to a border
+-- @param border main border ("top", "bottom", "left", "right")
+function Adjustable.Container:connectToBorder(border)
+    if not self.attached or not Adjustable.Container.Attached[border] then
+        return
+    end
+    self.connectedToBorder = self.connectedToBorder or {}
+    self.connectedToBorder[border] = true
+    self.connectedContainers = self.connectedContainers or {}
+    for k,v in pairs(Adjustable.Container.Attached[border]) do
+        v.connectedContainers = v.connectedContainers or {}
+        v.connectedContainers[self.name] = true
+        if self.attached == border then
+            v.connectedToBorder = v.connectedToBorder or {}
+            v.connectedToBorder[border] = true
+            self.connectedContainers[k] = v
+        end
+        v:adjustConnectedContainers()
+    end
+end
+
+--- adds elements to connect containers to borders into the right click menu
+function Adjustable.Container:addConnectMenu()
+    local label = self.adjLabel
+    local menuTxt = self.Locale.connectTo and self.Locale.connectTo.message or "Connect To:"
+    label:addMenuLabel("Connect To: ")
+    label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
+    local menuParent = self.rCLabel.MenuItems
+    menuParent[#menuParent + 1] = {"top", "bottom", "left", "right"}
+    self.rCLabel.MenuWidth3 = self.ChildMenuWidth
+    self.rCLabel.MenuFormat3 = self.rCLabel.MenuFormat2
+    label:createMenuItems()
+    for  k,v in ipairs(menuParent[#menuParent]) do
+        menuTxt = self.Locale[v] and self.Locale[v].message or v
+        label:findMenuElement("Connect To: ."..v):echo(menuTxt, "nocolor")
+        label:setMenuAction("Connect To: ."..v, function() closeAllLevels(self.rCLabel) self:connectToBorder(v) end)
+    end
+    menuTxt = self.Locale.disconnect and self.Locale.disconnect.message or "Disconnect "
+    label:addMenuLabel("Disconnect ")
+    label:setMenuAction("Disconnect ", function() closeAllLevels(self.rCLabel) self:disconnect() end)
+    label:findMenuElement("Disconnect "):echo(menuTxt, "nocolor", "c")
+end
+
+--- disconnects your container from a border
+function Adjustable.Container:disconnect()
+    if not self.connectedToBorder then
+        return
+    end
+    for k in pairs(self.connectedToBorder) do
+        if Adjustable.Container.Attached[k] then
+            for k1,v1 in pairs(Adjustable.Container.Attached[k]) do
+                if v1.connectedContainers and v1.connectedContainers[self.name] then
+                    v1.connectedContainers[self.name] = nil
+                    if table.is_empty(v1.connectedContainers) then
+                        v1.connectedContainers = nil
+                    end
+                end
+            end
+        end
+    end
+    self.connectedToBorder = nil
+    self.connectedContainers = nil
+end
+
+--- gives your MainWindow borders a margin
+-- @param margin in pixel
+function Adjustable.Container:setBorderMargin(margin)
+    self.attachedMargin = margin
+    self:adjustBorder()
 end
 
 -- internal function to resize the border automatically if the window size changes
@@ -235,7 +386,7 @@ function Adjustable.Container:resizeBorder()
     -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event
     if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
         self.timer_active = false
-        tempTimer(0.2, function() self:adjustBorder() end)
+        tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
     end
     self.old_w_value = winw
     self.old_h_value = winh
@@ -246,6 +397,8 @@ end
 -- @param border possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:attachToBorder(border)
     if self.attached then self:detach() end
+    Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
+    Adjustable.Container.Attached[border][self.name] = self
     self.attached = border
     self:adjustBorder()
     self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
@@ -255,6 +408,8 @@ end
 --- detaches the given container
 -- this means the mudlet main window border will be reseted
 function Adjustable.Container:detach()
+    Adjustable.Container.Attached[self.attached][self.name] = nil
+    self.borderSize = nil
     self:resetBorder(self.attached)
     self.attached=false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
@@ -263,10 +418,19 @@ end
 -- internal function to reset the given border
 -- @param where possible border values are "top", "bottom", "right", "left"
 function Adjustable.Container:resetBorder(where)
-    if        where == "right"   then setBorderRight(0)
-    elseif  where == "left"    then setBorderLeft(0)
-    elseif  where == "bottom"  then setBorderBottom(0)
-    elseif  where == "top"     then setBorderTop(0)
+    local resetTo = 0
+    if not Adjustable.Container.Attached[where] then
+        return
+    end
+    for k,v in pairs(Adjustable.Container.Attached[where]) do
+        if v.borderSize > resetTo then
+            resetTo = v.borderSize
+        end
+    end
+    if        where == "right"   then setBorderRight(resetTo)
+    elseif  where == "left"    then setBorderLeft(resetTo)
+    elseif  where == "bottom"  then setBorderBottom(resetTo)
+    elseif  where == "top"     then setBorderTop(resetTo)
     end
 end
 
@@ -334,13 +498,13 @@ end
 -- what means that the container is moveable/resizable by mouse again 
 function Adjustable.Container:unlockContainer()
     closeAllLevels(self.rCLabel)
-    shrink_title(self)
     self.Inside:resize("-"..self.padding,"-"..self.padding)
     self.Inside:move(self.padding, self.padding*2)
     self.adjLabel:setStyleSheet(self.adjLabelstyle)
     self.exitLabel:show()
     self.minimizeLabel:show()
     self.locked = false
+    shrink_title(self)
 end
 
 --- sets the padding of your container
@@ -396,13 +560,17 @@ end
 --- minimizes the container
 -- hides everything beside the title
 function Adjustable.Container:minimize()
-    if self.minimized == false and self.locked == false then
-        self.origh = self.height
-        self.Inside:hide()
-        self:resize(nil, self.buttonsize + 10)
-        self.minimized = true
-        self:adjustBorder()
+    if self.minimized and self.locked then
+        return
     end
+    self.origh = self.height
+    self.Inside:hide()
+    self:resize(nil, self.buttonsize + 10)
+    self.minimized = true
+    if self.connectedToBorder or self.connectedContainers then
+        self:disconnect()
+    end
+    self:adjustBorder()
 end
 
 --- restores the container after it was minimized
@@ -542,8 +710,11 @@ function Adjustable.Container:save()
     mytable.attached = self.attached
     mytable.lockStyle = self.lockStyle
     mytable.padding = self.padding
+    mytable.attachedMargin = self.attachedMargin
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
+    mytable.connectedToBorder = self.connectedToBorder
+    mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
     if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
     table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
@@ -553,7 +724,6 @@ end
 -- @see Adjustable.Container:save
 function Adjustable.Container:load()
     local mytable = {}
-
     if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
         table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
     end
@@ -566,6 +736,8 @@ function Adjustable.Container:load()
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
     self.padding = mytable.padding or self.padding
+    self.attachedMargin = mytable.attachedMargin or self.attachedMargin
+
 
     if mytable.x then
         self:move(mytable.x, mytable.y)
@@ -580,12 +752,21 @@ function Adjustable.Container:load()
 
     if mytable.attached then self:attachToBorder(mytable.attached) end
     self:adjustBorder()
+
+    self.connectedContainers = mytable.connectedContainers or self.connectedContainers
+    self.connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
+    if self.connectedToBorder then
+        for k in pairs(self.connectedToBorder) do
+            self:connectToBorder(k)
+        end
+    end
     if mytable.auto_hidden or mytable.hidden then
         self:hide()
         if not mytable.hidden then self.hidden = false self.auto_hidden = true end
     else
         self:show()
     end
+    self:adjustConnectedContainers()
 end
 
 --- overridden reposition function to raise an event of the Adjustable.Container changing position/size
@@ -665,6 +846,7 @@ Adjustable.Container.parent = Geyser.Container
 -- Create table to put every Adjustable.Container in it
 Adjustable.Container.all = Adjustable.Container.all or {}
 Adjustable.Container.all_windows = Adjustable.Container.all_windows or {}
+Adjustable.Container.Attached = Adjustable.Container.Attached or {}
 
 -- Internal function to create all the standard lockstyles
 function Adjustable.Container:globalLockStyles()
@@ -747,6 +929,7 @@ end
 --@param[opt="15"] cons.buttonsize  size of the minimize and close buttons
 --@param[opt="8"] cons.buttonFontSize  font size of the minimize and close buttons
 --@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting)
+--@param[opt="5"] cons.attachedMargin  margin for the MainWindow border if an adjustable container is attached
 --@param cons.adjLabelstyle  style of the main Label where all elements are in
 --@param cons.menustyle  menu items style
 --@param cons.buttonstyle close and minimize buttons style
@@ -781,6 +964,7 @@ function Adjustable.Container:new(cons,container)
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
     me.padding = me.padding or 10
+    me.attachedMargin = me.attachedMargin or 5
 
     me.adjLabelstyle = me.adjLabelstyle or [[
     background-color: rgba(0,0,0,100%);
