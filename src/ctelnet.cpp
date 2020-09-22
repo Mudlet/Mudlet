@@ -109,9 +109,26 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = QStringLiteral("Mudlet " APP_VERSION);
-    if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(QStringLiteral(APP_BUILD));
+
+    // RFC 1010 and 1091 dictate that the TTYPE string must be no more than
+    // 40 NVT ASCII characters from the set of UPPER Case letters, digits and
+    // the TWO punctionation characters hyphen and slash - that EXCLUDES spaces
+    // and period; it must begin with a letter and end with a letter or digit
+    // See: https://tools.ietf.org/html/rfc1091 & https://tools.ietf.org/html/rfc1010 :
+    termType = QStringLiteral("MUDLET/" APP_VERSION).replace(QLatin1Char('.'),QLatin1Char('-'));
+    const int initialLength = termType.size();
+    if (!QByteArray(APP_BUILD).trimmed().isEmpty()) {
+        QRegularExpression invalidCharacters(QStringLiteral("[^a-z,A-Z,0-9,-,\\/]"));
+        QString sanitisedBuild = QStringLiteral("/" APP_BUILD).replace(invalidCharacters, QStringLiteral("-")).toUpper();
+        while (sanitisedBuild.contains(QStringLiteral("--"))) {
+            sanitisedBuild = sanitisedBuild.replace(QStringLiteral("--"), QStringLiteral("-"));
+        }
+        while (!sanitisedBuild.isEmpty() && (sanitisedBuild.endsWith(QLatin1Char('-'))
+                                             || sanitisedBuild.endsWith(QLatin1Char('/'))
+                                             || ((initialLength + sanitisedBuild.size()) > 40))) {
+            sanitisedBuild.chop(1);
+        }
+        termType.append(sanitisedBuild);
     }
 
     command = "";
