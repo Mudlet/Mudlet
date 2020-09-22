@@ -544,6 +544,7 @@ function Adjustable.Container:save()
     mytable.padding = self.padding
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
+    mytable.windowname = self.windowname
     if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
     table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
 end
@@ -555,6 +556,12 @@ function Adjustable.Container:load()
 
     if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
         table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
+    end
+
+    mytable.windowname = mytable.windowname or "main"
+    -- send Adjustable Container to a UserWindow if saved there
+    if self.windowname ~= mytable.windowname then
+        self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
