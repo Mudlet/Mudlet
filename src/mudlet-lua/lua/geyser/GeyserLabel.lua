@@ -21,7 +21,7 @@ Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
--- @param color The color to use.
+-- @param color The color to use. If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
@@ -54,9 +54,20 @@ function Geyser.Label:echo(message, color, format)
   if not fs then
     fs = tostring(self.fontSize)
   end
+  if color == "nocolor" then
+    color = [[ style=" ]]
+  else
+    color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
+  end
   fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
+  message = [[<div ]] .. alignment .. color .. fs ..
   [[">]] .. message .. [[</div>]]
+  echo(self.name, message)
+end
+
+--- raw Echo without formatting/handholding stuff that Geyser.Label:echo() does
+-- @param message The message to print. Can contain html formatting.
+function Geyser.Label:rawEcho(message)
   echo(self.name, message)
 end
 
@@ -526,23 +537,37 @@ function Geyser.Label:displayNest()
     yOffset = parY - (maxDim["V"] - layout["V"])
   end
   local flyIndex = { R = 0, L = 0, T = 0, B = 0 }
+  local yOffsetT = 0
   for i, v in pairs(nestedLabels["V"]) do
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["V"]
-
+    
     if v.flyDir == "L" then
       v.x = parX + flyMap[v.flyDir][1] * width
     else
       v.x = parX + flyMap[v.flyDir][1] * parW
     end
-
+    
+    -- T and B use their own offset values
     if v.flyDir == "T" then
-      v.y = parY + flyMap[v.flyDir][2] * height * ( number - flyIndex[v.flyDir] - yOffset)
+      v.y = parY + flyMap[v.flyDir][2] * height * (number - flyIndex[v.flyDir]) + yOffsetT
+      if v.y < 0 then
+        yOffsetT = v.y * -1
+        v.y = 0
+      end
     else
-      v.y = parY + flyMap[v.flyDir][2] * parH - yOffset + height * flyIndex[v.flyDir]
+      
+      local edge = parY + parH + (number * height)
+      if edge > maxDim["V"]  and v.flyDir == "B" then
+        yOffsetT = edge - maxDim["V"]
+      else
+        yOffsetT = yOffset
+      end
+      
+      v.y = parY + flyMap[v.flyDir][2] * parH - yOffsetT + height * flyIndex[v.flyDir]
     end
-
+    
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -550,22 +575,34 @@ function Geyser.Label:displayNest()
     flyIndex[v.flyDir] = flyIndex[v.flyDir] + 1
   end
   local flyIndex = { R = 0, L = 0, T = 0, B = 0 }
+  local xOffsetL = 0
   for i, v in pairs(nestedLabels["H"]) do
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["H"]
+    -- L and H use their own offset values
     if v.flyDir == "L" then
-      v.x = parX + flyMap[v.flyDir][1] * width * (number - flyIndex[v.flyDir] - xOffset)
+      v.x = parX + flyMap[v.flyDir][1] * width * (number - flyIndex[v.flyDir]) + xOffsetL
+      if v.x < 0 then
+        xOffsetL = v.x * -1
+        v.x = 0
+      end
     else
-      v.x = parX + flyMap[v.flyDir][1] * parW - xOffset + width * flyIndex[v.flyDir]
+      local edge = parX + parW + (number * width)
+      if edge > maxDim["H"]  and v.flyDir == "R" then
+        xOffsetL = edge - maxDim["H"]
+      else
+        xOffsetL = xOffset
+      end
+      v.x = parX + flyMap[v.flyDir][1] * parW - xOffsetL + width * flyIndex[v.flyDir]
     end
-
+    
     if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height
     else
       v.y = parY + flyMap[v.flyDir][2] * parH
     end
-
+    
     v:show()
     v:raise()
     moveWindow(v.name, v.x, v.y)
@@ -785,22 +822,28 @@ end
 function Geyser.Label:addScrollbars(parent, layout)
   local label = parent.nestedLabels[1]
   local flyDir, layoutDir
+
   flyDir = string.sub(layout, 1, 1)
   layoutDir = string.sub(layout, 2, 2)
-  cons = { name = "forScroll" .. label.name .. layout, x = label:get_x(), y = label:get_y(),
+
+  local cons = { name = "forScroll" .. label.name .. layout, x = label:get_x(), y = label:get_y(),
     width = label:get_width(), layoutDir = layoutDir, flyDir = flyDir, height = label:get_height(), message = "More..." }
-  local forward = Geyser.Label:new(cons, parent.container)
+
+  local forward = Geyser.Label:new(cons, label.container)
+
   forward.nestParent = parent
   forward.maxScroll = #parent.nestedLabels + 1
   forward:setOnEnter("doNestEnter", forward)
   forward:setOnLeave("doNestLeave", forward)
   forward:setClickCallback("doNestScroll", forward)
   cons.name = "backScroll" .. label.name .. layout
+
   local backward = Geyser.Label:new(cons, label.container)
   backward.nestParent = parent
   backward:setOnEnter("doNestEnter", backward)
   backward:setOnLeave("doNestLeave", backward)
   backward:setClickCallback("doNestScroll", backward)
+
   return { backward, forward }
 end
 
@@ -857,7 +900,11 @@ function Geyser.Label:addChild(cons, container)
       break
     end
   end
-  table.insert(self.nestedLabels, me)
+  if me.index then
+    table.insert(self.nestedLabels, me.index, me)
+  else
+    self.nestedLabels[#self.nestedLabels + 1] = me
+  end
   me:hide()
   return me
 end
@@ -872,6 +919,303 @@ end
 function Geyser.Label:disableClickthrough()
   disableClickthrough(self.name)
   self.clickthrough = false
+end
+
+-- internal function to change the layout of the rightClick menu if we are at the right edge
+-- @param labelNest Nested Labels
+-- @param fdir flying direction of the label
+local function changeMenuLayout(labelNest, fdir)
+  if not labelNest then
+    return
+  end
+  for k, v in pairs(labelNest) do
+    v.flyDir = fdir
+    changeMenuLayout(v.nestedLabels, fdir)
+  end
+end
+
+-- internal function to add or restyle an element
+local function addElement(self, name, configLabel, myMenu, depth, index, restyle)
+  myMenu.MenuLabels[name] = myMenu.MenuLabels[name] or
+  myMenu:addChild(
+  {
+    index = index,
+    depth = depth,
+    menuName = name,
+    width = configLabel["MenuWidth"..depth] or configLabel["MenuWidth"],
+    height = configLabel["MenuHeight"..depth] or configLabel["MenuHeight"],
+    name = myMenu.name..name,
+    format = configLabel["MenuFormat"..depth] or configLabel["MenuFormat"],
+    font = configLabel["MenuFont"..depth] or configLabel["MenuFont"],
+    fgColor = "nocolor",
+    message = name,
+    color = "red",
+    layoutDir = "RV",
+    flyOut = true,
+    nestable = true,
+  }
+)
+-- ensure Labels are on the same parent window
+if self.windowname ~= myMenu.MenuLabels[name].windowname then
+  if self.windowname == "main" then
+    myMenu.MenuLabels[name]:changeContainer(Geyser)
+  else
+    myMenu.MenuLabels[name]:changeContainer(Geyser.windowList[self.windowname.."Container"].windowList[self.windowname])
+  end
+end
+
+if restyle then
+  myMenu.MenuLabels[name].stylesheet = nil
+end
+
+local Style = configLabel["Style"..depth] or configLabel["Style"]
+local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+end
+
+-- internal function to create the right click Menu Labels
+function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, depth)
+  
+  depth = depth or 1
+  MenuItems = MenuItems or self.MenuItems
+  self.MenuItems = MenuItems
+  myMenu = myMenu or self.rightClickMenu
+  configLabel = configLabel or myMenu
+  myMenu.MenuLabels = myMenu.MenuLabels or {}
+  local index = 1
+  
+  for i = 1, #MenuItems do
+    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
+      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
+      myMenu.MenuLabels[MenuItems[i]].index = index
+      myMenu.MenuLabels[MenuItems[i]].tblIndex = i
+      index = index + 1
+    end
+    --Ignore all children if parent is hidden
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+      myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
+      myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
+    end
+  end
+end
+
+function Geyser.Label:styleMenuItems(mode, css)
+  local menu = self.rightClickMenu
+  mode = mode or menu.Style
+  menu.Style = mode
+  css = css or menu.MenuStyle
+  menu.MenuStyle = css
+  self:createMenuItems(true)
+end
+
+-- internal function to handle the onRightClick event
+-- @param oldClickCallBack previous clickcallback function
+-- @param oldClickArgs previous clickcallback args
+-- @param event the onClick event
+function Geyser.Label:onRightClick(event)
+  closeAllLevels(self.rightClickMenu)
+  if event.button == "RightButton" then
+    local winw = getUserWindowSize(self.windowname)
+    local mousepos = self:get_x() + event.x
+    local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
+    local diff = winw - mousepos
+    local flyDir = self.rightClickMenu.nestedLabels[1].flyDir
+    if diff <= maxdiff and flyDir == "R" then
+      changeMenuLayout(self.rightClickMenu.nestedLabels, "L")
+    elseif diff > maxdiff and flyDir == "L" then
+      changeMenuLayout(self.rightClickMenu.nestedLabels, "R")
+    end
+    self.rightClickMenu:move(event.x, event.y)
+    doNestShow(self.rightClickMenu)
+  end
+end
+
+--- finds and returns a right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param only used internally the right click menu [optional]
+-- @param findParent only used internally to return a Parent [optional]
+function Geyser.Label:findMenuElement(name, parent, findParent)
+  local parent = parent or self.rightClickMenu
+  local menu = parent.MenuItems
+  local parentName = parent.menuName
+  for i = 1, #menu do
+    local item = menu[i]
+    if type(item) == "string" then
+      item = parentName and parentName.."."..item or item
+      if item == name and not findParent then
+        return parent.MenuLabels[menu[i]], menu
+      end
+      if findParent and item == name and type(menu[i + 1]) == "table" then
+        return parent.MenuLabels[menu[i]], menu[i + 1]
+      end
+    end
+    if type(item) == "table" then
+      local itemParent = menu[i-1]
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      if element then
+        return element, menuTable
+      end
+    end
+  end
+  return nil, "findMenuElement: Couldn't find menu element "..name
+end
+
+--- Sets a action to be used when this label from the right click menu is clicked
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param ... Parameters to pass to the function. Will be passed directly to the setClickCallback function.
+-- @see Geyser.Label:setClickCallback
+function Geyser.Label:setMenuAction(name, ...)
+  local menuElement = self:findMenuElement(name)
+  if not menuElement then
+    error ("setMenuAction: Couldn't find menu element "..name)
+  end
+  menuElement:setClickCallback(...)
+end
+
+--- hides a right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+function Geyser.Label:hideMenuLabel(name)
+  local menuElement = self:findMenuElement(name)
+  if not menuElement then
+    error ("hideMenuLabel: Couldn't find menu element "..name)
+  end
+  local nestTable = menuElement.nestParent.nestedLabels
+  local index = table.index_of(menuElement.nestParent.nestedLabels, menuElement)
+  -- If it's already hidden do nothing
+  if menuElement.ignore then 
+    return 
+  end
+  menuElement.MenuIndex = index
+  menuElement.MenuNestTable = nestTable
+  menuElement.ignore = true
+  menuElement:hide()
+  table.remove(nestTable, index)
+  self:createMenuItems()
+end
+
+--- shows a previously hidden right click menu item
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+function Geyser.Label:showMenuLabel(name)
+  local menuElement = self:findMenuElement(name)
+  if not menuElement then
+    error ("showMenuLabel: Couldn't find menu element "..name)
+  end
+  -- If it's already shown do nothing
+  if not menuElement.ignore then 
+    return 
+  end
+  menuElement.ignore = false
+  table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
+  self:createMenuItems()
+end
+
+--- adds a new item to the right click menu
+-- @param name Name of the new menu item.
+-- @param parent name of the parent where the new item will be created in (optional)
+-- @param index of the new menu item (optional)
+function Geyser.Label:addMenuLabel(name, parent, index)
+  local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
+  
+  if parent and not menuParent then
+    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  end
+  
+  menuElement = menuElement or self.rightClickMenu
+  menuParent = menuParent or self.rightClickMenu.MenuItems
+  
+  if parent then
+    parent = parent.."."
+  else
+    parent = ""
+  end
+  
+  if not menuElement.MenuLabels[name] then
+    menuParent[#menuParent + 1] = name
+  elseif menuElement.MenuLabels[name].ignore then
+    self:showMenuLabel(parent..name)
+  end
+  
+  self:createMenuItems()
+  
+  if index then
+    self:changeMenuIndex(parent..name, index)
+  end
+end
+
+--- changes a right click menu items index
+-- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param index the new index
+function Geyser.Label:changeMenuIndex(name, index)
+  local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
+  
+  if not menuElement then
+    error ("changeMenuIndex: Couldn't find menu element "..name)
+  end
+  
+  local nestTable = menuElement.nestParent.nestedLabels
+  local newindex = nestTable[index].tblIndex
+  
+  -- table index is not the same as index
+  -- if element is parent behave differently
+  if nestTable[index].isParent then
+    if newindex > menuElement.tblIndex then
+      newindex = newindex + 1
+    end
+  end
+  --nestTable
+  table.remove(nestTable, menuElement.index)
+  table.insert(nestTable, index, menuElement)
+  
+  menuElement.index = index
+  
+  -- MenuItems Table
+  -- parents need to bring also their children to their index
+  if menuElement.isParent then
+    local child = menuTable[menuElement.tblIndex + 1]
+    if newindex > menuElement.tblIndex then
+      newindex = newindex - 1
+    end
+    table.remove(menuTable, menuElement.tblIndex + 1)
+    table.remove(menuTable, menuElement.tblIndex)
+    table.insert(menuTable, newindex, child)
+    table.insert(menuTable, newindex, menuElement.menuName)
+  else
+    table.remove(menuTable, menuElement.tblIndex)
+    table.insert(menuTable, newindex, menuElement.menuName)
+  end
+  self:createMenuItems()
+end
+
+--- creates a right click menu for your Label
+---@param cons different parameters controlling the size and style of the right click menu elements
+--@param[opt="140" ] cons.MenuWidth  default menu width of your right click menu. to give levels different width add a number at the end per level usage MenuWidth1
+--@param[opt="25" ] cons.MenuWidth default menu height of your right click menu. to give levels different height add a number at the end per level usage MenuHeight1
+--@param[opt="c10"] cons.MenuFormat default font/echo format of your right click menu. different levels can use different formating. usage MenuFormat1 MenuFormat2
+--@param[opt="light"] cons.Style default styling mode of your right click menu. 2 possible modes "light" and "dark". different levels can also have different styling modes
+--@param cons.MenuStyle default style of your menu. if this is given cons.Style will be ignored. different levels can also have different MenuStyles
+--@param cons.MenuItems list of right click menu items/elements. usage example: MenuItems = {"First", "Second", {"First"},"Third"} 
+function Geyser.Label:createRightClickMenu(cons)
+  cons.width = "0"
+  cons.height = "0"
+  cons.nestable = true
+  cons.name = self.name .. "rightClickMenu"
+  cons.MenuWidth = cons.MenuWidth or 140
+  cons.MenuHeight = cons.MenuHeight or 25
+  cons.MenuFormat = cons.MenuFormat or "c10"
+  cons.MenuStyleMode = {}
+  cons.MenuStyleMode["light"] = [[QLabel::hover{ background-color: rgba(0,150,255,100%); color: white;} QLabel::!hover{color: black; background-color: rgba(240,240,240,100%);} ]]
+  cons.MenuStyleMode["dark"] = [[QLabel::hover{ background-color: #282828;  color: #808080;} QLabel::!hover{color: #707070; background-color:#181818;}]]
+  
+  cons.Style = cons.Style or "light"
+  
+  if not(self.rightClickMenu) then
+    self:setClickCallback(self.onRightClick, self)
+  end
+  
+  -- create a label with a nestable=true property as base menu
+  self.rightClickMenu = Geyser.Label:new(cons, self)
+  self:createMenuItems(nil, cons.MenuItems)
 end
 
 ---
