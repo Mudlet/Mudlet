@@ -4114,12 +4114,12 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>Verbinden über ein sicheres Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2322"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet soll ein sicheres SSL/TLS-Protokoll anstelle eines unverschlüsselten Protokolls verwenden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2328"/>
