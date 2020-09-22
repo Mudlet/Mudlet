@@ -408,7 +408,9 @@ end
 --- detaches the given container
 -- this means the mudlet main window border will be reseted
 function Adjustable.Container:detach()
-    Adjustable.Container.Attached[self.attached][self.name] = nil
+    if Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached] then
+        Adjustable.Container.Attached[self.attached][self.name] = nil
+    end
     self.borderSize = nil
     self:resetBorder(self.attached)
     self.attached=false
