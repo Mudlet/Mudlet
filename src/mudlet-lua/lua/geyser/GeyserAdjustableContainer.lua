@@ -563,8 +563,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.padding = self.padding
     mytable.hidden = self.hidden
     mytable.auto_hidden = self.auto_hidden
-
-
+    mytable.windowname = self.windowname
     if not(io.exists(dir)) then lfs.mkdir(dir) end
     table.save(saveDir, mainTable)
     return true
@@ -589,6 +588,12 @@ function Adjustable.Container:load(slot, dir)
     -- if slot settings not found load default settings
     if slot then
         mytable = mytable[slot] or mytable
+    end
+
+    mytable.windowname = mytable.windowname or "main"
+    -- send Adjustable Container to a UserWindow if saved there
+    if self.windowname ~= mytable.windowname then
+        self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
