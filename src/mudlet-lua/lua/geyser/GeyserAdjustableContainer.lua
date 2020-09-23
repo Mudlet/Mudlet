@@ -408,7 +408,9 @@ end
 --- detaches the given container
 -- this means the mudlet main window border will be reseted
 function Adjustable.Container:detach()
-    Adjustable.Container.Attached[self.attached][self.name] = nil
+    if Adjustable.Container.Attached and Adjustable.Container.Attached[self.attached] then
+        Adjustable.Container.Attached[self.attached][self.name] = nil
+    end
     self.borderSize = nil
     self:resetBorder(self.attached)
     self.attached=false
@@ -697,9 +699,28 @@ end
 --- saves your container settings
 -- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
 -- to be reliable it is important that the Adjustable.Container has an unique 'name'
+-- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines save directory [optional]
 -- @see Adjustable.Container:load
-function Adjustable.Container:save()
+function Adjustable.Container:save(slot, dir)
+    assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.save: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
+    assert(dir == nil or type(dir) == "string" , "Adjustable.Container.save: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
+    dir = dir or self.defaultDir
+    local saveDir = string.format("%s%s.lua", dir, self.name)
+    local mainTable = {}
     local mytable = {}
+
+    -- check if there are already saved settings and if so load them to the mainTable
+    if io.exists(saveDir) then
+        table.load(saveDir, mainTable)
+    end
+
+    if slot then
+        mainTable[slot] = mytable
+    else
+        mytable = mainTable
+    end
+
     mytable.x = self.x
     mytable.y = self.y
     mytable.height= self.height
@@ -716,22 +737,41 @@ function Adjustable.Container:save()
     mytable.connectedToBorder = self.connectedToBorder
     mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
-    if not(io.exists(getMudletHomeDir().."/AdjustableContainer/")) then lfs.mkdir(getMudletHomeDir().."/AdjustableContainer/") end
-    table.save(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
+    if not(io.exists(dir)) then lfs.mkdir(dir) end
+    table.save(saveDir, mainTable)
+    return true
 end
 
 --- restores/loads the before saved settings 
+-- @param slot defines a load slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines load directory [optional]
 -- @see Adjustable.Container:save
-function Adjustable.Container:load()
+function Adjustable.Container:load(slot, dir)
     local mytable = {}
-    if io.exists(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua") then
-        table.load(getMudletHomeDir().."/AdjustableContainer/"..self.name..".lua", mytable)
+    assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.load: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
+    assert(dir == nil or type(dir) == "string" , "Adjustable.Container.load: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
+    dir = dir or self.defaultDir
+    local loadDir = string.format("%s%s.lua", dir, self.name)
+    if io.exists(loadDir) then
+        table.load(loadDir, mytable)
+    else
+        return "Adjustable.Container.load: Couldn't load settings from " .. loadDir
+    end
+
+    -- if slot settings not found load default settings
+    if slot then
+        mytable = mytable[slot] or mytable
     end
 
     mytable.windowname = mytable.windowname or "main"
+    
     -- send Adjustable Container to a UserWindow if saved there
-    if self.windowname ~= mytable.windowname then
-        self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+    if mytable.windowname ~= self.windowname then
+        if mytable.windowname == "main" then
+            self:changeContainer(Geyser)
+        else
+            self:changeContainer(Geyser.windowList[mytable.windowname.."Container"].windowList[mytable.windowname])
+        end
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
@@ -749,8 +789,11 @@ function Adjustable.Container:load()
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
     end
+    self:detach()
+    if mytable.attached then
+        self:attachToBorder(mytable.attached) 
+    end
 
-    if mytable.attached then self:attachToBorder(mytable.attached) end
     self:adjustBorder()
 
     self.connectedContainers = mytable.connectedContainers or self.connectedContainers
@@ -767,6 +810,7 @@ function Adjustable.Container:load()
         self:show()
     end
     self:adjustConnectedContainers()
+    return true
 end
 
 --- overridden reposition function to raise an event of the Adjustable.Container changing position/size
@@ -780,19 +824,38 @@ function Adjustable.Container:reposition()
     end
 end
 
---- saves all your adjustable containers at once
+--- deletes the file where your saved settings are stored
+-- @param dir defines directory where the saved file is in [optional]
 -- @see Adjustable.Container:save
-function Adjustable.Container:saveAll()
+function Adjustable.Container:deleteSaveFile(dir)
+    assert(dir == nil or type(dir) == "string" , "Adjustable.Container.deleteSaveFile: bad argument #1 type (directory as string expected, got "..type(dir).."!)")
+    dir = dir or self.defaultDir
+    local deleteDir = string.format("%s%s.lua", dir, self.name)
+    if io.exists(deleteDir) then
+        os.remove(deleteDir)
+    else
+        return "Adjustable.Container.deleteSaveFile: Couldn't find file to delete at " .. deleteDir
+    end
+    return true
+end
+
+--- saves all your adjustable containers at once
+-- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines save directory [optional]
+-- @see Adjustable.Container:save
+function Adjustable.Container:saveAll(slot, dir)
     for  k,v in pairs(Adjustable.Container.all) do
-        v:save()
+        v:save(slot, dir)
     end
 end
 
 --- loads all your adjustable containers at once
+-- @param slot defines a load slot for example a number (1,2,3..) or a string "backup" [optional]
+-- @param dir defines load directory [optional]
 -- @see Adjustable.Container:load
-function Adjustable.Container:loadAll()
+function Adjustable.Container:loadAll(slot, dir)
     for  k,v in pairs(Adjustable.Container.all) do
-        v:load()
+        v:load(slot, dir)
     end
 end
 
@@ -922,6 +985,7 @@ end
 --- constructor for the Adjustable Container
 ---@param cons besides standard Geyser.Container parameters there are also:
 ---@param container
+--@param[opt="getMudletHomeDir().."/AdjustableContainer/"" ] cons.defaultDir default dir where settings are loaded/saved to/from
 --@param[opt="102" ] cons.ParentMenuWidth  menu width of the main right click menu
 --@param[opt="82"] cons.ChildMenuWidth  menu width of the children in the right click menu (for attached, lockstyles and custom items)
 --@param[opt="22"] cons.MenuHeight  height of a single menu item
@@ -957,6 +1021,7 @@ function Adjustable.Container:new(cons,container)
     local me = self.parent:new(cons, container)
     setmetatable(me, self)
     self.__index = self
+    me.defaultDir = me.defaultDir or getMudletHomeDir().."/AdjustableContainer/"
     me.ParentMenuWidth = me.ParentMenuWidth or "102"
     me.ChildMenuWidth = me.ChildMenuWidth or "82"
     me.MenuHeight = me.MenuHeight or "22"
