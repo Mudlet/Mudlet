@@ -32,6 +32,10 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     exit
   fi
 
+  # get commit date now before we check out an change into another git repository
+  commitDate=$(git show -s --format=%cs | tr -d '-')
+  yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
+
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
@@ -53,9 +57,6 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
                    "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
-
-      commitDate=$(git show -s --format=%as | tr -d '-')
-      yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
 
       if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
         echo "== No new commits, aborting public test build generation =="
