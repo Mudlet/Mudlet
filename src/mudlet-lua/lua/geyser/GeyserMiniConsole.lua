@@ -201,6 +201,20 @@ function Geyser.MiniConsole:bg(color)
   bg(self.name, color)
 end
 
+--- sets the background image of this miniconsole
+-- @param imgPath image path or stylesheet option (if mode is set to "style") as string
+-- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
+function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
+  self.imgPath = imgPath
+  return setConsoleBackgroundImage(self.name, imgPath, mode)
+end
+
+--- resets the background image of this miniconsole
+function Geyser.MiniConsole:resetBackgroundImage()
+  self.imgPath = nil
+  return resetConsoleBackgroundImage(self.name)
+end
+
 --- inserts clickable text into the miniconsole at the end of the current line.
 -- see: https://wiki.mudlet.org/w/Manual:UI_Functions#echoLink
 function Geyser.MiniConsole:echoLink(...)

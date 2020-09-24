@@ -1335,6 +1335,85 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
+int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
+{
+    QString windowName = "main";
+    QString imgPath;
+    int mode = 1;
+    int counter = 1;
+    int n = lua_gettop(L);
+    if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+            counter++;
+        }
+    }
+
+    if (!lua_isstring(L, counter)) {
+        lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    } else {
+        imgPath = QString::fromUtf8(lua_tostring(L, counter));
+        counter++;
+    }
+
+    if (n > 2 || (counter == 2 && n > 1)) {
+        if (!lua_isnumber(L, counter)) {
+            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
+            return lua_error(L);
+        } else {
+            mode = lua_tonumber(L, counter);
+        }
+    }
+
+    if (mode < 1 || mode > 4) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setConsoleBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
+        return 2;
+    }
+
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->setWindowBackgroundImage(host, windowName, imgPath, mode)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetConsoleBackgroundImage
+int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
+{
+    QString windowName = "main";
+    int n = lua_gettop(L);
+    if (n > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "resetConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->resetWindowBackgroundImage(host, windowName)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineNumber
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
@@ -4747,7 +4826,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     int r, g, b, alpha;
 
     auto validRange = [](int number) {
-        return number >= 0 and number <= 255;
+        return number >= 0 && number <= 255;
     };
 
     int s = 1;
@@ -4823,8 +4902,8 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            pHost->mBgColor.setRgb(r, g, b);
-            pHost->mpConsole->setConsoleBgColor(r, g, b);
+            pHost->mBgColor.setRgb(r, g, b, alpha);
+            pHost->mpConsole->setConsoleBgColor(r, g, b, alpha);
         } else {
             lua_pushnil(L);
             lua_pushstring(L, "could not find the main window");
@@ -12170,65 +12249,100 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBgColor
 int TLuaInterpreter::setBgColor(lua_State* L)
 {
-    int s = 0;
-    int n = lua_gettop(L);
-    QString windowName = QStringLiteral("main");
-    int luaRed;
-    int luaGreen;
-    int luaBlue;
-    if (n > 3) {
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setBgColor: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
+    Host* pHost = &getHostFromLua(L);
+    QString windowName;
+    int r, g, b, alpha;
+
+    auto validRange = [](int number) { return number >= 0 && number <= 255; };
+
+    int s = 1;
+    if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
+        windowName = QString::fromUtf8(lua_tostring(L, s));
+
+        if (!lua_isnumber(L, ++s)) {
+            lua_pushfstring(L, "setBgColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         } else {
-            windowName = QString::fromUtf8(lua_tostring(L, s));
+            r = static_cast<int>(lua_tonumber(L, s));
+
+            if (!validRange(r)) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+                return 2;
+            }
         }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(r)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     }
+
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (green value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        luaRed = lua_tointeger(L, s);
-        if (luaRed < 0 || luaRed >  255) {
+        g = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(g)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
             return 2;
         }
     }
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (blue value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        luaGreen = lua_tointeger(L, s);
-        if (luaGreen < 0 || luaGreen >  255) {
+        b = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(b)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
             return 2;
         }
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    if (lua_gettop(L) <= s) {
+        alpha = 255;
+    } else if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        luaBlue = lua_tointeger(L, s);
-        if (luaBlue < 0 || luaBlue >  255) {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+
+        if (!validRange(alpha)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
             return 2;
         }
     }
 
-    Host& host = getHostFromLua(L);
-    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0) {
-        host.mpConsole->setBgColor(luaRed, luaGreen, luaBlue);
-    } else {
-        mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+            pHost->mpConsole->setBgColor(r, g, b, alpha);
+        } else {
+            lua_pushnil(L);
+            lua_pushstring(L, "could not find the main window");
+            return 2;
+        }
+    } else if (!mudlet::self()->setBgColor(pHost, windowName, r, g, b, alpha)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
+        return 2;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
+
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
 int TLuaInterpreter::insertLink(lua_State* L)
@@ -17112,6 +17226,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
+    lua_register(pGlobalLua, "setConsoleBackgroundImage", TLuaInterpreter::setConsoleBackgroundImage);
+    lua_register(pGlobalLua, "resetConsoleBackgroundImage", TLuaInterpreter::resetConsoleBackgroundImage);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
     lua_register(pGlobalLua, "spawn", TLuaInterpreter::spawn);
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);
