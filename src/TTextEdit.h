@@ -127,7 +127,7 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOffBound = nullptr, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOffBound, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOffBound);
