@@ -33,7 +33,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   fi
 
   # get commit date now before we check out an change into another git repository
-  commitDate=$(git show -s --format=%as | tr -d '-')
+  commitDate=$(git show -s --format=%cs | tr -d '-')
   yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
