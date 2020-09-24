@@ -714,11 +714,11 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    bool isOutOffBound = false;
+    bool isOutOffbounds = false;
     int lineIndex = std::max(0, (event->y() / mFontHeight) + imageTopLine());
-    int tCharIndex = convertMouseXToBufferX(event->x(), lineIndex, &isOutOffBound);
+    int tCharIndex = convertMouseXToBufferX(event->x(), lineIndex, &isOutOffbounds);
 
-    updateTextCursor(event, lineIndex, tCharIndex, isOutOffBound);
+    updateTextCursor(event, lineIndex, tCharIndex, isOutOffbounds);
 
     if (!mMouseTracking) {
         return;
@@ -782,11 +782,11 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     mDragSelectionEnd = cursorLocation;
 }
 
-void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOffBound)
+void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOffbounds)
 {
     if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
         if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOffBound) {
+            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOffbounds) {
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 QToolTip::showText(event->globalPos(), tooltip.join("\n"));
@@ -804,7 +804,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
 // If a pointer to a boolean is provided as a third argument then it will
 // be set to true if the mouse is positioned over a visible time stamp
 // and left unchanged otherwise.
-int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOffBound, bool* isOverTimeStamp) const
+int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOffbounds, bool* isOverTimeStamp) const
 {
     if (lineNumber >= 0 && lineNumber < mpBuffer->lineBuffer.size()) {
         // Line number is (should be) within range of lines in the
@@ -865,7 +865,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
         }
 
         //        qDebug().nospace().noquote() << "TTextEdit::convertMouseXToBufferX(" << mouseX << ", " << lineNumber << ") INFO - falling out of bottom of for loop and returning: " << indexOfLastChar << " !";
-        *isOutOffBound = true;
+        *isOutOffbounds = true;
         return std::max(0, indexOfLastChar);
     }
 
@@ -911,17 +911,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mCtrlSelecting = true;
         }
 
-        bool isOutOffBound = false;
+        bool isOutOffbounds = false;
         if (!mCtrlSelecting && mShowTimeStamps) {
             bool isOverTimeStamp = false;
-            x = convertMouseXToBufferX(event->x(), y, &isOutOffBound, &isOverTimeStamp);
+            x = convertMouseXToBufferX(event->x(), y, &isOutOffbounds, &isOverTimeStamp);
             if (isOverTimeStamp) {
                 // If we have clicked on the timestamp then emulate the effect
                 // of control clicking - i.e. select the WHOLE line:
                 mCtrlSelecting = true;
             }
         } else {
-            x = convertMouseXToBufferX(event->x(), y, &isOutOffBound);
+            x = convertMouseXToBufferX(event->x(), y, &isOutOffbounds);
         }
 
         if (mCtrlSelecting) {
@@ -938,7 +938,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
-            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOffBound) {
+            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOffbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QString func;
@@ -1026,11 +1026,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::RightButton) {
         int y = (event->y() / mFontHeight) + imageTopLine();
         y = std::max(y, 0);
-        bool isOutOffBound = false;
-        int x = convertMouseXToBufferX(event->x(), y, &isOutOffBound);
+        bool isOutOffbounds = false;
+        int x = convertMouseXToBufferX(event->x(), y, &isOutOffbounds);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
-            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOffBound) {
+            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOffbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
