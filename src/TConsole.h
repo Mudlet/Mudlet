@@ -34,6 +34,7 @@
 #include <QDataStream>
 #include <QHBoxLayout>
 #include <QFile>
+#include <QLabel>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
@@ -135,7 +136,7 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
-    void setBgColor(int, int, int);
+    void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void setMiniConsoleCmdVisible(bool);
@@ -171,6 +172,8 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
+    bool setConsoleBackgroundImage(const QString&, int);
+    bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -179,7 +182,7 @@ public:
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    void setConsoleBgColor(int, int, int);
+    void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
@@ -285,6 +288,7 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
+    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
@@ -319,6 +323,8 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     QWidget* mpButtonMainLayer;
+    int mBgImageMode;
+    QString mBgImagePath;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet

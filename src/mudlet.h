@@ -150,6 +150,8 @@ public:
     bool setWindowFont(Host*, const QString&, const QString&);
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
+    bool setWindowBackgroundImage(Host *, const QString&, const QString&, int);
+    bool resetWindowBackgroundImage(Host *, const QString&);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
@@ -193,7 +195,7 @@ public:
     void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
     std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setFgColor(Host*, const QString& name, int, int, int);
-    void setBgColor(Host*, const QString& name, int, int, int);
+    bool setBgColor(Host*, const QString& name, int, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void deleteProfileData(const QString &profile, const QString &item);

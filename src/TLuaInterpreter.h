@@ -376,6 +376,8 @@ public:
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
+    static int setConsoleBackgroundImage(lua_State*);
+    static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
