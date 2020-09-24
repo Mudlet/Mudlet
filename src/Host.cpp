@@ -650,18 +650,19 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.loadGlobal();
     mBlockScriptCompile = false;
 
+    mAliasUnit.reenableAllTriggers();
+    mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
+
+    getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll();
-    // All the Timers are NOT compiled here;
-    mResetProfile = false;
 
-    mAliasUnit.reenableAllTriggers();
-    mTimerUnit.reenableAllTriggers();
-    mTriggerUnit.reenableAllTriggers();
-    mKeyUnit.reenableAllTriggers();
+    mResetProfile = false;
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -1390,6 +1391,11 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
+
+    // After the event has been raised but before 'event' goes out of scope,
+    // we need to safely dereference the members of 'event' that point to
+    // values in the Lua registry
+    mLuaInterpreter.freeAllInLuaRegistry(pE);
 }
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
