@@ -96,6 +96,62 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Start commandLine functions
+--- Enables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:enableCommandLine()
+  enableCommandLine(self.name)
+end
+
+--- Disables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:disableCommandLine()
+  disableCommandLine(self.name)
+end
+
+--- Sets an action to be used when text is send in this commandline. When this
+-- function is called by the event system, text the commandline sends will be 
+-- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
+-- the setClickCallback events
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function.
+function Geyser.MiniConsole:setCmdAction(func, ...)
+  setCmdLineAction(self.name, func, ...)
+  self.actionFunc = func
+  self.actionArgs = { ... }
+end
+
+--- Resets the action the command will be send to the game
+function Geyser.MiniConsole:resetCmdAction()
+  resetCmdLineAction(self.name)
+  self.actionFunc = nil
+  self.actionArgs = nil
+end
+
+--- Clears the cmdLine
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
+function Geyser.MiniConsole:clearCmd()
+  clearCmdLine(self.name)
+end
+
+--- prints text to the commandline and clears text if there was one previously
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine(text)
+function Geyser.MiniConsole:printCmd(text)
+  printCmdLine(self.name, text)
+end
+
+--- appends text to the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
+function Geyser.MiniConsole:appendCmd(text)
+  appendCmdLine(self.name, text)
+end
+
+--- returns the text in the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
+function Geyser.MiniConsole:getCmdLine()
+  return getCmdLine(self.name)
+end
+
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
@@ -143,6 +199,20 @@ end
 --- sets the current background color of cursor in this miniconsole.
 function Geyser.MiniConsole:bg(color)
   bg(self.name, color)
+end
+
+--- sets the background image of this miniconsole
+-- @param imgPath image path or stylesheet option (if mode is set to "style") as string
+-- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
+function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
+  self.imgPath = imgPath
+  return setConsoleBackgroundImage(self.name, imgPath, mode)
+end
+
+--- resets the background image of this miniconsole
+function Geyser.MiniConsole:resetBackgroundImage()
+  self.imgPath = nil
+  return resetConsoleBackgroundImage(self.name)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.
@@ -324,7 +394,6 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".*Class") then
