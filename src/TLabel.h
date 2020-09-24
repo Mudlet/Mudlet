@@ -59,7 +59,6 @@ public:
     void enterEvent(QEvent*) override;
     void setClickThrough(bool clickthrough);
 
-    bool forwardEventToMapper(QEvent*);
 
     QPointer<Host> mpHost;
     int mClickFunction = 0;

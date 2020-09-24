@@ -1,5 +1,27 @@
 describe("Tests TableUtils.lua functions", function()
 
+  describe("spairs", function()
+    it("should sort by basic sorted keys by default", function()
+      local tbl = { Tom = 40, Mary = 50, Joe = 24 }
+      local expected = "Joe has 24 thingies\nMary has 50 thingies\nTom has 40 thingies\n"
+      local actual = ""
+      for name, thingies in spairs(tbl) do
+        actual = actual .. string.format("%s has %d thingies\n", name, thingies)
+      end
+      assert.are.equal(expected,actual)
+    end)
+
+    it("should sort based on a given function", function()
+      local tbl = { Tom = 40, Mary = 50, Joe = 23 }
+      local expected = "Joe has 23 thingies\nTom has 40 thingies\nMary has 50 thingies\n"
+      local actual = ""
+      for name, thingies in spairs(tbl, function(t,a,b) return t[a] < t[b] end) do --iterate from lowest value to highest
+        actual = actual .. string.format("%s has %d thingies\n", name, thingies)
+      end
+      assert.are.equal(expected, actual)
+    end)
+  end)
+
   describe("table.is_empty(tbl)", function()
     it("Should return false if the table has an entry in it", function()
       assert.is_false(table.is_empty({"one"}))
@@ -95,6 +117,284 @@ describe("Tests TableUtils.lua functions", function()
       local tbl = { "one", "Two", "three" }
       tbl.four = 4
       assert.are.equal(table.size(tbl), 4)
+    end)
+  end)
+
+  describe("table.collect(tbl, func)", function()
+    it("should collect all key-value pairs from tbl for which func(key,value) returns true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(key, value)
+        if string.match(value, "%a") then return true end
+      end
+      local expected = {
+        this = "that",
+        the = "other"
+      }
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should return an empty table if no items in tbl cause func(key,value) to return true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(key, value)
+        if string.match(value, "%d") then return true end
+      end
+      local expected = {}
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should have another test because the existing ones seem insufficient", function()
+      local tbl = {
+        hp = 99,
+        mana = 30,
+        endurance = 73,
+        willpower = 13
+      }
+      local func = function(key,value)
+        if value < 50 then return true end
+      end
+      local expected = {
+        mana = 30,
+        willpower = 13
+      }
+      local actual = table.collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should throw an error if you give a non-table as the first argument", function()
+      local tbl = "not a table"
+      local func = function() end
+      local errfn = function()
+        table.collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.collect: bad argument #1 type (table to collect items from as table expected, got string)") 
+    end)
+
+    it("should throw an error if you give a non-function as the second argument", function()
+      local tbl = {}
+      local func = "function() end"
+      local errfn = function()
+        table.collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+    end)
+  end)
+
+  describe("table.n_collect(tbl, func)", function()
+    it("should return a table of unique values for which func(value) returns true", function()
+      local tbl = {
+        this = "that",
+        the = "other",
+        three = 3,
+      }
+      local func = function(value)
+        if type(value) == "number" then return true end
+      end
+      local expected = { 3 }
+      local actual = table.n_collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+    
+    it("should return an empty table if no values return true", function()
+      local tbl = {
+        this = "that",
+        the = "other"
+      }
+      local func = function(value)
+        if type(value) == "number" then return true end
+      end
+      local expected = {}
+      local actual = table.n_collect(tbl, func)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should work on lists as well as maps", function()
+      local tbl = {
+        10,
+        20,
+        25,
+        53,
+        1829,
+        1800
+      }
+      local func = function(value)
+        if value % 10 == 0 then return true end
+      end
+      local expected = {
+        10,
+        20,
+        1800
+      }
+      local actual = table.n_collect(tbl, func)
+      table.sort(actual)
+      assert.are.same(expected,actual)
+    end)
+
+    it("should throw an error if you give a non-table as the first argument", function()
+      local tbl = "not a table"
+      local func = function() end
+      local errfn = function()
+        table.n_collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.n_collect: bad argument #1 type (table to collect items from as table expected, got string)") 
+    end)
+
+    it("should throw an error if you give a non-function as the second argument", function()
+      local tbl = {}
+      local func = "function() end"
+      local errfn = function()
+        table.n_collect(tbl, func)
+      end
+      assert.has_error(errfn, "table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got string)") 
+    end)
+  end)
+
+  describe("table.matches(tbl, pattern_1,[pattern_2+], [check_keys])", function()
+    it("should return an empty table of no values math", function()
+      local tbl = { 
+        this = "that",
+        the = "other"
+       }
+      local actual = table.matches(tbl, "%d")
+      assert.is_true(table.is_empty(actual))
+    end)
+
+    it("should return a table containing all the items which match", function()
+      local tbl = {
+        this = "that",
+        the = "other",
+        number = "1234",
+        one = "1"
+      }
+      local expected = {
+        number = "1234",
+        one = "1"
+      }
+      local actual = table.matches(tbl, "%d")
+      assert.are.same(expected, actual)
+      expected = {
+        this = "that",
+        the = "other"
+      }
+      actual = table.matches(tbl, "%a+")
+      assert.are.same(expected, actual)
+    end)
+
+    it("should check both keys and values if check_keys is true", function()
+      local tbl = {
+        hp = 50,
+        maxhp = 100,
+        mana = 300,
+        maxmana = 1000,
+      }
+      local expected = {
+        hp = 50,
+        maxhp = 100
+      }
+      local actual = table.matches(tbl, "hp", true)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should check multiple patterns if passed", function()
+      local tbl = {
+        hp = 50,
+        mana = 50,
+        wakefulness = "awake",
+        title = "Lord High Muckity",
+        name = "SuchAndSuch"
+      }
+      local expected = {
+        hp = 50,
+        mana = 50,
+        title = "Lord High Muckity"
+      }
+      local actual = table.matches(tbl, "^%d+$", "title", true)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should throw an errow if the first parameter is not a table", function()
+      local not_tbl = "not a table"
+      local errfn = function()
+        table.matches(not_tbl, "%d")
+      end
+      assert.has_error(errfn, "table.matches: bad argument #1 type (table to check using string.match as table expected, got string)") 
+    end)
+
+    it("should throw an error if the pattern passed is not a string", function()
+      local tbl = {}
+      local not_string = 4
+      local errfn = function()
+        table.matches(tbl, not_string)
+      end
+      assert.has_error(errfn, "table.matches: bad argument #2 type (pattern to check as string expected, got number)")
+      errfn = function()
+        table.matches(tbl, "a string", not_string)
+      end
+      assert.has_error(errfn, "table.matches: bad argument #3 type (pattern to check as string expected, got number)")
+    end)
+  end)
+
+  describe("table.n_matches(tbl, pattern_1,[pattern_2+])", function()
+    it("should return a list of values which string.match a given pattern", function()
+      local tbl = {
+        this = "that",
+        the = "other",
+        [1] = "blue"
+      }
+      local expected = {
+        "blue",
+        "other"
+      }
+      local actual = table.n_matches(tbl, "e")
+      table.sort(actual)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should only add any given value once", function()
+      local tbl = {
+        "this",
+        "this",
+        "that",
+        "other",
+        "something"
+      }
+      local expected = {
+        "other",
+        "something",
+        "that",
+        "this",
+      }
+      local actual = table.n_matches(tbl, "%a")
+      table.sort(actual)
+      assert.are.same(expected, actual)
+    end)
+
+    it("should error if the first argument is not a table", function()
+      local not_tbl = "not a table"
+      local errfn = function()
+        table.n_matches(not_tbl, "%d")
+      end
+      assert.has_error(errfn, "table.n_matches: bad argument #1 type (table to check using string.match as table expected, got string)")
+    end)
+
+    it("should throw an error if the pattern passed is not a string", function()
+      local tbl = {}
+      local not_string = 4
+      local errfn = function()
+        table.n_matches(tbl, not_string)
+      end
+      assert.has_error(errfn, "table.n_matches: bad argument #2 type (pattern to check as string expected, got number)")
+      errfn = function()
+        table.n_matches(tbl, "a string", not_string)
+      end
+      assert.has_error(errfn, "table.n_matches: bad argument #3 type (pattern to check as string expected, got number)")
     end)
   end)
 

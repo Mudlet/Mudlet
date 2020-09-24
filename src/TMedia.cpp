@@ -183,7 +183,9 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     // This is JSON
     auto json = document.object();
 
-    if (packageMessage == "Client.Media.Stop") {
+    QString package = packageMessage.toLower(); // Don't change original variable
+
+    if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
         return;
     }
@@ -192,17 +194,43 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         return;
     }
 
-    if (packageMessage == "Client.Media.Default" || packageMessage == "Client.Media") { // Client.Media obsolete
+    if (package == "client.media.default" || package == "client.media") { // Client.Media obsolete
         TMedia::parseJSONForMediaDefault(json);
-    } else if (packageMessage == "Client.Media.Load") {
+    } else if (package == "client.media.load") {
         TMedia::parseJSONForMediaLoad(json);
-    } else if (packageMessage == "Client.Media.Play") {
+    } else if (package == "client.media.play") {
         TMedia::parseJSONForMediaPlay(json);
     }
+}
+
+bool TMedia::purgeMediaCache()
+{
+    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    QDir mediaDir(mediaPath);
+
+    if (!mediaDir.mkpath(mediaPath)) {
+        qWarning() << QStringLiteral("TMedia::purgeMediaCache() WARNING - Not able to reference directory: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
+        return false;
+    }
+
+    stopAllMediaPlayers();
+    mediaDir.removeRecursively();
+    return true;
 }
 // End Public
 
 // Private
+void TMedia::stopAllMediaPlayers()
+{
+    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList);
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer pPlayer = itTMediaPlayer.next();
+        pPlayer.getMediaPlayer()->stop();
+    }
+}
+
 QUrl TMedia::parseUrl(TMediaData& mediaData)
 {
     QUrl url;
@@ -500,7 +528,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
         request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
         request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == QStringLiteral("https")) {
             QSslConfiguration config(QSslConfiguration::defaultConfiguration());
             request.setSslConfiguration(config);

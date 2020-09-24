@@ -60,7 +60,6 @@ public:
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
-    void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -81,7 +80,7 @@ public:
     int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
-    void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
+    void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -123,16 +122,16 @@ private slots:
 
 private:
     void initDefaultSettings();
-    QString getSelectedText(char newlineChar = '\n');
+    QString getSelectedText(const QChar& newlineChar = QChar::LineFeed);
     static QString htmlCenter(const QString&);
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOfbounds, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
-    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
-    void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
+    bool establishSelectedText();
 
     int mFontHeight;
     int mFontWidth;

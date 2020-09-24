@@ -430,9 +430,8 @@ void dlgProfilePreferences::disableHostDetails()
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
 
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+    groupBox_ircOptions->setEnabled(false);
+
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
 
@@ -494,9 +493,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+
+    groupBox_ircOptions->setEnabled(true);
+
     groupbox_searchEngineSelection->setEnabled(true);
 
 #if defined(QT_NO_SSL)
@@ -518,6 +517,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
@@ -668,8 +668,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-    //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
-    //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
@@ -880,15 +878,27 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         widget_playerRoomStyle->hide();
     }
 
-    comboBox_encoding->addItem(QLatin1String("ASCII"));
-    comboBox_encoding->addItems(pHost->mTelnet.getFriendlyEncodingsList());
+    comboBox_encoding->addItem(mudlet::self()->getEncodingNamesMap().value(QByteArray("ASCII")), QByteArray("ASCII"));
+    for (auto encoding : pHost->mTelnet.getEncodingsList()) {
+        auto encodingTitle = mudlet::self()->getEncodingNamesMap().value(encoding, tr("%1 (*Error, report to Mudlet Makers*)",
+                                                                                      // Intentional comment to separate arguments
+                                                                                      "The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!")
+                                                                         .arg(QLatin1String(encoding)));
+        comboBox_encoding->addItem(encodingTitle, encoding);
+    }
     if (pHost->mTelnet.getEncoding().isEmpty()) {
         // cTelnet::mEncoding is (or should be) empty for the default 7-bit
         // ASCII case, so need to set the control specially to its (the
         // first) value
         comboBox_encoding->setCurrentIndex(0);
     } else {
-        comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
+        int currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
+        if (currentIndex >=0) {
+            comboBox_encoding->setCurrentIndex(currentIndex);
+        } else {
+            // invalid or not found - so reset to ASCII:
+            comboBox_encoding->setCurrentIndex(0);
+        }
     }
 
     timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
@@ -1051,7 +1061,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::copyMap);
     connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::loadMap);
     connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::saveMap);
-    connect(comboBox_encoding, &QComboBox::currentTextChanged, this, &dlgProfilePreferences::slot_setEncoding);
+    connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
@@ -1155,6 +1165,7 @@ void dlgProfilePreferences::clearHostDetails()
     edbeePreviewWidget->textDocument()->setText(QString());
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
@@ -1424,10 +1435,8 @@ void dlgProfilePreferences::setColors2()
 
 void dlgProfilePreferences::setTab(QString tab)
 {
-    foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
-    {
-        if (child->objectName().contains(tab, Qt::CaseInsensitive))
-        {
+    for (auto child : tabWidget->findChildren<QWidget*>()) {
+        if (child->objectName().contains(tab, Qt::CaseInsensitive)) {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
         }
@@ -1441,7 +1450,6 @@ void dlgProfilePreferences::resetColors()
     if (!pHost) {
         return;
     }
-
     pHost->mCommandLineFgColor = Qt::darkGray;
     pHost->mCommandLineBgColor = Qt::black;
     pHost->mCommandFgColor = QColor(113, 113, 0);
@@ -1468,6 +1476,7 @@ void dlgProfilePreferences::resetColors()
 
     setColors();
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 
@@ -2107,7 +2116,12 @@ void dlgProfilePreferences::copyMap()
     }
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
-    QSet<Host*> activeHosts(mudlet::self()->mConsoleMap.keys().toSet());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QList<Host*> activeHostsList{mudlet::self()->mConsoleMap.keys()};
+    QSet<Host*> activeHosts{activeHostsList.begin(), activeHostsList.end()};
+#else
+    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().toSet()};
+#endif
     QMap<QString, Host*> activeOtherHostMap;
     QSetIterator<Host*> itActiveHost(activeHosts);
     while (itActiveHost.hasNext()) {
@@ -2154,12 +2168,12 @@ void dlgProfilePreferences::copyMap()
         int otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
-        if( pHost->mpMap->retrieveMapFileStats( itOtherProfile.key(),
-                                                 & otherProfileFileUsed,
-                                                 & otherProfileVersion,
-                                                 & otherProfileCurrentRoomId,
-                                                 & otherProfileAreaCount,
-                                                 & otherProfileRoomCount ) ) {
+        if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),
+                                               &otherProfileFileUsed,
+                                               &otherProfileVersion,
+                                               &otherProfileCurrentRoomId,
+                                               &otherProfileAreaCount,
+                                               &otherProfileRoomCount)) {
 
             qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
                      << itOtherProfile.key()
@@ -2370,6 +2384,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
+        pHost->adjustNAWS();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
@@ -2417,6 +2432,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mBorderRightWidth = rightBorderWidth->value();
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
+        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -2436,7 +2452,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
-
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();
@@ -2675,11 +2690,11 @@ void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
     }
 }
 
-void dlgProfilePreferences::slot_setEncoding(const QString& newEncoding)
+void dlgProfilePreferences::slot_setEncoding(const int newEncodingIndex)
 {
     Host* pHost = mpHost;
     if (pHost) {
-        pHost->mTelnet.setEncoding(pHost->mTelnet.getComputerEncoding(newEncoding));
+        pHost->mTelnet.setEncoding(comboBox_encoding->itemData(newEncodingIndex).toByteArray());
 
         if (checkBox_useWideAmbiguousEastAsianGlyphs->checkState() == Qt::PartiallyChecked) {
             // We are linking the Server encoding to this setting currently

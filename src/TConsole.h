@@ -27,9 +27,14 @@
 
 #include "TBuffer.h"
 
+
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QDataStream>
+#include <QHBoxLayout>
 #include <QFile>
+#include <QLabel>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
@@ -87,6 +92,7 @@ public:
     void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     void copy();
     void cut();
     void paste();
@@ -106,6 +112,7 @@ public:
 
     int getColumnNumber();
     std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -119,6 +126,7 @@ public:
         buffer.setWrapIndent(count);
     }
 
+    TLinkStore &getLinkStore() { return buffer.mLinkStore; }
     void echo(const QString&);
     bool moveCursor(int x, int y);
     int select(const QString&, int numOfMatch = 1);
@@ -128,9 +136,10 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
-    void setBgColor(int, int, int);
+    void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -145,8 +154,8 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    TLabel*
-    createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
+    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
@@ -163,6 +172,8 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
+    bool setConsoleBackgroundImage(const QString&, int);
+    bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -171,7 +182,7 @@ public:
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    void setConsoleBgColor(int, int, int);
+    void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
@@ -214,6 +225,8 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
 
 
     QPointer<Host> mpHost;
@@ -230,6 +243,7 @@ public:
     QToolButton* emergencyStop;
     QWidget* layer;
     QWidget* layerCommandLine;
+    QHBoxLayout* layoutLayer2;
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;
@@ -251,6 +265,7 @@ public:
     int mIndentCount;
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;
@@ -273,6 +288,7 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
+    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
@@ -307,6 +323,8 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     QWidget* mpButtonMainLayer;
+    int mBgImageMode;
+    QString mBgImagePath;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
@@ -328,8 +346,10 @@ public slots:
     void slot_reloadMap(QList<QString>);
 
 protected:
-    void dragEnterEvent(QDragEnterEvent* e);
-    void dropEvent(QDropEvent* e);
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dropEvent(QDropEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
+    void mousePressEvent(QMouseEvent*) override;
 
 private:
     void refreshMiniConsole() const;

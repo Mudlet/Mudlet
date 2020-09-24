@@ -179,14 +179,11 @@ end
 --- Appends code to an existing script
 ---
 --- @param name name of the script item
---- @param luaCode 
+--- @param luaCode
 function appendScript(name, luaCode, pos)
   pos = pos or 1
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
-  assert(type(name) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
-  if not getScript(name, pos) then
-    return nil, 'script "'..name..'" at position "'..pos..'" not found'
-  end
+  assert(type(luaCode) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
   return setScript(name, getScript(name, pos).."\n"..luaCode, pos)
 end
 
@@ -844,7 +841,8 @@ do
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
-        func(event, ...)
+        local success, error = pcall(func, event, ...)
+        if not success then showHandlerError(event, error) end
       end
     end
   end
@@ -943,4 +941,93 @@ function translateTable(data, language)
   end
 
   return t
+end
+
+-- internal function to get the right keys from the translation json file
+local function getTranslationTable(inputTable, packageName)
+  local outputTable = {}
+  for k, v in pairs(inputTable) do
+      if k:match("^"..packageName.."%.") then
+          outputTable[k:gsub("^.*%.", "")] = inputTable[k]
+      end
+  end
+  return outputTable
+end
+
+--internal function to read table from Json file
+local function readJsonFile(input)
+  local filePointer = io.open(input, "r")
+  local str = filePointer:read("*all")
+  if str == "" then
+    return {}
+  end
+  return yajl.to_value(str)
+end
+
+--- loads Translations located in the /translations folder
+-- @param packageName name of the lua package which needs the translations, for example "AdjustableContainer"
+-- @param fileName file name of the translations .json file, defaults to "mudlet-lua" [optional]
+-- @param languageCode for example de_DE for German, if not given it will take translations from the default file [optional]
+-- @param folder folder where your translations can be found, if not given it defaults to the default location [optional]
+-- Folder needs to be like (Default File) yourFolder/yourFileName.json (Translated files) yourFolder/translated/yourFileName_lang_code.json
+function loadTranslations(packageName, fileName, languageCode, folder)
+  fileName = fileName or "mudlet-lua"
+  languageCode = languageCode or mudlet.translations.interfacelanguage
+  -- get the right folder
+  folder = folder or io.exists("../translations/lua") and "../translations/lua/"
+  folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
+  folder = folder or luaGlobalPath.."/translations/"
+
+  assert(type(packageName) == "string", string.format("loadTranslations: bad argument #1 type (packageName as string expected, got %s)", type(packageName)))
+  assert(type(fileName) == "string", string.format("loadTranslations: bad argument #2 type (fileName as string expected, got %s)", type(fileName)))
+  assert(type(languageCode) == "string", string.format("loadTranslations: bad argument #3 type (languageCode as string expected, got %s)", type(languageCode)))
+  assert(type(folder) == "string", string.format("loadTranslations: bad argument #4 type (folder path as string expected, got %s)", type(folder)))
+
+  local langFile = io.exists(folder.."translated/"..fileName.."_"..languageCode..".json") and folder.."translated/"..fileName.."_"..languageCode..".json"
+  local defaultFile = io.exists(folder..fileName..".json") and folder..fileName..".json"
+  if not defaultFile and not langFile then
+    return nil, "unable to find '"..fileName..".json' in '"..folder.."'"
+  end
+  local translation = {}
+  if langFile then
+      translation = readJsonFile(langFile)
+      translation = getTranslationTable(translation, packageName)
+  end
+  if defaultFile then
+    local defaultTranslation = readJsonFile(defaultFile)
+    defaultTranslation = getTranslationTable(defaultTranslation, packageName)
+    if table.is_empty(translation) then
+      translation = defaultTranslation
+    else
+      -- if some strings in language file are empty, string from defaultTranslation will be used
+      translation = table.update(defaultTranslation, translation)
+    end
+  end
+  if table.is_empty(translation) then
+      return nil, "couldn't find translations for '"..packageName.."'"
+  end
+  return translation
+end
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param fileName name and location of the file
+-- @param suffix suffix of the file
+function packageDrop(event, fileName, suffix)
+  local acceptable_suffix = {"xml", "mpackage", "zip"}
+  if not table.contains(acceptable_suffix, suffix) then
+    return
+  end
+  installPackage(fileName)
+end
+registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+
+-- Add dummy functions for the TTS functions if Mudlet has been compiled without them
+-- This is to prevent scripts erroring if they've been written with TTS capabilities
+-- then loaded into a Mudlet without them.
+if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TTS capabilities.
+  local funcs = {"ttsClearQueue", "ttsGetCurrentLine", "ttsGetCurrentVoice", "ttsGetQueue", "ttsGetState", "ttsGetVoices", "ttsPause", "ttsQueue", "ttsResume", "ttsSpeak", "ttsSetPitch", "ttsSetRate", "ttsSetVolume", "ttsSetVoiceByIndex", "ttsSetVoiceByName", "ttsSkip"}
+  for _,fn in ipairs(funcs) do
+    _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
+  end
 end

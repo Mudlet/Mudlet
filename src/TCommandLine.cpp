@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,15 +24,19 @@
 
 
 #include "Host.h"
-#include <QRegularExpression>
 #include "TConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QKeyEvent>
+#include <QRegularExpression>
+#include <QScrollBar>
+#include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mpHost(pHost)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -46,6 +50,8 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
+, mType(type)
+, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -107,6 +113,13 @@ bool TCommandLine::event(QEvent* event)
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
+        if (!ke) {
+            // Something is wrong -
+            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynmically castable to the latter - so the processing of this event "
+                                     "has been aborted - please report this to Mudlet Makers.";
+            // Indicate that we don't want to touch this event with a barge-pole!
+            return false;
+        }
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
@@ -539,6 +552,10 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
 
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
+
+    // Make sure this profile's tab gets activated in multi-view mode:
+    mudlet::self()->activateProfile(mpHost);
+
     QPlainTextEdit::focusInEvent(event);
 }
 
@@ -554,9 +571,25 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
     QPlainTextEdit::focusOutEvent(event);
 }
 
+void TCommandLine::hideEvent(QHideEvent* event)
+{
+    if (hasFocus()) {
+        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+    }
+    QPlainTextEdit::hideEvent(event);
+}
+
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
+    // Workaround for SubCommandLines textCursor not visible in some situations
+    // SubCommandLines cannot autoresize
+    if (mType == SubCommandLine) {
+        if (lines <= 1) {
+            verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
+        }
+        return;
+    }
     int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
@@ -566,6 +599,7 @@ void TCommandLine::adjustHeight()
     }
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
+
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -810,12 +844,17 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
+        // The use of accept here prevents this event from reaching any parent
+        // widget - like the TConsole containing this TCommandLine...
         event->accept();
+        mudlet::self()->activateProfile(mpHost);
         return;
     }
 
-    // Process any other possible mousePressEvent
+    // Process any other possible mousePressEvent - which is default popup
+    // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
@@ -826,9 +865,19 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionTyped.clear();
 
     QStringList _l = _t.split(QChar::LineFeed);
+
     for (int i = 0; i < _l.size(); i++) {
-        mpHost->send(_l[i]);
+        if (mType != MainCommandLine && mActionFunction) {
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+        } else {
+            mpHost->send(_l[i]);
+        }
+        // send command to your MiniConsole
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+            mpConsole->printCommand(_l[i]);
+        }
     }
+
     if (!toPlainText().isEmpty()) {
         mHistoryBuffer = 0;
         setPalette(mRegularPalette);
@@ -1136,4 +1185,26 @@ void TCommandLine::clearMarksOnWholeLine()
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
+}
+
+void TCommandLine::setAction(const int func){
+    releaseFunc(mActionFunction, func);
+    mActionFunction = func;
+}
+
+void TCommandLine::resetAction()
+{
+    if (mActionFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mActionFunction);
+        mActionFunction = 0;
+    }
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TCommandLine::releaseFunc(const int existingFunction, const int newFunction)
+{
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
+    }
 }

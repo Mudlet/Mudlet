@@ -8,6 +8,11 @@ fi
 
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
+
+  # get commit date now before we check out an change into another git repository
+  commitDate=$(git show -s --format=%cs | tr -d '-')
+  yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
+
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
@@ -49,27 +54,52 @@ if [ "${DEPLOY}" = "deploy" ]; then
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # ptb/release build
+    app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
+
+      if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
+        echo "== No new commits, aborting public test build generation =="
+        exit 0
+      fi
+
       echo "== Creating a public test build =="
+      mv "$app" "source/build/Mudlet PTB.app"
+      app="source/build/Mudlet PTB.app"
     else
       echo "== Creating a release build =="
     fi
+
     # add ssh-key to ssh-agent for deployment
     # shellcheck disable=2154
     # the two "undefined" variables are defined by travis
-    openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
-    eval "$(ssh-agent -s)"
-    chmod 600 /tmp/mudlet-deploy-key
-    ssh-add /tmp/mudlet-deploy-key
+    if [ "${public_test_build}" != "true" ]; then
+      echo "=== Registering Mudlet SSH keys for release upload ==="
+      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
+      eval "$(ssh-agent -s)"
+      chmod 600 /tmp/mudlet-deploy-key
+      ssh-add /tmp/mudlet-deploy-key
+    fi
 
-    bash make-installer.sh -r "${VERSION}" source/build/Mudlet.app
+    if [ "${public_test_build}" == "true" ]; then
+      bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+    else
+      bash make-installer.sh -r "${VERSION}" "$app"
+    fi
 
     if [ ! -z "$CERT_PW" ]; then
-      codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      if [ "${public_test_build}" == "true" ]; then
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
+      else
+        codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet.dmg"
+      fi
       echo "Signed final .dmg"
     fi
 
-    mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
+    if [ "${public_test_build}" == "true" ]; then
+      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"
+    else
+      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
+    fi
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Uploading public test build to make.mudlet.org ==="
@@ -86,10 +116,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}"
+      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
       echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}" || true
     else
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
@@ -103,4 +133,3 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   export DEPLOY_URL
 fi
-

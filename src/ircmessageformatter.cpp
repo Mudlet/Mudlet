@@ -177,7 +177,7 @@ QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isF
 QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isForLua)
 {
     QString motdData;
-    foreach (const QString& line, message->lines()) {
+    for (auto line : message->lines()) {
         QString content, lineEnd;
         if (isForLua) {
             lineEnd = "\n";

@@ -25,13 +25,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TTextCodec.h"
+
 #include "pre_guard.h"
 #include <QEvent>
 #include <QMutex>
 #include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
+#include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QPointer>
 #include <QProcess>
+#include <QQueue>
 #include <QThread>
 #include <QTimer>
 #include <edbee/texteditorwidget.h>
@@ -91,6 +96,7 @@ public:
     bool compile(const QString& code, QString& error, const QString& name);
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
+    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
@@ -107,11 +113,15 @@ public:
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
+    bool callCmdLineAction(const int func, QString);
     bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
+    int createHttpResponseTable(QNetworkReply*);
+    void createHttpHeadersTable(lua_State*, QNetworkReply*);
+    void createCookiesTable(lua_State*, QNetworkReply*);
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -242,6 +252,7 @@ public:
     static int searchRoom(lua_State*);
     static int resetProfile(lua_State*);
     static int createMapper(lua_State*);
+    static int createCommandLine(lua_State*);
     static int sendTelnetChannel102(lua_State* L);
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);
@@ -270,6 +281,7 @@ public:
     static int setFontSize(lua_State* L);
     static int getFontSize(lua_State* L);
     static int openUserWindow(lua_State* L);
+    static int setUserWindowTitle(lua_State* L);
     static int echoUserWindow(lua_State* L);
     static int clearUserWindow(lua_State* L);
     static int enableTimer(lua_State* L);
@@ -309,6 +321,7 @@ public:
     static int disableKey(lua_State* L);
     static int killKey(lua_State* L);
     static int debug(lua_State* L);
+    static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
     static int resetFormat(lua_State*);
@@ -350,6 +363,8 @@ public:
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setCmdLineAction(lua_State*);
+    static int resetCmdLineAction(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -361,6 +376,8 @@ public:
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
+    static int setConsoleBackgroundImage(lua_State*);
+    static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -379,7 +396,6 @@ public:
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
-    static int getMudletLuaDefaultPaths(lua_State*);
     static int setTriggerStayOpen(lua_State*);
     static int wrapLine(lua_State*);
     static int getFgColor(lua_State*);
@@ -404,6 +420,8 @@ public:
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
+    static int enableCommandLine(lua_State*);
+    static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State* L);
     static int disableClickthrough(lua_State* L);
     static int startLogging(lua_State* L);
@@ -427,6 +445,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
@@ -440,6 +459,7 @@ public:
     static int sendATCP(lua_State*);
     static int sendGMCP(lua_State*);
     static int receiveMSP(lua_State*);
+    static int purgeMediaCache(lua_State*);
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
@@ -507,6 +527,8 @@ public:
     static int getColumnCount(lua_State*);
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
+    static int getClipboardText(lua_State*);
+    static int setClipboardText(lua_State*);
     static int getAvailableFonts(lua_State* L);
     static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
@@ -538,17 +560,20 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int getHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
     static int unzipAsync(lua_State* L);
+    static int setMapWindowTitle(lua_State*);
+    static int getMudletInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
-    void encodingChanged(const QString&);
+    void freeAllInLuaRegistry(TEvent);
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -557,6 +582,7 @@ public slots:
 
 private:
     void logError(std::string& e, const QString&, const QString& function);
+    void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
     bool validLuaCode(const QString &code);
     QByteArray encodeBytes(const char*);
@@ -573,6 +599,10 @@ private:
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
+    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    void insertNativeSeparatorsFunction(lua_State* L);
+
+    const int LUA_FUNCTION_MAX_ARGS = 50;
 
 
     QNetworkAccessManager* mpFileDownloader;

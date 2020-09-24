@@ -26,14 +26,23 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "outFile" -Value "upload-location.txt";
+  Write-Output "=== Uploading the snapshot build ==="
   Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
   if ($Script:PublicTestBuild) {
+
+    $commitDate = Get-Date -date $(git show -s --format=%cs)
+    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
+    if ($commitDate -lt $yesterdaysDate) {
+      Write-Output "=== No new commits, aborting public test build generation ==="
+      exit 0
+    }
+
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"

@@ -96,6 +96,62 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Start commandLine functions
+--- Enables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:enableCommandLine()
+  enableCommandLine(self.name)
+end
+
+--- Disables the scroll bar for this window
+-- @param isVisible boolean to set visibility.
+function Geyser.MiniConsole:disableCommandLine()
+  disableCommandLine(self.name)
+end
+
+--- Sets an action to be used when text is send in this commandline. When this
+-- function is called by the event system, text the commandline sends will be 
+-- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
+-- the setClickCallback events
+-- @param func The function to use.
+-- @param ... Parameters to pass to the function.
+function Geyser.MiniConsole:setCmdAction(func, ...)
+  setCmdLineAction(self.name, func, ...)
+  self.actionFunc = func
+  self.actionArgs = { ... }
+end
+
+--- Resets the action the command will be send to the game
+function Geyser.MiniConsole:resetCmdAction()
+  resetCmdLineAction(self.name)
+  self.actionFunc = nil
+  self.actionArgs = nil
+end
+
+--- Clears the cmdLine
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
+function Geyser.MiniConsole:clearCmd()
+  clearCmdLine(self.name)
+end
+
+--- prints text to the commandline and clears text if there was one previously
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine(text)
+function Geyser.MiniConsole:printCmd(text)
+  printCmdLine(self.name, text)
+end
+
+--- appends text to the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
+function Geyser.MiniConsole:appendCmd(text)
+  appendCmdLine(self.name, text)
+end
+
+--- returns the text in the commandline
+-- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
+function Geyser.MiniConsole:getCmdLine()
+  return getCmdLine(self.name)
+end
+
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
@@ -143,6 +199,20 @@ end
 --- sets the current background color of cursor in this miniconsole.
 function Geyser.MiniConsole:bg(color)
   bg(self.name, color)
+end
+
+--- sets the background image of this miniconsole
+-- @param imgPath image path or stylesheet option (if mode is set to "style") as string
+-- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
+function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
+  self.imgPath = imgPath
+  return setConsoleBackgroundImage(self.name, imgPath, mode)
+end
+
+--- resets the background image of this miniconsole
+function Geyser.MiniConsole:resetBackgroundImage()
+  self.imgPath = nil
+  return resetConsoleBackgroundImage(self.name)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.
@@ -296,6 +366,19 @@ function Geyser.MiniConsole:resetAutoWrap()
   setWindowWrap(self.name, self.wrapAt)
 end
 
+--- The same as Mudlet's base display(), but outputs to the miniconsole instead of the main window.
+function Geyser.MiniConsole:display(...)
+  local arg = {...}
+  arg.n = table.maxn(arg)
+  if arg.n > 1 then
+    for i = 1, arg.n do
+      self:display(arg[i])
+    end
+  else
+    self:echo((prettywrite(arg[1], '  ') or 'nil') .. '\n')
+  end
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -311,13 +394,17 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".*Class") then
     me.windowname = me.windowname or me.container.windowname or "main"
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
+
+-- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+    if me.hidden or me.auto_hidden then
+      hideWindow(me.name)
+    end
 
     -- Set any defined colors
     Geyser.Color.applyColors(me)
@@ -346,5 +433,13 @@ function Geyser.MiniConsole:new (cons, container)
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.MiniConsole:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

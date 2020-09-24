@@ -35,6 +35,7 @@
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -69,69 +70,60 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
 , mpComposer(nullptr)
+, mpDownloader()
+, mpProgressDialog()
+, mProfileName(profileName)
 , mpHost(pH)
+, mpOutOfBandDataIncomingCodec()
+, outgoingDataCodec()
+, hostPort()
+, mWaitingForResponse()
+, mZstream()
+, mNeedDecompression()
+, iac()
+, iac2()
+, insb()
+, recvdGA()
 , mEncoding()
 , mpPostingTimer(new QTimer(this))
 , mUSE_IRE_DRIVER_BUGFIX(false)
-, mLF_ON_GA(false)
 , mCommands(0)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
-, mpProgressDialog()
-, mProfileName(profileName)
-, hostPort()
-, networkLatencyMin()
-, networkLatencyMax()
-, mWaitingForResponse()
-, mZstream()
-, recvdGA()
+, mIsTimerPosting()
 , lastTimeOffset()
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
 , enableMSP(false)
 , enableChannel102(false)
+, mDontReconnect(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
 , mEncodingWarningIssued(false)
+, mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
 {
-    mIsTimerPosting = false;
-    mNeedDecompression = false;
-    mDontReconnect = false;
-
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
-    encodingChanged(QStringLiteral("UTF-8"));
-    termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
+    encodingChanged("UTF-8");
+    termType = QStringLiteral("Mudlet " APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QStringLiteral(APP_BUILD));
     }
 
-    iac = iac2 = insb = false;
-
     command = "";
-    curX = 80;
-    curY = 25;
-
+    // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
-        mAcceptableEncodings << QStringLiteral("UTF-8");
-        mAcceptableEncodings << QStringLiteral("GBK");
-        mAcceptableEncodings << QStringLiteral("GB18030");
-        mAcceptableEncodings << QStringLiteral("Big5");
-        mAcceptableEncodings << QStringLiteral("ISO 8859-1");
-        mAcceptableEncodings << TBuffer::getComputerEncodingNames();
-    }
-
-    if (mFriendlyEncodings.isEmpty()) {
-        mFriendlyEncodings << QStringLiteral("UTF-8");
-        mFriendlyEncodings << QStringLiteral("GBK");
-        mFriendlyEncodings << QStringLiteral("GB18030");
-        mFriendlyEncodings << QStringLiteral("Big5");
-        mFriendlyEncodings << QStringLiteral("ISO 8859-1");
-        mFriendlyEncodings << TBuffer::getFriendlyEncodingNames();
+        mAcceptableEncodings << "UTF-8";
+        mAcceptableEncodings << "GBK";
+        mAcceptableEncodings << "GB18030";
+        mAcceptableEncodings << "BIG5";
+        mAcceptableEncodings << "BIG5-HKSCS";
+        mAcceptableEncodings << "ISO 8859-1";
+        mAcceptableEncodings << TBuffer::getEncodingNames();
     }
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
@@ -172,7 +164,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 void cTelnet::reset()
 {
     //reset telnet options state
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; ++i) {
         myOptionState[i] = false;
         hisOptionState[i] = false;
         announcedState[i] = false;
@@ -211,7 +203,7 @@ cTelnet::~cTelnet()
 #else
         qWarning("cTelnet::~cTelnet() Instance being destroyed before it could display some messages,\nmessages are:\n------------");
 #endif
-        foreach (QString message, messageStack) {
+        for (auto message : messageStack) {
 #if defined (Q_OS_WIN32)
             qWarning("%s", qPrintable(message));
             qWarning("------------");
@@ -226,30 +218,54 @@ cTelnet::~cTelnet()
     socket.deleteLater();
 }
 
-
-void cTelnet::encodingChanged(const QString& encoding)
+// This configures two out of three of the QTextCodec used by this profile:
+// 1) A single or multi-byte encoder for all outgoing data
+// 2) A single or multi-byte encoder for incoming OutOfBand data
+// There is one more:
+// 3) A multi-byte ONLY decoder for incoming InBand data, set in:
+// the (void) TBuffer::encodingChanged(...) method and used in
+// the (bool) TBuffer::processXXXSequence(...) methods {where XXX is "UTF8",
+// "Big5" or "GB").
+// We have a few substute TTextCodecs that are derived from the QTextCodec
+// class and they all have a name the same as the ones we hoped that Qt would
+// provide except they have a "M_" prefix. We, however hide that detail from the
+// user so the value supplied as an argument MAY need to be matched against
+// the prefixed name or not:
+void cTelnet::encodingChanged(const QByteArray& requestedEncoding)
 {
     // unicode carries information in form of single byte characters
     // and multiple byte character sequences.
     // the encoder and the decoder maintain translation state, i.e. they need to know the preceding
     // chars to make the correct decisions when translating into unicode and vice versa
 
+    // If there is a match in mAcceptableEncodings with an "M_" prefix then we
+    // need to add on that prefix:
+    QByteArray encoding = mAcceptableEncodings.contains("M_" + requestedEncoding) ? "M_" + requestedEncoding : requestedEncoding;
     if (mEncoding != encoding) {
         mEncoding = encoding;
         mEncodingWarningIssued = false;
+        mEncoderFailureNoticeIssued = false;
         // Not currently used as we do it by hand as we have to extract the data
         // from the telnet protocol and all the out-of-band stuff.  It might be
         // possible to use this in the future for non-UTF-8 traffic though.
-//    incomingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+//    incomingDataCodec = QTextCodec::codecForName(encoding);
 //    incomingDataDecoder = incomingDataCodec->makeDecoder();
 
-        outgoingDataCodec = QTextCodec::codecForName(encoding.toLatin1().data());
+        outgoingDataCodec = QTextCodec::codecForName(encoding);
         // Do NOT create BOM on out-going text data stream!
-        outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        if (outgoingDataCodec) {
+            outgoingDataEncoder = outgoingDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        } else {
+            outgoingDataEncoder = nullptr;
+        }
 
-        if (!mEncoding.isEmpty() && mEncoding != QLatin1String("ASCII")) {
-            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding.toLatin1().constData());
-            qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+        if (!mEncoding.isEmpty() && mEncoding != "ASCII") {
+            mpOutOfBandDataIncomingCodec = QTextCodec::codecForName(encoding);
+            if (mpOutOfBandDataIncomingCodec) {
+                qDebug().nospace() << "cTelnet::encodingChanged(" << encoding << ") INFO - Installing a codec for OOB protocols that can handle: " << mpOutOfBandDataIncomingCodec->aliases();
+            } else {
+                qWarning().nospace() << "cTelnet::encodingChanged(" << encoding << ") WARNING - Unable to locate a codec for OOB protocols that can handle: " << mEncoding;
+            }
 
         } else if (mpOutOfBandDataIncomingCodec) {
             // Will get here if the encoding is ASCII (or empty which is treated
@@ -263,12 +279,6 @@ void cTelnet::encodingChanged(const QString& encoding)
         // profile to change its QTextCodec to match as it now checks for
         // changes here on each incoming packet
     }
-}
-
-// returns the computer encoding name ("ISO 8859-5") given a human-friendly one ("ISO 8859-5 (Cyrillic)")
-const QString& cTelnet::getComputerEncoding(const QString& encoding)
-{
-    return TBuffer::getComputerEncoding(encoding);
 }
 
 #if !defined(QT_NO_SSL)
@@ -293,23 +303,18 @@ QString cTelnet::errorString()
     return socket.errorString();
 }
 
-// returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
-const QString& cTelnet::getFriendlyEncoding() const
-{
-    int index = mAcceptableEncodings.indexOf(mEncoding);
-    return mFriendlyEncodings.at(index);
-}
-
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-// saveValue: if true, record this setting, otherwise it is ephemereal for this session
-QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool saveValue)
+// saveValue: if false do not bother to save the setting as a profile setting
+// to the filesystem (because we have just read it from there!) otherwise, and
+// by default, do save it:
+QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const bool saveValue)
 {
-    QString reportedEncoding = newEncoding;
-    if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
-        reportedEncoding = QStringLiteral("ASCII");
+    QByteArray reportedEncoding = newEncoding;
+    if (newEncoding.isEmpty() || newEncoding == "ASCII") {
+        reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
             // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
@@ -320,16 +325,35 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
-    } else if (!mAcceptableEncodings.contains(newEncoding)) {
-        // Not in list - so reject it
+    } else if (!(mAcceptableEncodings.contains(newEncoding) || mAcceptableEncodings.contains("M_" + newEncoding))) {
+        // Not in list (even with a "M_" prefix that indicates the relevant
+        // QTextCodec is actually one of our own TTextCodecs) - so reject it
+        // Since we want to hide the implimentation detail that some of the
+        // encoding names could have a "M_"  prefix we will need to preprocess
+        // the list of encodings.
+        // Since the mAcceptableEncodings list is unchanging once it has been
+        // populated we only need to do this once and can save the results for
+        // reuse - in hindsight this is undoing part of:
+        // TBuffer::getEncodingNames() !
+        static QByteArrayList fixedUpEncodings;
+        if (fixedUpEncodings.isEmpty()) {
+            fixedUpEncodings = mAcceptableEncodings;
+            QMutableByteArrayListIterator itEncoding(fixedUpEncodings);
+            while (itEncoding.hasNext()) {
+                auto checkEncoding{itEncoding.next()};
+                if (checkEncoding.left(2) == "M_") {
+                    itEncoding.setValue(checkEncoding.mid(2));
+                }
+            }
+        }
         return qMakePair(false,
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"")
-                                 % mAcceptableEncodings.join(QLatin1String(R"(", ")"))
+                                 % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
-    } else if (mEncoding != newEncoding) {
+    } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
         if (saveValue) {
-            mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
+            mpHost->writeProfileData(QStringLiteral("encoding"), QLatin1String(mEncoding));
         }
     }
 
@@ -359,7 +383,6 @@ void cTelnet::connectIt(const QString& address, int port)
 {
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
-        mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
@@ -427,7 +450,7 @@ void cTelnet::slot_send_login()
 void cTelnet::slot_send_pass()
 {
     if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
-        sendData(mpHost->getPass());
+        sendData(mpHost->getPass(), false);
     }
 }
 
@@ -502,14 +525,13 @@ void cTelnet::handle_socket_signal_disconnected()
         if (sslerr) {
             mDontReconnect = true;
 
-            for (int a = 0; a < sslErrors.count(); a++) {
+            for (int a = 0; a < sslErrors.count(); ++a) {
                 reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
             QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
-        } else
+        } else {
 #endif
-        {
             if (mDontReconnect) {
                 reason = QStringLiteral("User Disconnected");
             } else {
@@ -522,11 +544,11 @@ void cTelnet::handle_socket_signal_disconnected()
             postMessage(err);
         }
         postMessage(msg);
+#if !defined(QT_NO_SSL)
     }
 
-#if !defined(QT_NO_SSL)
     if (sslerr) {
-        mudlet::self()->show_options_dialog(QStringLiteral("Security"));
+        mudlet::self()->show_options_dialog(QStringLiteral("tab_connection"));
     }
 #endif
 
@@ -564,40 +586,45 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
         postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
-    } else
-#endif
-    if (!hostInfo.addresses().isEmpty()) {
-        mHostAddress = hostInfo.addresses().constFirst();
-        postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
-        if (!mConnectViaProxy) {
-            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
-        } else {
-            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
-        }
-        socket.connectToHost(mHostAddress, hostPort);
     } else {
-        socket.connectToHost(hostInfo.hostName(), hostPort);
-        postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
-                       "Connection cannot be established.\n"
-                       "The server name is not correct, not working properly,\n"
-                       "or your nameservers are not working properly."));
-        return;
+#endif
+        if (!hostInfo.addresses().isEmpty()) {
+            mHostAddress = hostInfo.addresses().constFirst();
+            postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+            if (!mConnectViaProxy) {
+                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+            } else {
+                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+            }
+            socket.connectToHost(mHostAddress, hostPort);
+        } else {
+            socket.connectToHost(hostInfo.hostName(), hostPort);
+            postMessage(tr("[ ERROR ] - Host name lookup Failure!\n"
+                           "Connection cannot be established.\n"
+                           "The server name is not correct, not working properly,\n"
+                           "or your nameservers are not working properly."));
+            return;
+        }
+#if !defined(QT_NO_SSL)
     }
+#endif
 }
 
 // This uses UTF-16BE encoded data but needs to be converted to the selected
 // Mud Server encoding - it should NOT contain any Telnet protocol byte
 // sequences:
-bool cTelnet::sendData(QString& data)
+bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event {};
-    event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(data);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    if (Q_LIKELY(permitDataSendRequestEvent)) {
+        TEvent event{};
+        event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(data);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(event);
+    }
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
@@ -608,20 +635,35 @@ bool cTelnet::sendData(QString& data)
             "Note: this warning will only be issued once, even if this happens again, until\n"
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
-            if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr(errorMsgTemplate,
-                                      "%1 is the name of the encoding currently set.").arg(mEncoding);
-                postMessage(errorMsg);
-                mEncodingWarningIssued = true;
+            if (outgoingDataEncoder) {
+                if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
+                    QString errorMsg = tr(errorMsgTemplate,
+                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                    postMessage(errorMsg);
+                    mEncodingWarningIssued = true;
+                }
+                // Even if there are bad characters - try to send it anyway...
+                outData = outgoingDataEncoder->fromUnicode(data).constData();
+            } else {
+                if (!mEncoderFailureNoticeIssued) {
+                    postMessage(tr("[ ERROR ] - Internal error, no codec found for current setting of {\"%1\"}\n"
+                                   "so Mudlet cannot send data in that format to the Game Server. Please\n"
+                                   "check to see if there is an alternative that the MUD and Mudlet can\n"
+                                   "use. Mudlet will attempt to send the data using the ASCII encoding\n"
+                                   "but will be limited to only unaccented characters of basic English.\n"
+                                   "Note: this warning will only be issued once, until the encoding is\n"
+                                   "changed.").arg(QLatin1String(mEncoding)));
+                    mEncoderFailureNoticeIssued = true;
+                }
+                // Even if there are unusable characters - try to send it as ASCII ...
+                outData = data.toStdString();
             }
-            // Even if there are bad characters - try to send it anyway...
-            outData = outgoingDataEncoder->fromUnicode(data).constData();
         } else {
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                QString errorMsg = tr(errorMsgTemplate,
-                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                    QString errorMsg = tr(errorMsgTemplate,
+                                          "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -680,7 +722,7 @@ bool cTelnet::socketOutRaw(std::string& data)
     } while (written < dataLength);
 
     if (mGA_Driver) {
-        mCommands++;
+        ++mCommands;
         if (mCommands == 1) {
             mWaitingForResponse = true;
             networkLatencyTime.restart();
@@ -692,7 +734,7 @@ bool cTelnet::socketOutRaw(std::string& data)
 
 void cTelnet::setDisplayDimensions()
 {
-    int x = mpHost->mWrapAt;
+    int x = (mpHost->mScreenWidth < mpHost->mWrapAt) ? mpHost->mScreenWidth : mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
         std::string s;
@@ -941,9 +983,30 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #endif
 
         if (option == OPT_EOR) {
-            //EOR support (END OF RECORD=TN_GA
+            //EOR support (END OF RECORD=TN_GA)
             qDebug() << "EOR enabled";
             sendTelnetOption(TN_DO, OPT_EOR);
+            break;
+        }
+
+        if (option == OPT_CHARSET) {
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We DONT welcome the WILL
+                sendTelnetOption(TN_DONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
+            } else {
+                sendTelnetOption(TN_DO, OPT_CHARSET);
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
             break;
         }
 
@@ -1078,7 +1141,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
                 mpHost->mServerMXPenabled = true;
-                mpHost->mpConsole->buffer.mMXP = true;
+                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }
@@ -1154,6 +1217,11 @@ void cTelnet::processTelnetCommand(const std::string& command)
             triedToEnable[idxOption] = false;
             heAnnouncedState[idxOption] = true;
         } else {
+            if (option == OPT_CHARSET) {
+                // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
+                enableCHARSET = false;
+                raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+            }
 
             if (option == OPT_MSDP) {
                 // MSDP got turned off
@@ -1227,6 +1295,28 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
 #endif
+
+        if (option == OPT_CHARSET) {
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (mpHost->mFORCE_CHARSET_NEGOTIATION_OFF) { // We WONT welcome the DO
+                sendTelnetOption(TN_WONT, option);
+
+                if (enableCHARSET) {
+                    raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+                }
+
+                enableCHARSET = false;
+                qDebug() << "Rejecting CHARSET, because Force CHARSET negotiation off is checked.";
+            } else  { // We have already negotiated the use of the option by us (We WILL welcome the DO)
+                sendTelnetOption(TN_WILL, OPT_CHARSET);
+                enableCHARSET = true; // We negotiated, the game server is welcome to REQUEST now
+                qDebug() << "CHARSET enabled";
+                raiseProtocolEvent("sysProtocolEnabled", "CHARSET");
+            }
+
+            break;
+        }
+
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
             sendTelnetOption(TN_WILL, OPT_MSDP);
@@ -1322,6 +1412,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
 #endif
+        if (option == OPT_CHARSET) {
+            // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
+            enableCHARSET = false;
+            raiseProtocolEvent("sysProtocolDisabled", "CHARSET");
+        }
+
         if (option == OPT_MSDP) {
             // MSDP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");
@@ -1373,18 +1469,89 @@ void cTelnet::processTelnetCommand(const std::string& command)
     case TN_SB: {
         option = command[2];
 
+        // CHARSET
+        if (option == OPT_CHARSET && enableCHARSET) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
+                return;
+            }
+
+            // Trim off the Telnet suboption bytes from beginning (3) and end (2)
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            // CHARSET support per https://tools.ietf.org/html/rfc2066
+            if (command[3] == CHARSET_REQUEST) {
+                if (payload.startsWith("[TTABLE]1")) { // No translate table support.  Discard.
+                    payload.remove(0, 9);
+                }
+
+                auto characterSetList = payload.split(payload[1]); // Second character is the separator.
+                QByteArray acceptedCharacterSet;
+
+                if (!characterSetList.isEmpty()) {
+                    for (int i = 1; i < characterSetList.size(); ++i) {
+                        QByteArray characterSet = characterSetList.at(i).toUpper();
+
+                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))) {
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+                    }
+                }
+
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_CHARSET;
+
+                if (!acceptedCharacterSet.isEmpty()) {
+                    setEncoding(acceptedCharacterSet, true);
+
+                    output += CHARSET_ACCEPTED;
+                    output += payload[1]; // Separator
+                    output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
+                } else {
+                    output += CHARSET_REJECTED;
+                }
+
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
+            } else if (command[3] == CHARSET_ACCEPTED) {
+                // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
+            } else if (command[3] == CHARSET_REJECTED) {
+                // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
+            } else if (command[3] == CHARSET_TTABLE_IS) {
+                // Mudlet does not support translate tables
+                // Required to respond per the specification
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_CHARSET;
+                output += CHARSET_TTABLE_REJECTED;
+                output += TN_IAC;
+                output += TN_SE;
+                socketOutRaw(output);
+            }
+
+            return;
+        }
+
         // MSDP
         if (option == OPT_MSDP) {
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
-            QByteArray _m = command.c_str();
+            QByteArray rawData = command.c_str();
             if (command.size() < 6) {
                 return;
             }
-            // _m is in the Mud Server's encoding, trim off the Telnet suboption
+
+            rawData = rawData.replace(TN_BELL, QLatin1String("\\\\7"));
+
+            // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
-            _m = _m.mid(3, static_cast<int>(command.size()) - 5);
-            mpHost->mLuaInterpreter.msdp2Lua(_m.constData());
+            rawData = rawData.mid(3, static_cast<int>(rawData.size()) - 5);
+            mpHost->mLuaInterpreter.msdp2Lua(rawData.constData());
             return;
         }
 
@@ -1844,7 +2011,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && transcodedMsg.startsWith(QStringLiteral("Client.Media"))) {
+    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -1923,7 +2090,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     QStringList argumentList = transcodedMsg.split(QChar::Space);
 
     if (argumentList.size() > 0) {
-        for (int i = 0; i < argumentList.size(); i++) {
+        for (int i = 0; i < argumentList.size(); ++i) {
             if (i < 1) {
                 mediaData.setMediaFileName(argumentList[i]);
             } else {
@@ -1936,7 +2103,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 QString mspVAR;
                 QString mspVAL;
 
-                for (int j = 0; j < payloadList.size(); j++) {
+                for (int j = 0; j < payloadList.size(); ++j) {
                     if (j < 1) {
                         mspVAR = payloadList[j];
                     } else {
@@ -1986,6 +2153,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::purgeMediaCache()
+{
+    return mpHost->mpMedia->purgeMediaCache();
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
@@ -2096,7 +2268,7 @@ void cTelnet::postMessage(QString msg)
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
             quint8 prefixLength = hyphenIndex + 1;
             while (body.at(0).at(prefixLength) == ' ') {
-                prefixLength++;
+                ++prefixLength;
             }
 
             QString prefix = body.at(0).left(prefixLength).toUpper();
@@ -2105,7 +2277,7 @@ void cTelnet::postMessage(QString msg)
             if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     // Fix for lua using tabs for indentation which was messing up justification:
@@ -2117,7 +2289,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
                 mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2128,7 +2300,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2139,7 +2311,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
                 mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orangish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2150,7 +2322,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2161,7 +2333,7 @@ void cTelnet::postMessage(QString msg)
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2172,7 +2344,7 @@ void cTelnet::postMessage(QString msg)
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 50, 50), mpHost->mBgColor); //Foreground dark grey, background bright grey
-                for (quint8 _i = 0; _i < body.size(); _i++) {
+                for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
@@ -2212,7 +2384,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
                         goto NEXT;
                         break;
                     }
-                    j++;
+                    ++j;
                 }
             }
             if (mMudData[j] == '\n') {
@@ -2222,7 +2394,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
                 break;
             }
         NEXT:
-            j++;
+            ++j;
         }
         //
         ////////////////////////////
@@ -2258,16 +2430,10 @@ void cTelnet::gotRest(std::string& mud_data)
             }
         }
 
-    } else if (mGA_Driver) {
+    } else {
         mMudData += mud_data;
         postData();
         mMudData = "";
-    } else {
-        mMudData += mud_data;
-        if (!mIsTimerPosting) {
-            mpPostingTimer->start();
-            mIsTimerPosting = true;
-        }
     }
 }
 
@@ -2350,9 +2516,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             postMessage(tr("[ INFO ]  - Loading replay file:\n"
                            "\"%1\".")
                         .arg(name));
-            mIsReplayRunFromLua = true;
-        } else {
             mIsReplayRunFromLua = false;
+        } else {
+            mIsReplayRunFromLua = true;
         }
         replayStream.setDevice(&replayFile);
         if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
@@ -2419,7 +2585,7 @@ void cTelnet::slot_processReplayChunk()
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
-    for (int i = 0; i < datalen; i++) {
+    for (int i = 0; i < datalen; ++i) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
             if (!(iac || iac2 || insb) && (ch == TN_IAC)) {
@@ -2475,7 +2641,7 @@ void cTelnet::slot_processReplayChunk()
                 command = "";
             }
         } else {
-            if (ch != '\r') {
+            if (ch != '\r' && ch != '\0') {
                 cleandata += ch;
             }
         }
@@ -2489,9 +2655,7 @@ void cTelnet::slot_processReplayChunk()
                 }
             }
 
-            if (mUSE_IRE_DRIVER_BUGFIX || mLF_ON_GA) {
-                cleandata.push_back('\n'); //part of the broken IRE-driver bugfix to make up for broken \n-prepending in unsolicited lines, part #2 see line 628
-            }
+            cleandata.push_back('\n');
             recvdGA = false;
             gotPrompt(cleandata);
             cleandata = "";
@@ -2524,8 +2688,6 @@ void cTelnet::handle_socket_signal_readyRead()
 
 void cTelnet::processSocketData(char* in_buffer, int amount)
 {
-    mpHost->mInsertedMissingLF = false;
-
     char out_buffer[100010];
 
     in_buffer[amount + 1] = '\0';
@@ -2554,7 +2716,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         }
 
         recvdGA = false;
-        for (int i = 0; i < datalen; i++) {
+        for (int i = 0; i < datalen; ++i) {
             char ch = buffer[i];
 
             if (iac || iac2 || insb || (ch == TN_IAC)) {
@@ -2594,7 +2756,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
                             bool _compress = false;
                             if ((i > 1) && (i + 2 < datalen)) {
-                                qDebug() << "checking mccp start seq...";
                                 if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
                                     qDebug() << "MCCP version 1 starting sequence";
                                     _compress = true;
@@ -2603,7 +2764,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                     qDebug() << "MCCP version 2 starting sequence";
                                     _compress = true;
                                 }
-                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
                             }
                             if (_compress) {
                                 mNeedDecompression = true;
@@ -2659,7 +2819,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     // flash taskbar for 3 seconds on the telnet bell
                     QApplication::alert(mudlet::self(), 3000);
                 }
-                if (ch != '\r' && ch != 0) {
+                if (ch != '\r' && ch != '\0') {
                     cleandata += ch;
                 }
             }
@@ -2679,10 +2839,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     gotPrompt(cleandata);
                     cleandata = "";
                 } else {
-                    if (mLF_ON_GA) //TODO: reenable option in preferences
-                    {
-                        cleandata.push_back('\n');
-                    }
+                    cleandata.push_back('\n');
                 }
             }
         } //for

@@ -176,10 +176,10 @@ mudlet::mudlet()
 , mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
 , mshowMapAuditErrors(false)
-, mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
+, mMultiView(false)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -209,7 +209,13 @@ mudlet::mudlet()
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(version);
-    setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
+    if (scmIsReleaseVersion) {
+        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet.png")));
+    } else if (scmIsPublicTestVersion) {
+        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_ptb_256px.png")));
+    } else { // scmIsDevelopmentVersion
+        setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_dev_256px.png")));
+    }
     mpMainToolBar = new QToolBar(this);
     mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
@@ -225,7 +231,10 @@ mudlet::mudlet()
     mpTabBar->setTabsClosable(true);
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    mpTabBar->setMovable(true);
+    // TODO: Do not enable this option currently - although the user can drag
+    // the tabs the underlying main TConsoles do not move and then it means that
+    // the wrong title can be shown over the wrong window.
+    mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
@@ -401,8 +410,13 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
 
     mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
+    mpActionMultiView->setToolTip(tr("<p>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</p>",
+                                     // Intentional comment to separate arguments
+                                     "Same text is used in 2 places."));
     mpMainToolBar->addAction(mpActionMultiView);
+    mpActionMultiView->setCheckable(true);
+    mpActionMultiView->setChecked(false);
+    mpActionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
@@ -514,7 +528,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
@@ -582,7 +596,10 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
-    loadDictionaryLanguageMap();
+
+    // Initialise a couple of QMaps with elements that must be translated into
+    // the current GUI Language
+    loadMaps();
 }
 
 QSettings* mudlet::getQSettings()
@@ -616,7 +633,7 @@ void mudlet::initEdbee()
     loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 }
 
-void mudlet::loadDictionaryLanguageMap()
+void mudlet::loadMaps()
 {
     // Used to identify Hunspell dictionaries (some of which are not useful -
     // the "_med" ones are suppliments and no good for Mudlet) - all keys are to
@@ -789,9 +806,11 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("ne"), tr("Nepali")},
                                   {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
                                   {QStringLiteral("nl"), tr("Dutch")},
+                                  {QStringLiteral("nl_an"), tr("Dutch (Netherlands Antilles)")},
                                   {QStringLiteral("nl_aw"), tr("Dutch (Aruba)")},
                                   {QStringLiteral("nl_be"), tr("Dutch (Belgium)")},
                                   {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
+                                  {QStringLiteral("nl_sr"), tr("Dutch (Suriname)")},
                                   {QStringLiteral("nn"), tr("Norwegian Nynorsk")},
                                   {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
                                   {QStringLiteral("oc"), tr("Occitan")},
@@ -866,6 +885,51 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")},
                                   {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")},
                                   {QStringLiteral("zu"), tr("Zulu")}};
+
+    mEncodingNameMap = {{"ASCII", tr("ASCII (Basic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"UTF-8", tr("UTF-8 (Recommended)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"GBK", tr("GBK (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"GB18030", tr("GB18030 (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"BIG5", tr("Big5-ETen (Taiwan)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"BIG5-HKSCS", tr("Big5-HKSCS (Hong Kong)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-1", tr("ISO 8859-1 (Western European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-2", tr("ISO 8859-2 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-3", tr("ISO 8859-3 (South European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-4", tr("ISO 8859-4 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-5", tr("ISO 8859-5 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-6", tr("ISO 8859-6 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-7", tr("ISO 8859-7 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-8", tr("ISO 8859-8 (Hebrew Visual)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-9", tr("ISO 8859-9 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-10", tr("ISO 8859-10 (Nordic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-11", tr("ISO 8859-11 (Latin/Thai)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-13", tr("ISO 8859-13 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-14", tr("ISO 8859-14 (Celtic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-15", tr("ISO 8859-15 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"ISO 8859-16", tr("ISO 8859-16 (Romanian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP437", tr("CP437 (OEM Font)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP437", QStringLiteral("m ") % tr("CP437 (OEM Font)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP667", tr("CP667 (Mazovia)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP667", QStringLiteral("m ") % tr("CP667 (Mazovia)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP737", tr("CP737 (DOS Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP737", QStringLiteral("m ") % tr("CP737 (DOS Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP850", tr("CP850 (Western Europe)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP866", tr("CP866 (Cyrillic/Russian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP869", tr("CP869 (DOS Greek 2)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"M_CP869",  QStringLiteral("m ") % tr("CP869 (DOS Greek 2)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"CP1161", tr("CP1161 (Latin/Thai)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"KOI8-R", tr("KOI8-R (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"KOI8-U", tr("KOI8-U (Cyrillic/Ukrainian)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"MACINTOSH", tr("MACINTOSH", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1252", tr("WINDOWS-1252 (Western)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1253", tr("WINDOWS-1253 (Greek)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1254", tr("WINDOWS-1254 (Turkish)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1255", tr("WINDOWS-1255 (Hebrew)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1256", tr("WINDOWS-1256 (Arabic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1257", tr("WINDOWS-1257 (Baltic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"WINDOWS-1258", tr("WINDOWS-1258 (Vietnamese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")}};
 }
 
 // migrates the Central Debug Console to the next available host, if any
@@ -1113,8 +1177,23 @@ void mudlet::layoutModules()
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
-            masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
             QStringList moduleInfo = mpModuleTableHost->mInstalledModules[pModules[i]];
+            QFileInfo moduleFile = moduleInfo[0];
+            QStringList accepted_suffix;
+            accepted_suffix << "xml" << "trigger";
+            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                         "is saved at the end of the session.")));
+            } else {
+                masterModule->setFlags(Qt::NoItemFlags);
+                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
+                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
+            }
+
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -1122,10 +1201,7 @@ void mudlet::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
-            masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                             .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                     "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                     "is saved at the end of the session.")));
+
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
@@ -1438,15 +1514,11 @@ void mudlet::slot_close_profile_requested(int tab)
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-#if defined (Q_OS_WIN32)
     if (pH->mSslTsl) {
         pH->mTelnet.abortConnection();
     } else {
         pH->mTelnet.disconnectIt();
     }
-#else
-    pH->mTelnet.disconnectIt();
-#endif
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
@@ -1484,11 +1556,6 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     migrateDebugConsole(pH);
-
-    // Wait for disconnection to complete
-    while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-        QApplication::processEvents();
-    }
 
     mConsoleMap.value(pH)->close();
     if (!mTabMap.contains(pH->getName())) {
@@ -1569,6 +1636,29 @@ void mudlet::slot_tab_changed(int tabID)
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
 
+    dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+
+    // Restore the multi-view mode if it was enabled:
+    if (mpTabBar->count() > 1) {
+        if (!mpActionMultiView->isEnabled() || !dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(true);
+            dactionMultiView->setEnabled(true);
+        }
+        if (mMultiView) {
+            QMapIterator<Host*, TConsole*> it(mConsoleMap);
+            while (it.hasNext()) {
+                it.next();
+                it.value()->show();
+            }
+        }
+
+    } else {
+        if (mpActionMultiView->isEnabled() || dactionMultiView->isEnabled()) {
+            mpActionMultiView->setEnabled(false);
+            dactionMultiView->setEnabled(false);
+        }
+    }
+
     emit signal_tabChanged(mpCurrentActiveHost->getName());
 }
 
@@ -1615,7 +1705,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpCurrentActiveHost = pH;
 
-    set_compact_input_line();
     if (pH->mLogStatus) {
         pConsole->logButton->click();
     }
@@ -1877,11 +1966,58 @@ void mudlet::commitLayoutUpdates()
     while (itHostToolbarsList.hasNext()) {
         itHostToolbarsList.next();
         for (auto pToolBar : itHostToolbarsList.value()) {
-            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_LIKELY(pToolBar)) {
+                if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                    qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                } else if (pToolBar->property("layoutChanged").toBool()) {
+                    pToolBar->setProperty("layoutChanged", QVariant(false));
+                }
             }
         }
         itHostToolbarsList.remove();
+    }
+}
+
+bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -1963,7 +2099,7 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     }
 
     auto fontMetrics = QFontMetrics(font);
-    return QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
 }
 
 std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -1993,7 +2129,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
         dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        dockwidget->setWindowTitle(name);
         pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
@@ -2026,11 +2162,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         loadWindowLayout();
         dockwidget->hasLayoutAlready = true;
     }
-
-    //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-    console->show();
     dockwidget->show();
-    console->showWindow(name);
 
     if (!autoDock) {
         dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
@@ -2178,7 +2310,7 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pC) {
-        pC->setConsoleBgColor(r, g, b);
+        pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
         QPalette mainPalette;
@@ -2211,23 +2343,6 @@ bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& path)
     }
 }
 
-bool mudlet::setTextFormat(Host* pHost, const QString& name, const QColor& bgColor, const QColor& fgColor, const TChar::AttributeFlags attributes)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->mFormatCurrent.setTextFormat(fgColor, bgColor, attributes);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2237,7 +2352,7 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         // Set or reset all the specified attributes (but leave others unchanged)
-        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
+        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (state ? attributes : TChar::None));
         pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
@@ -2283,6 +2398,7 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -2297,6 +2413,11 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
         } else {
             return pHost->mpConsole->showWindow(name);
         }
+    }
+
+    if (pN) {
+        pN->show();
+        return true;
     }
 
     return false;
@@ -2325,6 +2446,8 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->hide();
@@ -2336,6 +2459,11 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
+    }
+
+    if (pN) {
+        pN->hide();
+        return true;
     }
 
     return false;
@@ -2350,25 +2478,35 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->resize(x1, y1);
         return true;
-    } else if (pC) {
-        if (pD) {
-            if (!pD->isFloating()) {
-                // Can't resize a docked window...?
-                return false;
-            } else {
-                pD->resize(x1, y1);
-                return true;
-            }
-        } else {
-            pC->resize(x1, y1);
-            return true;
-        }
-    } else {
-        return false;
     }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->resize(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->resize(x1, y1);
+        return true;
+    }
+
+    return false;
 }
 
 bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1)
@@ -2406,6 +2544,21 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
     }
 }
 
+bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setMiniConsoleCmdVisible(isVisible);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool mudlet::resetFormat(Host* pHost, QString& name)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2430,6 +2583,8 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->move(x1, y1);
         return true;
@@ -2453,6 +2608,11 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pN) {
+        pN->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -2467,6 +2627,7 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
     auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
     auto pW = pHost->mpConsole->mpMainFrame;
     auto pM = pHost->mpConsole->mpMapper;
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
         return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
@@ -2490,6 +2651,13 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pN) {
+        pN->setParent(pW);
+        pN->move(x1, y1);
+        if (show) {
+            pN->show();
         }
         return {true, QString()};
     } else if (pM && name.toLower() == QLatin1String("mapper")) {
@@ -2591,6 +2759,32 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
+    }
+    return false;
+}
+
+bool mudlet::setCmdLineAction(Host* pHost, const QString& name, const int func)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setAction(func);
+        return true;
+    }
+    return false;
+}
+
+bool mudlet::resetCmdLineAction(Host* pHost, const QString& name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->resetAction();
+        return true;
     }
     return false;
 }
@@ -2865,18 +3059,20 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
+bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
 {
     if (!pHost || !pHost->mpConsole) {
-        return;
+        return false;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setBgColor(r, g, b);
+        pC->setBgColor(r, g, b, a);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
+        return true;
     }
+    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
@@ -3063,7 +3259,7 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    foreach (TConsole* pC, mConsoleMap) {
+    for (auto pC : mConsoleMap) {
         if (!pC->close()) {
             event->ignore();
             return;
@@ -3080,9 +3276,13 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
 
-    foreach (TConsole* pC, mConsoleMap) {
+    for (auto pC : mConsoleMap) {
         // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-        pC->mpHost->mTelnet.disconnectIt();
+        if (pC->mpHost->mSslTsl) {
+            pC->mpHost->mTelnet.abortConnection();
+        } else {
+            pC->mpHost->mTelnet.disconnectIt();
+        }
 
         // close script-editor
         if (pC->mpHost->mpEditorDialog) {
@@ -3099,11 +3299,6 @@ void mudlet::closeEvent(QCloseEvent* event)
         if (mpIrcClientMap.contains(pC->mpHost)) {
             mpIrcClientMap[pC->mpHost]->setAttribute(Qt::WA_DeleteOnClose);
             mpIrcClientMap[pC->mpHost]->deleteLater();
-        }
-
-        // Wait for disconnection to complete
-        while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-            QApplication::processEvents();
         }
 
         // close console
@@ -3132,7 +3327,12 @@ void mudlet::forceClose()
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        host->mTelnet.disconnectIt();
+        if (host->mSslTsl) {
+            host->mTelnet.abortConnection();
+        } else {
+            host->mTelnet.disconnectIt();
+        }
+
         // close script-editor
         if (host->mpEditorDialog) {
             host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3148,11 +3348,6 @@ void mudlet::forceClose()
 
         if (mpIrcClientMap.contains(host)) {
             mpIrcClientMap.value(host)->close();
-        }
-
-        // Wait for disconnection to complete
-        while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-            QApplication::processEvents();
         }
 
         console->close();
@@ -3193,6 +3388,12 @@ void mudlet::readEarlySettings(const QSettings& settings)
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
+    mUserLocale = QLocale(mInterfaceLanguage);
+    if (mUserLocale == QLocale::c()) {
+        qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
+    } else {
+        qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+    }
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3215,7 +3416,6 @@ void mudlet::readLateSettings(const QSettings& settings)
     mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
-    mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
@@ -3354,7 +3554,6 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
-    settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
@@ -3364,13 +3563,16 @@ void mudlet::writeSettings()
 
 void mudlet::slot_show_connection_dialog()
 {
-    auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
-    pDlg->fillout_form();
+    if (mConnectionDialog) {
+        return;
+    }
+    mConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
+    mConnectionDialog->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
-    pDlg->setAttribute(Qt::WA_DeleteOnClose);
-    pDlg->show();
+    connect(mConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    mConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mConnectionDialog->show();
 }
 
 void mudlet::show_editor_dialog()
@@ -3501,8 +3703,8 @@ void mudlet::show_action_dialog()
     pEditor->activateWindow();
 }
 
-
-void mudlet::show_options_dialog(QString tab)
+// tab must be the "objectName" of the tab in the preferences NOT the "titleText"
+void mudlet::show_options_dialog(const QString& tab)
 {
     Host* pHost = getActiveHost();
 
@@ -3560,7 +3762,7 @@ void mudlet::slot_update_shortcuts()
         dactionModuleManager->setShortcut(QKeySequence());
 
         multiViewShortcut = new QShortcut(multiViewKeySequence, this);
-        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_multi_view);
+        connect(multiViewShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_multi_view);
         dactionMultiView->setShortcut(QKeySequence());
 
         connectShortcut = new QShortcut(connectKeySequence, this);
@@ -3612,7 +3814,7 @@ void mudlet::slot_update_shortcuts()
 
 void mudlet::slot_show_options_dialog()
 {
-    show_options_dialog("General");
+    show_options_dialog(QStringLiteral("tab_general"));
 }
 
 void mudlet::show_help_dialog()
@@ -3777,7 +3979,6 @@ void mudlet::slot_irc()
 
     if (!mpIrcClientMap.contains(pHost)) {
         QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        dlg->setDefaultHostClient(false);
         mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
@@ -3804,7 +4005,7 @@ void mudlet::updateMudletDiscordInvite()
     manager->setCache(diskCache);
 
 
-    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
@@ -4051,36 +4252,12 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// these two callbacks are called from cTelnet::handleConnectedToServer()
-void mudlet::slot_send_login()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString login = pHost->getLogin();
-    pHost->mTelnet.sendData(login);
-}
-
-void mudlet::slot_send_pass()
-{
-    if (tempHostQueue.isEmpty()) {
-        return;
-    }
-    Host* pHost = tempHostQueue.dequeue();
-    QString pass = pHost->getPass();
-    pHost->mTelnet.sendData(pass);
-}
-//////////////////////////////////////////////////////////////////////////////
-
 
 void mudlet::processEventLoopHack()
 {
@@ -4176,8 +4353,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     //      and one host has a slower response time as the other one, but
     //      the worst that can happen is that they have to login manually.
 
-    tempHostQueue.enqueue(pHost);
-    tempHostQueue.enqueue(pHost);
     if (connect) {
         pHost->connectToServer();
     } else {
@@ -4186,49 +4361,67 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 }
 
-void mudlet::slot_multi_view()
+// Connected to and needed by the shortcut to trigger the menu or toolbar button
+// action because it does not provide the checked state of the item to which the
+// shortcut is associated:
+void mudlet::slot_toggle_multi_view()
 {
+    const bool newState = !mMultiView;
+    slot_multi_view(newState);
+}
+
+// Connected to a menu and toolbar button (but not a short-cut to one of them)
+// as they provide their checked state directly:
+void mudlet::slot_multi_view(const bool state)
+{
+    // Ensure the state of both controls is updated to reflect the state of the
+    // option:
+    if (mpActionMultiView->isChecked() != state) {
+        mpActionMultiView->setChecked(state);
+    }
+    if (dactionMultiView->isChecked() != state) {
+        dactionMultiView->setChecked(state);
+    }
+    mMultiView = state;
+    bool foundActiveHost = false;
     QMapIterator<Host*, TConsole*> it(mConsoleMap);
     while (it.hasNext()) {
         it.next();
-        it.value()->show();
+        if (mpCurrentActiveHost && (mpCurrentActiveHost == it.key())) {
+            // After switching the option off need to redraw the, now only, main
+            // TConsole to be displayed for the currently active profile:
+            foundActiveHost = true;
+            it.value()->show();
+        } else if (mMultiView) {
+            it.value()->show();
+        } else {
+            it.value()->hide();
+        }
+    }
+    if (!foundActiveHost && mpTabBar->count() > 0) {
+        // If there IS at least one profile still active, but none of them WAS
+        // the active one then make one (the first) the active one:
+        slot_tab_changed(0);
     }
 }
 
-
+// Called by the short-cut to the menu item that doesn't pass the checked state
+// of the menu-item that it provides a short-cut to:
 void mudlet::slot_toggle_compact_input_line()
 {
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-        setCompactInputLine(false);
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
-        setCompactInputLine(true);
-    }
+    const bool newState = !dactionInputLine->isChecked();
+    slot_compact_input_line(newState);
 }
 
-void mudlet::set_compact_input_line()
+// Called by the menu-item's action itself, that DOES pass the checked state:
+void mudlet::slot_compact_input_line(const bool state)
 {
-    if (!mpCurrentActiveHost) {
-        return;
+    if (dactionInputLine->isChecked() != state) {
+        // Ensure the menu item reflectes the actual state:
+        dactionInputLine->setChecked(state);
     }
-
-    auto buttons = mpCurrentActiveHost->mpConsole->mpButtonMainLayer;
-
-    if (!compactInputLine()) {
-        buttons->show();
-        dactionInputLine->setText(tr("Compact input line"));
-    } else {
-        buttons->hide();
-        dactionInputLine->setText(tr("Standard input line"));
+    if (mpCurrentActiveHost) {
+        mpCurrentActiveHost->setCompactInputLine(state);
     }
 }
 
@@ -4463,10 +4656,15 @@ void mudlet::playSound(const QString& s, int soundVolume)
         if (state == QMediaPlayer::StoppedState) {
             TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().fileName());
+            soundFinished.mArgumentList.append(pPlayer->media().request().url().path());
+#else
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
-            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().path());
+#endif
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             if (pHost) {
                 // The host may have gone away if the sound was a long one
@@ -4823,7 +5021,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case editorWidgetThemePathFile:
         // Takes two extra arguments (profile name, theme name) that returns the
         // pathFileName of the theme file used by the edbee editor - also
-        // handles the special case of the default theme "mudlet.thTheme" that
+        // handles the special case of the default theme "mudlet.tmTheme" that
         // is carried internally in the resource file:
         if (extra1.compare(QStringLiteral("Mudlet.tmTheme"), Qt::CaseSensitive)) {
             // No match
@@ -4872,15 +5070,28 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
         } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            // From debug or release subdirectory of a shadow build directory
+            // alongside the ./src one. {Typically QMake builds from Qtcreator
+            // with CONFIG containing both 'debug_and_release' and
+            // 'debug_and_release_target' (this is normal also on Windows):
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
         } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
-            // From shadow build directory alongside the ./src one:
+            // From shadow build directory alongside the ./src one. {Typically
+            // QMake builds from Qtcreator with CONFIG NOT containing both
+            // 'debug_and_release' and 'debug_and_release_target':
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(QStringLiteral("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory above the ./src one. {Typically
+            // CMake builds from Qtcreator which are outside of the unpacked
+            // source code from a git repo or tarball - which has to have been
+            // unpacked/placed in a directory called 'mudlet'}:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return QStringLiteral("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
         } else {
-            // From build within ./src
+            // From build within ./src AND installer builds that bundle
+            // dictionaries in the same directory as the executable:
             mudlet::self()->mUsingMudletDictionaries = true;
             return QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
         }
@@ -4995,7 +5206,7 @@ void mudlet::slot_update_installed()
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
-    dactionUpdate->setText(QStringLiteral("Update installed - restart to apply"));
+    dactionUpdate->setText(tr("Update installed - restart to apply"));
 #endif // !Q_OS_MACOS
 }
 
@@ -5087,6 +5298,10 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    if (mMultiView) {
+        // We do not need to mark tabs with activity if they are all on show anyhow:
+        return;
+    }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
         if (mpTabBar->count() > 1) {
@@ -5295,6 +5510,14 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     if (mInterfaceLanguage != languageCode) {
         mInterfaceLanguage = languageCode;
+        mUserLocale = QLocale(mInterfaceLanguage);
+        if (mUserLocale == QLocale::c()) {
+            qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                           << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+        }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
         // would also need a call here to do the same in this class that the
@@ -5418,7 +5641,10 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 
     dict.close();
 
-    qDebug().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") - INFO actual(recorded) word counts is(were): " << wl.count() << "(" << oldWC << ").";
+    qDebug().nospace().noquote() << "Loaded custom dictionary \"" << dict.fileName() << "\" with " << wl.count() << " words.";
+    if (oldWC != wl.count()) {
+        qDebug().nospace().noquote() << "Previously, there were " << oldWC << " words recorded instead.";
+    }
     if (wl.count() > 1) {
         // This will use the system default locale - it might be better to use
         // the Mudlet one...
@@ -5612,7 +5838,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // to allow for persistant editing of it as it is not possible to obtain it
     // from the Hunspell library:
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    wordSet = QSet<QString>(wordList.begin(), wordList.end());
+#else
     wordSet = wordList.toSet();
+#endif
 
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
@@ -5663,7 +5893,12 @@ Hunhandle* mudlet::prepareSharedDictionary()
         return nullptr;
     }
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
+#else
     mWordSet_shared = wordList.toSet();
+#endif
+
 #if defined(Q_OS_WIN32)
     mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
     mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
@@ -5690,7 +5925,11 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
         return false;
     }
 
-    QStringList wordList(wordSet.toList());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList{wordSet.begin(), wordSet.end()};
+#else
+    QStringList wordList{wordSet.toList()};
+#endif
 
     // This also sorts wordList as a wanted side-effect:
     int wordCount = scanWordList(wordList, graphemeCounts);
@@ -5859,10 +6098,35 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-#ifndef QT_NO_SSL
+#if !defined(QT_NO_SSL)
     if (url.scheme() == QStringLiteral("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+void mudlet::activateProfile(Host* pHost)
+{
+    if (!mMultiView || !pHost) {
+        // We do not need to update the currently selected tab if we are not in
+        // multi-view mode as that will happen by the user selecting the tab
+        // themself - also, if the supplied argument is a nullptr we do not need
+        // to do anything:
+        return;
+    }
+
+    const QString newActiveHostName{pHost->getName()};
+    if (mpCurrentActiveHost != pHost) {
+        // Need to switch mpCurrentActiveHost to be the given pHost and change
+        // the tab to match - without triggering slot_tab_changed(int)
+        int tabToBeActive = mpTabBar->tabIndex(newActiveHostName);
+        if (tabToBeActive >= 0) {
+            mpTabBar->blockSignals(true);
+            mpTabBar->setCurrentIndex(tabToBeActive);
+            mpTabBar->blockSignals(false);
+        }
+        mpCurrentActiveHost = pHost;
+        dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+    }
 }

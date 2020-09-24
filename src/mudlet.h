@@ -39,6 +39,7 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
@@ -59,7 +60,12 @@
 #include <QToolButton>
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
+#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
+#else
+#include <qt5keychain/keychain.h>
+#endif
+
 #include <optional>
 #include "post_guard.h"
 
@@ -105,6 +111,7 @@ class TTimer;
 class TToolBar;
 class dlgIRC;
 class dlgAboutDialog;
+class dlgConnectionProfiles;
 class dlgProfilePreferences;
 
 class translation;
@@ -143,6 +150,8 @@ public:
     bool setWindowFont(Host*, const QString&, const QString&);
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
+    bool setWindowBackgroundImage(Host *, const QString&, const QString&, int);
+    bool resetWindowBackgroundImage(Host *, const QString&);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
@@ -163,8 +172,9 @@ public:
     bool pasteWindow(Host* pHost, const QString& name);
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
     bool setBackgroundImage(Host*, const QString& name, QString& path);
-    bool setTextFormat(Host*, const QString& name, const QColor &bgColor, const QColor &fgColor, const TChar::AttributeFlags attributes = TChar::None);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
+    bool setCmdLineAction(Host*, const QString&, const int);
+    bool resetCmdLineAction(Host*, const QString&);
     bool setLabelClickCallback(Host*, const QString&, const int);
     bool setLabelDoubleClickCallback(Host*, const QString&, const int);
     bool setLabelReleaseCallback(Host*, const QString&, const int);
@@ -185,7 +195,7 @@ public:
     void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
     std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setFgColor(Host*, const QString& name, int, int, int);
-    void setBgColor(Host*, const QString& name, int, int, int);
+    bool setBgColor(Host*, const QString& name, int, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void deleteProfileData(const QString &profile, const QString &item);
@@ -227,6 +237,7 @@ public:
     bool replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
+    bool setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible);
     bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
     void replayOver();
     void showEvent(QShowEvent* event) override;
@@ -248,6 +259,8 @@ public:
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void activateProfile(Host*);
+
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -279,6 +292,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
+    QPointer<dlgConnectionProfiles> mConnectionDialog;
     QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -316,8 +330,6 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
-    bool compactInputLine() const { return mCompactInputLine; }
-    void setCompactInputLine(const bool state) { mCompactInputLine = state; }
     void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
 
@@ -416,9 +428,10 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
-    void show_options_dialog(QString tab);
+    void show_options_dialog(const QString& tab);
     void setInterfaceLanguage(const QString &languageCode);
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
+    const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
@@ -445,6 +458,7 @@ public:
     void startAutoLogin(const QString&);
     QPointer<QTableWidget> moduleTable;
     int64_t getPhysicalMemoryTotal();
+    const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
 
 
 #if defined(INCLUDE_UPDATER)
@@ -494,11 +508,10 @@ public slots:
     void slot_open_mappingscripts_page();
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
-    void slot_multi_view();
+    void slot_multi_view(const bool);
+    void slot_toggle_multi_view();
     void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
-    void slot_send_login();
-    void slot_send_pass();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
@@ -573,6 +586,7 @@ private slots:
     void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
+    void slot_compact_input_line(const bool);
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
 
@@ -586,10 +600,9 @@ private:
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
     void check_for_mappingscript();
-    void set_compact_input_line();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
-    void loadDictionaryLanguageMap();
+    void loadMaps();
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
@@ -597,9 +610,6 @@ private:
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QQueue<QString> tempLoginQueue;
-    QQueue<QString> tempPassQueue;
-    QQueue<Host*> tempHostQueue;
     static QPointer<mudlet> _self;
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
@@ -682,8 +692,6 @@ private:
 
     bool mshowMapAuditErrors;
 
-    bool mCompactInputLine;
-
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
@@ -692,6 +700,10 @@ private:
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
     QString mInterfaceLanguage {};
+    // An encapsulation of the above in a form that Qt uses to hold all the
+    // details:
+    QLocale mUserLocale {};
+
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call
@@ -707,12 +719,18 @@ private:
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
+    // Stores the translated names for the Encodings for the static and thus
+    // const TBuffer::csmEncodingTable:
+    QMap<QByteArray, QString> mEncodingNameMap;
+
+    // Whether multi-view is in effect:
+    bool mMultiView;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

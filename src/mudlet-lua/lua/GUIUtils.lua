@@ -264,6 +264,7 @@ color_table["SpringGreen"]            = { 0, 255, 127 }
 color_table["tan"]                    = { 210, 180, 140 }
 color_table["thistle"]                = { 216, 191, 216 }
 color_table["tomato"]                 = { 255, 99, 71 }
+color_table["transparent"]            = { 255, 255, 255, 0}
 color_table["turquoise"]              = { 64, 224, 208 }
 color_table["violet_red"]             = { 208, 32, 144 }
 color_table["VioletRed"]              = { 208, 32, 144 }
@@ -631,7 +632,7 @@ end
 ---   -- also handles recursive matches:
 ---   replaceAll("you", "you and me")
 ---   </pre>
-function replaceAll(word, what)
+function replaceAll(word, what, keepColor)
   local getCurrentLine, selectSection, replace = getCurrentLine, selectSection, replace
   local startp, endp = 1, 1
   while true do
@@ -640,7 +641,7 @@ function replaceAll(word, what)
       break
     end
     selectSection(startp - 1, endp - startp + 1)
-    replace(what)
+    replace(what, keepColor)
     endp = endp + (#what - #word) + 1 -- recalculate the new word ending to start search from there
   end
 end
@@ -697,11 +698,12 @@ function bg(console, colorName)
   if not color_table[colorName] then
     error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
   end
+  local alpha = color_table[colorName][4] or 255
 
   if console == colorName or console == "main" then
-    setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+    setBgColor(color_table[colorName][1], color_table[colorName][2], color_table[colorName][3], alpha)
   else
-    setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3])
+    setBgColor(console, color_table[colorName][1], color_table[colorName][2], color_table[colorName][3], alpha)
   end
 end
 
@@ -742,12 +744,12 @@ end
 ---   selectString(matches[2], 1)
 ---   replace("hello")
 ---   </pre>
-function replaceWildcard(what, replacement)
+function replaceWildcard(what, replacement, keepColor)
   if replacement == nil or what == nil then
     return
   end
   selectCaptureGroup(what)
-  replace(replacement)
+  replace(replacement, keepColor)
 end
 
 -- internal sorting function, sorts first by hue, then luminosity, then value
@@ -976,12 +978,12 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r|#r)]],
-        rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
+        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})?(?:,[0-9a-fA-F]{6,})?)|(\|r|#r)]],
+        rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
         [[(<[0-9,:]+>)|(<r>)]],
-        rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
+        rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
         [[(<[a-zA-Z0-9_,:]+>)]],
@@ -1015,21 +1017,32 @@ if rex then
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
-            local fr, fg, fb, br, bg, bb = _Echos.Patterns[style][2]:match(c)
+            local fr, fg, fb, br, bg, bb, ba = _Echos.Patterns[style][2]:match(c)
             local color = {}
             if style == 'Hex' then
+              -- hex has alpha value in front
+              if ba then
+                local temp = ba
+                ba = br
+                br = bg
+                bg = bb
+                bb = temp
+              else
+                ba = "ff"
+              end
               if fr and fg and fb then
                 fr, fg, fb = tonumber(fr, 16), tonumber(fg, 16), tonumber(fb, 16)
               end
-              if br and bg and bb then
-                br, bg, bb = tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
+              if br and bg and bb and ba  then
+                ba, br, bg, bb = tonumber(ba, 16), tonumber(br, 16), tonumber(bg, 16), tonumber(bb, 16)
               end
             end
             if fr and fg and fb then
               color.fg = { fr, fg, fb }
             end
-            if br and bg and bb then
-              color.bg = { br, bg, bb }
+            ba = ba or 255
+            if br and bg and bb and ba then
+              color.bg = { br, bg, bb, ba }
             end
 
             -- if the colour failed to match anything, then what we captured in <> wasn't a colour -
@@ -1132,8 +1145,9 @@ if rex then
           setFgColor(win, fr, fg, fb)
         end
         if v.bg then
-          local br, bg, bb = unpack(v.bg)
-          setBgColor(win, br, bg, bb)
+          local br, bg, bb, ba = unpack(v.bg)
+          ba = ba or 255
+          setBgColor(win, br, bg, bb, ba)
         end
       elseif v == "\27reset" then
         resetFormat(win)
@@ -1358,6 +1372,190 @@ if rex then
   -- Backwards compatibility
   checho = cecho
 
+  -- table to facilitate converting color names to ansi escapes
+  local ctable =
+  {
+    black = "0",
+    red = "1",
+    green = "2",
+    yellow = "3",
+    blue = "4",
+    magenta = "5",
+    cyan = "6",
+    white = "7",
+    light_black = "8",
+    light_red = "9",
+    light_green = "10",
+    light_yellow = "11",
+    light_blue = "12",
+    light_magenta = "13",
+    light_cyan = "14",
+    light_white = "15",
+    lightBlack = "8",
+    lightRed = "9",
+    lightGreen = "10",
+    lightYellow = "11",
+    lightBlue = "12",
+    lightMagenta = "13",
+    lightCyan = "14",
+    lightWhite = "15",
+  }
+  for i = 0, 255 do
+    local key = tostring(i)
+    ctable[key] = key
+    ctable["ansi_" .. key] = key
+  end
+
+  -- take a color name and turn it into an ANSI escape string
+  local function colorToAnsi(colorName)
+    local result = ""
+    local cols = colorName:split(":")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      if fore == "r" or fore == "reset" then
+        result = result .. "\27[39;49m"
+      else
+        local colorNumber = ctable[fore]
+        if colorNumber then
+          result = string.format("%s\27[38:5:%sm", result, colorNumber)
+        end
+      end
+    end
+    if back then
+      local colorNumber = ctable[back]
+      result = string.format("%s\27[48:5:%sm", result, colorNumber)
+    end
+    return result
+  end
+
+  -- converts decho color information to ansi escape sequences
+  local function rgbToAnsi(rgb)
+    local result = ""
+    local cols = rgb:split(":")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      local components = fore:split(",")
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    if back then
+      local components = back:split(",")
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    return result
+  end
+
+  -- converts a 6 digit hex color code to ansi escape sequence
+  local function hexToAnsi(hexcode)
+    local result = ""
+    local cols = hexcode:split(",")
+    local fore = cols[1]
+    local back = cols[2]
+    if fore ~= "" then
+      local components = {
+        tonumber(fore:sub(1,2),16),
+        tonumber(fore:sub(3,4),16),
+        tonumber(fore:sub(5,6),16)
+      }
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    if back then
+      local components = {
+        tonumber(back:sub(1,2),16),
+        tonumber(back:sub(3,4),16),
+        tonumber(back:sub(5,6),16)
+      }
+      result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+    end
+    return result
+  end
+
+  --- feedTriggers with cecho style color information.
+  -- Valid colors are  black,red,green,yellow,blue,magenta,cyan,white and light_* versions of same
+  -- Can also pass in a number between 0 and 255 to use the expanded ansi 255 colors. IE <124> will set foreground to the color ANSI124
+  -- Will also take ansi colors as ansi_#, IE <ansi_124>
+  -- Reset using <r> or <reset>
+  --@param text the text to pump into feedTriggers
+  --@see cecho
+  --@see cinsertText
+  function cfeedTriggers(text)
+    local colorPattern = _Echos.Patterns.Color[1]
+    local result = ""
+    for str, color in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. colorToAnsi(color:match("<(.+)>"))
+      end
+    end
+    feedTriggers(result .. "\n")
+    echo("")
+  end
+
+  --- Returns a string with decho style color codes converted to ANSI color
+  -- IE <128,0,0> for red, <0,128,0> for green, <0,128,0:128,0,0> for green on red background.
+  -- <r> to reset
+  --@param text the text to convert to ansi colors
+  --@see decho
+  --@see dinsertText
+  function decho2ansi(text)
+    local colorPattern = _Echos.Patterns.Decimal[1]
+    local result = ""
+    for str, color, res in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        result = result .. rgbToAnsi(color:match("<(.+)>"))
+      end
+      if res then
+        result = result .. "\27[39;49m"
+      end
+    end
+    return result
+  end
+
+  --- feedTriggers with decho style color information.
+  -- IE <128,0,0> for red, <0,128,0> for green, <0,128,0:128,0,0> for green on red background.
+  -- <r> to reset
+  --@param text the text to pump into feedTriggers
+  --@see decho
+  --@see dinsertText
+  function dfeedTriggers(text)
+    feedTriggers(decho2ansi(text) .. "\n")
+    echo("")
+  end
+
+  --- turn hecho style color information into an ANSI color string
+  -- IE #800000 for red, #008000 for green, #008000,800000 for green on red background
+  -- #r to reset
+  --@param text the text convert to ansi colors
+  --@see hecho
+  --@see hinsertText
+  function hecho2ansi(text)
+    local colorPattern = _Echos.Patterns.Hex[1]
+    local result = ""
+    for str, color, res in rex.split(text, colorPattern) do
+      result = result .. str
+      if color then
+        if color:sub(1,1) == "|" then color = color:gsub("|c", "#") end
+        result = result .. hexToAnsi(color:sub(2,-1))
+      end
+      if res then
+        result = result .. "\27[39;49m"
+      end
+    end
+    return result
+  end
+
+  --- feedTriggers with hecho style color information.
+  -- IE #800000 for red, #008000 for green, #008000,800000 for green on red background
+  -- #r to reset
+  --@param text the text to pump into feedTriggers
+  --@see hecho
+  --@see hinsertText
+  function hfeedTriggers(text)
+    feedTriggers(hecho2ansi(text) .. "\n")
+    echo("")
+  end
 
 else
   -- NOT using rex module:
@@ -1382,14 +1580,15 @@ else
       local bgcol = colist[2] ~= "" and colist[2] or "black"
       local FGrgb = color_table[fgcol] or string.split(fgcol, ",")
       local BGrgb = color_table[bgcol] or string.split(bgcol, ",")
+      local alpha = BGrgb[4] or 255
 
       if win then
         setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
-        setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
+        setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3], alpha)
         echo(win, text)
       else
         setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
-        setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
+        setBgColor(BGrgb[1], BGrgb[2], BGrgb[3], alpha)
         echo(text)
       end
     end
@@ -1433,14 +1632,14 @@ else
         local bgcol = colist[2] ~= "" and colist[2] or "black"
         local FGrgb = color_table[fgcol] or string.split(fgcol, ",")
         local BGrgb = color_table[bgcol] or string.split(bgcol, ",")
-
+        local alpha = BGrgb[4] or 255
         if win then
           setFgColor(win, FGrgb[1], FGrgb[2], FGrgb[3])
-          setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3])
+          setBgColor(win, BGrgb[1], BGrgb[2], BGrgb[3], alpha)
           echo(win, text)
         else
           setFgColor(FGrgb[1], FGrgb[2], FGrgb[3])
-          setBgColor(BGrgb[1], BGrgb[2], BGrgb[3])
+          setBgColor(BGrgb[1], BGrgb[2], BGrgb[3], alpha)
           echo(text)
         end
       end
@@ -1877,7 +2076,7 @@ local function copy2color(name,win,str,inst)
   if not start then
     error(name..": string not found",3)
   end
-  local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   if name == "copy2html" then
     style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
@@ -1961,11 +2160,28 @@ function setLabelCursor(labelname, cursorShape)
   return setLabelCursorLayer(labelname, cursorShape)
 end
 
+mudlet.BgImageMode ={
+  ["border"] = 1,
+  ["center"] = 2,
+  ["tile"]   = 3,
+  ["style"]  = 4,
+}
 
---These functions ensure backward compatibility for the setLabelCallback functions
+local setConsoleBackgroundImageLayer = setConsoleBackgroundImage
+function setConsoleBackgroundImage(...)
+  local mode = arg[arg.n]
+  if type(mode) == "string" then
+    mode = mudlet.BgImageMode[mode] or mode
+  end
+  arg[arg.n] = mode
+  return setConsoleBackgroundImageLayer(unpack(arg))
+end
+
+
+--These functions ensure backward compatibility for the setActionCallback functions
 --unpack function which also returns the nil values
 -- the arg_table (arg) saves the number of arguments in n -> arg_table.n (arg.n)
-local function unpack_w_nil (arg_table, counter)
+function unpack_w_nil (arg_table, counter)
   counter = counter or 1
   if counter >= arg_table.n then
     return arg_table[counter]
@@ -1973,15 +2189,18 @@ local function unpack_w_nil (arg_table, counter)
   return arg_table[counter], unpack_w_nil(arg_table, counter + 1)
 end
 
-local function setLabelCallback(callbackFunc, labelname, func, ...)
+-- This wrapper gives callback functions the possibility to be used like
+-- setCallBackFunction (name,function as string,args)
+-- it is used by setLabelCallBack functions and setCmdLineAction
+local function setActionCallback(callbackFunc, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
     func = loadstring("return "..func.."(...)")
   end
-  assert(type(func) == 'function', '<setLabelCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
+  assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
   if nr > 1 then
-    return callbackFunc(labelname, 
+    return callbackFunc(name, 
     function(event) 
       if not event then 
         arg.n = nr - 1 
@@ -1990,40 +2209,53 @@ local function setLabelCallback(callbackFunc, labelname, func, ...)
       func(unpack_w_nil(arg)) 
     end )
   end 
-  callbackFunc(labelname, func) 
+  callbackFunc(name, func) 
 end
 
 local setLC = setLC or setLabelClickCallback
 function setLabelClickCallback (...)
-  setLabelCallback(setLC, ...)
+  setActionCallback(setLC, ...)
 end
 
 local setLDC = setLDC or setLabelDoubleClickCallback
 function setLabelDoubleClickCallback (...)
-  setLabelCallback(setLDC, ...)
+  setActionCallback(setLDC, ...)
 end
 
 local setLRC = setLRC or setLabelReleaseCallback
 function setLabelReleaseCallback(...)
-  setLabelCallback(setLRC, ...)
+  setActionCallback(setLRC, ...)
 end
 
 local setLMC = setLMC or setLabelMoveCallback
 function setLabelMoveCallback(...)
-  setLabelCallback(setLMC, ...)
+  setActionCallback(setLMC, ...)
 end
 
 local setLWC = setLWC or setLabelWheelCallback
 function setLabelWheelCallback(...)
-  setLabelCallback(setLWC, ...)
+  setActionCallback(setLWC, ...)
 end
 
 local setOnE = setOnE or setLabelOnEnter
 function setLabelOnEnter(...)
-  setLabelCallback(setOnE, ...)
+  setActionCallback(setOnE, ...)
 end
 
 local setOnL = setOnL or setLabelOnLeave
 function setLabelOnLeave(...)
-  setLabelCallback(setOnL,...)
+  setActionCallback(setOnL,...)
+end
+
+local setCmdLA = setCmdLA or setCmdLineAction
+function setCmdLineAction(...)
+  setActionCallback(setCmdLA,...)
+end
+
+function resetUserWindowTitle(windowname)
+  return setUserWindowTitle(windowname, "")
+end
+
+function resetMapWindowTitle()
+  return setMapWindowTitle("")
 end
