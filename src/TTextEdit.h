@@ -64,6 +64,7 @@ public:
     void forceUpdate();
     void needUpdate(int, int);
     void scrollTo(int);
+    void scrollH(int);
     void scrollUp(int lines);
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
@@ -73,6 +74,7 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
+    void updateHorizontalScrollBar(int);
     void highlightSelection();
     void unHighlight();
     void focusInEvent(QFocusEvent* event) override;
@@ -88,6 +90,7 @@ public:
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
     int mCursorY;
+    int mCursorX;
     QFont mDisplayFont;
     QColor mFgColor;
     int mFontAscent;
@@ -111,6 +114,7 @@ public slots:
     void slot_copySelectionToClipboard();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
+    void slot_hScrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
@@ -156,12 +160,12 @@ private:
     TBuffer* mpBuffer;
     TConsole* mpConsole;
     QPointer<Host> mpHost;
-    QScrollBar* mpScrollBar;
     // screen height in characters
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
+    int mScreenOffset = 0;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
