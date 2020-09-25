@@ -165,12 +165,19 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
 void TTextEdit::slot_scrollBarMoved(int line)
 {
     if (mpConsole->mpScrollBar) {
+        updateScrollBar(line);
+        scrollTo(line);
+    }
+}
+
+void TTextEdit::updateScrollBar(int line)
+{
+    if (mpConsole->mpScrollBar) {
         disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
-        mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
+        mpConsole->mpScrollBar->setRange(mScreenHeight, mpBuffer->getLastLineNumber());
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(mScreenHeight);
         mpConsole->mpScrollBar->setValue(line);
-        scrollTo(line);
         connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
     }
 }
@@ -178,7 +185,7 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mpHScrollBar) {
-        updateHorizontalScrollBar(mpBuffer->getLastLineNumber());
+        updateHorizontalScrollBar();
         scrollH(offset);
     }
 }
@@ -194,15 +201,17 @@ void TTextEdit::initDefaultSettings()
     mWrapIndentCount = 5;
 }
 
-void TTextEdit::updateHorizontalScrollBar(int lineNumber)
+void TTextEdit::calculateScreenOffset(int lineNumber)
 {
-    if (mIsLowerPane || !mpConsole->mpHScrollBar || lineNumber < 1) {
+    if (mIsLowerPane || lineNumber < 1) {
         return;
     }
 
-    int columnCount = getColumnCount();
     const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     int currentSize = lineText.size();
+    int columnCount = getColumnCount();
+    mMaxHRange = mScreenOffset - columnCount;
+
     if (mShowTimeStamps) {
         currentSize += mTimeStampWidth;
     }
@@ -211,19 +220,34 @@ void TTextEdit::updateHorizontalScrollBar(int lineNumber)
         mScreenOffset = currentSize;
     }
 
-    int maxRange = mScreenOffset - columnCount;
-    if (maxRange < 1) {
+    if (mMaxHRange < 1) {
+        mCursorX = 0;
+    } else {
+        if (mCursorX > mMaxHRange) {
+            mCursorX = mMaxHRange;
+        }
+    }
+}
+
+void TTextEdit::updateHorizontalScrollBar()
+{
+    if (mIsLowerPane || !mpConsole->mpHScrollBar) {
+        return;
+    }
+
+    int columnCount = getColumnCount();
+    if (mMaxHRange < 1) {
         mpConsole->mpHScrollBar->hide();
         mCursorX = 0;
     } else {
-        mpConsole->mpHScrollBar->show();
-        if (mCursorX > maxRange) {
-            mCursorX = maxRange;
+        if (mCursorX > mMaxHRange) {
+            mCursorX = mMaxHRange;
         }
+        mpConsole->mpHScrollBar->show();
     }
 
     disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
-    mpConsole->mpHScrollBar->setRange(0, maxRange);
+    mpConsole->mpHScrollBar->setRange(0, mMaxHRange);
     mpConsole->mpHScrollBar->setSingleStep(1);
     mpConsole->mpHScrollBar->setPageStep(columnCount);
     mpConsole->mpHScrollBar->setValue(mCursorX);
@@ -266,6 +290,7 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
+    mOldScrollPos = mpBuffer->getLastLineNumber();
 }
 
 void TTextEdit::showNewLines()
@@ -295,14 +320,7 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
-            mpConsole->mpScrollBar->setRange(0, mpBuffer->getLastLineNumber());
-            mpConsole->mpScrollBar->setSingleStep(1);
-            mpConsole->mpScrollBar->setPageStep(mScreenHeight);
-            if (mIsTailMode) {
-                mpConsole->mpScrollBar->setValue(mpBuffer->mCursorY);
-            }
-            connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+            updateScrollBar(mpBuffer->mCursorY);
         }
     }
     update();
@@ -350,8 +368,9 @@ void TTextEdit::scrollUp(int lines)
     if (bufferScrollUp(lines)) {
         mIsTailMode = false;
         mScrollVector = 0;
-        update();
     }
+    updateScrollBar(mpBuffer->mCursorY);
+    update();
 }
 
 void TTextEdit::scrollDown(int lines)
@@ -362,6 +381,7 @@ void TTextEdit::scrollDown(int lines)
 
     if (bufferScrollDown(lines)) {
         mScrollVector = 0;
+        updateScrollBar(mpBuffer->mCursorY);
         update();
     }
 }
@@ -612,8 +632,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         drawLine(p, i + lineOffset, i);
-        if (Q_UNLIKELY(mpConsole->getType() == TConsole::ErrorConsole)) {
-            updateHorizontalScrollBar(i + lineOffset);
+        calculateScreenOffset(i + lineOffset);
+        if (Q_UNLIKELY(mpConsole->mpHScrollBar)) {
+            updateHorizontalScrollBar();
         }
     }
     p.end();
@@ -905,7 +926,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             if (mShowTimeStamps) {
                 rightX = (mTimeStampWidth + column - mCursorX) * mFontWidth;
             } else {
-                rightX = (column) * mFontWidth;
+                rightX = (column - mCursorX) * mFontWidth;
             }
 
             // Format of display "[index of FIRST QChar in grapheme|leftX]grapheme[rightX|index of LAST QChar in grapheme (may be same as FIRST)]" ...
@@ -1565,18 +1586,27 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    int k = 3;
-    if (e->delta() < 0) {
-        mpConsole->scrollDown(abs(k));
-        e->accept();
-        return;
-    }
-    if (e->delta() > 0) {
+    const int k = 3;
+    int deltaY = e->angleDelta().y() / (8 * 15);
+    int deltaX = e->angleDelta().x() / (8 * 15);
+    bool handled = false;
+    if (deltaY < 0) {
+        mpConsole->scrollDown(k);
+        handled = true;
+    } else if (e->delta() > 0) {
         mpConsole->scrollUp(k);
-        e->accept();
-        return;
+        handled = true;
     }
-    e->ignore();
+
+    if (deltaX < 0) {
+        scrollH(std::max(0, mCursorX - k));
+        handled = true;
+    } else if (deltaX > 0) {
+        scrollH(std::min(mMaxHRange, mCursorX + k));
+        handled = true;
+    }
+
+    e->setAccepted(handled);
 }
 
 int TTextEdit::imageTopLine()

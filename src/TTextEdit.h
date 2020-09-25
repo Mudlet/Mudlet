@@ -74,7 +74,9 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
-    void updateHorizontalScrollBar(int);
+    void updateScrollBar(int);
+    void calculateScreenOffset(int);
+    void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
     void focusInEvent(QFocusEvent* event) override;
@@ -166,6 +168,7 @@ private:
     QPixmap mScreenMap;
     int mScreenWidth;
     int mScreenOffset = 0;
+    int mMaxHRange;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
