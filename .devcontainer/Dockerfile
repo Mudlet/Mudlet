@@ -8,5 +8,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
          liblua5.1-dev zlib1g-dev libhunspell-dev libpcre3-dev libzip-dev libboost-dev \
          libyajl-dev libpulse-dev lua-rex-pcre lua-filesystem lua-zip lua-sql-sqlite3  \
          qt5-default qtmultimedia5-dev qttools5-dev luarocks ccache libpugixml-dev     \
-    && apt-get clean \
+         libqt5texttospeech5-dev qtspeech5-flite-plugin qtspeech5-speechd-plugin       \
+    && apt-get clean                                        \
     && rm -rf /var/lib/apt/lists/*
