@@ -89,6 +89,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
+, mpHScrollBar(nullptr)
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -516,6 +517,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mLowerPane->hide();
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
+
+    //give the ErrorConsole a horizontal scrollbar
+    if (mType == ErrorConsole) {
+        mpHScrollBar = new QScrollBar(Qt::Horizontal);
+        mpHScrollBar->setFixedHeight(15);
+        connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
+        centralLayout->addWidget(mpHScrollBar);
+        mpHScrollBar->setContentsMargins(0, 0, 0, 0);
+        mpHScrollBar->setSizePolicy(sizePolicy);
+        mpHScrollBar->hide();
+    }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
         mpScrollBar->hide();

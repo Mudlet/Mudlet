@@ -51,6 +51,7 @@
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
+, mCursorX(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
@@ -61,7 +62,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
-, mpScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
@@ -175,6 +175,14 @@ void TTextEdit::slot_scrollBarMoved(int line)
     }
 }
 
+void TTextEdit::slot_hScrollBarMoved(int offset)
+{
+    if (mpConsole->mpHScrollBar) {
+        updateHorizontalScrollBar(mpBuffer->getLastLineNumber());
+        scrollH(offset);
+    }
+}
+
 void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192, 192, 192);
@@ -184,6 +192,42 @@ void TTextEdit::initDefaultSettings()
     setFont(mDisplayFont);
     mWrapAt = 100;
     mWrapIndentCount = 5;
+}
+
+void TTextEdit::updateHorizontalScrollBar(int lineNumber)
+{
+    if (mIsLowerPane || !mpConsole->mpHScrollBar || lineNumber < 1) {
+        return;
+    }
+
+    int columnCount = getColumnCount();
+    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+    int currentSize = lineText.size();
+    if (mShowTimeStamps) {
+        currentSize += mTimeStampWidth;
+    }
+
+    if (currentSize > mScreenOffset) {
+        mScreenOffset = currentSize;
+    }
+
+    int maxRange = mScreenOffset - columnCount;
+    if (maxRange < 1) {
+        mpConsole->mpHScrollBar->hide();
+        mCursorX = 0;
+    } else {
+        mpConsole->mpHScrollBar->show();
+        if (mCursorX > maxRange) {
+            mCursorX = maxRange;
+        }
+    }
+
+    disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
+    mpConsole->mpHScrollBar->setRange(0, maxRange);
+    mpConsole->mpHScrollBar->setSingleStep(1);
+    mpConsole->mpHScrollBar->setPageStep(columnCount);
+    mpConsole->mpHScrollBar->setValue(mCursorX);
+    connect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
 }
 
 void TTextEdit::updateScreenView()
@@ -291,6 +335,12 @@ void TTextEdit::scrollTo(int line)
     }
 }
 
+void TTextEdit::scrollH(int offset)
+{
+    mCursorX = offset;
+    update();
+}
+
 void TTextEdit::scrollUp(int lines)
 {
     if (mIsLowerPane) {
@@ -353,7 +403,7 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
 {
-    QPoint cursor(0, lineOfScreen);
+    QPoint cursor(-mCursorX, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
 
@@ -562,6 +612,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             break;
         }
         drawLine(p, i + lineOffset, i);
+        if (Q_UNLIKELY(mpConsole->getType() == TConsole::ErrorConsole)) {
+            updateHorizontalScrollBar(i + lineOffset);
+        }
     }
     p.end();
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
@@ -774,6 +827,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // the left margin within the area that gets repainted...
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
+    forceUpdate();
 }
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds)
@@ -806,6 +860,8 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
         // that buffer has reached the limit when it starts to have the
         // beginning lines deleted!
 
+        // offset will only have a value for errorwindows if they use the horizontal scrollbar (for now)
+        int offset = mCursorX * mFontWidth;
         // Count of "normal" width equivalent characters - we will multiply that
         // by the average character width to determine whether the mouse is over
         // a particular grapheme:
@@ -836,7 +892,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             // Do an additional check if we need to establish whether we are
             // over just the timestamp part of the line:
             if (Q_UNLIKELY(isOverTimeStamp && mShowTimeStamps && indexOfChar == 0)) {
-                if (mouseX < (mTimeStampWidth * mFontWidth)) {
+                if ((mouseX + offset) < (mTimeStampWidth * mFontWidth)) {
                     // The mouse position is actually over the timestamp region
                     // to the left of the main text:
                     *isOverTimeStamp = true;
@@ -844,7 +900,14 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             }
 
             leftX = rightX;
-            rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            //mCursorX only relevant for horizontal scrollbars and therefore only for the ErrorConsole
+            //Otherwise the value is always 0
+            if (mShowTimeStamps) {
+                rightX = (mTimeStampWidth + column - mCursorX) * mFontWidth;
+            } else {
+                rightX = (column) * mFontWidth;
+            }
+
             // Format of display "[index of FIRST QChar in grapheme|leftX]grapheme[rightX|index of LAST QChar in grapheme (may be same as FIRST)]" ...
             // debugText << QStringLiteral("[%1|%2]%3[%4|%5]").arg(QString::number(indexOfChar), QString::number(leftX), grapheme, QString::number(rightX - 1), QString::number(nextBoundary - 1));
             if (leftX <= mouseX && mouseX < rightX) {
