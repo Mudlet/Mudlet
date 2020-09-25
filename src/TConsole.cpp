@@ -110,6 +110,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mHScrollBarEnabled(false)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -485,6 +486,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+    //create horizontal scrollbar
+    mpHScrollBar = new QScrollBar(Qt::Horizontal);
+    mpHScrollBar->setFixedHeight(15);
+    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
+    centralLayout->addWidget(mpHScrollBar);
+    mpHScrollBar->setContentsMargins(0, 0, 0, 0);
+    mpHScrollBar->setSizePolicy(sizePolicy);
+    mpHScrollBar->hide();
+
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
     }
@@ -518,15 +528,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
 
-    //give the ErrorConsole a horizontal scrollbar
+    //enable horizontal scrollbar in ErrorConsole
     if (mType == ErrorConsole) {
-        mpHScrollBar = new QScrollBar(Qt::Horizontal);
-        mpHScrollBar->setFixedHeight(15);
-        connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
-        centralLayout->addWidget(mpHScrollBar);
-        mpHScrollBar->setContentsMargins(0, 0, 0, 0);
-        mpHScrollBar->setSizePolicy(sizePolicy);
-        mpHScrollBar->hide();
+        mHScrollBarEnabled = true;
     }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
@@ -2232,6 +2236,14 @@ void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
         mpScrollBar->setVisible(isVisible);
+    }
+}
+
+void TConsole::setHorizontalScrollBar(bool isEnabled)
+{
+    if (mpHScrollBar) {
+        mHScrollBarEnabled = isEnabled;
+        mpHScrollBar->setVisible(isEnabled);
     }
 }
 

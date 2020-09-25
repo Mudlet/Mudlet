@@ -184,7 +184,7 @@ void TTextEdit::updateScrollBar(int line)
 
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
-    if (mpConsole->mpHScrollBar) {
+    if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
         updateHorizontalScrollBar();
         scrollH(offset);
     }
@@ -231,7 +231,7 @@ void TTextEdit::calculateScreenOffset(int lineNumber)
 
 void TTextEdit::updateHorizontalScrollBar()
 {
-    if (mIsLowerPane || !mpConsole->mpHScrollBar) {
+    if (mIsLowerPane) {
         return;
     }
 
@@ -637,7 +637,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         calculateScreenOffset(i + lineOffset);
         drawLine(p, i + lineOffset, i);
     }
-    if (Q_UNLIKELY(mpConsole->mpHScrollBar)) {
+    if (Q_UNLIKELY(mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar)) {
         updateHorizontalScrollBar();
     }
     p.end();

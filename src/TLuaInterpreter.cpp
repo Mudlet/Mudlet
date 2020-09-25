@@ -2659,7 +2659,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = "main";
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "enableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2680,7 +2680,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = "main";
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "disableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2694,6 +2694,49 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     Host& host = getHostFromLua(L);
 
     mudlet::self()->setScrollBarVisible(&host, windowName, false);
+    return 0;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableHorizontalScrollBar
+int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName = "main";
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setHorizontalScrollBar(&host, windowName, true);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableHorizontalScrollBar
+int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName = "main";
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setHorizontalScrollBar(&host, windowName, false);
     return 0;
 }
 
@@ -17269,6 +17312,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
+    lua_register(pGlobalLua, "enableHorizontalScrollBar", TLuaInterpreter::enableHorizontalScrollBar);
+    lua_register(pGlobalLua, "disableHorizontalScrollBar", TLuaInterpreter::disableHorizontalScrollBar);
     lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
     lua_register(pGlobalLua, "disableCommandLine", TLuaInterpreter::disableCommandLine);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);

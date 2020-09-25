@@ -2535,6 +2535,11 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
         return false;
     }
 
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setScrollBarVisible(isVisible);
+        return true;
+    }
+
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setScrollBarVisible(isVisible);
@@ -2542,6 +2547,26 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
     } else {
         return false;
     }
+}
+
+bool mudlet::setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+   return false;
 }
 
 bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)

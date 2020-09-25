@@ -96,6 +96,16 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Enables the horizontal scroll bar for this window
+function Geyser.MiniConsole:enableHorizontalScrollBar()
+  enableHorizontalScrollBar(self.name)
+end
+
+-- Disables the horizontal scroll bar for this window
+function Geyser.MiniConsole:disableHorizontalScrollBar()
+  disableHorizontalScrollBar(self.name)
+end
+
 -- Start commandLine functions
 --- Enables the scroll bar for this window
 -- @param isVisible boolean to set visibility.
