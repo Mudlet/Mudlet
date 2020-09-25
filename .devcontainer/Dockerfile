@@ -5,3 +5,4 @@ FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 # Install additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends cmake
+    && apt-get -y install --no-install-recommends qtbase5-dev
