@@ -1433,14 +1433,18 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon
+    # set the Windows binary icon, the proper .ico file should contains several
+    # layers of increasing sizes: 16, 24, 32, 48, 64, 128, 256 - as well as
+    # being used for the executable application file when it is displayed in
+    # the Windows explorer it is also used in some other places (installed
+    # applications in Windows settings/control panel)
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             RC_ICONS = icons/mudlet_dev.ico
         } else {
-            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+            RC_ICONS = icons/mudlet.ico
         }
     }
 
