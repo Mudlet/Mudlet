@@ -173,7 +173,7 @@ jobs:
           commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-qtkeychain:
+  update-qtkeychain-source:
     runs-on: ubuntu-latest
     if: github.repository == 'Mudlet/Mudlet'
     steps:
@@ -211,7 +211,7 @@ jobs:
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-qtkeychain-${{ github.sha }}
           path: 3rdparty/qtkeychain
-          commit-message: (autocommit) Updated qtkeychain submodule to latest
+          commit-message: (autocommit) Updated qtkeychain submodule to latest upstream
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
   update-lcf-source-51:
