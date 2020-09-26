@@ -15505,18 +15505,11 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 return;
             }
 
-            QString msspVAR;
-            QString msspVAL;
+            QString msspVAR = payloadList[0];
+            QString msspVAL = payloadList[1];
 
-            for (int j = 0; j < payloadList.size(); j++) {
-                if (j < 1) {
-                    msspVAR = payloadList[j];
-                    lua_pushstring(L, msspVAR.toUtf8().constData());
-                } else {
-                    msspVAL = payloadList[j];
-                    lua_pushlstring(L, msspVAL.toUtf8().constData(), msspVAL.toUtf8().length());
-                }
-            }
+            lua_pushstring(L, msspVAR.toUtf8().constData());
+            lua_pushlstring(L, msspVAL.toUtf8().constData(), msspVAL.toUtf8().length());
 
             lua_rawset(L, -3);
 
