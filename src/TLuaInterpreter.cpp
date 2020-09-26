@@ -14937,10 +14937,6 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         return false;
     }
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -14980,10 +14976,6 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     }
 
     lua_State* L = pIndenterState.get();
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return code;
-    }
 
     if (!validLuaCode(code)) {
         return code;
@@ -15025,10 +15017,6 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 bool TLuaInterpreter::compileScript(const QString& code)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -15058,10 +15046,6 @@ bool TLuaInterpreter::compileScript(const QString& code)
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
 
     int error = (luaL_loadbuffer(L, code.toUtf8().constData(),
                                  strlen(code.toUtf8().constData()),
@@ -15098,10 +15082,6 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 bool TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qWarning() << "LUA CRITICAL ERROR: no pGlobalLua Lua execution unit found.";
-        return false;
-    }
 
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
     lua_pop(L, lua_gettop(L));
@@ -15176,10 +15156,6 @@ void TLuaInterpreter::clearCaptureGroups()
     mMultiCaptureGroupPosList.clear();
 
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-    }
-
     lua_newtable(L);
     lua_setglobal(L, "matches");
     lua_newtable(L);
@@ -15505,11 +15481,6 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 {
     lua_State* L = pGlobalLua;
 
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return;
-    }
-
     // string_data is in the format of MSSP_VAR "PLAYERS" MSSP_VAL "52" MSSP_VAR "UPTIME" MSSP_VAL "1234567890"
     // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
     QStringList packageList = string_data.split(MSSP_VAR);
@@ -15777,10 +15748,6 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return std::make_pair(false, false);
-    }
 
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -15837,11 +15804,6 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
-
     setMatches(L);
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -15872,11 +15834,6 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return std::make_pair(false, false);
-    }
-
     bool returnValue = false;
 
     setMatches(L);
@@ -15960,10 +15917,6 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
 
     lua_getfield(L, LUA_GLOBALSINDEX, function.c_str());
     int error = lua_pcall(L, 0, 1, 0);
@@ -16005,10 +15958,6 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return false;
-    }
 
     if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
@@ -16059,10 +16008,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return std::make_pair(false, false);
-    }
 
     bool returnValue = false;
 
@@ -16381,10 +16326,6 @@ double TLuaInterpreter::condenseMapLoad()
     double loadTime = -1.0;
 
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qWarning() << "condenseMapLoad: no suitable Lua execution unit found.";
-        return false;
-    }
 
     lua_getfield(L, LUA_GLOBALSINDEX, "condenseMapLoad");
     int error = lua_pcall(L, 0, 1, 0);
@@ -16808,10 +16749,6 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return;
-    }
     lua_newtable(L);
     for (int i = 0; i < variableList.size(); i++) {
         lua_pushnumber(L, i + 1); // Lua indexes start with 1
@@ -16826,10 +16763,6 @@ void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& varia
 void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varValue)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return;
-    }
 
     lua_pushstring(L, varValue.toUtf8().constData());
     lua_setglobal(L, varName.toUtf8().constData());
@@ -16840,10 +16773,6 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return QStringLiteral("LUA CRITICAL ERROR");
-    }
 
     int error = luaL_dostring(L, QStringLiteral("return %1").arg(stringName).toUtf8().constData());
     if (!error) {
@@ -18788,9 +18717,6 @@ void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, c
 void TLuaInterpreter::updateAnsi16ColorsInTable()
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        return;
-    }
 
     // Does the color_table already exist:
     // Equivalent to Lua:
@@ -18895,9 +18821,6 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
 void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        return;
-    }
 
     // Does the color_table already exist:
     // Equivalent to Lua:
@@ -19004,10 +18927,6 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
-    if (!L) {
-        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return {};
-    }
 
     // Push empty table onto stack
     lua_newtable(L);
