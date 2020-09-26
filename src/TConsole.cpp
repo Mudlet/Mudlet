@@ -681,7 +681,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     int scrollBarHeight = 0;
     if (mpHScrollBar && mpHScrollBar->isVisible()) {
-        scrollBarHeight = 15;
+        scrollBarHeight = mpHScrollBar->height();
     }
 
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
