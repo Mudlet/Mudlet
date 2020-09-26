@@ -66,6 +66,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
 , mTimeStampWidth(13) // Should be the same as the size of the timeStampFormat constant in the TBuffer class
+, mScreenOffset(0)
+, mMaxHRange(0)
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -201,24 +203,14 @@ void TTextEdit::initDefaultSettings()
     mWrapIndentCount = 5;
 }
 
-void TTextEdit::calculateScreenOffset(int lineNumber)
+void TTextEdit::calculateHMaxRange()
 {
-    if (mIsLowerPane || lineNumber < 1) {
+    if (mIsLowerPane) {
         return;
     }
 
-    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
-    int currentSize = lineText.size();
     int columnCount = getColumnCount();
     mMaxHRange = mScreenOffset - columnCount;
-
-    if (mShowTimeStamps) {
-        currentSize += mTimeStampWidth;
-    }
-
-    if (currentSize > mScreenOffset) {
-        mScreenOffset = currentSize;
-    }
 
     if (mMaxHRange < 1) {
         mCursorX = 0;
@@ -236,10 +228,15 @@ void TTextEdit::updateHorizontalScrollBar()
     }
 
     int columnCount = getColumnCount();
-    if (mMaxHRange < 1) {
+
+    if (mMaxHRange < 1 && mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->hide();
-    } else {
+        mpConsole->resizeConsole();
+    }
+
+    if (mMaxHRange > 0 && !mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->show();
+        mpConsole->resizeConsole();
     }
 
     disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
@@ -416,18 +413,24 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
     return first.unicode();
 }
 
-void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
+void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, int* offset) const
 {
     QPoint cursor(-mCursorX, lineOfScreen);
     QString lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
-
+    int currentSize = lineText.size();
     if (mShowTimeStamps) {
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         for (const QChar c : timestamp) {
             cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
         }
+        currentSize += mTimeStampWidth;
+    }
+
+    //get the longest line
+    if (offset && *offset < currentSize) {
+        *offset = currentSize;
     }
 
     int columnWithOutTimestamp = 0;
@@ -634,9 +637,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         if (static_cast<int>(mpBuffer->buffer.size()) <= i + lineOffset) {
             break;
         }
-        calculateScreenOffset(i + lineOffset);
-        drawLine(p, i + lineOffset, i);
+        drawLine(p, i + lineOffset, i, &mScreenOffset);
     }
+    calculateHMaxRange();
     if (Q_UNLIKELY(mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar)) {
         updateHorizontalScrollBar();
     }
@@ -1220,6 +1223,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         mpBuffer->mCursorY = mpBuffer->size();
         mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
         mpConsole->mUpperPane->mIsTailMode = true;
+        mpConsole->mUpperPane->updateScrollBar(mpBuffer->mCursorY);
         mpConsole->mUpperPane->updateScreenView();
         mpConsole->mUpperPane->forceUpdate();
         event->accept();

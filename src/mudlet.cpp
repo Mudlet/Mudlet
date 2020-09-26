@@ -2382,6 +2382,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
+        pC->mUpperPane->resetHScrollbar();
         pC->buffer.clear();
         pC->mUpperPane->update();
         return true;

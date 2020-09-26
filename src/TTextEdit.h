@@ -58,7 +58,7 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void showNewLines();
     void forceUpdate();
@@ -75,7 +75,7 @@ public:
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
-    void calculateScreenOffset(int);
+    void calculateHMaxRange();
     void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
@@ -85,6 +85,7 @@ public:
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
+    void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -167,7 +168,7 @@ private:
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
-    int mScreenOffset = 0;
+    int mScreenOffset;
     int mMaxHRange;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;

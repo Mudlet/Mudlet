@@ -661,6 +661,12 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
     return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
 }
 
+void TConsole::resizeConsole()
+{
+    QSize s = QSize(width(), height());
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(this, &event);
+}
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -673,6 +679,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
+    int scrollBarHeight = 0;
+    if (mpHScrollBar && mpHScrollBar->isVisible()) {
+        scrollBarHeight = 15;
+    }
 
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
@@ -680,12 +690,12 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpBaseHFrame->resize(x, y);
         x = x - mpLeftToolBar->width() - mpRightToolBar->width();
         y = y - mpTopToolBar->height();
-        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
-        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() - scrollBarHeight);
+        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() - scrollBarHeight);
     } else {
         mpMainFrame->resize(x, y);
-        mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
-        mpBackground->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpMainDisplay->resize(x, y - scrollBarHeight); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y - scrollBarHeight);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
@@ -2025,9 +2035,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(this, &event);
+    resizeConsole();
 }
 
 void TConsole::refreshMiniConsole() const
@@ -2244,6 +2252,7 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     if (mpHScrollBar) {
         mHScrollBarEnabled = isEnabled;
         mpHScrollBar->setVisible(isEnabled);
+        resizeConsole();
     }
 }
 

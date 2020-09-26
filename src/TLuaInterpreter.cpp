@@ -4396,6 +4396,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
+        host.mpConsole->mUpperPane->resetHScrollbar();
         host.mpConsole->buffer.clear();
         host.mpConsole->mUpperPane->forceUpdate();
         return 0;

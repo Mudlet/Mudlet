@@ -83,6 +83,7 @@ public:
 
     void reset();
     void resetMainConsole();
+    void resizeConsole();
     Host* getHost();
     void replace(const QString&);
     void insertHTML(const QString&);
