@@ -89,7 +89,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
-, mpHScrollBar(nullptr)
+, mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -284,13 +284,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
+    auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
-    layer->setLayout(layoutLayer);
+    layer->setLayout(vLayoutLayer);
     layoutLayer->setMargin(0);  //neu rc1
     layoutLayer->setSpacing(0); //neu rc1
     layoutLayer->setMargin(0);  //neu rc1
 
     mpScrollBar->setFixedWidth(15);
+    mpHScrollBar->setFixedHeight(15);
 
     splitter = new TSplitter(Qt::Vertical);
     splitter->setContentsMargins(0, 0, 0, 0);
@@ -333,6 +335,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+
+    vLayoutLayer->addLayout(layoutLayer);
+    vLayoutLayer->addWidget(mpHScrollBar);
+    vLayoutLayer->setContentsMargins(0, 0, 0, 0);
+    vLayoutLayer->setMargin(0);
+    vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
@@ -486,14 +494,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
-    //create horizontal scrollbar
-    mpHScrollBar = new QScrollBar(Qt::Horizontal);
-    mpHScrollBar->setFixedHeight(15);
-    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
-    centralLayout->addWidget(mpHScrollBar);
-    mpHScrollBar->setContentsMargins(0, 0, 0, 0);
-    mpHScrollBar->setSizePolicy(sizePolicy);
-    mpHScrollBar->hide();
 
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
@@ -527,6 +527,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mLowerPane->hide();
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
+    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
+
+    mpHScrollBar->hide();
 
     //enable horizontal scrollbar in ErrorConsole
     if (mType == ErrorConsole) {
@@ -679,23 +682,18 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
-    int scrollBarHeight = 0;
-    if (mpHScrollBar && mpHScrollBar->isVisible()) {
-        scrollBarHeight = mpHScrollBar->height();
-    }
-
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x = x - mpLeftToolBar->width() - mpRightToolBar->width();
         y = y - mpTopToolBar->height();
-        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() - scrollBarHeight);
-        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height() - scrollBarHeight);
+        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        mpMainDisplay->resize(x, y - scrollBarHeight); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
-        mpBackground->resize(x, y - scrollBarHeight);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
@@ -2252,7 +2250,6 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     if (mpHScrollBar) {
         mHScrollBarEnabled = isEnabled;
         mpHScrollBar->setVisible(isEnabled);
-        resizeConsole();
     }
 }
 
