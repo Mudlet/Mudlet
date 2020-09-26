@@ -1378,7 +1378,7 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
-    static QString star = QString("*");
+    static QString star = QStringLiteral("*");
 
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
