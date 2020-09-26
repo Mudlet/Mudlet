@@ -2,6 +2,14 @@
 ARG VARIANT="buster"
 FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 
+# Desktop Debian (https://github.com/microsoft/vscode-dev-containers/blob/master/script-library/docs/desktop-lite.md#usage)
+COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
+RUN apt-get update && bash /tmp/library-scripts/dekstop-lite-debian.sh && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
+ENTRYPOINT ["/usr/local/share/desktop-init.sh"]
+CMD ["sleep", "infinity"]
+
 # Install C++ dependencies
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends build-essential git cmake            \
@@ -16,10 +24,3 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Install Lua dependencies
 RUN luarocks install luautf8 \
     && luarocks install lua-yajl
-
-# Desktop Debian (https://github.com/microsoft/vscode-dev-containers/blob/master/script-library/docs/desktop-lite.md#usage)
-COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/dekstop-lite-debian.sh
-ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
-ENTRYPOINT ["/usr/local/share/desktop-init.sh"]
-CMD ["sleep", "infinity"]
