@@ -2,7 +2,7 @@
 ARG VARIANT="buster"
 FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 
-# Install additional packages.
+# Install C++ dependencies
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends build-essential git cmake            \
          liblua5.1-dev zlib1g-dev libhunspell-dev libpcre3-dev libzip-dev libboost-dev \
@@ -12,3 +12,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
          libqt5opengl5-dev                                                             \
     && apt-get clean                                        \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Lua dependencies
+RUN luarocks install luautf8 \
+    && luarocks install lua-yajl
