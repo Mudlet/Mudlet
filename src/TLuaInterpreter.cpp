@@ -14937,6 +14937,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         return false;
     }
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -14953,7 +14954,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         logError(e, _n, _n2);
     }
 
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
     if (error == 0) {
         return true;
@@ -14976,6 +14977,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     }
 
     lua_State* L = pIndenterState.get();
+    int top = lua_gettop(L);
 
     if (!validLuaCode(code)) {
         return code;
@@ -15004,12 +15006,12 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
         QString objectName = "error in Lua code";
         QString functionName = "no debug data available";
         logError(e, objectName, functionName);
-        lua_pop(L, lua_gettop(L));
+        lua_settop(L, top);
         return code;
     }
 
     QString result = lua_tostring(L, 1);
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     return result;
 }
 
@@ -15017,6 +15019,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 bool TLuaInterpreter::compileScript(const QString& code)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -15033,7 +15036,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: code compiled without errors. OK\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
     if (error == 0) {
         return true;
@@ -15046,6 +15049,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     int error = (luaL_loadbuffer(L, code.toUtf8().constData(),
                                  strlen(code.toUtf8().constData()),
@@ -15068,7 +15072,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "\nLUA: code compiled without errors. OK\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
     if (error == 0) {
         return true;
@@ -15082,9 +15086,10 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 bool TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
     return error == 0;
 }
@@ -15156,12 +15161,13 @@ void TLuaInterpreter::clearCaptureGroups()
     mMultiCaptureGroupPosList.clear();
 
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_newtable(L);
     lua_setglobal(L, "matches");
     lua_newtable(L);
     lua_setglobal(L, "multimatches");
 
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 }
 
 // No documentation available in wiki - internal function
@@ -15197,6 +15203,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 void
 TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
     lua_State *L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
         lua_newtable(L);
@@ -15231,7 +15238,7 @@ TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString
         lua_rawseti(L, -2, i + 1);
     }
 
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
 
     TEvent event{};
@@ -15309,6 +15316,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     QStringList tokenList = key.split(QLatin1Char('.'));
     if (!lua_checkstack(L, tokenList.size() + 5)) {
         return;
@@ -15473,13 +15481,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             host.mTelnet.mpComposer->show();
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseMSSP(const QString& string_data)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     // string_data is in the format of MSSP_VAR "PLAYERS" MSSP_VAL "52" MSSP_VAR "UPTIME" MSSP_VAL "1234567890"
     // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
@@ -15529,7 +15538,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             host.raiseEvent(event);
         }
 
-        lua_pop(L, lua_gettop(L));
+        lua_settop(L, top);
     }
 }
 
@@ -15700,6 +15709,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
@@ -15725,14 +15735,14 @@ bool TLuaInterpreter::call_luafunction(void* pT)
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
             }
         }
-        lua_pop(L, lua_gettop(L));
-        //lua_settop(L, 0);
+        lua_settop(L, top);
         if (error == 0) {
             return true;
         } else {
             return false;
         }
     } else {
+        lua_settop(L, top);
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
         std::string e = "Lua error:";
@@ -15748,6 +15758,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -15781,7 +15792,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
             }
         }
-        lua_pop(L, lua_gettop(L));
+        lua_settop(L, top);
         //lua_settop(L, 0);
         if (error == 0) {
             return std::make_pair(true, returnValue);
@@ -15804,6 +15815,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     setMatches(L);
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -15825,7 +15837,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 
     return (error);
 }
@@ -15834,6 +15846,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     bool returnValue = false;
 
     setMatches(L);
@@ -15862,7 +15875,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     if (error == 0) {
         return std::make_pair(true, returnValue);
     } else {
@@ -15958,6 +15971,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
@@ -15996,7 +16010,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     if (error == 0) {
         return true;
     } else {
@@ -16008,6 +16022,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     bool returnValue = false;
 
@@ -16053,7 +16068,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     if (error == 0) {
         return std::make_pair(true, returnValue);
     } else {
@@ -16065,6 +16080,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     int error = 0;
     lua_pushstring(L, text.toUtf8().constData());
@@ -16082,7 +16098,7 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << QString::fromUtf8(err.c_str()) << "\n" >> 0;
         }
     }
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     return !error;
 }
 
@@ -16090,6 +16106,7 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     int error = 0;
     if (qE) {
@@ -16242,7 +16259,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         }
     }
 
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     return !error;
 }
 
@@ -16254,6 +16271,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
     if (error) {
@@ -16315,7 +16333,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
     return !error;
 }
 
@@ -16749,6 +16767,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
     lua_newtable(L);
     for (int i = 0; i < variableList.size(); i++) {
         lua_pushnumber(L, i + 1); // Lua indexes start with 1
@@ -16756,17 +16775,18 @@ void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& varia
         lua_settable(L, -3);
     }
     lua_setglobal(L, tableName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+    lua_settop(L, top);
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varValue)
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     lua_pushstring(L, varValue.toUtf8().constData());
     lua_setglobal(L, varName.toUtf8().constData());
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+    lua_settop(L, top);
 }
 
 // No documentation available in wiki - internal function
@@ -17448,7 +17468,7 @@ void TLuaInterpreter::initLuaGlobals()
     tn = "channel102";
     set_lua_table(tn, args);
 
-    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+    lua_settop(pGlobalLua, 0);  // initial setup
 
     //FIXME make function call in destructor lua_close(L);
 }
@@ -17458,6 +17478,7 @@ void TLuaInterpreter::initLuaGlobals()
 void TLuaInterpreter::setupLanguageData()
 {
     lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
 
     // 'mudlet' global table
     lua_createtable(L, 0, 1);
@@ -17524,7 +17545,7 @@ void TLuaInterpreter::setupLanguageData()
 
     lua_setfield(L, -2, "translations");
     lua_setglobal(L, "mudlet");
-    lua_pop(L, lua_gettop(L));
+    lua_settop(L, top);
 }
 
 // No documentation available in wiki - internal function
@@ -17626,7 +17647,7 @@ void TLuaInterpreter::initIndenterGlobals()
         mpHost->postMessage(msg);
     }
 
-    lua_pop(pIndenterState.get(), lua_gettop(pIndenterState.get()));
+    lua_settop(pIndenterState.get(), 0); // initial setup
 }
 
 // No documentation available in wiki - internal function called AFTER
