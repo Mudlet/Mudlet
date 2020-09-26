@@ -708,15 +708,21 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
     pRoom->rendered = false;
     QRectF roomRectangle;
     QRectF roomNameRectangle;
+    double realHeight;
     if (isGridMode) {
+        realHeight = mRoomHeight;
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
     } else {
+        realHeight = mRoomHeight * rSize;
         roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
 
-    roomNameRectangle = roomRectangle.adjusted(-2000, mRoomHeight, 2000, mRoomHeight);
+    roomNameRectangle = roomRectangle.adjusted(-2000, realHeight, 2000, realHeight);
     painter.save();
+
+    roomVNameFont.setPointSizeF(static_cast<qreal>(mRoomWidth) * rSize * pow(1.1, mpHost->mpMap->mMapNamesSizeAdj) / 2.0);
     painter.setFont(roomVNameFont);
+
     roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
     painter.restore();
 
