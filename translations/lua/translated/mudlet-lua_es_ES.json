@@ -6,5 +6,9 @@
   "AdjustableContainer.save": {
     "message": "Guardar",
     "description": "saves the containers settings"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Desconectar ",
+    "description": "disconnect your container from the border frame"
   }
 }

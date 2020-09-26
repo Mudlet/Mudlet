@@ -58,5 +58,13 @@
   "AdjustableContainer.min_restore": {
     "message": "Verkleinern/Wiederherstellen",
     "description": "label to minimize/restore the container"
+  },
+  "AdjustableContainer.connectTo": {
+    "message": "Verbinden mit: ",
+    "description": "connect your container to a border to create a frame"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "Trennen ",
+    "description": "disconnect your container from the border frame"
   }
 }
