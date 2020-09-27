@@ -333,6 +333,7 @@ void TTextEdit::scrollTo(int line)
             mpConsole->mLowerPane->hide();
             mIsTailMode = true;
             mCursorY = mpConsole->buffer.getLastLineNumber();
+            mpConsole->mUpperPane->updateScrollBar(mCursorY);
             updateScreenView();
             forceUpdate();
         }
