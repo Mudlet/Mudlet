@@ -981,7 +981,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting) {
+        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
             unHighlight();
             mDragStart.setX(0);
             mDragStart.setY(y);
