@@ -1448,7 +1448,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 // (and thus doesn't mess up any of the caches)
 std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     if (mpConsole->getType() == TConsole::MainConsole) {
         painter.setFont(mpHost->getDisplayFont());
         painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
