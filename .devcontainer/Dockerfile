@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 
 # Desktop Debian (https://github.com/microsoft/vscode-dev-containers/blob/master/script-library/docs/desktop-lite.md#usage)
 COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh && apt-get clean \
+RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh automatic mudlet && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" DISPLAY=":1" LANG="en_US.UTF-8" LANGUAGE="en_US.UTF-8"
 ENTRYPOINT ["/usr/local/share/desktop-init.sh"]
