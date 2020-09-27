@@ -231,12 +231,10 @@ void TTextEdit::updateHorizontalScrollBar()
 
     if (mMaxHRange < 1 && mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->hide();
-        mpConsole->resizeConsole();
     }
 
     if (mMaxHRange > 0 && !mpConsole->mpHScrollBar->isVisible()) {
         mpConsole->mpHScrollBar->show();
-        mpConsole->resizeConsole();
     }
 
     disconnect(mpConsole->mpHScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_hScrollBarMoved);
