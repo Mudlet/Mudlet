@@ -1419,7 +1419,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
-    pixmap.fill(palette().base().color());
+    pixmap.fill(mBgColor);
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
