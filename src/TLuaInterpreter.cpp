@@ -1828,10 +1828,10 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     }
     QByteArray data{lua_tostring(L, 1)};
 
-    QString currentEncoding = host.mTelnet.getEncoding();
+    QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
         // We can convert the data from a QByteArray to a QString:
-        if (currentEncoding == QStringLiteral("UTF-8")) {
+        if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
             host.mpConsole->printOnDisplay(dataStdString);
@@ -1843,12 +1843,12 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             // We need to transcode it from UTF-8 into the current Game Server
             // encoding - this can fail if it includes any characters (as UTF-8)
             // that the game encoding cannot convey:
-        auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
+        auto* pDataCodec = QTextCodec::codecForName(currentEncoding);
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
-        if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
+        if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
                 lua_pushnil(L);
-                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
+                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.constData());
                 return 2;
             }
 
@@ -3806,16 +3806,18 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
     Host& host = getHostFromLua(L);
 
     QStringList knownEncodings{"ASCII"};
+    // cTelnet::getEncoding() returns a QByteArray NOT a QString:
     QString currentEncoding{host.mTelnet.getEncoding()};
     {
         auto adjustEncoding = [](auto encodingName) {
             auto originalEncoding = encodingName;
-            if (encodingName.startsWith("M_")) {
+            if (encodingName.startsWith(QStringLiteral("M_"))) {
                 encodingName.remove(0, 2);
             }
 
             return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
         };
+        // cTelnet::getEncodingsList() returns a QByteArrayList NOT a QStringList/QList<QString>:
         for (const auto& encoding : host.mTelnet.getEncodingsList()) {
             knownEncodings.append(adjustEncoding(QString(encoding)));
         }
@@ -3825,13 +3827,11 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
         std::sort(knownEncodings.begin(), knownEncodings.end(), sorter);
 
         if (currentEncoding.isEmpty()) {
-            currentEncoding = "\"ASCII\"";
+            currentEncoding = QStringLiteral("\"ASCII\"");
         } else {
             currentEncoding = adjustEncoding(currentEncoding);
         }
     }
-
-
 
     host.postMessage(QStringLiteral("[ INFO ]  - Current encoding: %1").arg(currentEncoding));
 
