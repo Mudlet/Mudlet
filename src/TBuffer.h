@@ -156,7 +156,7 @@ public:
     bool applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHist);
     bool applyFgColor(const QPoint&, const QPoint&, const QColor&);
     bool applyBgColor(const QPoint&, const QPoint&, const QColor&);
-    void appendBuffer(const TBuffer& chunk);
+    void appendBuffer(TBuffer &chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
     QStringList getEndLines(int);

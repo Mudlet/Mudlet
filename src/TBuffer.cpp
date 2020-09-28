@@ -2430,11 +2430,15 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
         x = 0;
     }
-
+    int id = 0;
     for (int total = P2.x(); x < total; ++x) {
+        id = buffer.at(y).at(x).linkIndex();
+        if (id){
+            id = slice.mLinkStore.addLinks(mLinkStore.getLinks(id),mLinkStore.getHints(id));
+        }
         // This is rather inefficient as s is only ever one QChar long
         QString s(lineBuffer.at(y).at(x));
-        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags);
+        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
     }
     return slice;
 }
@@ -2491,14 +2495,19 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
 }
 
 // This only appends the FIRST line of chunk:
-void TBuffer::appendBuffer(const TBuffer& chunk)
+void TBuffer::appendBuffer(TBuffer& chunk)
 {
     if (chunk.buffer.empty()) {
         return;
     }
+    int id = 0;
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
+        id = chunk.buffer.at(0).at(cx).linkIndex();
+        if (id){
+            id = mLinkStore.addLinks(chunk.mLinkStore.getLinks(id), chunk.mLinkStore.getHints(id));
+        }
         QString s(chunk.lineBuffer.at(0).at(cx));
-        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
+        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags, id);
     }
 
     append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
