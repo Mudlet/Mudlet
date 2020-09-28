@@ -39,6 +39,14 @@ function Geyser.CommandLine:getText()
   return getCmdLine(self.name)
 end
 
+--- Sets the style sheet of the command-line
+-- @param css The style sheet string
+function Geyser.CommandLine:setStyleSheet(css)
+  css = css or self.stylesheet
+  setCmdLineStyleSheet(self.name, css)
+  self.stylesheet = css
+end
+
 --- Sets an action to be used when text is send in this commandline. When this
 -- function is called by the event system, text the commandline sends will be 
 -- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
@@ -72,6 +80,11 @@ function Geyser.CommandLine:new (cons, container)
   self.__index = self
   
   createCommandLine(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
+  
+  if me.stylesheet then 
+    me:setStyleSheet()
+  end
+  
   return me
 end
 

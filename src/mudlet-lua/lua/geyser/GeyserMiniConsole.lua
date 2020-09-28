@@ -152,6 +152,14 @@ function Geyser.MiniConsole:getCmdLine()
   return getCmdLine(self.name)
 end
 
+--- Sets the style sheet of the command-line
+-- @param css The style sheet string
+function Geyser.MiniConsole:setCmdLineStyleSheet(css)
+  css = css or self.cmdLineStylesheet
+  setCmdLineStyleSheet(self.name, css)
+  self.cmdLineStylesheet = css
+end
+
 --- Sets bold status for this miniconsole
 -- @param bool True for bolded
 function Geyser.MiniConsole:setBold(bool)
@@ -430,6 +438,14 @@ function Geyser.MiniConsole:new (cons, container)
       me:enableAutoWrap()
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
+    end
+    if me.commandLine then
+      me:enableCommandLine()
+    else
+      me:disableCommandLine()
+    end
+    if me.cmdLineStylesheet and me.commandLine then
+      me:setCmdLineStyleSheet()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end
