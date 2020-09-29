@@ -296,7 +296,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    auto styleSheet = QStringLiteral("background-color: rgba(0,0,0,0)");
+    //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
+    auto styleSheet = QStringLiteral("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
     splitter->setParent(layer);
 
