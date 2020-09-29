@@ -1435,14 +1435,12 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
     int offset = endLine - startLine;
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
-    qDebug() << "1 selection, buffer size" << mpBuffer->lineBuffer.size() << "startline" << startLine << "endline - startline+1" << endLine - startLine + 1;
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
         // according to startPos and endPos:
         if (!textLines.at(0).isEmpty()) {
-            qDebug() << "2 selection, line is:" << textLines.at(0) << "startPos:" << startPos << "endPos - startPos + 1" << endPos - startPos + 1;
             textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
         }
     } else {
@@ -1450,7 +1448,6 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
         // number of spaces to push the first line to the right so it lines up
         // with the following lines:
         if (!textLines.at(0).isEmpty()) {
-            qDebug() << "3 selection, textLines.at(0)" << textLines.at(0) << "startPos:" << startPos;
             textLines[0] = textLines.at(0).mid(startPos);
             textLines[0] = QString(QChar::Space).repeated(startPos) % textLines.at(0);
         }
