@@ -270,6 +270,9 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
+    if (!mIsLowerPane){
+        updateScrollBar(mCursorY);
+    }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
@@ -323,17 +326,16 @@ void TTextEdit::scrollTo(int line)
     // be wrong:
     Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one", "TTextEdit::scrollTo()");
     if ((line > -1) && (line <= mpBuffer->size())) {
-        if ((line < (mpBuffer->getLastLineNumber() - mScreenHeight) && mIsTailMode)) {
+        if ((line < (mpBuffer->getLastLineNumber()) && mIsTailMode)) {
             mIsTailMode = false;
             mpConsole->mLowerPane->mCursorY = mpBuffer->size();
             mpConsole->mLowerPane->show();
             mpConsole->mLowerPane->forceUpdate();
-        } else if ((line > (mpBuffer->getLastLineNumber() - mScreenHeight)) && !mIsTailMode) {
+        } else if ((line > (mpBuffer->getLastLineNumber() - 1)) && !mIsTailMode) {
             mpConsole->mLowerPane->mCursorY = mpConsole->buffer.getLastLineNumber();
             mpConsole->mLowerPane->hide();
             mIsTailMode = true;
             mCursorY = mpConsole->buffer.getLastLineNumber();
-            mpConsole->mUpperPane->updateScrollBar(mCursorY);
             updateScreenView();
             forceUpdate();
         }
@@ -1222,7 +1224,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         mpBuffer->mCursorY = mpBuffer->size();
         mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
         mpConsole->mUpperPane->mIsTailMode = true;
-        mpConsole->mUpperPane->updateScrollBar(mpBuffer->mCursorY);
         mpConsole->mUpperPane->updateScreenView();
         mpConsole->mUpperPane->forceUpdate();
         event->accept();

@@ -1410,7 +1410,6 @@ void TConsole::scrollDown(int lines)
         mLowerPane->hide();
 
         mUpperPane->mCursorY = buffer.lineBuffer.size();
-        mUpperPane->updateScrollBar(mUpperPane->mCursorY);
         mUpperPane->updateScreenView();
         mUpperPane->forceUpdate();
     }
