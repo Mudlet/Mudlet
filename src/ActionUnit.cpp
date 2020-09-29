@@ -247,6 +247,7 @@ void ActionUnit::unregisterAction(TAction* pT)
             }
         }
         if (!pT->getParent()) {
+            removeAction(pT);
             removeActionRootNode(pT);
         } else {
             removeAction(pT);
