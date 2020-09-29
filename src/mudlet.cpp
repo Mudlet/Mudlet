@@ -1966,11 +1966,58 @@ void mudlet::commitLayoutUpdates()
     while (itHostToolbarsList.hasNext()) {
         itHostToolbarsList.next();
         for (auto pToolBar : itHostToolbarsList.value()) {
-            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_LIKELY(pToolBar)) {
+                if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                    qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                } else if (pToolBar->property("layoutChanged").toBool()) {
+                    pToolBar->setProperty("layoutChanged", QVariant(false));
+                }
             }
         }
         itHostToolbarsList.remove();
+    }
+}
+
+bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -2263,7 +2310,7 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pC) {
-        pC->setConsoleBgColor(r, g, b);
+        pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
         QPalette mainPalette;
@@ -3012,18 +3059,20 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
+bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
 {
     if (!pHost || !pHost->mpConsole) {
-        return;
+        return false;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setBgColor(r, g, b);
+        pC->setBgColor(r, g, b, a);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
+        return true;
     }
+    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)

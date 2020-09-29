@@ -423,7 +423,7 @@ END : {
 #else
                     if (mBgColor != QColor("transparent")) {
 #endif
-                        pC->setBgColor(r1, g1, b1);
+                        pC->setBgColor(r1, g1, b1, 255);
                     }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                     if (mFgColor != QColorConstants::Transparent) {
@@ -435,7 +435,7 @@ END : {
                 }
             } else {
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
+                pC->setBgColor(r1, g1, b1, 255);
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -508,7 +508,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -640,7 +640,7 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -763,7 +763,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {
@@ -903,7 +903,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
 #else
                 if (mBgColor != QColor("transparent")) {
 #endif
-                    pC->setBgColor(r1, g1, b1);
+                    pC->setBgColor(r1, g1, b1, 255);
                 }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                 if (mFgColor != QColorConstants::Transparent) {

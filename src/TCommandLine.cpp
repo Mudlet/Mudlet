@@ -444,7 +444,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpHost->mScreenHeight);
+                mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -457,7 +457,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollDown(mpHost->mScreenHeight);
+                mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -571,6 +571,14 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
     QPlainTextEdit::focusOutEvent(event);
 }
 
+void TCommandLine::hideEvent(QHideEvent* event)
+{
+    if (hasFocus()) {
+        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+    }
+    QPlainTextEdit::hideEvent(event);
+}
+
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
@@ -598,13 +606,11 @@ void TCommandLine::adjustHeight()
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        if (mType == MainCommandLine) {
-            int x = mpConsole->width();
-            int y = mpConsole->height();
-            QSize s = QSize(x, y);
-            QResizeEvent event(s, s);
-            QApplication::sendEvent(mpConsole, &event);
-        }
+        int x = mpConsole->width();
+        int y = mpConsole->height();
+        QSize s = QSize(x, y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent(mpConsole, &event);
     }
 }
 

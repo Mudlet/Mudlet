@@ -1450,7 +1450,6 @@ void dlgProfilePreferences::resetColors()
     if (!pHost) {
         return;
     }
-
     pHost->mCommandLineFgColor = Qt::darkGray;
     pHost->mCommandLineBgColor = Qt::black;
     pHost->mCommandFgColor = QColor(113, 113, 0);
@@ -1477,6 +1476,7 @@ void dlgProfilePreferences::resetColors()
 
     setColors();
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 
