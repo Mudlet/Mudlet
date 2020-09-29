@@ -247,6 +247,7 @@ void ActionUnit::unregisterAction(TAction* pT)
             }
         }
         if (!pT->getParent()) {
+            removeAction(pT);
             removeActionRootNode(pT);
         } else {
             removeAction(pT);
@@ -465,7 +466,10 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
     pTB->setTitleBarWidget(nullptr);
     pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     if (pA->mLocation == 4) {
-        mudlet::self()->addDockWidget(pA->mToolbarLastDockArea, pTB);
+        if (pA->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
+            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pA->mName << "\"), for this toolbar forcing it to the Left one!";
+        }
+        mudlet::self()->addDockWidget(((pA->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pA->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pTB);
         if (pA->mToolbarLastFloatingState) {
             pTB->setFloating(true);
             QPoint pos = QPoint(pA->mPosX, pA->mPosY);

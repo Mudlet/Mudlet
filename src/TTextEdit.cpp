@@ -1008,7 +1008,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting) {
+        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
             unHighlight();
             mDragStart.setX(0);
             mDragStart.setY(y);
@@ -1446,7 +1446,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
-    pixmap.fill(palette().base().color());
+    pixmap.fill(mBgColor);
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
@@ -1475,7 +1475,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 // (and thus doesn't mess up any of the caches)
 std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     if (mpConsole->getType() == TConsole::MainConsole) {
         painter.setFont(mpHost->getDisplayFont());
         painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);

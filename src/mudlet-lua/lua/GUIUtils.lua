@@ -1739,6 +1739,14 @@ local grayscaleComponents = {
 }
 
 local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
+
+-- function for converting a raw ANSI string into plain strings
+function ansi2string(text)
+  assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
+  local result = rex.gsub(text, ansiPattern, "")
+  return result
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent

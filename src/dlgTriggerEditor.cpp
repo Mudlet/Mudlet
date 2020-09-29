@@ -86,6 +86,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
 , mSavingAs(false)
+, mIsGrabKey(false)
 , mAutosaveInterval{}
 , mTriggerEditorSplitterState{}
 , mAliasEditorSplitterState{}

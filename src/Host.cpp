@@ -1378,8 +1378,16 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
+    static QString star = QStringLiteral("*");
+
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
+        for (auto& script : scriptList) {
+            script->callEventHandler(pE);
+        }
+    }
+    if (mEventHandlerMap.contains(star)) {
+        QList<TScript*> scriptList = mEventHandlerMap.value(star);
         for (auto& script : scriptList) {
             script->callEventHandler(pE);
         }
@@ -1387,6 +1395,12 @@ void Host::raiseEvent(const TEvent& pE)
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
         QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+        for (int i = 0, total = functionsList.size(); i < total; ++i) {
+            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        }
+    }
+    if (mAnonymousEventHandlerFunctions.contains(star)) {
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
         for (int i = 0, total = functionsList.size(); i < total; ++i) {
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
@@ -1951,17 +1965,17 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
     bool needToEmit = false;
-    const QString encoding(mTelnet.getEncoding());
+    const QByteArray encoding(mTelnet.getEncoding());
 
     QMutexLocker locker(& mLock);
     if (state == Qt::PartiallyChecked) {
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == QLatin1String("GBK")
-            || encoding == QLatin1String("GB18030")
-            || encoding == QLatin1String("Big5")
-            || encoding == QLatin1String("Big5-HKSCS")) {
+        if (encoding == "GBK"
+            || encoding == "GB18030"
+            || encoding == "BIG5"
+            || encoding == "BIG5-HKSCS") {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
