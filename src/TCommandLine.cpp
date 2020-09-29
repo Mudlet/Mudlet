@@ -444,7 +444,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpHost->mScreenHeight);
+                mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -457,7 +457,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollDown(mpHost->mScreenHeight);
+                mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
