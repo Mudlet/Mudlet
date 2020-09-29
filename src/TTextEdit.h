@@ -83,6 +83,7 @@ public:
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
+    int getScreenHeight() { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
