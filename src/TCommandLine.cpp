@@ -280,7 +280,6 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mIsTailMode = true;
-                mpConsole->mUpperPane->updateScrollBar(mpConsole->buffer.mCursorY);
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
                 ke->accept();
