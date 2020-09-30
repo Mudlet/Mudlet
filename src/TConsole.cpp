@@ -1855,7 +1855,7 @@ std::list<int> TConsole::_getFgColor(int offset)
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while(len - 1 >= x+n) {
+        while (len - 1 >= x+n) {
             if (color != line.at(x+n).foreground())
                 break;
             n += 1;
@@ -1889,7 +1889,7 @@ std::list<int> TConsole::_getBgColor(int offset)
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while(len - 1 >= x+n) {
+        while (len - 1 >= x+n) {
             if (color != line.at(x+n).background())
                 break;
             n += 1;
