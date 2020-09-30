@@ -106,8 +106,8 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
-    std::list<int> getFgColor(std::string& buf);
-    std::list<int> getBgColor(std::string& buf);
+    std::list<int> getFgColor(std::string& buf, int offset);
+    std::list<int> getBgColor(std::string& buf, int offset);
     void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
@@ -184,8 +184,8 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
-    std::list<int> _getFgColor();
-    std::list<int> _getBgColor();
+    std::list<int> _getFgColor(int offset);
+    std::list<int> _getBgColor(int offset);
     void _luaWrapLine(int);
     QString getCurrentLine();
     void selectCurrentLine();

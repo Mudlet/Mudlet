@@ -1832,10 +1832,10 @@ void TConsole::selectCurrentLine(std::string& buf)
     }
 }
 
-std::list<int> TConsole::_getFgColor()
+std::list<int> TConsole::_getFgColor(int offset)
 {
     std::list<int> result;
-    int x = P_begin.x();
+    int x = P_begin.x() + offset;
     int y = P_begin.y();
     if (y < 0) {
         return result;
@@ -1847,20 +1847,29 @@ std::list<int> TConsole::_getFgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).foreground());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while(len - 1 >= x+n) {
+            if (color != line.at(x+n).foreground())
+                break;
+            n += 1;
+        }
+        result.push_back(n);
     }
 
     return result;
 }
 
-std::list<int> TConsole::_getBgColor()
+std::list<int> TConsole::_getBgColor(int offset)
 {
     std::list<int> result;
-    int x = P_begin.x();
+    int x = P_begin.x() + offset;
     int y = P_begin.y();
     if (y < 0) {
         return result;
@@ -1872,38 +1881,48 @@ std::list<int> TConsole::_getBgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).background());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while(len - 1 >= x+n) {
+            if (color != line.at(x+n).background())
+                break;
+            n += 1;
+        }
+        result.push_back(n);
     }
+
     return result;
 }
 
-std::list<int> TConsole::getFgColor(std::string& buf)
+std::list<int> TConsole::getFgColor(std::string& buf, int offset)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        return _getFgColor();
+        return _getFgColor(offset);
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
-        return pC->_getFgColor();
+        return pC->_getFgColor(offset);
     }
 
     return {};
 }
 
-std::list<int> TConsole::getBgColor(std::string& buf)
+std::list<int> TConsole::getBgColor(std::string& buf, int offset)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        return _getBgColor();
+        return _getBgColor(offset);
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
-        return pC->_getBgColor();
+        return pC->_getBgColor(offset);
     }
 
     return {};
