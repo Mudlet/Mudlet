@@ -355,7 +355,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
         } else {
-            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area not valid.";
         }
     } else {
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";
