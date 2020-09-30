@@ -383,7 +383,7 @@ function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
     self.timer_active = self.timer_active or true
     -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event
+    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
     if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
         self.timer_active = false
         tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
