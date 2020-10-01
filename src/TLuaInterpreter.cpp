@@ -8626,6 +8626,8 @@ int TLuaInterpreter::exists(lua_State* L)
         cnt += host.getAliasUnit()->mLookupTable.count(name);
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
+    } else if (type == "button") {
+        cnt += host.getActionUnit()->findActionsByName(name).size();
     } else if (type == "script") {
         cnt += host.getScriptUnit()->findScriptId(name).size();
     }
@@ -8686,6 +8688,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
             it1++;
         }
+    } else if (type.compare(QLatin1String("button"), Qt::CaseInsensitive) == 0) {
+        QMap<int, TAction*> actions = host.getActionUnit()->getActionList();
+        for (auto action : actions) {
+            if (action->getName() == name && action->isActive()) {
+                ++cnt;
+            }
+        }
     } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
         QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
         for (auto script : scripts) {
@@ -8695,8 +8704,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         }
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'keybind', 'timer' or 'trigger'",
-                        type.toUtf8().constData());
+        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'keybind', 'timer' or 'trigger'", type.toUtf8().constData());
     }
     lua_pushnumber(L, cnt);
     return 1;
