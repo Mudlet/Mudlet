@@ -2433,12 +2433,12 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     int linkId, oldLinkId, id;
     for (int total = P2.x(); x < total; ++x) {
         linkId = buffer.at(y).at(x).linkIndex();
-        if (linkId && !(linkId == oldLinkId)){
-            id = slice.mLinkStore.addLinks(mLinkStore.getLinks(linkId),mLinkStore.getHints(linkId));
+        if (linkId && !(linkId == oldLinkId)) {
+            id = slice.mLinkStore.addLinks(mLinkStore.getLinks(linkId), mLinkStore.getHints(linkId));
             oldLinkId = linkId;
         }
 
-        if (!linkId){
+        if (!linkId) {
             id = 0;
         }
         // This is rather inefficient as s is only ever one QChar long
@@ -2508,11 +2508,11 @@ void TBuffer::appendBuffer(TBuffer& chunk)
     int oldLinkId, linkId, id = 0;
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         linkId = chunk.buffer.at(0).at(cx).linkIndex();
-        if (linkId && !(oldLinkId == linkId)){
+        if (linkId && !(oldLinkId == linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinks(linkId), chunk.mLinkStore.getHints(linkId));
             oldLinkId = linkId;
         }
-        if (!linkId){
+        if (!linkId) {
             id = 0;
         }
         QString s(chunk.lineBuffer.at(0).at(cx));
