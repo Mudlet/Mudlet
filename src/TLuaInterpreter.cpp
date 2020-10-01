@@ -5155,7 +5155,7 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     QString name = "main";
     if (n > 1) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "setCmdLineStyleSheet: bad argument #1 type (userwindow name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "setCmdLineStyleSheet: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         name = QString::fromUtf8(lua_tostring(L, 1));
