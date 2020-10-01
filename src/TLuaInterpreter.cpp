@@ -8704,7 +8704,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         }
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'keybind', 'timer' or 'trigger'", type.toUtf8().constData());
+        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'", type.toUtf8().constData());
     }
     lua_pushnumber(L, cnt);
     return 1;
