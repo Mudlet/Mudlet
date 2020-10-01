@@ -1926,7 +1926,6 @@ int TLuaInterpreter::getLineCount(lua_State* L)
         lua_pushnumber(L, lineNumber);
         return 1;
     }
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
