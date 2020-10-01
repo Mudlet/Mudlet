@@ -1711,10 +1711,9 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, "the player does not have a valid room id set");
         return 2;
-    } else {
-        lua_pushnumber(L, roomID);
-        return 1;
     }
+    lua_pushnumber(L, roomID);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
@@ -5793,26 +5792,25 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, "getAllRoomEntrances: no map present or loaded!");
         return 2;
-    } else {
-        TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
-        if (!pR) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).", roomId);
-            return 2;
-        }
-        lua_newtable(L);
-        QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
-        // Could use a .toSet().toList() to remove duplicates values
-        if (entrances.count() > 1) {
-            std::sort(entrances.begin(), entrances.end());
-        }
-        for (uint i = 0; i < entrances.size(); i++) {
-            lua_pushnumber(L, i + 1);
-            lua_pushnumber(L, entrances.at(i));
-            lua_settable(L, -3);
-        }
-        return 1;
     }
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).", roomId);
+        return 2;
+    }
+    lua_newtable(L);
+    QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
+    // Could use a .toSet().toList() to remove duplicates values
+    if (entrances.count() > 1) {
+        std::sort(entrances.begin(), entrances.end());
+    }
+    for (uint i = 0; i < entrances.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushnumber(L, entrances.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#searchRoom
@@ -11463,24 +11461,23 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
         lua_pushnil(L);
         lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
         return 2;
-    } else {
-        bool result = host.mpMap->setRoomArea(id, -1, false);
-        if (result) {
-            // As a sucessfull result WILL change the area a room is in then the map
-            // should be updated.  The GUI code that modifies room(s) areas already
-            // includes such a call to update the mapper.
-            if (host.mpMap->mpMapper) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-#if defined(INCLUDE_3DMAPPER)
-            if (host.mpMap->mpM) {
-                host.mpMap->mpM->update();
-            }
-#endif
-        }
-        lua_pushboolean(L, result);
-        return 1;
     }
+    bool result = host.mpMap->setRoomArea(id, -1, false);
+    if (result) {
+        // As a sucessfull result WILL change the area a room is in then the map
+        // should be updated.  The GUI code that modifies room(s) areas already
+        // includes such a call to update the mapper.
+        if (host.mpMap->mpMapper) {
+            host.mpMap->mpMapper->mp2dMap->update();
+        }
+#if defined(INCLUDE_3DMAPPER)
+        if (host.mpMap->mpM) {
+            host.mpMap->mpM->update();
+        }
+#endif
+    }
+    lua_pushboolean(L, result);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomChar
@@ -18006,10 +18003,9 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
-    } else {
-        lua_pushboolean(L, true);
-        return 1;
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeWordFromDictionary
@@ -18036,10 +18032,9 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
-    } else {
-        lua_pushboolean(L, true);
-        return 1;
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#spellCheckWord
