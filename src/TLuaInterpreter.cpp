@@ -92,6 +92,15 @@ int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
+static bool isMain(const QString& name)
+{
+    if (name.isEmpty())
+        return true;
+    if (name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0)
+        return true;
+    return false;
+}
+
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
@@ -652,7 +661,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     Host& host = getHostFromLua(L);
 
     int s = 1;
-    QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
+    QString windowName;
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
@@ -661,11 +670,6 @@ int TLuaInterpreter::selectString(lua_State* L)
         }
         // We cannot yet properly handle non-ASCII windows names but we will eventually!
         windowName = QString::fromUtf8(lua_tostring(L, s));
-        if (windowName == QLatin1String("main")) {
-            // This matches the identifier for the main window - so make it
-            // appear so by emptying it...
-            windowName.clear();
-        }
         s++;
     }
 
@@ -685,7 +689,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     }
     qint64 numOfMatch = lua_tointeger(L, s);
 
-    if (windowName.isEmpty()) {
+    if (isMain(windowName)) {
         lua_pushnumber(L, host.mpConsole->select(searchText, numOfMatch));
     } else {
         lua_pushnumber(L, mudlet::self()->selectString(&host, windowName, searchText, numOfMatch));
@@ -696,18 +700,21 @@ int TLuaInterpreter::selectString(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCurrentLine
 int TLuaInterpreter::selectCurrentLine(lua_State* L)
 {
-    std::string luaSendText = "";
-    if (lua_gettop(L) == 0) {
-        luaSendText = "main";
-    } else {
+    std::string windowName;
+    if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "selectCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
-        luaSendText = lua_tostring(L, 1);
+        windowName = lua_tostring(L, 1);
     }
+
     Host& host = getHostFromLua(L);
-    host.mpConsole->selectCurrentLine(luaSendText);
+    if (isMain(QString::fromStdString(windowName))) {
+        host.mpConsole->selectCurrentLine();
+    } else {
+        host.mpConsole->selectCurrentLine(windowName);
+    }
     return 0;
 }
 
@@ -717,7 +724,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
     std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (ANSI color number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int ansiFg = lua_tointeger(L, 1);
@@ -816,7 +823,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
     std::string windowName = "main";
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (ANSI color number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int ansiBg = lua_tointeger(L, 1);
@@ -952,7 +959,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
 int TLuaInterpreter::getTextFormat(lua_State* L)
 {
-    QString windowName = QStringLiteral("main");
+    QString windowName;
     if (lua_gettop(L)) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getTextFormat: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
@@ -1057,7 +1064,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    std::string windowName = "main";
+    std::string windowName;
     if (lua_gettop(L)) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, "wrapLine: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, 1));
@@ -1138,7 +1145,7 @@ int TLuaInterpreter::getLines(lua_State* L)
 {
     int n = lua_gettop(L);
     int s = 0;
-    QString windowName = QLatin1String("main");
+    QString windowName;
     if (n > 2) {
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "getLines: bad argument #%d type (mini console, user window or buffer name as string expected {may be omitted for the \"main\" console}, got %s!)", s, luaL_typename(L, s));
@@ -1395,7 +1402,7 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
         windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         lua_pushnumber(L, host.mpConsole->getLineNumber());
         return 1;
     } else {
@@ -2466,7 +2473,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     Host& host = getHostFromLua(L);
 
     int ret;
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         ret = host.mpConsole->selectSection(from, to);
     } else {
         ret = mudlet::self()->selectSection(&host, windowName, from, to);
@@ -2492,7 +2499,7 @@ int TLuaInterpreter::getSelection(lua_State* L)
         }
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         std::tie(valid, text, start, length) = host.mpConsole->getSelection();
     } else {
         std::tie(valid, text, start, length) = mudlet::self()->getSelection(&host, windowName);
@@ -2543,7 +2550,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    if (windowName.isEmpty() || windowName == "main") {
+    if (isMain(windowName)) {
         lua_pushboolean(L, host.mpConsole->moveCursor(luaFrom, luaTo));
     } else {
         lua_pushboolean(L, mudlet::self()->moveCursor(&host, windowName, luaFrom, luaTo));
@@ -2584,7 +2591,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    if (windowName.isEmpty() || windowName == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->buffer.setBufferSize(luaFrom, luaTo);
     } else {
         mudlet::self()->setConsoleBufferSize(&host, windowName, luaFrom, luaTo);
@@ -2685,22 +2692,22 @@ int TLuaInterpreter::replace(lua_State* L)
     QString text = lua_tostring(L, s);
     s++;
 
-    QString name;
+    QString windowName;
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "replace: wrong argument type");
             lua_error(L);
             return 1;
         }
-        name = text;
+        windowName = text;
         text = lua_tostring(L, s);
     }
 
     Host& host = getHostFromLua(L);
-    if (name.isEmpty() || name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->replace(text);
     } else {
-        mudlet::self()->replace(&host, name, text);
+        mudlet::self()->replace(&host, windowName, text);
     }
     return 0;
 }
@@ -2708,22 +2715,22 @@ int TLuaInterpreter::replace(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLine
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
-    QString name;
+    QString windowName;
     if (lua_gettop(L) == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "deleteLine: wrong argument type");
             lua_error(L);
             return 1;
         }
-        name = lua_tostring(L, 1);
+        windowName = lua_tostring(L, 1);
     }
 
     Host& host = getHostFromLua(L);
 
-    if (name.isEmpty() || name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->skipLine();
     } else {
-        mudlet::self()->deleteLine(&host, name);
+        mudlet::self()->deleteLine(&host, windowName);
     }
     return 0;
 }
@@ -3425,7 +3432,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QFont::insertSubstitution(font, QStringLiteral("Noto Color Emoji"));
 #endif
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); !setNewFont) {
                 lua_pushnil(L);
@@ -3471,7 +3478,7 @@ int TLuaInterpreter::getFont(lua_State* L)
         }
         windowName = QString::fromUtf8(lua_tostring(L, 1));
 
-        if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (isMain(windowName)) {
             font = pHost->mpConsole->mUpperPane->fontInfo().family();
         } else {
             font = mudlet::self()->getWindowFont(pHost, windowName);
@@ -3522,7 +3529,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         return 2;
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             // get host profile display font and alter it, since that is how it's done in Settings.
             pHost->setDisplayFontSize(size);
@@ -3564,7 +3571,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
         }
         windowName = QString::fromUtf8(lua_tostring(L, 1));
 
-        if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        if (isMain(windowName)) {
             rval = pHost->getDisplayFont().pointSize();
         } else {
             rval = mudlet::self()->getFontSize(pHost, windowName);
@@ -4729,7 +4736,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return 2;
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             pHost->mBgColor.setRgb(r, g, b, alpha);
             pHost->mpConsole->setConsoleBgColor(r, g, b, alpha);
@@ -6436,7 +6443,7 @@ int TLuaInterpreter::deselect(lua_State* L)
         }
     }
 
-    if (windowName.isEmpty()) {
+    if (isMain(windowName)) {
         host.mpConsole->deselect();
         lua_pushboolean(L, true);
     } else {
@@ -6467,7 +6474,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
         }
     }
 
-    if (windowName.isEmpty()) {
+    if (isMain(windowName)) {
         host.mpConsole->reset();
         lua_pushboolean(L, true);
     } else {
@@ -6735,11 +6742,12 @@ int TLuaInterpreter::setLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPopup
 int TLuaInterpreter::setPopup(lua_State* L)
 {
-    QString name = "";
+    QString windowName = "";
     QStringList _hintList;
     QStringList _commandList;
     int s = 1;
     int n = lua_gettop(L);
+
     // console name is an optional first argument
     if (n > 4) {
         if (!lua_isstring(L, s)) {
@@ -6747,7 +6755,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
             lua_error(L);
             return 1;
         }
-        name = lua_tostring(L, s);
+        windowName = lua_tostring(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -6799,10 +6807,10 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 1;
     }
 
-    if (name.isEmpty()) {
+    if (isMain(windowName)) {
         host.mpConsole->setLink(_commandList, _hintList);
     } else {
-        mudlet::self()->setLink(&host, name, _commandList, _hintList);
+        mudlet::self()->setLink(&host, windowName, _commandList, _hintList);
     }
 
     return 0;
@@ -6832,7 +6840,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::Bold, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -6873,7 +6881,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::Italic, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -6914,7 +6922,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::Overline, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -6955,7 +6963,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -6996,7 +7004,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::StrikeOut, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -7037,7 +7045,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     }
     bool isAttributeEnabled = lua_toboolean(L, s);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setDisplayAttributes(TChar::Underline, isAttributeEnabled);
         // Always succeeds on main console:
         lua_pushboolean(L, true);
@@ -11659,7 +11667,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 {
     int s = 0;
     int n = lua_gettop(L);
-    QString windowName = QStringLiteral("main");
+    QString windowName;
     if (n > 3) {
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "setFgColor: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
@@ -11703,7 +11711,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->setFgColor(luaRed, luaGreen, luaBlue);
     } else {
         mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
@@ -11787,7 +11795,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         return 2;
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             pHost->mpConsole->setBgColor(r, g, b, alpha);
         } else {
@@ -11852,12 +11860,13 @@ int TLuaInterpreter::insertLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
-    QString name = "";
+    QString windowName;
     QStringList _hintList;
     QStringList _commandList;
     bool customFormat = false;
     int s = 1;
     int n = lua_gettop(L);
+
     // console name is an optional first argument
     if (n >= 4) {
         if (!lua_isstring(L, s)) {
@@ -11865,7 +11874,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
             lua_error(L);
             return 1;
         }
-        name = lua_tostring(L, s);
+        windowName = lua_tostring(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -11921,10 +11930,10 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 1;
     }
 
-    if (name.isEmpty() || name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->insertLink(txt, _commandList, _hintList, customFormat);
     } else {
-        mudlet::self()->insertLink(&host, name, txt, _commandList, _hintList, customFormat);
+        mudlet::self()->insertLink(&host, windowName, txt, _commandList, _hintList, customFormat);
     }
 
     return 0;
@@ -11951,7 +11960,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     }
     QString text = QString::fromUtf8(lua_tostring(L, s));
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->insertText(text);
         lua_pushboolean(L, true);
         return 1;
@@ -12010,14 +12019,6 @@ int TLuaInterpreter::Echo(lua_State* L)
             return lua_error(L);
         }
         consoleName = QString::fromUtf8(lua_tostring(L, 1));
-        if (!consoleName.isEmpty()) {
-            if (consoleName == QLatin1String("main")) {
-                // QString::compare is zero for a match on the "default"
-                // case so clear the variable - to flag this as the main
-                // window case - as is the case for an empty string
-                consoleName.clear();
-            }
-        }
     } else if (!n) {
         // Handle case with NO arguments
         lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
@@ -12030,7 +12031,7 @@ int TLuaInterpreter::Echo(lua_State* L)
     }
     QString displayText = QString::fromUtf8(lua_tostring(L, n));
 
-    if (consoleName.isEmpty()) {
+    if (isMain(consoleName)) {
         host.mpConsole->buffer.mEchoingText = true;
         host.mpConsole->echo(displayText);
         host.mpConsole->buffer.mEchoingText = false;
@@ -12119,7 +12120,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         return lua_error(L);
     }
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         host.mpConsole->echoLink(text, commandList, hintList, customFormat);
     } else {
         mudlet::self()->echoLink(&host, windowName, text, commandList, hintList, customFormat);
@@ -12209,18 +12210,17 @@ int TLuaInterpreter::echoLink(lua_State* L)
         text = a1;
         function << a2;
         hint << a3;
-        host.mpConsole->echoLink(text, function, hint, useCurrentFormat);
     } else {
         windowName = a1;
         text = a2;
         function << a3;
         hint << a4;
+    }
 
-        if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-            host.mpConsole->echoLink(text, function, hint, useCurrentFormat);
-        } else {
-            mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormat);
-        }
+    if (isMain(windowName)) {
+        host.mpConsole->echoLink(text, function, hint, useCurrentFormat);
+    } else {
+        mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormat);
     }
     return 0;
 }
@@ -13105,7 +13105,7 @@ int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     int n = lua_gettop(L);
     Host& host = getHostFromLua(L);
-    QString name;
+    QString windowName;
 
     if (n > 0) {
         if (!lua_isstring(L, 1)) {
@@ -13113,13 +13113,13 @@ int TLuaInterpreter::appendBuffer(lua_State* L)
             lua_error(L);
             return 1;
         }
-        QString name = lua_tostring(L, 1);
+        windowName = lua_tostring(L, 1);
     }
 
-    if (name.isEmpty() || name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->appendBuffer();
     } else {
-        mudlet::self()->appendBuffer(&host, name);
+        mudlet::self()->appendBuffer(&host, windowName);
     }
 
     return 0;
@@ -17831,7 +17831,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     int columns;
     Host* pHost = &getHostFromLua(L);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         columns = pHost->mpConsole->mUpperPane->getColumnCount();
     } else {
         columns = mudlet::self()->getColumnCount(pHost, windowName);
@@ -17864,7 +17864,7 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     int rows;
     Host* pHost = &getHostFromLua(L);
 
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         rows = pHost->mpConsole->mUpperPane->getRowCount();
     } else {
         rows = mudlet::self()->getRowCount(pHost, windowName);
