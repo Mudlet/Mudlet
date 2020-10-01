@@ -50,6 +50,16 @@ QStringList& TLinkStore::getHints(int id)
     return mHintStore[id];
 }
 
+QStringList TLinkStore::getLinksConst(int id) const
+{
+    return mLinkStore[id];
+}
+
+QStringList TLinkStore::getHintsConst(int id) const
+{
+    return mHintStore[id];
+}
+
 int TLinkStore::getCurrentLinkID() const
 {
     return mLinkID;

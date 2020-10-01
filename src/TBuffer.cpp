@@ -2500,7 +2500,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
 }
 
 // This only appends the FIRST line of chunk:
-void TBuffer::appendBuffer(TBuffer& chunk)
+void TBuffer::appendBuffer(const TBuffer& chunk)
 {
     if (chunk.buffer.empty()) {
         return;
@@ -2509,7 +2509,7 @@ void TBuffer::appendBuffer(TBuffer& chunk)
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && !(oldLinkId == linkId)) {
-            id = mLinkStore.addLinks(chunk.mLinkStore.getLinks(linkId), chunk.mLinkStore.getHints(linkId));
+            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId));
             oldLinkId = linkId;
         }
         if (!linkId) {
