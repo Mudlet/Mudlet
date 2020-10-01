@@ -5268,8 +5268,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
   <tabstop>USE_UNIX_EOL</tabstop>
-  <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
+  <tabstop>show_sent_text_checkbox</tabstop>
+  <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>checkBox_runAllKeyBindings</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>

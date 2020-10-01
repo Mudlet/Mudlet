@@ -372,6 +372,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
                 historyDown(ke);
+                if (mpHost->mUnHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -406,6 +409,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
                 historyUp(ke);
+                if (mpHost->mUnHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -1017,7 +1023,7 @@ void TCommandLine::historyDown(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || mpHost->mUnHighlightHistory) {
         mHistoryBuffer--;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
@@ -1043,7 +1049,7 @@ void TCommandLine::historyUp(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || mpHost->mUnHighlightHistory) {
         if (toPlainText().size() != 0) {
             mHistoryBuffer++;
         }
