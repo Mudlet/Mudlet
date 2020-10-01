@@ -2697,7 +2697,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
     int n = lua_gettop(L);
@@ -2718,7 +2718,7 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommandLine
 int TLuaInterpreter::disableCommandLine(lua_State* L)
 {
     int n = lua_gettop(L);

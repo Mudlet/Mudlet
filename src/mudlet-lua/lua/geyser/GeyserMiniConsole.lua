@@ -97,13 +97,13 @@ function Geyser.MiniConsole:disableScrollBar()
 end
 
 -- Start commandLine functions
---- Enables the scroll bar for this window
+--- Enables the command-line for this window
 -- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:enableCommandLine()
   enableCommandLine(self.name)
 end
 
---- Disables the scroll bar for this window
+--- Disables the command-line for this window
 -- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
