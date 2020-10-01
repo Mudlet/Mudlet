@@ -2584,7 +2584,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    if (windowName.isEmpty() || windowName == "main" || n < 3) {
+    if (windowName.isEmpty() || windowName == "main") {
         host.mpConsole->buffer.setBufferSize(luaFrom, luaTo);
     } else {
         mudlet::self()->setConsoleBufferSize(&host, windowName, luaFrom, luaTo);
@@ -2682,21 +2682,22 @@ int TLuaInterpreter::replace(lua_State* L)
         lua_error(L);
         return 1;
     }
-    QString name = lua_tostring(L, s);
+    QString text = lua_tostring(L, s);
     s++;
 
-    QString text = "";
+    QString name;
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "replace: wrong argument type");
             lua_error(L);
             return 1;
         }
+        name = text;
         text = lua_tostring(L, s);
     }
 
     Host& host = getHostFromLua(L);
-    if (n == 1) {
+    if (name.isEmpty() || name == "main") {
         host.mpConsole->replace(text);
     } else {
         mudlet::self()->replace(&host, name, text);
