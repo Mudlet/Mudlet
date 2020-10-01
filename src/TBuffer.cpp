@@ -2430,7 +2430,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
         x = 0;
     }
-    int linkId, oldLinkId, id;
+    int linkId, oldLinkId, id = 0;
     for (int total = P2.x(); x < total; ++x) {
         linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && !(linkId == oldLinkId)) {
