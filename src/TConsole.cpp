@@ -1224,7 +1224,7 @@ void TConsole::changeColors()
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
             auto styleSheet = mpCommandLine->styleSheet();
-            mpCommandLine->setStyleSheet("");
+            mpCommandLine->setStyleSheet(QString());
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
