@@ -380,6 +380,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
@@ -2574,6 +2575,14 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     }
 
     return {true, QString()};
+}
+
+void Host::setDebugShowAllProblemCodepoints(const bool state)
+{
+    if (mDebugShowAllProblemCodepoints != state) {
+        mDebugShowAllProblemCodepoints = state;
+        emit signal_changeDebugShowAllProblemCodepoints(state);
+    }
 }
 
 void Host::setCompactInputLine(const bool state)
