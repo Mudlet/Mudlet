@@ -1223,6 +1223,8 @@ void TConsole::changeColors()
         }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet("");
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1230,6 +1232,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
