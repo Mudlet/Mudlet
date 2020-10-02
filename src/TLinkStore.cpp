@@ -32,7 +32,7 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
 
 QStringList TLinkStore::getCurrentLinks() const
 {
-    return mLinkStore[mLinkID];
+    return mLinkStore.value(mLinkID);
 }
 
 void TLinkStore::setCurrentLinks(const QStringList& links)
@@ -52,12 +52,12 @@ QStringList& TLinkStore::getHints(int id)
 
 QStringList TLinkStore::getLinksConst(int id) const
 {
-    return mLinkStore[id];
+    return mLinkStore.value(id);
 }
 
 QStringList TLinkStore::getHintsConst(int id) const
 {
-    return mHintStore[id];
+    return mHintStore.value(id);
 }
 
 int TLinkStore::getCurrentLinkID() const
