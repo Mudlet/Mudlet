@@ -1737,7 +1737,7 @@ int TLuaInterpreter::copy(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (windowName == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->copy();
     } else {
         mudlet::self()->copy(&host, windowName);
@@ -1764,7 +1764,7 @@ int TLuaInterpreter::paste(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (windowName == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->paste();
     } else {
         mudlet::self()->pasteWindow(&host, windowName);
@@ -1878,7 +1878,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         lua_error(L);
         return 1;
     }
-    QString name = lua_tostring(L, 1);
+    QString windowName = lua_tostring(L, 1);
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setWindowWrap: wrong argument type");
@@ -1888,10 +1888,10 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     int luaFrom = lua_tointeger(L, 2);
 
     Host& host = getHostFromLua(L);
-    if (name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->setWrapAt(luaFrom);
     } else {
-        mudlet::self()->setWindowWrap(&host, name, luaFrom);
+        mudlet::self()->setWindowWrap(&host, windowName, luaFrom);
     }
     return 0;
 }
@@ -1904,7 +1904,7 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
         lua_error(L);
         return 1;
     }
-    QString name = lua_tostring(L, 1);
+    QString windowName = lua_tostring(L, 1);
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
@@ -1914,10 +1914,10 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     int luaFrom = lua_tointeger(L, 2);
 
     Host& host = getHostFromLua(L);
-    if (name == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->setIndentCount(luaFrom);
     } else {
-        mudlet::self()->setWindowWrapIndent(&host, name, luaFrom);
+        mudlet::self()->setWindowWrapIndent(&host, windowName, luaFrom);
     }
     return 0;
 }
@@ -3743,10 +3743,8 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         return 1;
     }
     QString windowName = lua_tostring(L, 1);
-    if (windowName == "main") {
-        // QString::compare is zero for a match on the "default"
-        // case so clear the variable - to flag this as the main
-        // window case - as is the case for an empty string
+    if (isMain(windowName)) {
+        // createMiniConsole only accepts the empty name as the main window
         windowName.clear();
     }
 
@@ -4088,10 +4086,8 @@ int TLuaInterpreter::createMapper(lua_State* L)
     if (n > 4 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = lua_tostring(L, 1);
         counter++;
-        if (windowName == "main") {
-            // QString::compare is zero for a match on the "default"
-            // case so clear the variable - to flag this as the main
-            // window case - as is the case for an empty string
+        if (isMain(windowName)) {
+            // createMapper only accepts the empty name as the main window
             windowName.clear();
         }
     }
@@ -4148,10 +4144,8 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
     if (n > 5 && lua_type(L, 1) == LUA_TSTRING) {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
         counter++;
-        if (windowName == "main") {
-            // QString::compare is zero for a match on the "default"
-            // case so clear the variable - to flag this as the main
-            // window case - as is the case for an empty string
+        if (isMain(windowName)) {
+            // createCommandLine only accepts the empty name as the main window
             windowName.clear();
         }
     }
@@ -6618,7 +6612,7 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (windowName == "main") {
+    if (isMain(windowName)) {
         host.mpConsole->moveCursorEnd();
     } else {
         mudlet::self()->moveCursorEnd(&host, windowName);
@@ -6638,7 +6632,7 @@ int TLuaInterpreter::getLastLineNumber(lua_State* L)
 
     Host& host = getHostFromLua(L);
     int number;
-    if (windowName == "main") {
+    if (isMain(windowName)) {
         number = host.mpConsole->getLastLineNumber();
     } else {
         number = mudlet::self()->getLastLineNumber(&host, windowName);
@@ -11851,7 +11845,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hint << sL[3];
 
     Host& host = getHostFromLua(L);
-    if (_name == "main") {
+    if (isMain(_name)) {
         host.mpConsole->insertLink(printScreen, command, hint, b);
     } else {
         mudlet::self()->insertLink(&host, _name, printScreen, command, hint, b);
@@ -13149,7 +13143,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 
     Host& host = getHostFromLua(L);
     auto pN = host.mpConsole->mSubCommandLineMap.value(name);
-    if (!pN || name == "main") {
+    if (!pN || isMain(name)) {
         pN = host.mpConsole->mpCommandLine;
     }
     if (!pN) {
@@ -13180,7 +13174,7 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     auto pN = host.mpConsole->mSubCommandLineMap.value(name);
-    if (!pN || name == "main") {
+    if (!pN || isMain(name)) {
         pN = host.mpConsole->mpCommandLine;
     }
     if (!pN) {
@@ -13472,7 +13466,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
 
     Host& host = getHostFromLua(L);
     auto pN = host.mpConsole->mSubCommandLineMap.value(name);
-    if (!pN || name == "main") {
+    if (!pN || isMain(name)) {
         pN = host.mpConsole->mpCommandLine;
     }
     if (!pN) {
@@ -13501,7 +13495,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     auto pN = host.mpConsole->mSubCommandLineMap.value(name);
-    if (!pN || name == "main") {
+    if (!pN || isMain(name)) {
         pN = host.mpConsole->mpCommandLine;
     }
     if (!pN) {
