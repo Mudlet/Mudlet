@@ -612,6 +612,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
 TConsole::~TConsole()
 {
+    if (mType & ~CentralDebugConsole) {
+        // Codepoint issues reporting is not enabled for the CDC:
+        mUpperPane->reportCodepointErrors();
+    }
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
