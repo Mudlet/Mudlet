@@ -11844,7 +11844,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     }
 
     QString _name(sL[0]);
-    QString printScreen = sL[1];
+    QString printScreen(sL[1]);
     QStringList command;
     QStringList hint;
     command << sL[2];
