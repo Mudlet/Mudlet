@@ -117,6 +117,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
+  describe("Tests the functionality of ansi2string()", function()
+    it("should return the string fed into it with ansi codes removed", function()
+      local original = '\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m'
+      local expected = 'You say in a baritone voice, "Test."'
+      local actual = ansi2string(original)
+      assert.equals(expected, actual)
+    end)
+  end)
+
   describe("Tests the functionality of setHexFgColor()", function()
 
     it("Should convert hex string correctly", function()
