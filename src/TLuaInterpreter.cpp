@@ -92,12 +92,15 @@ int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
+// No documentation available in wiki - internal function
 static bool isMain(const QString& name)
 {
-    if (name.isEmpty())
+    if (name.isEmpty()) {
         return true;
-    if (name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0)
+    }
+    if (!name.compare(QStringLiteral("main"))) {
         return true;
+    }
     return false;
 }
 
