@@ -590,7 +590,7 @@ void TCommandLine::adjustHeight()
         }
         return;
     }
-    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
+    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }

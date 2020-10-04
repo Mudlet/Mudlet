@@ -97,13 +97,13 @@ function Geyser.MiniConsole:disableScrollBar()
 end
 
 -- Start commandLine functions
---- Enables the scroll bar for this window
+--- Enables the command-line for this window
 -- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:enableCommandLine()
   enableCommandLine(self.name)
 end
 
---- Disables the scroll bar for this window
+--- Disables the command-line for this window
 -- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
@@ -150,6 +150,14 @@ end
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 function Geyser.MiniConsole:getCmdLine()
   return getCmdLine(self.name)
+end
+
+--- Sets the style sheet of the command-line
+-- @param css The style sheet string
+function Geyser.MiniConsole:setCmdLineStyleSheet(css)
+  css = css or self.cmdLineStylesheet
+  setCmdLineStyleSheet(self.name, css)
+  self.cmdLineStylesheet = css
 end
 
 --- Sets bold status for this miniconsole
@@ -430,6 +438,14 @@ function Geyser.MiniConsole:new (cons, container)
       me:enableAutoWrap()
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
+    end
+    if me.commandLine then
+      me:enableCommandLine()
+    else
+      me:disableCommandLine()
+    end
+    if me.cmdLineStylesheet and me.commandLine then
+      me:setCmdLineStyleSheet()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end
