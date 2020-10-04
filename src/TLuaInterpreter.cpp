@@ -9813,14 +9813,13 @@ int TLuaInterpreter::setDoor(lua_State* L)
         return 2;
     }
 
-    int roomId;
     TRoom* pR;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setDoor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
-    roomId = lua_tointeger(L, 1);
+    int roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
@@ -9828,13 +9827,12 @@ int TLuaInterpreter::setDoor(lua_State* L)
         return 2;
     }
 
-    QString exitCmd;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setDoor: bad argument #2 type (door command as string expected, got %s!)", luaL_typename(L, 2));
         lua_error(L);
         return 1;
     }
-    exitCmd = QString::fromUtf8(lua_tostring(L, 2));
+    QString exitCmd = QString::fromUtf8(lua_tostring(L, 2));
     if (exitCmd.compare(QStringLiteral("n")) && exitCmd.compare(QStringLiteral("e")) && exitCmd.compare(QStringLiteral("s")) && exitCmd.compare(QStringLiteral("w"))
         && exitCmd.compare(QStringLiteral("ne"))
         && exitCmd.compare(QStringLiteral("se"))
@@ -9885,7 +9883,6 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // else IS a valid stub or real normal exit -fall through to continue
     }
 
-    int doorStatus;
     if (!lua_isnumber(L, 3)) {
         lua_pushfstring(L,
                         "setDoor: bad argument #3 type (door type as number expected {0=\"none\",\n"
@@ -9894,7 +9891,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         lua_error(L);
         return 1;
     }
-    doorStatus = lua_tointeger(L, 3);
+    int doorStatus = lua_tointeger(L, 3);
     if (doorStatus < 0 || doorStatus > 3) {
         lua_pushnil(L);
         lua_pushfstring(L,
@@ -10785,10 +10782,9 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
         lua_pushnil(L);
         lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 value ("key" can not be an empty string).)");
         return 2;
-    } else {
-        lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
-        return 1;
     }
+    lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearSpecialExits
