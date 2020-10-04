@@ -2430,10 +2430,10 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
         x = 0;
     }
-    int oldLinkId, id = 0;
+    int oldLinkId{}, id{};
     for (int total = P2.x(); x < total; ++x) {
         int linkId = buffer.at(y).at(x).linkIndex();
-        if (linkId && !(linkId == oldLinkId)) {
+        if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId));
             oldLinkId = linkId;
         }
@@ -2505,10 +2505,10 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     if (chunk.buffer.empty()) {
         return;
     }
-    int oldLinkId, id = 0;
+    int oldLinkId{}, id{};
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         int linkId = chunk.buffer.at(0).at(cx).linkIndex();
-        if (linkId && !(oldLinkId == linkId)) {
+        if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId));
             oldLinkId = linkId;
         }
