@@ -503,7 +503,7 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         painter.setPen(fgColor);
     }
 
-    painter.drawText(textRect.x(), textRect.y() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
     return (useReplacementCharacter ? 1 : charWidth);
 }
 
