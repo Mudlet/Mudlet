@@ -93,6 +93,7 @@ public:
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void copy();
     void cut();
     void paste();
