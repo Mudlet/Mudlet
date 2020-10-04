@@ -1738,7 +1738,7 @@ local grayscaleComponents = {
   [23] = 255
 }
 
-local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
