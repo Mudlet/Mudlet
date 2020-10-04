@@ -294,17 +294,17 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    int ovector[MAX_CAPTURE_GROUPS * 3];
 
-    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 99);
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         return false;
     } else if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] Cannot handle matches. Too many capture groups.\n"), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
         }
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for 33 captured substrings\n";
+        qDebug() << QStringLiteral("CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %1 captured substrings").arg(MAX_CAPTURE_GROUPS);
     } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::blue), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -360,7 +360,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 99);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -372,9 +372,9 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             goto END;
         } else if (rc == 0) {
             if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] Cannot handle matches. Too many capture groups.\n"), QColor(255, 128, 0), QColor(Qt::black));
+                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
             }
-            qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for 33 captured substrings\n";
+            qDebug() << QStringLiteral("CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %1 captured substrings").arg(MAX_CAPTURE_GROUPS);
         }
 
         for (i = 0; i < rc; i++) {
