@@ -664,6 +664,21 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
 }
 
 
+std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (name.isEmpty() || !name.compare(QStringLiteral("main"))) {
+        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+}
+
 void TConsole::resizeEvent(QResizeEvent* event)
 {
     if (mType & (MainConsole|Buffer)) {
@@ -1214,6 +1229,8 @@ void TConsole::changeColors()
         }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet(QString());
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1221,6 +1238,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
