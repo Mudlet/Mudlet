@@ -882,6 +882,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     if (event->y() >= height() - 10) {
         mpConsole->scrollDown(3);
     }
+
+    if (event->x() < 10) {
+        scrollH(std::max(0, mCursorX - 3));
+    }
+    if (event->x() >= width() - 10) {
+        scrollH(std::min(mMaxHRange, mCursorX + 3));
+    }
+
     if (lineIndex > static_cast<int>(mpBuffer->size() - 1)) {
         return;
     }
