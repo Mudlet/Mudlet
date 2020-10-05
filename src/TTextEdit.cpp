@@ -321,6 +321,7 @@ void TTextEdit::showNewLines()
     }
 
     mCursorY = mpBuffer->size();
+    mCursorX = 0;
     if (!mIsLowerPane) {
         mpBuffer->mCursorY = mpBuffer->size();
     }
@@ -884,10 +885,10 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     if (event->x() < 10) {
-        scrollH(std::max(0, mCursorX - 3));
+        scrollH(std::max(0, mCursorX - 2));
     }
     if (event->x() >= width() - 10) {
-        scrollH(std::min(mMaxHRange, mCursorX + 3));
+        scrollH(std::min(mMaxHRange, mCursorX + 2));
     }
 
     if (lineIndex > static_cast<int>(mpBuffer->size() - 1)) {
@@ -1312,6 +1313,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         mpConsole->mLowerPane->hide();
         mpBuffer->mCursorY = mpBuffer->size();
         mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
+        mpConsole->mUpperPane->mCursorX = 0;
         mpConsole->mUpperPane->mIsTailMode = true;
         mpConsole->mUpperPane->updateScreenView();
         mpConsole->mUpperPane->forceUpdate();
