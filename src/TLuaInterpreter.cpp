@@ -17553,11 +17553,11 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     QString windowName;
     if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
-    } else if (!lua_isstring(L, 1)) {
+    } else if (lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    } else {
         lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     int columns;
@@ -17585,11 +17585,11 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     QString windowName;
     if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
-    } else if (!lua_isstring(L, 1)) {
+    } else if (lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    } else {
         lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     int rows;
