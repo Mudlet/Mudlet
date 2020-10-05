@@ -186,12 +186,19 @@ void TTextEdit::slot_scrollBarMoved(int line)
 
 void TTextEdit::updateScrollBar(int line)
 {
+    int screenHeight{mScreenHeight};
+    if (mIsTailMode){
+        screenHeight -= mpConsole->mLowerPane->getScreenHeight();
+    }
+    qDebug() <<"screenHeight: "<< screenHeight;
+    qDebug() <<"maxRange: "<< mpBuffer->getLastLineNumber() + 1;
+    qDebug() <<"line: "<< line;
     if (mpConsole->mpScrollBar) {
         disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
-        mpConsole->mpScrollBar->setRange(mScreenHeight, mpBuffer->getLastLineNumber() + 1);
+        mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
         mpConsole->mpScrollBar->setSingleStep(1);
-        mpConsole->mpScrollBar->setPageStep(mScreenHeight);
-        mpConsole->mpScrollBar->setValue(line);
+        mpConsole->mpScrollBar->setPageStep(screenHeight);
+        mpConsole->mpScrollBar->setValue(std::max(0, line));
         connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
     }
 }
@@ -283,7 +290,7 @@ void TTextEdit::updateScreenView()
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     if (!mIsLowerPane){
-        updateScrollBar(mCursorY);
+        updateScrollBar(mpBuffer->mCursorY);
     }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
     if (mpConsole->getType() == TConsole::MainConsole) {
@@ -338,12 +345,12 @@ void TTextEdit::scrollTo(int line)
     // be wrong:
     Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one", "TTextEdit::scrollTo()");
     if ((line > -1) && (line <= mpBuffer->size())) {
-        if ((line < (mpBuffer->getLastLineNumber()) && mIsTailMode)) {
+        if ((line < (mpBuffer->getLastLineNumber() + 1) && mIsTailMode)) {
             mIsTailMode = false;
             mpConsole->mLowerPane->mCursorY = mpBuffer->size();
             mpConsole->mLowerPane->show();
             mpConsole->mLowerPane->forceUpdate();
-        } else if ((line > (mpBuffer->getLastLineNumber() - 1)) && !mIsTailMode) {
+        } else if ((line > (mpBuffer->getLastLineNumber())) && !mIsTailMode) {
             mpConsole->mLowerPane->mCursorY = mpConsole->buffer.getLastLineNumber();
             mpConsole->mLowerPane->hide();
             mIsTailMode = true;
@@ -370,10 +377,9 @@ void TTextEdit::scrollUp(int lines)
         return;
     }
 
-    if (bufferScrollUp(lines)) {
-        mIsTailMode = false;
-        mScrollVector = 0;
-    }
+    mpBuffer->mCursorY -= lines;
+    mScrollVector = 0;
+    mIsTailMode = false;
     updateScrollBar(mpBuffer->mCursorY);
     update();
 }
@@ -1720,27 +1726,6 @@ int TTextEdit::imageTopLine()
     }
 }
 
-// Ensure we return 0 if the whole buffer fits within the space on-screen which
-// should stop the split appearing if there is nothing to scroll up/down.
-// This should only be used on the upper pane:
-int TTextEdit::bufferScrollUp(int lines)
-{
-    if (Q_UNLIKELY((mpBuffer->mCursorY - lines) >= mScreenHeight)) {
-        mpBuffer->mCursorY -= lines;
-        return lines;
-
-    } else {
-        mpBuffer->mCursorY -= lines;
-        if (mCursorY < 0) {
-            int delta = mCursorY;
-            mpBuffer->mCursorY = 0;
-            return delta;
-
-        } else {
-            return 0;
-        }
-    }
-}
 
 // This should only be used on the upper pane:
 int TTextEdit::bufferScrollDown(int lines)
@@ -1749,7 +1734,7 @@ int TTextEdit::bufferScrollDown(int lines)
         if (mpBuffer->mCursorY < mScreenHeight) {
             mpBuffer->mCursorY = mScreenHeight + lines;
             if (mpBuffer->mCursorY > static_cast<int>(mpBuffer->size() - 1)) {
-                mpBuffer->mCursorY = mpBuffer->size() - 1;
+                mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
                 mIsTailMode = true;
             }
 

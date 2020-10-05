@@ -525,7 +525,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mUpperPane->show();
     mLowerPane->show();
-    mLowerPane->hide();
+    mLowerPane->updateScreenView();
+    // timer needed as updateScreenView doesn't seem to finish in time
+    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
     connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);

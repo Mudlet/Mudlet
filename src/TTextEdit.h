@@ -81,7 +81,6 @@ public:
     void unHighlight();
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
-    int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
