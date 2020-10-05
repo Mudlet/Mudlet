@@ -12048,16 +12048,17 @@ int TLuaInterpreter::Echo(lua_State* L)
     QString consoleName;
     int n = lua_gettop(L);
 
+    if (!n) {
+        // Handle case with NO arguments
+        lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
+        return lua_error(L);
+    }
     if (n > 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "echo: bad argument #1 type (console name as string, is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         consoleName = QString::fromUtf8(lua_tostring(L, 1));
-    } else if (!n) {
-        // Handle case with NO arguments
-        lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
-        return lua_error(L);
     }
 
     if (!lua_isstring(L, n)) {
@@ -17857,12 +17858,12 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
     QString windowName;
     if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
-    } else if (!lua_isstring(L, 1)) {
+    } else if (lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    } else {
         lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
-    } else {
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     int columns;
@@ -17891,11 +17892,11 @@ int TLuaInterpreter::getRowCount(lua_State* L)
     if (!lua_gettop(L)) {
         windowName = QStringLiteral("main");
     } else if (!lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+    } else {
         lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
-    } else {
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
     }
 
     int rows;
