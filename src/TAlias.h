@@ -35,6 +35,7 @@
 
 class Host;
 
+#define MAX_CAPTURE_GROUPS 33
 
 class TAlias : public Tree<TAlias>
 {
