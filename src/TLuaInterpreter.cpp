@@ -4721,11 +4721,12 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) <= s) {
         alpha = 255;
-    } else if (!lua_isnumber(L, ++s)) {
+    } else if (lua_isnumber(L, ++s)) {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+    } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
-    alpha = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(alpha)) {
         lua_pushnil(L);
