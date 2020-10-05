@@ -53,6 +53,12 @@ public:
         return mActionRootNodeList;
     }
 
+    QMap<int, TAction*> getActionList()
+    {
+        QMutexLocker locker(&mActionUnitLock);
+        return mActionMap;
+    }
+
     TAction* getAction(int id);
     TAction* findAction(const QString&);
     std::vector<TAction*> findActionsByName(const QString&);
