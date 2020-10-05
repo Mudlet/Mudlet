@@ -230,6 +230,7 @@ void TTextEdit::calculateHMaxRange()
 
     if (mMaxHRange < 1) {
         mCursorX = 0;
+        mMaxHRange = 0;
         return;
     }
     if (mCursorX > mMaxHRange) {
