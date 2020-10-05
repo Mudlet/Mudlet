@@ -13470,11 +13470,12 @@ int TLuaInterpreter::expandAlias(lua_State* L)
         // because expandAlias("command") should be the same as expandAlias("command", nil)
         if (lua_isnil(L, 2)) {
             wantPrint = false;
-        } else if (!lua_isboolean(L, 2)) {
+        } else if (lua_isboolean(L, 2)) {
+            wantPrint = lua_toboolean(L, 2);
+        } else {
             lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
-        wantPrint = lua_toboolean(L, 2);
     }
     Host& host = getHostFromLua(L);
     // Host::send will encode the UTF encoded data here in the wanted Server
