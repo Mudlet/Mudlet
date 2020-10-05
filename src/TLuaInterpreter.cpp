@@ -1658,13 +1658,11 @@ int TLuaInterpreter::centerview(lua_State* L)
         return 2;
     }
 
-    int roomId;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        roomId = lua_tointeger(L, 1);
     }
+    int roomId = lua_tointeger(L, 1);
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (pR) {
@@ -9305,16 +9303,15 @@ int TLuaInterpreter::createRoomID(lua_State* L)
                             "got %s!)",
                             luaL_typename(L, 1));
             return lua_error(L);
-        } else {
-            int minId = lua_tointeger(L, 1);
-            if (minId < 1) {
-                lua_pushnil(L);
-                lua_pushfstring(L,
-                                "createRoomID: bad argument #1 value (minimum room id %d is an optional value\n"
-                                "but if provided it must be greater than zero.)",
-                                minId);
-                return 2;
-            }
+        }
+        int minId = lua_tointeger(L, 1);
+        if (minId < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L,
+                            "createRoomID: bad argument #1 value (minimum room id %d is an optional value\n"
+                            "but if provided it must be greater than zero.)",
+                            minId);
+            return 2;
         }
         lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
     } else {
@@ -12164,42 +12161,41 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "getMudletVersion: wrong argument type.");
             return lua_error(L);
-        } else {
-            QString tidiedWhat = QString(lua_tostring(L, 1)).toLower().trimmed();
-            if (tidiedWhat.contains("major")) {
-                lua_pushinteger(L, major);
-            } else if (tidiedWhat.contains("minor")) {
-                lua_pushinteger(L, minor);
-            } else if (tidiedWhat.contains("revision")) {
-                lua_pushinteger(L, revision);
-            } else if (tidiedWhat.contains("build")) {
-                if (build.isEmpty()) {
-                    lua_pushnil(L);
-                } else {
-                    lua_pushstring(L, build);
-                }
-            } else if (tidiedWhat.contains("string")) {
-                if (build.isEmpty()) {
-                    lua_pushstring(L, version.constData());
-                } else {
-                    lua_pushstring(L, version.append(build).constData());
-                }
-            } else if (tidiedWhat.contains("table")) {
-                lua_pushinteger(L, major);
-                lua_pushinteger(L, minor);
-                lua_pushinteger(L, revision);
-                if (build.isEmpty()) {
-                    lua_pushnil(L);
-                } else {
-                    lua_pushstring(L, build);
-                }
-                return 4;
+        }
+        QString tidiedWhat = QString(lua_tostring(L, 1)).toLower().trimmed();
+        if (tidiedWhat.contains("major")) {
+            lua_pushinteger(L, major);
+        } else if (tidiedWhat.contains("minor")) {
+            lua_pushinteger(L, minor);
+        } else if (tidiedWhat.contains("revision")) {
+            lua_pushinteger(L, revision);
+        } else if (tidiedWhat.contains("build")) {
+            if (build.isEmpty()) {
+                lua_pushnil(L);
             } else {
-                lua_pushstring(L,
-                               "getMudletVersion: takes one (optional) argument:\n"
-                               "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
-                return lua_error(L);
+                lua_pushstring(L, build);
             }
+        } else if (tidiedWhat.contains("string")) {
+            if (build.isEmpty()) {
+                lua_pushstring(L, version.constData());
+            } else {
+                lua_pushstring(L, version.append(build).constData());
+            }
+        } else if (tidiedWhat.contains("table")) {
+            lua_pushinteger(L, major);
+            lua_pushinteger(L, minor);
+            lua_pushinteger(L, revision);
+            if (build.isEmpty()) {
+                lua_pushnil(L);
+            } else {
+                lua_pushstring(L, build);
+            }
+            return 4;
+        } else {
+            lua_pushstring(L,
+                            "getMudletVersion: takes one (optional) argument:\n"
+                            "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+            return lua_error(L);
         }
     } else if (n == 0) {
         lua_newtable(L);
@@ -13118,28 +13114,28 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
                         "expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        bool isToShowDefaultArea = lua_toboolean(L, 1);
-        if (host.mpMap->mpMapper) {
-            // If we are reenabled the display of the default area
-            // AND the mapper was showing the default area
-            // the area widget will NOT be showing the correct area name afterwards
-            bool isAreaWidgetInNeedOfResetting = false;
-            if ((!host.mpMap->mpMapper->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
-                isAreaWidgetInNeedOfResetting = true;
-            }
+    }
+    bool isToShowDefaultArea = lua_toboolean(L, 1);
 
-            host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
-            if (isAreaWidgetInNeedOfResetting) {
-                // Corner case fixup:
-                host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->mpRoomDB->getDefaultAreaName());
-            }
-            host.mpMap->mpMapper->mp2dMap->repaint();
-            host.mpMap->mpMapper->update();
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
+    if (host.mpMap->mpMapper) {
+        // If we are reenabled the display of the default area
+        // AND the mapper was showing the default area
+        // the area widget will NOT be showing the correct area name afterwards
+        bool isAreaWidgetInNeedOfResetting = false;
+        if ((!host.mpMap->mpMapper->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
+            isAreaWidgetInNeedOfResetting = true;
         }
+
+        host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
+        if (isAreaWidgetInNeedOfResetting) {
+            // Corner case fixup:
+            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->mpRoomDB->getDefaultAreaName());
+        }
+        host.mpMap->mpMapper->mp2dMap->repaint();
+        host.mpMap->mpMapper->update();
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
     }
     return 1;
 }
