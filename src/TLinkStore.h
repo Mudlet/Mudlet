@@ -46,6 +46,8 @@ public:
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
+    QStringList getLinksConst(int id) const;
+    QStringList getHintsConst(int id) const;
 
     int getCurrentLinkID() const;
 
