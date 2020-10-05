@@ -8097,7 +8097,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     int ansiBgColor = TTrigger::scmIgnored;
 
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #2 type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
+        lua_pushfstring(L, "bad argument #1 type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
                         TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 2));
         return lua_error(L);
     } else {
@@ -8120,7 +8120,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     }
 
     if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (background color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
+        lua_pushfstring(L, "bad argument #2 type (background color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
                         TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 3));
                  return lua_error(L);
     } else {
@@ -8139,11 +8139,11 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     }
 
     if (lua_isstring(L, 3)) {
-        code = QString::fromUtf8(lua_tostring(L, 1));
+        code = QString::fromUtf8(lua_tostring(L, 3));
     } else if (lua_isfunction(L, 3)) {
         // leave code as a null QString()
     } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
@@ -8153,7 +8153,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
     }
