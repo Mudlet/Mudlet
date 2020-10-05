@@ -190,9 +190,6 @@ void TTextEdit::updateScrollBar(int line)
     if (mIsTailMode){
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
-    qDebug() <<"screenHeight: "<< screenHeight;
-    qDebug() <<"maxRange: "<< mpBuffer->getLastLineNumber() + 1;
-    qDebug() <<"line: "<< line;
     if (mpConsole->mpScrollBar) {
         disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
         mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
