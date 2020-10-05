@@ -4787,12 +4787,13 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
-    } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
+    } else if (lua_gettop(L) == 0 || lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        size = mudlet::self()->calcFontSize(pHost, windowName);
+    } else {
         lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    windowName = QString::fromUtf8(lua_tostring(L, 1));
-    size = mudlet::self()->calcFontSize(pHost, windowName);
 
     if (size.width() <= -1) {
         lua_pushnil(L);
