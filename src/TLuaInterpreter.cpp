@@ -104,6 +104,30 @@ static bool isMain(const QString& name)
     return false;
 }
 
+static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
+static const char *bad_window_value = "window \"%s\" not found";
+
+#define WINDOW_NAME(_L, _pos)                                                                  \
+    ({                                                                                         \
+        if (!lua_isstring(_L, _pos)) {                                                         \
+            lua_pushfstring(_L, bad_window_type, __FUNCTION__, _pos, luaL_typename(_L, _pos)); \
+            return lua_error(_L);                                                              \
+        }                                                                                      \
+        lua_tostring(_L, _pos);                                                                \
+    })
+    
+#define CONSOLE(_L, _name)                                                                     \
+    ({                                                                                         \
+        auto console = getHostFromLua(_L).findConsole(_name);                                  \
+        if (!console) {                                                                        \
+            lua_pushnil(L);                                                                    \
+            lua_pushfstring(L, bad_window_value, _name.toUtf8().constData());                  \
+            return 2;                                                                          \
+        }                                                                                      \
+        console;                                                                               \
+    })
+
+
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
@@ -661,12 +685,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        // We cannot yet properly handle non-ASCII windows names but we will eventually!
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, 1);
         s++;
     }
 
@@ -684,28 +703,21 @@ int TLuaInterpreter::selectString(lua_State* L)
     }
     qint64 numOfMatch = lua_tointeger(L, s);
 
-    if (isMain(windowName)) {
-        lua_pushnumber(L, host.mpConsole->select(searchText, numOfMatch));
-    } else {
-        lua_pushnumber(L, mudlet::self()->selectString(&host, windowName, searchText, numOfMatch));
-    }
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->select(searchText, numOfMatch));
     return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCurrentLine
 int TLuaInterpreter::selectCurrentLine(lua_State* L)
 {
-    std::string windowName;
+    QString windowName;
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "selectCurrentLine: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = WINDOW_NAME(L, 1);
     }
 
-    Host& host = getHostFromLua(L);
-    host.mpConsole->selectCurrentLine(windowName);
+    auto console = CONSOLE(L, windowName);
+    console->selectCurrentLine();
     return 0;
 }
 
