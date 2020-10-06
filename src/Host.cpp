@@ -2598,3 +2598,15 @@ void Host::setCompactInputLine(const bool state)
         }
     }
 }
+
+QPointer<TConsole> Host::findConsole(QString name)
+{
+    if (name.isEmpty() or name == QStringLiteral("main")) {
+        // Reason for the deref-plus-ref in the next line: `QPointer`s do not
+        // follow inheritance. See https://bugreports.qt.io/browse/QTBUG-2258
+        return &*mpConsole;
+    } else {
+        return mpConsole->mSubConsoleMap.value(name);
+    }
+}
+

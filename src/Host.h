@@ -331,7 +331,7 @@ public:
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
-
+    QPointer<TConsole> findConsole(QString name);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
