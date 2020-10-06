@@ -1698,7 +1698,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     if (deltaY < 0) {
         mpConsole->scrollDown(k);
         handled = true;
-    } else if (e->delta() > 0) {
+    } else if (deltaY > 0) {
         mpConsole->scrollUp(k);
         handled = true;
     }
