@@ -8099,8 +8099,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     int s = 0;
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #1 type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
-                        TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
         return lua_error(L);
     } else {
         int value = lua_tointeger(L, s);
@@ -8123,17 +8123,19 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         }
     }
 
-    if (lua_gettop(L) < 4) {
+    // s=1 at this point. If top=4 the next argument must be the BG color number,
+    // otherwise it may have been omitted.
+    if (lua_gettop(L) < s+3 && !lua_isnumber(L, s+1)) {
         // BG color omitted, skip this part
     } else if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #2 type (background color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
-                        TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (background color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
         return lua_error(L);
     } else {
         int value = lua_tointeger(L, s);
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, only %d (ignore background color), %d (default background color) or 0 to 255 are recognised",
+            lua_pushfstring(L, "invalid ANSI color number %d, only %d (ignore background color), %d (default background color) or 0 to 255 recognised",
                             value, TTrigger::scmIgnored, TTrigger::scmDefault);
             return 2;
         } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
@@ -8151,20 +8153,23 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     } else if (lua_isfunction(L, s)) {
         // leave code as a null QString(), see below
     } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, s));
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #4 value (trigger expiration count must be a number, got %s!+ )", luaL_typename(L, s));
+    int expiryCount;
+    if (lua_isnil(L, ++s)) {
+        expiryCount = -1;
+    } else if (lua_isnumber(L, s)) {
+        expiryCount = lua_tonumber(L, s);
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    } else {
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
-    }
-    int expiryCount = lua_tonumber(L, s);
-
-    if ((expiryCount < 1) && (expiryCount != -1)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be -1 or greater than zero, got %d)", expiryCount);
-        return 2;
     }
 
     int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code, expiryCount);
