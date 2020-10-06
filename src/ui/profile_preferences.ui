@@ -496,12 +496,12 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_unHighlightHistory">
+           <widget class="QCheckBox" name="checkBox_highlightHistory">
             <property name="toolTip">
-             <string>&lt;p&gt;Stop automatic history highlighting&lt;/p&gt;&lt;p&gt;&lt;i&gt;This disables the automatic highlighting of the history&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Hightlight History&lt;/p&gt;&lt;p&gt;&lt;i&gt;highlights your input line text if scrolling through your history&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Stop highlighting history</string>
+             <string>Highlight History</string>
             </property>
            </widget>
           </item>
@@ -5270,7 +5270,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>USE_UNIX_EOL</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
   <tabstop>show_sent_text_checkbox</tabstop>
-  <tabstop>checkBox_unHighlightHistory</tabstop>
+  <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>checkBox_runAllKeyBindings</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
