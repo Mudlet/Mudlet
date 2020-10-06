@@ -109,19 +109,21 @@ static const char *bad_window_value = "window \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
-        if (!lua_isstring(_L, _pos)) {                                                         \
-            lua_pushfstring(_L, bad_window_type, __FUNCTION__, _pos, luaL_typename(_L, _pos)); \
+        int pos = (_pos);                                                                      \
+        if (!lua_isstring(_L, pos)) {                                                          \
+            lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos, luaL_typename(_L, pos));   \
             return lua_error(_L);                                                              \
         }                                                                                      \
-        lua_tostring(_L, _pos);                                                                \
+        lua_tostring(_L, pos);                                                                 \
     })
     
 #define CONSOLE(_L, _name)                                                                     \
     ({                                                                                         \
-        auto console = getHostFromLua(_L).findConsole(_name);                                  \
+        auto name = (_name);                                                                   \
+        auto console = getHostFromLua(_L).findConsole(name);                                   \
         if (!console) {                                                                        \
             lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_window_value, _name.toUtf8().constData());                  \
+            lua_pushfstring(L, bad_window_value, name.toUtf8().constData());                   \
             return 2;                                                                          \
         }                                                                                      \
         console;                                                                               \
