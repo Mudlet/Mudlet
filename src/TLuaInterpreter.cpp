@@ -8157,19 +8157,14 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    int expiryCount;
-    if (lua_isnil(L, ++s)) {
-        expiryCount = -1;
-    } else if (lua_isnumber(L, s)) {
+    int expiryCount = -1;
+    if (lua_isnumber(L, ++s)) {
         expiryCount = lua_tonumber(L, s);
         if (expiryCount < 1) {
             lua_pushnil(L);
             lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
     }
 
     int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code, expiryCount);
