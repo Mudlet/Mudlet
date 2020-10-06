@@ -19206,20 +19206,10 @@ int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     auto color = host.mBgColor_2;
-    lua_newtable(L);
-    lua_pushnumber(L, 1);
     lua_pushnumber(L, color.red());
-    lua_settable(L, -3);
-
-    lua_pushnumber(L, 2);
     lua_pushnumber(L, color.green());
-    lua_settable(L, -3);
-
-    lua_pushnumber(L, 3);
     lua_pushnumber(L, color.blue());
-    lua_settable(L, -3);
-
-    return 1;
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
@@ -19270,20 +19260,10 @@ int TLuaInterpreter::getMapRoomExitsColor(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     auto color = host.mFgColor_2;
-    lua_newtable(L);
-    lua_pushnumber(L, 1);
     lua_pushnumber(L, color.red());
-    lua_settable(L, -3);
-
-    lua_pushnumber(L, 2);
     lua_pushnumber(L, color.green());
-    lua_settable(L, -3);
-
-    lua_pushnumber(L, 3);
     lua_pushnumber(L, color.blue());
-    lua_settable(L, -3);
-
-    return 1;
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapRoomExitsColor
