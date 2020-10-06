@@ -766,7 +766,6 @@ void XMLimport::readHostPackage()
 void XMLimport::readHostPackage(Host* pHost)
 {
     pHost->mAutoClearCommandLineAfterSend = (attributes().value("autoClearCommandLineAfterSend") == "yes");
-    pHost->mHighlightHistory = !(attributes().value("HighlightHistory") == "no");
     pHost->mPrintCommand = (attributes().value("printCommand") == "yes");
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
@@ -774,6 +773,11 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
+    if (attributes().hasAttribute("HighlightHistory")) {
+        pHost->mHighlightHistory = attributes().value("HighlightHistory") == "yes";
+    } else {
+        pHost->mHighlightHistory = true;
+    }
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringRef ambiguousWidthSetting(attributes().value("AmbigousWidthGlyphsToBeWide"));
         if (ambiguousWidthSetting == QStringLiteral("yes")) {

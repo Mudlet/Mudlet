@@ -498,10 +498,10 @@
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_highlightHistory">
             <property name="toolTip">
-             <string>&lt;p&gt;Hightlight History&lt;/p&gt;&lt;p&gt;&lt;i&gt;highlights your input line text if scrolling through your history&lt;/i&gt;&lt;/p&gt;</string>
+             <string>Highlights your input line text when scrolling through your history for easy cancellation</string>
             </property>
             <property name="text">
-             <string>Highlight History</string>
+             <string>Highlight history</string>
             </property>
            </widget>
           </item>
