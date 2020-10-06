@@ -11818,16 +11818,16 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) <= s) {
         alpha = 255;
-    } else if (!lua_isnumber(L, ++s)) {
+    } else if (lua_isnumber(L, ++s)) {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(alpha)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            return 2;
+        }
+    } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
-    }
-    alpha = static_cast<int>(lua_tonumber(L, s));
-
-    if (!validRange(alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-        return 2;
     }
 
     if (isMain(windowName)) {
