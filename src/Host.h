@@ -339,6 +339,7 @@ public:
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    bool mHighlightHistory;
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
