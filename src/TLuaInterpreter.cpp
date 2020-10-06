@@ -734,7 +734,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getFgColor(windowName, 0);
+    result = host.mpConsole->getFgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -836,7 +836,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
-    result = host.mpConsole->getBgColor(windowName, 0);
+    result = host.mpConsole->getBgColor(windowName);
     auto it = result.begin();
     if (result.size() < 3) {
         return 0;
@@ -926,24 +926,17 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
-    int offset = 0;
-
     if (lua_gettop(L) > 0) {
-        if (lua_isnumber(L, 1)) {
-            offset = lua_tointeger(L, 1);
-        } else if (!lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             windowName = lua_tostring(L, 1);
-            if (lua_gettop(L) > 1 && lua_isnumber(L, 2)) {
-                offset = lua_tointeger(L, 2);
-            }
         }
     }
 
     Host& host = getHostFromLua(L);
-    std::list<int> result = host.mpConsole->getFgColor(windowName, offset);
+    std::list<int> result = host.mpConsole->getFgColor(windowName);
     for (int pos : result) {
         lua_pushnumber(L, pos);
     }
@@ -954,24 +947,17 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 int TLuaInterpreter::getBgColor(lua_State* L)
 {
     std::string windowName = "main";
-    int offset = 0;
-
     if (lua_gettop(L) > 0) {
-        if (lua_isnumber(L, 1)) {
-            offset = lua_tointeger(L, 1);
-        } else if (!lua_isstring(L, 1)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         } else {
             windowName = lua_tostring(L, 1);
-            if (lua_gettop(L) > 1 && lua_isnumber(L, 2)) {
-                offset = lua_tointeger(L, 2);
-            }
         }
     }
 
     Host& host = getHostFromLua(L);
-    std::list<int> result = host.mpConsole->getBgColor(windowName, offset);
+    std::list<int> result = host.mpConsole->getBgColor(windowName);
     for (int pos : result) {
         lua_pushnumber(L, pos);
     }
