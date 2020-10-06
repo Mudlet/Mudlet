@@ -1338,7 +1338,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
 int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 {
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     QString imgPath;
     int mode = 1;
     int counter = 1;
@@ -1391,7 +1391,7 @@ int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetConsoleBackgroundImage
 int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
 {
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     int n = lua_gettop(L);
     if (n > 0) {
         if (!lua_isstring(L, 1)) {
@@ -2659,7 +2659,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "enableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2680,7 +2680,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "disableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2701,7 +2701,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "enableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2722,7 +2722,7 @@ int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "disableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));

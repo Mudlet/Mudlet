@@ -287,7 +287,7 @@ void TTextEdit::updateScreenView()
         mFontHeight = mFontAscent + mFontDescent;
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
-    if (!mIsLowerPane){
+    if (!mIsLowerPane) {
         updateScrollBar(mpBuffer->mCursorY);
     }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
