@@ -83,6 +83,7 @@ public:
 
     void reset();
     void resetMainConsole();
+    void resizeConsole();
     Host* getHost();
     void replace(const QString&);
     void insertHTML(const QString&);
@@ -140,6 +141,7 @@ public:
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setHorizontalScrollBar(bool);
     void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -327,6 +329,7 @@ public:
     QWidget* mpButtonMainLayer;
     int mBgImageMode;
     QString mBgImagePath;
+    bool mHScrollBarEnabled;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet

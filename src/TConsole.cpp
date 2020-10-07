@@ -89,7 +89,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
-, mpHScrollBar(nullptr)
+, mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -110,6 +110,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mHScrollBarEnabled(false)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -283,13 +284,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
+    auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
-    layer->setLayout(layoutLayer);
+    layer->setLayout(vLayoutLayer);
     layoutLayer->setMargin(0);  //neu rc1
     layoutLayer->setSpacing(0); //neu rc1
     layoutLayer->setMargin(0);  //neu rc1
 
     mpScrollBar->setFixedWidth(15);
+    mpHScrollBar->setFixedHeight(15);
 
     splitter = new TSplitter(Qt::Vertical);
     splitter->setContentsMargins(0, 0, 0, 0);
@@ -333,6 +336,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+
+    vLayoutLayer->addLayout(layoutLayer);
+    vLayoutLayer->addWidget(mpHScrollBar);
+    vLayoutLayer->setContentsMargins(0, 0, 0, 0);
+    vLayoutLayer->setMargin(0);
+    vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
@@ -486,6 +495,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
     }
@@ -515,19 +525,18 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mUpperPane->show();
     mLowerPane->show();
-    mLowerPane->hide();
+    mLowerPane->updateScreenView();
+    // timer needed as updateScreenView doesn't seem to finish in time
+    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
+    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
 
-    //give the ErrorConsole a horizontal scrollbar
+    mpHScrollBar->hide();
+
+    //enable horizontal scrollbar in ErrorConsole
     if (mType == ErrorConsole) {
-        mpHScrollBar = new QScrollBar(Qt::Horizontal);
-        mpHScrollBar->setFixedHeight(15);
-        connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
-        centralLayout->addWidget(mpHScrollBar);
-        mpHScrollBar->setContentsMargins(0, 0, 0, 0);
-        mpHScrollBar->setSizePolicy(sizePolicy);
-        mpHScrollBar->hide();
+        mHScrollBarEnabled = true;
     }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
@@ -663,6 +672,12 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
     return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
 }
 
+void TConsole::resizeConsole()
+{
+    QSize s = QSize(width(), height());
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(this, &event);
+}
 
 std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
@@ -690,7 +705,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
-
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -702,7 +716,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
-        mpBackground->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
@@ -2045,9 +2059,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(this, &event);
+    resizeConsole();
 }
 
 void TConsole::refreshMiniConsole() const
@@ -2256,6 +2268,14 @@ void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
         mpScrollBar->setVisible(isVisible);
+    }
+}
+
+void TConsole::setHorizontalScrollBar(bool isEnabled)
+{
+    if (mpHScrollBar) {
+        mHScrollBarEnabled = isEnabled;
+        mpHScrollBar->setVisible(isEnabled);
     }
 }
 
