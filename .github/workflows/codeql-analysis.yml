@@ -71,21 +71,36 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+    - name: "Set location of vcpkg dependencies"
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+      run: |
+        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
+      shell: bash
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
+    - name: Install apt dependencies
+      run: |
+        # Installing packages might fail as the github image becomes outdated
+        sudo apt update
+        # These aren't available or don't work well in vcpkg
+        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v2
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    #- run: |
-    #   make bootstrap
-    #   make release
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v2
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
