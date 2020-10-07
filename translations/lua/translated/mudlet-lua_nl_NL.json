@@ -1,1 +1,6 @@
-{}
+{
+  "AdjustableContainer.disconnect": {
+    "message": "Verbreek verbinding ",
+    "description": "disconnect your container from the border frame"
+  }
+}

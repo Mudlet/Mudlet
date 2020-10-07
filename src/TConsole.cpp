@@ -296,7 +296,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    auto styleSheet = QStringLiteral("background-color: rgba(0,0,0,0)");
+    //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
+    auto styleSheet = QStringLiteral("QSplitter { background-color: rgba(0,0,0,0) }");
     splitter->setStyleSheet(styleSheet);
     splitter->setParent(layer);
 
@@ -611,6 +612,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
 TConsole::~TConsole()
 {
+    if (mType & ~CentralDebugConsole) {
+        // Codepoint issues reporting is not enabled for the CDC:
+        mUpperPane->reportCodepointErrors();
+    }
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
@@ -657,6 +663,21 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
     return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
 }
 
+
+std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (name.isEmpty() || !name.compare(QStringLiteral("main"))) {
+        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+}
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -1208,6 +1229,8 @@ void TConsole::changeColors()
         }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet(QString());
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1215,6 +1238,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);

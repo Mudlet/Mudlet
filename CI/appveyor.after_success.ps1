@@ -15,8 +15,6 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 } else {
   $Script:Commit = git rev-parse --short HEAD
 }
-# ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
-$Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
@@ -43,9 +41,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
+    $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    $Script:VersionAndSha = "$Env:VERSION"
   }
 
   Write-Output "=== Cloning installer project ==="

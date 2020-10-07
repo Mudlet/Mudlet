@@ -637,6 +637,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors2();
 
+    checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
 
@@ -1259,6 +1260,8 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
+
+    checkBox_debugShowAllCodepointProblems->setChecked(false);
 
     groupBox_ssl_certificate->hide();
     notificationArea->hide();
@@ -2610,6 +2613,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+        pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
 
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the

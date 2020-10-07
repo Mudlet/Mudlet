@@ -184,7 +184,7 @@ end</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>^Visible Exits:</string>
+					<string>(?i:^(obvious|visible) exits:)</string>
 				</regexCodeList>
 				<regexCodePropertyList>
 					<integer>1</integer>
@@ -204,7 +204,7 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 					<colorTriggerFgColor>#000000</colorTriggerFgColor>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
-						<string>^([\w\s]+)\s+: [\w\s]+</string>
+						<string>^([\w\s]+)\s*: [\w\s]+</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>

@@ -39,6 +39,7 @@
 #include <QChar>
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QHash>
 #include <QPainter>
 #include <QScrollBar>
 #include <QTextBoundaryFinder>
@@ -65,7 +66,10 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
-, mTimeStampWidth(13) // Should be the same as the size of the timeStampFormat constant in the TBuffer class
+// Should be the same as the size of the timeStampFormat constant in the TBuffer
+// class:
+, mTimeStampWidth(13)
+, mShowAllCodepointIssues(false)
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -79,6 +83,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 
         mpHost->setDisplayFontFixedPitch(true);
         setFont(hostFont);
+
+        // There is no point in setting this option on the Central Debug Console
+        // as A) it is shared and B) any codepoints that it can't handle will
+        // probably have already cropped up on another TConsole:
+        if (!mIsLowerPane) {
+            mShowAllCodepointIssues = mpHost->debugShowAllProblemCodepoints();
+            connect(mpHost, &Host::signal_changeDebugShowAllProblemCodepoints, this, &TTextEdit::slot_changeDebugShowAllProblemCodepoints);
+        }
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
@@ -438,12 +450,19 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  */
 int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
+    static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
+    bool useReplacementCharacter = false;
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
     } else {
         charWidth = getGraphemeWidth(unicode);
+        if (!charWidth) {
+            // Print the grapheme replacement character instead - which seems to
+            // be 1 wide
+            useReplacementCharacter = true;
+        }
     }
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
@@ -477,15 +496,15 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         bgColor = charStyle.background();
     }
 
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * (useReplacementCharacter ? 1 : charWidth), mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
 
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
-    return charWidth;
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
+    return (useReplacementCharacter ? 1 : charWidth);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -500,19 +519,77 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         return 1;
     case 2: // Draw as wide
         return 2;
-    case widechar_nonprint:     // -1 = The character is not printable.
-        qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+" << QString::number(unicode, 16) << ".";
-        return 1;
-    case widechar_combining:    // -2 = The character is a zero-width combiner.
-        qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+" << QString::number(unicode, 16) << ".";
-        return 1;
-    case widechar_ambiguous:    // -3 = The character is East-Asian ambiguous width.
+    case widechar_nonprint:
+        // -1 = The character is not printable - so put in a replacement
+        // character instead - and so it can be seen it need a space:
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::make_tuple(1, "Unprintable"));
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+        }
+        return 0;
+    case widechar_combining:
+        // -2 = The character is a zero-width combiner - and should not be
+        // present as the FIRST codepoint in a grapheme so this indicates an
+        // error somewhere - so put in the replacement character
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Zero Width Combiner"}});
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+        }
+        return 0;
+    case widechar_ambiguous:
+        // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
-    case widechar_private_use:  // -4 = The character is for private use - we cannot know for certain what width to used
-        qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private User Character, we cannot know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+    case widechar_private_use:
+        // -4 = The character is for private use - we cannot know for certain
+        // what width to used - let's assume 1 for the moment:
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
+                                             << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Private Use"}});
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+        }
         return 1;
-    case widechar_unassigned:   // -5 = The character is unassigned.
-        qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+    case widechar_unassigned:
+        // -5 = The character is unassigned - at least for the Unicode version
+        // that our widechar_wcwidth(...) was built for - assume 1:
+        if (!mIsLowerPane) {
+            bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
+            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+                qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
+                                               << QStringLiteral("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
+            }
+            if (Q_UNLIKELY(newCodePointToWarnAbout)) {
+                mProblemCodepoints.insert(unicode, std::tuple{1, std::string{"Unassigned"}});
+            } else {
+                auto [count, reason] = mProblemCodepoints.value(unicode);
+                mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
+            }
+        }
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
         if (mUseOldUnicode8) {
@@ -652,9 +729,12 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 }
 
 // highlights the currently selected text.
-// mPA is the top-left point of the selection and mPB is the bottom-right point
-// of the selection, regardless of the way the user is selecting (top-down,
-// bottom-up, left-right, right-left)
+// mpA represents the first (zero-based) line/row (y) and position/column
+// (x) that IS to be selected, mpB represents the last (zero-based) line and
+// column that IS to be selected regardless of the way the user is selecting
+// (top-down, bottom-up, left-right, right-left) - which means that in the
+// traditional 'for' loop construct where the test is a '<' based one, the test
+// limit is mpB.y() + 1 for the row and mpB.x() + 1 for the column:
 void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
@@ -692,28 +772,23 @@ void TTextEdit::highlightSelection()
 
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
-    int startY = mPA.y();
-    auto totalY = static_cast<int>(mpBuffer->buffer.size());
-    for (int currentY = startY, total = mPB.y(); currentY <= total; ++currentY) {
-        int currentX = 0;
-        int maxX = static_cast<int>(mpBuffer->buffer.at(currentY).size());
-        if (currentY == startY) {
-            currentX = mPA.x();
-        }
+    // clang-format off
+    for (int y = std::max(0, mPA.y()),
+             endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
+         y < endY;
+         ++y) {
 
-        if (currentY >= totalY) {
-            break;
-        }
+        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
+                 endX = (y == (mPB.y()))
+                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                     : static_cast<int>(mpBuffer->buffer.at(y).size());
+             x < endX;
+             ++x) {
 
-        for (; currentX < maxX; ++currentX) {
-            if ((currentY == mPB.y()) && (currentX > mPB.x())) {
-                break;
-            }
-            if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
-                mpBuffer->buffer.at(currentY).at(currentX).select();
-            }
+            mpBuffer->buffer.at(y).at(x).select();
         }
     }
+    // clang-format on
 
     update(mSelectedRegion.boundingRect());
     update(newRegion);
@@ -723,23 +798,24 @@ void TTextEdit::highlightSelection()
 void TTextEdit::unHighlight()
 {
     normaliseSelection();
-    int y1 = mPA.y();
 
-    if (y1 < 0) {
-        return;
-    }
-    for (int y = y1, total = mPB.y(); y <= total; ++y) {
-        int x = 0;
+    // clang-format off
+    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
+         y < endY;
+         ++y) {
 
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            break;
+        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
+                 endX = (y == (mPB.y()))
+                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
+                     : static_cast<int>(mpBuffer->buffer.at(y).size());
+             x < endX;
+             ++x) {
+
+            mpBuffer->buffer.at(y).at(x).deselect();
         }
-
-        for (; x < static_cast<int>(mpBuffer->buffer.at(y).size()); ++x)
-            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                mpBuffer->buffer.at(y).at(x).deselect();
-            }
     }
+    // clang-format on
+
     forceUpdate();
 }
 
@@ -885,7 +961,10 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                charWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode);
+                // The paint code is set to use a replacement character for a
+                // zero return value - so handle the space that will need)
+                charWidth = (reportedWidth ? reportedWidth : 1);
             }
             column += charWidth;
 
@@ -981,7 +1060,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting) {
+        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
             unHighlight();
             mDragStart.setX(0);
             mDragStart.setY(y);
@@ -1404,7 +1483,10 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                charWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode);
+                // The paint code is set to use a replacement character for a
+                // zero return value - so handle the space that will need)
+                charWidth = (reportedWidth ? reportedWidth : 1);
             }
             column += charWidth;
             // The timestamp is (currently) 13 "normal width" characters
@@ -1419,7 +1501,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
-    pixmap.fill(palette().base().color());
+    pixmap.fill(mBgColor);
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {
@@ -1448,7 +1530,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 // (and thus doesn't mess up any of the caches)
 std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     if (mpConsole->getType() == TConsole::MainConsole) {
         painter.setFont(mpHost->getDisplayFont());
         painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
@@ -1486,12 +1568,16 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
-
+    // try to prevent crash if buffer is batch deleted
+    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1){
+        mPA.ry() -= mpBuffer->mBatchDeleteSize;
+        mPB.ry() -= mpBuffer->mBatchDeleteSize;
+    }
     int startLine = std::max(0, mPA.y());
-    int endLine = std::min(mPB.y(), mpBuffer->lineBuffer.size());
+    int endLine = std::min(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
     int offset = endLine - startLine;
     int startPos = std::max(0, mPA.x());
-    int endPos = std::min(mPB.x(), mpBuffer->lineBuffer.at(endLine).size());
+    int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
 
     if (mPA.y() == mPB.y()) {
@@ -2190,5 +2276,50 @@ void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
     if (mWideAmbigousWidthGlyphs != state) {
         mWideAmbigousWidthGlyphs = state;
         update();
+    }
+}
+
+void TTextEdit::slot_changeDebugShowAllProblemCodepoints(const bool state)
+{
+    if (mShowAllCodepointIssues != state) {
+        mShowAllCodepointIssues = state;
+    }
+}
+
+// Originally this was going to be part of the destructor - but it was unable
+// to get the parent Console and Profile names at that point:
+void TTextEdit::reportCodepointErrors()
+{
+    if (mIsLowerPane) {
+        return;
+    }
+
+    if (!mProblemCodepoints.isEmpty()) {
+        QList<uint> keyList{mProblemCodepoints.keys()};
+        std::sort(keyList.begin(), keyList.end());
+        qDebug().nospace().noquote() << "TTextEdit INFO - during the use of TTextEdit::getGraphemeWidth(...) for the \n"
+                                     << "    \"" << mpConsole->mConsoleName << "\" console for the \"" << mpConsole->mProfileName << "\" profile\n"
+                                     << "    the following awkward Unicode codepoints were detected with the frequency\n"
+                                        "    indicated. Note that this does not precisely reflect how many times they\n"
+                                        "    were seen in the MUD Game server output but instead how many times they\n"
+                                        "    had to be redrawn so also depends on how much scrolling around was done.\n"
+                                        "    Nevertheless the higher the number the more desirable to eliminate them\n"
+                                        "    (if possible) it would be.\n"
+                                        "    You may wish to consult with the Mudlet Makers via any of our support\n"
+                                        "    channels to see if these problems are known about and can be fixed:\n";
+        qDebug().nospace().noquote() << QStringLiteral("%1 %2 %3").arg(QStringLiteral("    Codepoint (Hex)")).arg(QStringLiteral("Count"), 7).arg(QStringLiteral("Reason"), -7);
+        for (int i = 0, total = mProblemCodepoints.count(); i < total; ++i) {
+            const auto key = keyList.at(i);
+            const auto [count, reason] = mProblemCodepoints.value(key);
+            if (key <= 0xffff) {
+                // Within the BMP:
+                qDebug().nospace().noquote() << QStringLiteral("             U+%1 %2 %3").arg(key, 4, 16, QLatin1Char('0')).arg(count, 7).arg(reason.c_str());
+            } else {
+                // Beyond the BMP:
+                qDebug().nospace().noquote() << QStringLiteral("           U+%1 %2 %3").arg(key, 6, 16, QLatin1Char('0')).arg(count, 7).arg(reason.c_str());
+            }
+        }
+        // Needed to put a blank line after the last entry:
+        qDebug().nospace().noquote() << " ";
     }
 }
