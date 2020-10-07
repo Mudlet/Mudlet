@@ -1396,28 +1396,12 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
     int s = 0;
 
     if (lua_gettop(L) > 0) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "getLineNumber: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
-    if (isMain(windowName)) {
-        lua_pushnumber(L, host.mpConsole->getLineNumber());
-        return 1;
-    } else {
-        auto[success, lineNumber] = mudlet::self()->getLineNumber(&host, windowName);
-
-        if (success) {
-            lua_pushnumber(L, lineNumber);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
-            return 2;
-        }
-    }
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getLineNumber());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
@@ -1719,19 +1703,13 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
-    QString windowName = "";
-    if (lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-    } else {
-        windowName = "main";
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        windowName = WINDOW_NAME(L, 1);
     }
 
-    Host& host = getHostFromLua(L);
-    if (isMain(windowName)) {
-        host.mpConsole->copy();
-    } else {
-        mudlet::self()->copy(&host, windowName);
-    }
+    auto console = CONSOLE(L, windowName);
+    console->copy();
     return 0;
 }
 
@@ -1746,19 +1724,13 @@ int TLuaInterpreter::cut(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#paste
 int TLuaInterpreter::paste(lua_State* L)
 {
-    QString windowName = "";
-    if (lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-    } else {
-        windowName = "main";
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        windowName = WINDOW_NAME(L, 1);
     }
 
-    Host& host = getHostFromLua(L);
-    if (isMain(windowName)) {
-        host.mpConsole->paste();
-    } else {
-        mudlet::self()->pasteWindow(&host, windowName);
-    }
+    auto console = CONSOLE(L, windowName);
+    console->paste();
     return 0;
 }
 
@@ -1863,35 +1835,28 @@ int TLuaInterpreter::isPrompt(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrap
 int TLuaInterpreter::setWindowWrap(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setWindowWrap: wrong argument type");
-        return lua_error(L);
+    int s = 1;
+    QString windowName;
+    if (lua_gettop(L) > 1) {
+        windowName = WINDOW_NAME(L, 1);
+        ++s;
     }
-    QString windowName = lua_tostring(L, 1);
 
-    if (!lua_isnumber(L, 2)) {
+    if (!lua_isnumber(L, s)) {
         lua_pushstring(L, "setWindowWrap: wrong argument type");
         return lua_error(L);
     }
     int luaFrom = lua_tointeger(L, 2);
 
-    Host& host = getHostFromLua(L);
-    if (isMain(windowName)) {
-        host.mpConsole->setWrapAt(luaFrom);
-    } else {
-        mudlet::self()->setWindowWrap(&host, windowName, luaFrom);
-    }
+    auto console = CONSOLE(L, windowName);
+    console->setWrapAt(luaFrom);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
@@ -1899,60 +1864,35 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     }
     int luaFrom = lua_tointeger(L, 2);
 
-    Host& host = getHostFromLua(L);
-    if (isMain(windowName)) {
-        host.mpConsole->setIndentCount(luaFrom);
-    } else {
-        mudlet::self()->setWindowWrapIndent(&host, windowName, luaFrom);
-    }
+    auto console = CONSOLE(L, windowName);
+    console->setIndentCount(luaFrom);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineCount
 int TLuaInterpreter::getLineCount(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-    if (lua_isstring(L, 1)) {
-        QString window = lua_tostring(L, 1);
-        lua_pushnumber(L, mudlet::self()->getLastLineNumber(&host, window) + 1);
-        return 1;
-    } else {
-        int lineNumber = host.mpConsole->getLineCount();
-        lua_pushnumber(L, lineNumber);
-        return 1;
+    QString windowName;
+    if (lua_gettop(L) > 0) {
+        windowName = WINDOW_NAME(L, 1);
     }
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getLineCount());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
     QString windowName;
-    Host& host = getHostFromLua(L);
-    if (lua_gettop(L)) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getColumnNumber: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-
-        int result = 0;
-        if (windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-            result = host.mpConsole->getColumnNumber();
-        } else {
-            result = mudlet::self()->getColumnNumber(&host, windowName);
-        }
-        if (result == -1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
-            return 2;
-        } else {
-            lua_pushnumber(L, result);
-            return 1;
-        }
-    } else {
-        lua_pushnumber(L, host.mpConsole->getColumnNumber());
-        return 1;
+    if (lua_gettop(L) > 0) {
+        windowName = WINDOW_NAME(L, 1);
     }
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getColumnNumber());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getStopWatchTime
@@ -2435,15 +2375,10 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
 int TLuaInterpreter::selectSection(lua_State* L)
 {
     int s = 1;
-    int argumentsCount = lua_gettop(L);
     QString windowName;
 
-    if (argumentsCount > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, "selectSection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+    if (lua_gettop(L) > 2) {
+        windowName = WINDOW_NAME(L, 1);
         s++;
     }
     if (!lua_isnumber(L, s)) {
@@ -2461,12 +2396,8 @@ int TLuaInterpreter::selectSection(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    int ret;
-    if (isMain(windowName)) {
-        ret = host.mpConsole->selectSection(from, to);
-    } else {
-        ret = mudlet::self()->selectSection(&host, windowName, from, to);
-    }
+    auto console = CONSOLE(L, windowName);
+    int ret = console->selectSection(from, to);
     lua_pushboolean(L, ret == -1 ? false : true);
     return 1;
 }
@@ -2478,21 +2409,12 @@ int TLuaInterpreter::getSelection(lua_State* L)
     QString text;
     int start, length;
 
-    auto& host = getHostFromLua(L);
-
     QString windowName;
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getSelection: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = WINDOW_NAME(L, 1);
     }
-    if (isMain(windowName)) {
-        std::tie(valid, text, start, length) = host.mpConsole->getSelection();
-    } else {
-        std::tie(valid, text, start, length) = mudlet::self()->getSelection(&host, windowName);
-    }
+    auto console = CONSOLE(L, windowName);
+    std::tie(valid, text, start, length) = console->getSelection();
 
     if (!valid) {
         lua_pushnil(L);
@@ -2513,11 +2435,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "moveCursor: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
 
@@ -2534,13 +2452,8 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     }
     int luaTo = lua_tointeger(L, s);
 
-    Host& host = getHostFromLua(L);
-
-    if (isMain(windowName)) {
-        lua_pushboolean(L, host.mpConsole->moveCursor(luaFrom, luaTo));
-    } else {
-        lua_pushboolean(L, mudlet::self()->moveCursor(&host, windowName, luaFrom, luaTo));
-    }
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->moveCursor(luaFrom, luaTo));
     return 1;
 }
 
@@ -2551,11 +2464,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
 
@@ -2705,22 +2614,17 @@ int TLuaInterpreter::replace(lua_State* L)
 {
     int n = lua_gettop(L);
     int s = 1;
+    QString windowName;
+
+    if (n > 1) {
+        windowName = WINDOW_NAME(L, 1);
+        s++;
+    }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "replace: wrong argument type");
         return lua_error(L);
     }
     QString text = lua_tostring(L, s);
-    s++;
-
-    QString windowName;
-    if (n > 1) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "replace: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = text;
-        text = lua_tostring(L, s);
-    }
 
     Host& host = getHostFromLua(L);
     if (isMain(windowName)) {
@@ -2736,11 +2640,7 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) == 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "deleteLine: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = WINDOW_NAME(L, 1);
     }
 
     Host& host = getHostFromLua(L);
