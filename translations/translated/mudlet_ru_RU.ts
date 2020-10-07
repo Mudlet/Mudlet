@@ -10655,7 +10655,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>Уведомлять о новых сообщениях</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -10675,7 +10675,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Включить MSP (Mud Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="731"/>
@@ -11035,7 +11035,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2518"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>Чат</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4934"/>
