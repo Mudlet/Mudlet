@@ -104,7 +104,7 @@ static bool isMain(const QString& name)
     return false;
 }
 
-static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s!";
+static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
