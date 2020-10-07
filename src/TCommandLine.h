@@ -42,15 +42,30 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
     Q_OBJECT
 
 public:
+    enum CommandLineTypeFlag {
+        UnknownType = 0x0,     // Should not be encountered but left as a trap value
+        MainCommandLine = 0x1, // One per profile
+        SubCommandLine = 0x2,  // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4,  // Integrated in MiniConsoles
+    };
+
+    Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
+
     Q_DISABLE_COPY(TCommandLine)
-    TCommandLine(Host*, TConsole*, QWidget*);
+    explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void hideEvent(QHideEvent*) override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
+    void setAction(const int);
+    void resetAction();
+    void releaseFunc(const int, const int);
+    CommandLineType getType() const { return mType; }
 
-
+    int mActionFunction = 0;
     QPalette mRegularPalette;
+    QString mCommandLineName;
 
 
 private:
@@ -65,7 +80,7 @@ private:
     void adjustHeight();
     void processNormalKey(QEvent*);
     bool keybindingMatched(QKeyEvent*);
-
+    CommandLineType mType;
 
     QPointer<Host> mpHost;
     KeyUnit* mpKeyUnit;
@@ -98,5 +113,7 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
 
 #endif // MUDLET_TCOMMANDLINE_H

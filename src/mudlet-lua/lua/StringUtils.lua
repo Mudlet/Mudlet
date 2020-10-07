@@ -64,16 +64,22 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.split
 function string:split(delimiter)
   delimiter = delimiter or " "
-  if delimiter == "" then return {self:match( (self:gsub(".", "(.)")) )} end
   local result = { }
-  local from = 1
-  local delim_from, delim_to = string.find( self, delimiter, from  )
-  while delim_from do
-    table.insert( result, string.sub( self, from, delim_from - 1 ) )
-    from = delim_to + 1
-    delim_from, delim_to = string.find( self, delimiter, from  )
+
+  if delimiter == "" then
+    for i = 1, #self do
+      result[i] = self:sub(i,i)
+    end
+  else
+    local from = 1
+    local delim_from, delim_to = string.find( self, delimiter, from  )
+    while delim_from do
+      result[#result+1] = string.sub(self, from, delim_from - 1)
+      from = delim_to + 1
+      delim_from, delim_to = string.find( self, delimiter, from  )
+    end
+    result[#result+1] = string.sub(self, from)
   end
-  table.insert( result, string.sub( self, from  ) )
   return result
 end
 

@@ -1,0 +1,51 @@
+name: Update Geyser docs
+
+on:
+  repository_dispatch:
+    types: update-geyser-docs
+  schedule:
+    - cron: '0 0 * * fri'
+
+jobs:
+  update-geyser-docs:
+    runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
+
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout source code
+
+    - uses: leafo/gh-actions-lua@v5
+      name: Install Lua
+      with:
+        luaVersion: "5.1.5"
+
+    - uses: leafo/gh-actions-luarocks@v2
+      name: Install LuaRocks
+
+    - name: Install LDoc
+      run: |
+        luarocks install ldoc
+
+    - name: Regenerate docs
+      run: cd "${WORKSPACE}/src/mudlet-lua" && ./genDoc.sh
+      env:
+        WORKSPACE: ${{github.workspace}}
+
+    - name: Remove previous docs
+      uses: appleboy/ssh-action@master
+      with:
+        host: mudlet.org
+        username: ${{secrets.UPLOAD_USERNAME}}
+        key: ${{secrets.UPLOAD_PRIVATEKEY}}
+        script: "rm -rf /home/${{secrets.UPLOAD_USERNAME}}/geyser/"
+
+    - name: Upload docs
+      uses: appleboy/scp-action@master
+      with:
+        host: mudlet.org
+        username: ${{secrets.UPLOAD_USERNAME}}
+        key: ${{secrets.UPLOAD_PRIVATEKEY}}
+        source: "${{github.workspace}}/src/mudlet-lua/mudlet-lua-doc/files/"
+        target: "/home/${{secrets.UPLOAD_USERNAME}}/geyser/"
+        strip_components: 5

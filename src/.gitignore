@@ -1,1 +1,6 @@
 /qrc_mudlet_alpha.cpp
+/.qmake.stash
+/kwallet_interface.h
+/kwallet_interface.cpp
+/moc_predefs.h
+

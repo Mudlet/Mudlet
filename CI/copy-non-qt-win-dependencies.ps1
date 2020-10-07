@@ -7,6 +7,7 @@ COPY $Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libpcre-1.dll .
 COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
 XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
+XCOPY /S /I /Q /Y ..\..\translations\lua translations\lua
 COPY ..\*.dic .
 COPY ..\*.aff .
 XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .

@@ -134,6 +134,10 @@ Tree<T>::~Tree()
     delete mpMyChildrenList;
     if (mpParent) {
         mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
+        // FIXME: std::uncaught_exception() is deprecated in C++17 and is to be
+        // removed in C++20 - and this throws out a lot of build time warnings
+        // that are currently being suppressed by a `-Wno-deprecated-declarations`
+        // but which might also be masking issues in other areas:
         if (std::uncaught_exception()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }

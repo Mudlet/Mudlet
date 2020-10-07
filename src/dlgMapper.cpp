@@ -291,7 +291,7 @@ void dlgMapper::goRoom()
     //        while (it.hasNext()) {
     //            it.next();
     //            int i = it.key();
-    //            if (mpMap->rooms[i]->name.contains( txt, Qt::CaseInsensitive)) {
+    //            if (mpMap->rooms[i]->name.contains(txt, Qt::CaseInsensitive)) {
     //                qDebug() << "inserting match:" << i;
     //                searchList->addItem(mpMap->rooms[i]->name);
     //            }
@@ -355,7 +355,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
         } else {
-            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area not valid.";
         }
     } else {
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";

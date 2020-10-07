@@ -1,0 +1,8 @@
+--triplet
+x64-linux
+yajl
+hunspell
+pugixml
+--overlay-ports=../our-vcpkg-dependencies/lua
+lua[core]
+boost-graph
