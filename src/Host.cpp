@@ -2600,7 +2600,7 @@ void Host::setCompactInputLine(const bool state)
 
 QPointer<TConsole> Host::findConsole(QString name)
 {
-    if (name.isEmpty() or name == "main") {
+    if (name.isEmpty() or name == QStringLiteral("main")) {
         return mpConsole;
     } else {
         return mpConsole->mSubConsoleMap.value(name);
