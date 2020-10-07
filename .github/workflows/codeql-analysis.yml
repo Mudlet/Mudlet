@@ -73,7 +73,7 @@ jobs:
 
     - name: "Set location of vcpkg dependencies"
       env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
       run: |
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
