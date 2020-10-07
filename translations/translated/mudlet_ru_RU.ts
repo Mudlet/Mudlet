@@ -10670,7 +10670,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Для этого также необходимо, чтобы GMCP был включен в следующей группе ниже.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
@@ -10682,7 +10682,7 @@ try again when it has finished.</source>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>Этот шрифт не является моноширинным, что может быть не идеальным для игры в некоторые текстовые игры: вы можете использовать его, но могут быть проблемы с выравнивание столбцов текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1258"/>
@@ -11466,7 +11466,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation type="unfinished"/>
+      <translation>Показывать отладочные сообщения для таймеров не меньше:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5126"/>
