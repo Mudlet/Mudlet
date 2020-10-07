@@ -467,8 +467,7 @@ void Host::saveModules(int sync, bool backup)
         QString filename_xml = entry[0];
 
         if (backup) {
-            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
-            QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+            QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
             savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
@@ -693,10 +692,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (2 of 6)
     QString filename_xml;
     if (saveName.isEmpty()) {
-        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
     }
