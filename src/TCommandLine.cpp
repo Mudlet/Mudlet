@@ -279,6 +279,7 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mCursorX = 0;
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
