@@ -176,25 +176,7 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
-    QPair<bool, QString> addWordToSet(const QString&);
-    QPair<bool, QString> removeWordFromSet(const QString&);
-    void setSystemSpellDictionary(const QString&);
-    void setProfileSpellDictionary();
-    const QString& getSystemSpellDictionary() const { return mSpellDic; }
-    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
-    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
-    // Either returns the handle of the per profile or the shared Mudlet one or
-    // nullptr depending on the state of the flags mEnableUserDictionary and
-    // mUseSharedDictionary:
-    Hunhandle* getHunspellHandle_user() const {
-        return mEnableUserDictionary
-                ? (mUseSharedDictionary
-                   ? mpHunspell_shared
-                   : mpHunspell_profile)
-                : nullptr; }
-    QSet<QString> getWordSet() const;
     virtual void setProfileName(const QString&);
-    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     // In the next pair of functions the first element in the return is an
     // error code:
     // 0 = Okay
@@ -329,32 +311,6 @@ private:
 
     ConsoleType mType;
 
-    // Was public in Host class but made private there and cloned to here
-    // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the the changed dictionary:
-    QString mSpellDic;
-
-    // Cloned from Host
-    bool mEnableUserDictionary;
-    bool mUseSharedDictionary;
-
-    // Three handles, one for the dictionary the user choses from the system
-    // one created by the mudlet class for all profiles and the third for a per
-    // profile one - the last pair are built by the user and/or lua functions:
-    Hunhandle* mpHunspell_system;
-    Hunhandle* mpHunspell_shared;
-    Hunhandle* mpHunspell_profile;
-    // The user dictionary will always use the UTF-8 codec, but the one
-    // selected from the system's ones may not:
-    QByteArray mHunspellCodecName_system;
-    QTextCodec* mpHunspellCodec_system;
-    // To update the profile dictionary we actually have to track all the words
-    // in it so we loaded the contents into this on startup and adjust it as we
-    // go. Then, at the end of a session we will put the revised contents
-    // back into the user's ".dic" file and regenerate the needed pair of lines
-    // for the ".aff" file - this member is for the per profile option only as
-    // the shared one is held by the mudlet singleton class:
-    QSet<QString> mWordSet_profile;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -363,6 +319,7 @@ class TMainConsole : public TConsole
 {
 public:
     TMainConsole(Host*, QWidget* parent = nullptr);
+    ~TMainConsole();
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
@@ -400,6 +357,53 @@ public:
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool setBackgroundImage(const QString& name, const QString& path);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+
+    void setSystemSpellDictionary(const QString&);
+    void setProfileSpellDictionary();
+    const QString& getSystemSpellDictionary() const { return mSpellDic; }
+    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    // Either returns the handle of the per profile or the shared Mudlet one or
+    // nullptr depending on the state of the flags mEnableUserDictionary and
+    // mUseSharedDictionary:
+    Hunhandle* getHunspellHandle_user() const {
+        return mEnableUserDictionary
+                ? (mUseSharedDictionary
+                   ? mpHunspell_shared
+                   : mpHunspell_profile)
+                : nullptr; }
+    QSet<QString> getWordSet() const;
+    QPair<bool, QString> addWordToSet(const QString&);
+    QPair<bool, QString> removeWordFromSet(const QString&);
+    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+
+private:
+    // Was public in Host class but made private there and cloned to here
+    // (for main TConsole) to prevent it being changed without going through the
+    // process to load in the the changed dictionary:
+    QString mSpellDic;
+
+    // Cloned from Host
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
+
+    // Three handles, one for the dictionary the user choses from the system
+    // one created by the mudlet class for all profiles and the third for a per
+    // profile one - the last pair are built by the user and/or lua functions:
+    Hunhandle* mpHunspell_system;
+    Hunhandle* mpHunspell_shared;
+    Hunhandle* mpHunspell_profile;
+    // The user dictionary will always use the UTF-8 codec, but the one
+    // selected from the system's ones may not:
+    QByteArray mHunspellCodecName_system;
+    QTextCodec* mpHunspellCodec_system;
+    // To update the profile dictionary we actually have to track all the words
+    // in it so we loaded the contents into this on startup and adjust it as we
+    // go. Then, at the end of a session we will put the revised contents
+    // back into the user's ".dic" file and regenerate the needed pair of lines
+    // for the ".aff" file - this member is for the per profile option only as
+    // the shared one is held by the mudlet singleton class:
+    QSet<QString> mWordSet_profile;
 };
 
 #if !defined(QT_NO_DEBUG)
