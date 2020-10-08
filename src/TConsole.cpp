@@ -57,6 +57,8 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mLogFileName(QString(""))
+, mLogToLogFile(false)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -96,8 +98,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mDisplayFont(QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal))
 , mFgColor(Qt::black)
 , mIndentCount(0)
-, mLogFileName(QString(""))
-, mLogToLogFile(false)
 , mMainFrameBottomHeight(0)
 , mMainFrameLeftWidth(0)
 , mMainFrameRightWidth(0)
@@ -966,13 +966,8 @@ int TConsole::getButtonState()
     return mButtonState;
 }
 
-void TConsole::toggleLogging(bool isMessageEnabled)
+void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    if (mType & (CentralDebugConsole|ErrorConsole|SubConsole|UserWindow)) {
-        return;
-        // We don't support logging anything other than main console (at present?)
-    }
-
     // CHECKME: This path seems suspicious, it is shared amoungst ALL profiles
     // but the action is "Per Profile"...!
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("autolog")));
@@ -1173,8 +1168,7 @@ void TConsole::slot_toggleLogging()
         return;
         // We don't support logging anything other than main console (at present?)
     }
-
-    toggleLogging(true);
+    mpHost->mpConsole->toggleLogging(true);
 }
 
 void TConsole::slot_toggleReplayRecording()

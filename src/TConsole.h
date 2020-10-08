@@ -174,7 +174,6 @@ public:
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
 
-    void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     // In the next pair of functions the first element in the return is an
@@ -219,10 +218,6 @@ public:
     TChar mFormatSystemMessage;
 
     int mIndentCount;
-    QFile mLogFile;
-    QString mLogFileName;
-    QTextStream mLogStream;
-    bool mLogToLogFile;
     int mMainFrameBottomHeight;
     int mMainFrameLeftWidth;
     int mMainFrameRightWidth;
@@ -308,9 +303,7 @@ protected:
 private:
     void refreshMiniConsole() const;
 
-
     ConsoleType mType;
-
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -376,6 +369,12 @@ public:
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+
+    QFile mLogFile;
+    QString mLogFileName;
+    QTextStream mLogStream;
+    bool mLogToLogFile;
+    void toggleLogging(bool);
 
 private:
     // Was public in Host class but made private there and cloned to here
