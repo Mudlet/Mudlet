@@ -82,7 +82,6 @@ public:
     ~TConsole();
 
     void reset();
-    void resetMainConsole();
     void resizeConsole();
     Host* getHost();
     void replace(const QString&);
@@ -92,9 +91,6 @@ public:
     void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false);
     void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
-    void setLabelStyleSheet(std::string& buf, std::string& sh);
-    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
-    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void copy();
     void cut();
     void paste();
@@ -108,13 +104,8 @@ public:
     int getLineNumber();
     int getLineCount();
     bool deleteLine(int);
-    std::list<int> getFgColor(std::string& buf);
-    std::list<int> getBgColor(std::string& buf);
-    void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
-    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
-    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -144,7 +135,6 @@ public:
     void setHorizontalScrollBar(bool);
     void setMiniConsoleCmdVisible(bool);
     void changeColors();
-    TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
     void scrollUp(int lines);
     void print(const QString&, QColor fgColor, QColor bgColor);
@@ -158,21 +148,6 @@ public:
     int getLastLineNumber();
     void refresh();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
-    std::pair<bool, QString> deleteLabel(const QString&);
-    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
-    std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
-    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    bool raiseWindow(const QString& name);
-    bool lowerWindow(const QString& name);
-    bool showWindow(const QString& name);
-    bool hideWindow(const QString& name);
-    bool printWindow(const QString& name, const QString& text);
-    bool setBackgroundImage(const QString& name, const QString& path);
-    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-    QString getCurrentLine(std::string&);
-    void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
@@ -187,9 +162,9 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
-    std::list<int> _getFgColor();
-    std::list<int> _getBgColor();
-    void _luaWrapLine(int);
+    std::list<int> getFgColor();
+    std::list<int> getBgColor();
+    void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
     bool saveMap(const QString&, int saveVersion = 0);
@@ -198,7 +173,6 @@ public:
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-    QSize getUserWindowSize(const QString& windowname) const;
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
@@ -219,7 +193,7 @@ public:
                    : mpHunspell_profile)
                 : nullptr; }
     QSet<QString> getWordSet() const;
-    void setProfileName(const QString&);
+    virtual void setProfileName(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
     // In the next pair of functions the first element in the return is an
     // error code:
@@ -227,9 +201,6 @@ public:
     // 1 = Window not found
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
-    QPair<quint8, TChar> getTextAttributes(const QString&) const;
-    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
-    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
 
 
     QPointer<Host> mpHost;
@@ -266,10 +237,6 @@ public:
     TChar mFormatSystemMessage;
 
     int mIndentCount;
-    QMap<QString, TConsole*> mSubConsoleMap;
-    QMap<QString, TDockWidget*> mDockWidgetMap;
-    QMap<QString, TCommandLine*> mSubCommandLineMap;
-    QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
@@ -396,6 +363,43 @@ class TMainConsole : public TConsole
 {
 public:
     TMainConsole(Host*, QWidget* parent = nullptr);
+
+    QMap<QString, TConsole*> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TLabel*> mLabelMap;
+
+    void resetMainConsole();
+
+    TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    bool raiseWindow(const QString& name);
+    bool lowerWindow(const QString& name);
+    bool showWindow(const QString& name);
+    bool hideWindow(const QString& name);
+    bool printWindow(const QString& name, const QString& text);
+    void setProfileName(const QString&);
+    void selectCurrentLine(std::string&);
+    std::list<int> getFgColor(std::string& buf);
+    std::list<int> getBgColor(std::string& buf);
+    QPair<quint8, TChar> getTextAttributes(const QString&) const;
+    void luaWrapLine(std::string& buf, int line);
+    QString getCurrentLine(std::string&);
+    TConsole* createBuffer(const QString& name);
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    bool setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags);
+    TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
+    QSize getUserWindowSize(const QString& windowname) const;
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
+    void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
+    std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
+    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
+    bool setBackgroundImage(const QString& name, const QString& path);
+    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
 };
 
 #if !defined(QT_NO_DEBUG)

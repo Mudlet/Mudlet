@@ -649,7 +649,7 @@ Host* TConsole::getHost()
     return mpHost;
 }
 
-void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
+void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
 {
     QString key = QString::fromUtf8(buf.c_str());
     QString sheet = sh.c_str();
@@ -663,7 +663,7 @@ void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
     }
 }
 
-std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
+std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet)
 {
     if (name.isEmpty()) {
         return {false, QStringLiteral("a userwindow cannot have an empty string as its name")};
@@ -684,7 +684,7 @@ void TConsole::resizeConsole()
     QApplication::sendEvent(this, &event);
 }
 
-std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(QStringLiteral("main"))) {
         mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
@@ -1858,11 +1858,11 @@ void TConsole::selectCurrentLine()
     selectSection(0, buffer.line(mUserCursor.y()).size());
 }
 
-void TConsole::selectCurrentLine(std::string& buf)
+void TMainConsole::selectCurrentLine(std::string& buf)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        selectCurrentLine();
+        TConsole::selectCurrentLine();
         return;
     }
     auto pC = mSubConsoleMap.value(key);
@@ -1871,7 +1871,7 @@ void TConsole::selectCurrentLine(std::string& buf)
     }
 }
 
-std::list<int> TConsole::_getFgColor()
+std::list<int> TConsole::getFgColor()
 {
     std::list<int> result;
     int x = P_begin.x();
@@ -1906,7 +1906,7 @@ std::list<int> TConsole::_getFgColor()
     return result;
 }
 
-std::list<int> TConsole::_getBgColor()
+std::list<int> TConsole::getBgColor()
 {
     std::list<int> result;
     int x = P_begin.x();
@@ -1941,29 +1941,29 @@ std::list<int> TConsole::_getBgColor()
     return result;
 }
 
-std::list<int> TConsole::getFgColor(std::string& buf)
+std::list<int> TMainConsole::getFgColor(std::string& buf)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        return _getFgColor();
+        return TConsole::getFgColor();
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
-        return pC->_getFgColor();
+        return pC->getFgColor();
     }
 
     return {};
 }
 
-std::list<int> TConsole::getBgColor(std::string& buf)
+std::list<int> TMainConsole::getBgColor(std::string& buf)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        return _getBgColor();
+        return TConsole::getBgColor();
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
-        return pC->_getBgColor();
+        return pC->getBgColor();
     }
 
     return {};
@@ -1980,10 +1980,10 @@ QPair<quint8, TChar> TConsole::getTextAttributes() const
     return qMakePair(0, buffer.buffer.at(y).at(x));
 }
 
-QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
+QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
 {
     if (name.isEmpty() || name == QLatin1String("main")) {
-        return getTextAttributes();
+        return TConsole::getTextAttributes();
     }
 
     auto pC = mSubConsoleMap.value(name);
@@ -1994,20 +1994,20 @@ QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
     return qMakePair(1, TChar());
 }
 
-void TConsole::luaWrapLine(std::string& buf, int line)
+void TMainConsole::luaWrapLine(std::string& buf, int line)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        _luaWrapLine(line);
+        TConsole::luaWrapLine(line);
         return;
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
-        pC->_luaWrapLine(line);
+        pC->luaWrapLine(line);
     }
 }
 
-void TConsole::_luaWrapLine(int line)
+void TConsole::luaWrapLine(int line)
 {
     if (!mpHost) {
         return;
@@ -2109,11 +2109,11 @@ QString TConsole::getCurrentLine()
     return buffer.line(mUserCursor.y());
 }
 
-QString TConsole::getCurrentLine(std::string& buf)
+QString TMainConsole::getCurrentLine(std::string& buf)
 {
     QString key = QString::fromUtf8(buf.c_str());
     if (key.isEmpty() || key == QLatin1String("main")) {
-        return getCurrentLine();
+        return TConsole::getCurrentLine();
     }
     auto pC = mSubConsoleMap.value(key);
     if (pC) {
@@ -2348,7 +2348,7 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     mLowerPane->showNewLines();
 }
 
-TConsole* TConsole::createBuffer(const QString& name)
+TConsole* TMainConsole::createBuffer(const QString& name)
 {
     if (!mSubConsoleMap.contains(name)) {
         auto pC = new TConsole(mpHost, Buffer);
@@ -2363,7 +2363,7 @@ TConsole* TConsole::createBuffer(const QString& name)
     }
 }
 
-void TConsole::resetMainConsole()
+void TMainConsole::resetMainConsole()
 {
     //resetProfile should reset also UserWindows
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
@@ -2397,7 +2397,7 @@ void TConsole::resetMainConsole()
 }
 
 // This is a sub-console overlaid on to the main console
-TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
+TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     //if pW then add Console as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
@@ -2434,7 +2434,7 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
     }
 }
 
-TLabel* TConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
@@ -2459,7 +2459,7 @@ TLabel* TConsole::createLabel(const QString& windowname, const QString& name, in
     }
 }
 
-std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
+std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a label cannot have an empty string as its name")};
@@ -2487,7 +2487,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
+std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
         return {false, QStringLiteral("a label cannot have an empty string as its name")};
@@ -2505,7 +2505,7 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape)
+std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int shape)
 {
     if (name.isEmpty()) {
         return {false, QStringLiteral("a label cannot have an empty string as its name")};
@@ -2525,7 +2525,7 @@ std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
+std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
 {
     if (name.isEmpty()) {
         return {false, QStringLiteral("a label cannot have an empty string as its name")};
@@ -2549,7 +2549,7 @@ std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, con
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
+std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
     auto pM = mpHost->mpDockableMapWidget;
@@ -2610,7 +2610,7 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     return {true, QString()};
 }
 
-std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
         return {false, QLatin1String("a commandLine cannot have an empty string as its name")};
@@ -2636,7 +2636,7 @@ std::pair<bool, QString> TConsole::createCommandLine(const QString& windowname, 
     return {false, QLatin1String("couldn't create commandLine")};
 }
 
-bool TConsole::setBackgroundImage(const QString& name, const QString& path)
+bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
@@ -2648,7 +2648,7 @@ bool TConsole::setBackgroundImage(const QString& name, const QString& path)
     }
 }
 
-bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -2677,7 +2677,7 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
     }
 }
 
-bool TConsole::raiseWindow(const QString& name)
+bool TMainConsole::raiseWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -2704,7 +2704,7 @@ bool TConsole::raiseWindow(const QString& name)
     return false;
 }
 
-bool TConsole::lowerWindow(const QString& name)
+bool TMainConsole::lowerWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -2738,7 +2738,7 @@ bool TConsole::lowerWindow(const QString& name)
     return false;
 }
 
-bool TConsole::showWindow(const QString& name)
+bool TMainConsole::showWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -2758,7 +2758,7 @@ bool TConsole::showWindow(const QString& name)
     }
 }
 
-bool TConsole::hideWindow(const QString& name)
+bool TMainConsole::hideWindow(const QString& name)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -2773,7 +2773,7 @@ bool TConsole::hideWindow(const QString& name)
     }
 }
 
-bool TConsole::printWindow(const QString& name, const QString& text)
+bool TMainConsole::printWindow(const QString& name, const QString& text)
 {
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
@@ -3020,7 +3020,7 @@ QSize TConsole::getMainWindowSize() const
     return mainWindowSize;
 }
 //getUserWindowSize for resizing in Geyser
-QSize TConsole::getUserWindowSize(const QString& windowname) const
+QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
     if (pW){
@@ -3214,15 +3214,17 @@ QSet<QString> TConsole::getWordSet() const
 void TConsole::setProfileName(const QString& newName)
 {
     mProfileName = newName;
-    if (mType != MainConsole) {
-        return;
-    }
+}
+
+
+void TMainConsole::setProfileName(const QString& newName)
+{
+    TConsole::setProfileName(newName);
 
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
     }
 }
-
 
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
@@ -3257,7 +3259,7 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
-std::pair<bool, QString> TConsole::setUserWindowTitle(const QString& name, const QString& text)
+std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, const QString& text)
 {
     if (name.isEmpty()) {
         return {false, QStringLiteral("a user window cannot have an empty string as its name")};
@@ -3355,7 +3357,7 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-bool TConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
+bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags& flags)
 {
     if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
