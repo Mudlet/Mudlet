@@ -1475,7 +1475,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
 int TLuaInterpreter::removeMapMenu(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "removeMapMenu: bad argument #1 type (Menu name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "removeMapMenu: bad argument #1 type (Menu name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     }
