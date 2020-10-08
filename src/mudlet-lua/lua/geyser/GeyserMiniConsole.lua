@@ -96,6 +96,16 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Enables the horizontal scroll bar for this window
+function Geyser.MiniConsole:enableHorizontalScrollBar()
+  enableHorizontalScrollBar(self.name)
+end
+
+-- Disables the horizontal scroll bar for this window
+function Geyser.MiniConsole:disableHorizontalScrollBar()
+  disableHorizontalScrollBar(self.name)
+end
+
 -- Start commandLine functions
 --- Enables the command-line for this window
 -- @param isVisible boolean to set visibility.
@@ -430,6 +440,11 @@ function Geyser.MiniConsole:new (cons, container)
       me:enableScrollBar()
     else
       me:disableScrollBar()
+    end
+    if cons.horizontalScrollBar then
+      me:enableHorizontalScrollBar()
+    else
+      me:disableHorizontalScrollBar()
     end
     if cons.font then
       me:setFont(cons.font)

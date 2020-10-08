@@ -1310,7 +1310,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
 int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 {
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     QString imgPath;
     int mode = 1;
     int counter = 1;
@@ -1360,7 +1360,7 @@ int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetConsoleBackgroundImage
 int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
 {
-    QString windowName = "main";
+    QString windowName = QStringLiteral("main");
     int n = lua_gettop(L);
     if (n > 0) {
         if (!lua_isstring(L, 1)) {
@@ -2580,7 +2580,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "enableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2599,7 +2599,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = QStringLiteral("main");
     if (n == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "disableScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
@@ -2611,6 +2611,48 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
     Host& host = getHostFromLua(L);
 
     mudlet::self()->setScrollBarVisible(&host, windowName, false);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableHorizontalScrollBar
+int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName = QStringLiteral("main");
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setHorizontalScrollBar(&host, windowName, true);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableHorizontalScrollBar
+int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName = QStringLiteral("main");
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableHorizontalScrollBar: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = lua_tostring(L, 1);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setHorizontalScrollBar(&host, windowName, false);
     return 0;
 }
 
@@ -4147,6 +4189,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
+        host.mpConsole->mUpperPane->resetHScrollbar();
         host.mpConsole->buffer.clear();
         host.mpConsole->mUpperPane->forceUpdate();
         return 0;
@@ -4642,11 +4685,12 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) <= s) {
         alpha = 255;
-    } else if (!lua_isnumber(L, ++s)) {
+    } else if (lua_isnumber(L, ++s)) {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+    } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
-    alpha = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(alpha)) {
         lua_pushnil(L);
@@ -4708,12 +4752,13 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
-    } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
+    } else if (lua_gettop(L) == 0 || lua_isstring(L, 1)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        size = mudlet::self()->calcFontSize(pHost, windowName);
+    } else {
         lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    windowName = QString::fromUtf8(lua_tostring(L, 1));
-    size = mudlet::self()->calcFontSize(pHost, windowName);
 
     if (size.width() <= -1) {
         lua_pushnil(L);
@@ -11542,16 +11587,16 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) <= s) {
         alpha = 255;
-    } else if (!lua_isnumber(L, ++s)) {
+    } else if (lua_isnumber(L, ++s)) {
+        alpha = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(alpha)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            return 2;
+        }
+    } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
-    }
-    alpha = static_cast<int>(lua_tonumber(L, s));
-
-    if (!validRange(alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-        return 2;
     }
 
     if (isMain(windowName)) {
@@ -11764,16 +11809,17 @@ int TLuaInterpreter::Echo(lua_State* L)
     QString consoleName;
     int n = lua_gettop(L);
 
+    if (!n) {
+        // Handle case with NO arguments
+        lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
+        return lua_error(L);
+    }
     if (n > 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "echo: bad argument #1 type (console name as string, is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         consoleName = QString::fromUtf8(lua_tostring(L, 1));
-    } else if (!n) {
-        // Handle case with NO arguments
-        lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
-        return lua_error(L);
     }
 
     if (!lua_isstring(L, n)) {
@@ -13178,11 +13224,12 @@ int TLuaInterpreter::expandAlias(lua_State* L)
         // because expandAlias("command") should be the same as expandAlias("command", nil)
         if (lua_isnil(L, 2)) {
             wantPrint = false;
-        } else if (!lua_isboolean(L, 2)) {
+        } else if (lua_isboolean(L, 2)) {
+            wantPrint = lua_toboolean(L, 2);
+        } else {
             lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
-        wantPrint = lua_toboolean(L, 2);
     }
     Host& host = getHostFromLua(L);
     // Host::send will encode the UTF encoded data here in the wanted Server
@@ -16332,6 +16379,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
+    lua_register(pGlobalLua, "enableHorizontalScrollBar", TLuaInterpreter::enableHorizontalScrollBar);
+    lua_register(pGlobalLua, "disableHorizontalScrollBar", TLuaInterpreter::disableHorizontalScrollBar);
     lua_register(pGlobalLua, "enableCommandLine", TLuaInterpreter::enableCommandLine);
     lua_register(pGlobalLua, "disableCommandLine", TLuaInterpreter::disableCommandLine);
     lua_register(pGlobalLua, "startLogging", TLuaInterpreter::startLogging);
@@ -17552,12 +17601,13 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
 {
     QString windowName;
     if (!lua_gettop(L)) {
-        windowName = QStringLiteral("main");
+        // nothing to do, leave windowName empty
     } else if (lua_isstring(L, 1)) {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     } else {
         lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
+        lua_error(L);
+        return 1;
     }
 
     int columns;
@@ -17584,12 +17634,13 @@ int TLuaInterpreter::getRowCount(lua_State* L)
 {
     QString windowName;
     if (!lua_gettop(L)) {
-        windowName = QStringLiteral("main");
-    } else if (lua_isstring(L, 1)) {
+        // nothing to do, leave windowName empty
+    } else if (!lua_isstring(L, 1)) {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
     } else {
         lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
+        lua_error(L);
+        return 1;
     }
 
     int rows;

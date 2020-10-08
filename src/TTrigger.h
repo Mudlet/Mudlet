@@ -51,6 +51,7 @@ class TMatchState;
 #define REGEX_LINE_SPACER 5
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
+#define MAX_CAPTURE_GROUPS 33
 
 
 struct TColorTable

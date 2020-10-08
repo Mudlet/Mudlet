@@ -237,6 +237,7 @@ public:
     bool replayStart();
     bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
     bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
+    bool setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled);
     bool setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible);
     bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
     void replayOver();
