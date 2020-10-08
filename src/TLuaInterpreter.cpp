@@ -16947,6 +16947,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     lua_register(pGlobalLua, "setMapWindowTitle", TLuaInterpreter::setMapWindowTitle);
     lua_register(pGlobalLua, "getMudletInfo", TLuaInterpreter::getMudletInfo);
+    lua_register(pGlobalLua, "getMapBackgroundColor", TLuaInterpreter::getMapBackgroundColor);
+    lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);
+    lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
+    lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -18582,4 +18586,112 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
 
     // Put "cookies" table into table (now 3 deep in stack), pop stack twice
     lua_settable(L, -3);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapBackgroundColor
+int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto color = host.mBgColor_2;
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
+int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "setMapBackgroundColor: bad argument #1 type (red component as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    int r = lua_tonumber(L, 1);
+    if (r < 0 || r > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setMapBackgroundColor: bad argument #2 type (green component as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int g = lua_tonumber(L, 2);
+    if (g < 0 || g > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "setMapBackgroundColor: bad argument #3 type (blue component as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    int b = lua_tonumber(L, 3);
+    if (b < 0 || b > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
+        return 2;
+    }
+
+    auto& host = getHostFromLua(L);
+    host.mBgColor_2 = QColor(r, g, b);
+    updateMap(L);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapRoomExitsColor
+int TLuaInterpreter::getMapRoomExitsColor(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto color = host.mFgColor_2;
+    lua_pushnumber(L, color.red());
+    lua_pushnumber(L, color.green());
+    lua_pushnumber(L, color.blue());
+    return 3;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapRoomExitsColor
+int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #1 type (red component as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    int r = lua_tonumber(L, 1);
+    if (r < 0 || r > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #2 type (green component as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int g = lua_tonumber(L, 2);
+    if (g < 0 || g > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
+        return 2;
+    }
+
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #3 type (blue component as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    int b = lua_tonumber(L, 3);
+    if (b < 0 || b > 255) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
+        return 2;
+    }
+
+    auto& host = getHostFromLua(L);
+    host.mFgColor_2 = QColor(r, g, b);
+    updateMap(L);
+    lua_pushboolean(L, true);
+    return 1;
 }
