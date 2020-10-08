@@ -58,6 +58,7 @@ class LuaInterface;
 class TMedia;
 class TRoom;
 class TConsole;
+class TMainConsole;
 class dlgNotepad;
 class TMap;
 
@@ -332,7 +333,7 @@ public:
 
 
     cTelnet mTelnet;
-    QPointer<TConsole> mpConsole;
+    QPointer<TMainConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;

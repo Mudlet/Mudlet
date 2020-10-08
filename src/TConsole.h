@@ -392,6 +392,12 @@ private:
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 
+class TMainConsole : public TConsole
+{
+public:
+    TMainConsole(Host*, QWidget* parent = nullptr);
+};
+
 #if !defined(QT_NO_DEBUG)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
@@ -414,3 +420,4 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 #endif // !defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H
+

@@ -1668,7 +1668,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }
