@@ -1760,7 +1760,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                      * Once we comply with that we can be certain that Mud
                      * Server encoding will NOT be an issue!
                      */
-                    cmd += termType.toLatin1().data();
+                    cmd += termType.toUtf8().constData();
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
