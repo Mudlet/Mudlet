@@ -4093,7 +4093,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>Ein eindeutiger Name für das Profil, der jedoch nur aus Ascii-Zeichen bestehen darf.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
@@ -4123,7 +4123,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>Der Port, der zusammen mit dem Servernamen verwendet wird, um die Verbindung zum Spielserver herzustellen. Wenn nicht angegeben, wird der Standard von 23 für &quot;Telnet&quot; Verbindungen verwendet. Für sichere Verbindungen kann eine andere Portnummer erforderlich sein.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
@@ -4178,7 +4178,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Wird falls vorhanden zusammen mit dem Passwort zur Identifizierung des Benutzers im Spiel verschickt.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
