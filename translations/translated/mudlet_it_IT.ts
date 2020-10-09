@@ -10673,12 +10673,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>Evidenzia il testo della riga di input durante lo scorrimento della cronologia per facilitarne la cancellazione</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>Evidenzia la cronologia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
@@ -11481,7 +11481,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5177"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Segnala immediatamente tutti i problemi della mappa caratteri</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5180"/>
