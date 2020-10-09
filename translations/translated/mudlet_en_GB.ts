@@ -1257,7 +1257,8 @@ rooms:</translation>
       <location filename="../src/TAlias.cpp" line="190"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Alias Error:] %1 capture group limit exceeded, capture less groups.
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="259"/>
@@ -3326,7 +3327,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="375"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1127"/>
@@ -10571,12 +10573,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>Highlights your input line text when scrolling through your history for easy cancellation</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>Highlight history</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
@@ -11378,12 +11380,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5177"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Report all Codepoint problems immediately</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5180"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summerised in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarised in a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5235"/>
