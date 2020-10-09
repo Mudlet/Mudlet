@@ -1582,7 +1582,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16467"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Lua error: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16469"/>
