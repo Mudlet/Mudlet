@@ -10694,12 +10694,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>Выделять текст в строке ввода при использовании истории для удобного отмена</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>Выделять историю</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
