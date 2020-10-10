@@ -17565,7 +17565,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     }
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
-    pT->setIsFolder(false);
+    pT->setIsFolder(keycode == -1);
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerKey();
