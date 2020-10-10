@@ -5177,7 +5177,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>Report all Codepoint problems immediately</string>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summerised in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
+             <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
