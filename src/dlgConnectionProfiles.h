@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,7 +26,11 @@
 #include "ui_connection_profiles.h"
 #include "QDir"
 #include <pugixml.hpp>
+#if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
+#else
+#include <qt5keychain/keychain.h>
+#endif
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -40,6 +44,15 @@ public:
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
+    QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
+
+    static const int csmNameRole{Qt::UserRole};
+
+    QString btn_connect_enabled_accessDesc;
+    QString btn_load_enabled_accessDesc;
+    QString btn_connOrLoad_disabled_accessDesc;
+    QString item_profile_accessName;
+    QString item_profile_accessDesc;
 
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
@@ -82,9 +95,9 @@ private:
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
     bool hasCustomIcon(const QString& profileName) const;
-    void setProfileIcon(const QFont& font) const;
-    void loadCustomProfile(const QFont& font, const QString& profileName) const;
-    void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
+    void setProfileIcon() const;
+    void loadCustomProfile(const QString& profileName) const;
+    void generateCustomProfile(int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
@@ -113,6 +126,7 @@ private:
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile {};
+    QString mDateTimeFormat;
 
 
 private slots:

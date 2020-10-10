@@ -181,26 +181,51 @@ function Geyser.Container:show_impl()
 end
 
 --- Raises the window to the top of the z-order stack, displaying in front of all other windows
-function Geyser.Container:raise ()
-	raiseWindow(self.name)
+--@param changeWindowIndex used internally
+--@see Geyser.Container:raiseAll
+function Geyser.Container:raise (changeWindowIndex)
+  raiseWindow(self.name)
+  if changeWindowIndex ~= false then
+    local index = table.index_of(self.container.windows, self.name)
+    if index == #self.container.windows then
+      return
+    end
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    self.container.windows[#self.container.windows+1] = tempValue
+  end
 end
 
 --- Lowers the window to the bottom of the z-order stack, displaying behind all other windows
-function Geyser.Container:lower ()
-	lowerWindow(self.name)
+--@param changeWindowIndex used internally
+--@see Geyser.Container:lowerAll
+function Geyser.Container:lower (changeWindowIndex)
+  lowerWindow(self.name)
+  if changeWindowIndex ~= false then
+    local index = table.index_of(self.container.windows, self.name)
+    if index == 1 then
+      return
+    end
+    local tempValue = self.container.windows[index]
+    table.remove(self.container.windows, index)
+    table.insert(self.container.windows, 1, tempValue)
+  end
 end
 
+--- Raises the window and all its containing elements to the top of the z-order stack, displaying in front of all other windows.
+--@param container used internally
+--@param me used internally
+--@see Geyser.Container:raise
 function Geyser.Container:raiseAll(container, me)
-  me = me or true
   container = container or self
   -- raise myself
-  if me then
+  if me ~= false then
     container:raise()
   end
   local v
-  for i=1,#container.windows do
+  for i=1, #container.windows do
     v = container.windows[i]
-    container.windowList[v]:raise()
+    container.windowList[v]:raise(false)
     container.windowList[v]:raiseAll(container.windowList[v], false)
   end
 end
@@ -208,18 +233,20 @@ end
 local function createWindowTable(container)
   local v
   Geyser.Container.windowTable = Geyser.Container.windowTable or {}
-  for i=1,#container.windows do
+  for i=1, #container.windows do
     v = container.windows[i]
     Geyser.Container.windowTable[#Geyser.Container.windowTable+1] = container.windowList[v]
     createWindowTable(container.windowList[v])
   end
 end
 
+--- Lowers the window and all its containing elements to the bottom of the z-order stack, displaying behind all other windows
+--@see Geyser.Container:lower
 function Geyser.Container:lowerAll()
   createWindowTable(self)
   -- iterate in reverse order through all elements to keep the same z-axis inside the container
   for i=#Geyser.Container.windowTable,1,-1 do
-    Geyser.Container.windowTable[i]:lower()
+    Geyser.Container.windowTable[i]:lower(false)
   end
   Geyser.Container.windowTable = nil
   self:lower()
@@ -301,8 +328,14 @@ function Geyser.Container:new(cons, container)
   me.name = me.name or Geyser.nameGen()
   me.windowList = {}
   me.windows = {}
-  me.hidden = false
-  me.auto_hidden = false
+  --pass the given hidden/auto_hidden values for add2
+  if me.useAdd2 == true or (container and container.useAdd2) then
+    me.hidden = me.hidden or false
+    me.auto_hidden = me.auto_hidden or false
+  else
+    me.hidden = false
+    me.auto_hidden = false
+  end
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
@@ -312,16 +345,28 @@ function Geyser.Container:new(cons, container)
   if not string.find(me.name, ".*Class") then
     -- If passed in a container, add me to that container
     if container then
-      container:add(me)
+      if me.useAdd2 then
+        container:add2(me)
+      else
+        container:add(me)
+      end
     else
       -- Else assume the root window is my container
-      Geyser:add(me)
+      if me.useAdd2 then
+        Geyser:add2(me)
+      else
+        Geyser:add(me)
+      end
       container=Geyser
     end
    --Create Root-Container for UserWindow and add Children
    if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
         container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
-        container:add(me)
+        if me.useAdd2 then
+          container:add2(me)
+        else
+          container:add(me)
+        end
         container.get_width = function()
             return getUserWindowSize(me.windowname)
         end
@@ -333,5 +378,13 @@ function Geyser.Container:new(cons, container)
   end
 
   --print("New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+--- Overridden constructor to use add2
+function Geyser.Container:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

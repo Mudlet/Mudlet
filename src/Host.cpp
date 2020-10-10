@@ -37,6 +37,7 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
+
 #include "pre_guard.h"
 #include <chrono>
 #include <QtUiTools>
@@ -190,6 +191,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
 , mAutoClearCommandLineAfterSend(false)
+, mHighlightHistory(true)
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
@@ -205,12 +207,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mMxpClient(this)
+, mMxpProcessor(&mMxpClient)
 , mMediaLocationGMCP(QString())
 , mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
-, mInsertedMissingLF(false)
 , mSslTsl(false)
 , mUseProxy(false)
 , mProxyAddress(QString())
@@ -219,7 +222,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
-, mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
@@ -345,6 +347,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
+, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
@@ -378,6 +381,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mProfileStyleSheet(QString())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mDebugShowAllProblemCodepoints(false)
+, mCompactInputLine(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -462,8 +467,7 @@ void Host::saveModules(int sync, bool backup)
         QString filename_xml = entry[0];
 
         if (backup) {
-            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (1 of 6)
-            QString time = QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss");
+            QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
             savePathDir.rename(filename_xml, savePath + moduleName + time); //move the old file, use the key (module name) as the file
         }
 
@@ -589,6 +593,12 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
 
     if (mInstalledModules.contains(moduleName)) {
         QStringList moduleStringList = mInstalledModules[moduleName];
+        QFileInfo moduleFile = moduleStringList[0];
+        QStringList accepted_suffix;
+        accepted_suffix << "xml" << "trigger";
+        if (!accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
+            return {false, QStringLiteral("module has to be a .xml file")};
+        }
         moduleStringList[1] = value;
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
@@ -641,18 +651,19 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.loadGlobal();
     mBlockScriptCompile = false;
 
+    mAliasUnit.reenableAllTriggers();
+    mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
+
+    getTimerUnit()->compileAll();
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll();
-    // All the Timers are NOT compiled here;
-    mResetProfile = false;
 
-    mAliasUnit.reenableAllTriggers();
-    mTimerUnit.reenableAllTriggers();
-    mTriggerUnit.reenableAllTriggers();
-    mKeyUnit.reenableAllTriggers();
+    mResetProfile = false;
 
     // Have to recopy the values into the Lua "color_table"
     mLuaInterpreter.updateAnsi16ColorsInTable();
@@ -681,10 +692,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         directory_xml = saveFolder;
     }
 
-    // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (2 of 6)
     QString filename_xml;
     if (saveName.isEmpty()) {
-        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
     }
@@ -939,7 +949,6 @@ QPair<QString, QString> Host::getSearchEngine()
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
-        mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
@@ -1369,8 +1378,16 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
+    static QString star = QStringLiteral("*");
+
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
+        for (auto& script : scriptList) {
+            script->callEventHandler(pE);
+        }
+    }
+    if (mEventHandlerMap.contains(star)) {
+        QList<TScript*> scriptList = mEventHandlerMap.value(star);
         for (auto& script : scriptList) {
             script->callEventHandler(pE);
         }
@@ -1382,6 +1399,17 @@ void Host::raiseEvent(const TEvent& pE)
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
+    if (mAnonymousEventHandlerFunctions.contains(star)) {
+        QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
+        for (int i = 0, total = functionsList.size(); i < total; ++i) {
+            mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
+        }
+    }
+
+    // After the event has been raised but before 'event' goes out of scope,
+    // we need to safely dereference the members of 'event' that point to
+    // values in the Lua registry
+    mLuaInterpreter.freeAllInLuaRegistry(pE);
 }
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
@@ -1937,16 +1965,17 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 {
     bool localState = false;
     bool needToEmit = false;
-    const QString encoding(mTelnet.getEncoding());
+    const QByteArray encoding(mTelnet.getEncoding());
 
     QMutexLocker locker(& mLock);
     if (state == Qt::PartiallyChecked) {
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if ( encoding == QLatin1String("GBK")
-             || encoding == QLatin1String("GB18030")
-             || encoding == QLatin1String("Big5")) {
+        if (encoding == "GBK"
+            || encoding == "GB18030"
+            || encoding == "BIG5"
+            || encoding == "BIG5-HKSCS") {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
@@ -2529,5 +2558,42 @@ void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
     mSearchOptions = optionsState;
     if (mpEditorDialog) {
         mpEditorDialog->setSearchOptions(optionsState);
+    }
+}
+
+std::pair<bool, QString> Host::setMapperTitle(const QString& title)
+{
+    if (!mpDockableMapWidget) {
+        return {false, "no floating/dockable type map window found"};
+    }
+
+    if (title.isEmpty()) {
+        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+    } else {
+        mpDockableMapWidget->setWindowTitle(title);
+    }
+
+    return {true, QString()};
+}
+
+void Host::setDebugShowAllProblemCodepoints(const bool state)
+{
+    if (mDebugShowAllProblemCodepoints != state) {
+        mDebugShowAllProblemCodepoints = state;
+        emit signal_changeDebugShowAllProblemCodepoints(state);
+    }
+}
+
+void Host::setCompactInputLine(const bool state)
+{
+    if (mCompactInputLine != state) {
+        mCompactInputLine = state;
+        // When the profile is being loaded and the previously saved data is
+        // read from the XML file the main TConsole has not been instatiated
+        // yet - so must check for it existing first - and ensure the read
+        // setting is applied in the constructor for it:
+        if (mpConsole && mpConsole->mpButtonMainLayer) {
+            mpConsole->mpButtonMainLayer->setVisible(!state);
+        }
     }
 }

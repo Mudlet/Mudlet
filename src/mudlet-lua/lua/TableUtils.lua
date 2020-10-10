@@ -65,7 +65,35 @@ function __printTable( k, v )
   insertText("\nkey = " .. tostring(k) .. " value = " .. tostring( v )  )
 end
 
+-- originally found at https://stackoverflow.com/questions/15706270/sort-a-table-in-lua
+--- Returns a sorted iterator for a tbl. Defaults to a basic table.sort against the keys
+--@param tbl the table to iterator
+--@param[opt] order Function to use to sort table. Should accept three arguments, the table being iterated, and the two keys in the table it is comparing. Otherwise similar to table.sort
+--@usage local tbl = { Tom = 40, Mary = 50, Joe = 23 }
+--for name, thingies in spairs(tbl) do
+--  echo(string.format("%s has %d thingies\n", name, thingies))
+--end
+-- --"Joe has 23 thingies\nMary has 50 thingies\nTom has 40 thingies"
+--for name, thingies in spairs(tbl, function(t,a,b) return t[a] < t[b] end) do --iterate from lowest value to highest
+--  echo(string.format("%s has %d thingies\n", name, thingies))
+--end
+-- --"Joe has 23 thingies\nTom has 40 thingies\nMary has 50 thingies"
+function spairs(tbl, order)
+  local keys = table.keys(tbl)
+  if order then
+    table.sort(keys, function(a,b) return order(tbl, a, b) end)
+  else
+    table.sort(keys)
+  end
 
+  local i = 0
+  return function()
+    i = i + 1
+    if keys[i] then
+      return keys[i], tbl[keys[i]]
+    end
+  end
+end
 
 --- Lua debug function that prints the content of a Lua table on the screen. <br/>
 --- There are currently 3 functions with similar behaviour.

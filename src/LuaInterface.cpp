@@ -262,19 +262,27 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
         //FIXME: report why this fails to user
         return false;
     }
+
     if (!newParent && !oldParent) {
         //happens when we move from _G to _G
         return false;
-    } else if (!oldParent) {
+    }
+
+    if (!oldParent) {
         from = varUnit->getBase();
+        // newParent cannot be a nullptr here as we would have returned in
+        // previous if - so to won't be either:
         to = newParent;
     } else if (!newParent) {
+        // oldParent cannot be a nullptr here as we would have returned in
+        // previous if - so from won't be either:
         from = oldParent;
         to = varUnit->getBase();
     }
-    if (!from && !to) {
-        return false;
-    }
+
+    // one of from and to must not be a nullptr here - so prior test for BOTH
+    // being a nullptr here and returning false in that case was dead code.
+
     return reparentCVariable(from, to, curVar);
 }
 
@@ -374,11 +382,20 @@ bool LuaInterface::setValue(TVar* var)
     default:
         return false;
     }
-    luaL_loadstring(L, variableChangeCode.toUtf8().constData());
-    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    int error = luaL_loadstring(L, variableChangeCode.toUtf8().constData());
     if (error) {
-        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
-        //FIXME: report error to user qDebug()<<"error msg"<<emsg;
+        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (parsing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << variableChangeCode << "\".";
+        return false;
+    }
+    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error) {
+        qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (executing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << variableChangeCode << "\".";
         return false;
     }
     return true;
@@ -391,18 +408,27 @@ void LuaInterface::deleteVar(TVar* var)
     QString oldName = vars[0]->getName();
     for (int i = 1; i < vars.size(); i++) {
         if (vars[i]->getKeyType() == LUA_TNUMBER) {
-            oldName.append("[" + vars[i]->getName() + "]");
+            oldName.append(QStringLiteral("[%1]").arg(vars[i]->getName()));
         } else {
-            oldName.append(R"([")" + vars[i]->getName() + R"("])");
+            oldName.append(QStringLiteral(R"(["%1"])").arg(vars[i]->getName()));
         }
     }
     //delete it
-    oldName.append(QString(" = nil"));
-    luaL_loadstring(L, oldName.toUtf8().constData());
-    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    oldName.append(QStringLiteral(" = nil"));
+    int error = luaL_loadstring(L, oldName.toUtf8().constData());
     if (error) {
-        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
-        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
+        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (parsing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << oldName << "\".";
+        return;
+    }
+    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error) {
+        qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (executing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << oldName << "\".";
     }
 }
 
@@ -569,21 +595,24 @@ void LuaInterface::renameVar(TVar* var)
     if (vars.size() > 1) {
         newName = vars[0]->getName();
     }
+
     for (int i = 1; i < vars.size(); i++) {
         int kType = vars[i]->getKeyType();
         if (kType == LUA_TNUMBER) {
             oldVariable.append(QStringLiteral("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
-                newName.append("[" + vars[i]->getName() + "]");
+                newName.append(QStringLiteral("[%1]").arg(vars[i]->getName()));
             }
+
         } else if (kType == LUA_TTABLE) {
             renameCVar(vars);
             return;
-        } else {
-            oldVariable.append(QStringLiteral("[\"%1\"]").arg(vars.at(i)->getName()));
-            if (i < vars.size() - 1) {
-                newName.append(QStringLiteral("[\"%1\"]").arg(vars.at(i)->getName()));
-            }
+        }
+
+        // That leaves LUA_TSTRING:
+        oldVariable.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
+        if (i < vars.size() - 1) {
+            newName.append(QStringLiteral(R"(["%1"])").arg(vars.at(i)->getName()));
         }
     }
 
@@ -595,24 +624,46 @@ void LuaInterface::renameVar(TVar* var)
         if (var->getNewKeyType() == LUA_TNUMBER) {
             newName.append(QStringLiteral("[%1]").arg(vars.last()->getNewName()));
         } else {
-            newName.append(QStringLiteral("[\"%1\"]").arg(vars.last()->getNewName()));
+            newName.append(QStringLiteral(R"(["%1"])").arg(vars.last()->getNewName()));
         }
     }
 
     auto renameCode = QStringLiteral("%1 = %2").arg(newName, oldVariable);
-    luaL_loadstring(L, renameCode.toUtf8().constData());
-    int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    int error = luaL_loadstring(L, renameCode.toUtf8().constData());
     if (error) {
-        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << renameCode << "\".";
         var->clearNewName();
         return;
     }
-    //delete it
-    luaL_loadstring(L, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
     error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        QString emsg = QString::fromUtf8(lua_tostring(L, -1));
-        //FIXME: report error to userqDebug()<<"error msg"<<emsg;
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (executing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << renameCode << "\".";
+        var->clearNewName();
+        return;
+    }
+
+    //delete it
+    error = luaL_loadstring(L, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
+    if (error) {
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (parsing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << renameCode << "\".";
+        var->clearNewName();
+        return;
+    }
+    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (error) {
+        qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (executing) error: \""
+                                       << lua_tostring(L, -1)
+                                       << "\" in code:\n\""
+                                       << renameCode << "\".";
     }
     var->clearNewName();
 }

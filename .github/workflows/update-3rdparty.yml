@@ -1,11 +1,10 @@
 name: Update 3rdparty sources
 on:
-  push:
-    branches:
-      - 'release-**'
+  repository_dispatch:
+    types: update-3rdparty
 
   schedule:
-    - cron:  '0 0 * * fri'
+    - cron: '0 0 * * fri'
 
 jobs:
   update-iremapper-source:

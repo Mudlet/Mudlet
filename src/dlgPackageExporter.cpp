@@ -41,7 +41,9 @@
 #include "post_guard.h"
 
 // We are now using code that won't work with really old versions of libzip:
-#if (LIBZIP_VERSION_MAJOR < 1) && (LIBZIP_VERSION_MINOR < 11)
+// Unfortunately libzip 1.70 forgot to include these defines and thus broke the
+// original tests:
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && (LIBZIP_VERSION_MAJOR < 1) && (LIBZIP_VERSION_MINOR < 11)
 #error Mudlet requires a version of libzip of at least 0.11
 #endif
 

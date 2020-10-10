@@ -105,16 +105,6 @@ end
 function handleWindowResizeEvent()
 end
 
-function toNativeSeparators(rawPath)
-  if package.config:sub(1,1) == '\\' then
-    return string.gsub(rawPath, '/', '\\')
-  end
-
-  assert((package.config:sub(1,1) == '/'), "package path directory separator is neither '\\' nor '/' and cannot be handled")
-
-  return string.gsub(rawPath, '\\', '/')
-end
-
 local packages = {
   "StringUtils.lua",
   "TableUtils.lua",
@@ -137,6 +127,7 @@ local packages = {
   "geyser/GeyserVBox.lua",
   "geyser/GeyserUserWindow.lua",
   "geyser/GeyserAdjustableContainer.lua",
+  "geyser/GeyserCommandLine.lua",
 
   -- TODO probably don't need to load this file
   "geyser/GeyserTests.lua",

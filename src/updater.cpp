@@ -74,7 +74,7 @@ void Updater::checkUpdatesOnStart()
     setupOnWindows();
 #endif
 
-    mDailyCheck->setInterval(24h);
+    mDailyCheck->setInterval(12h);
     QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
           qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
@@ -115,8 +115,15 @@ void Updater::manuallyCheckUpdates()
 #if defined(Q_OS_MACOS)
     msparkleUpdater->checkForUpdates();
 #else
-    updateDialog->show();
+    feed->load();
+    QObject::connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 #endif
+}
+
+void Updater::showDialogManually() const
+{
+    updateDialog->show();
+    QObject::disconnect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 }
 
 void Updater::showChangelog() const
