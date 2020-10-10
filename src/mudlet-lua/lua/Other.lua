@@ -147,6 +147,7 @@ local group_creation_functions = {
   end,
   key = function(name, parent)
     return not (permKey(name, parent, -1, "") == -1)
+  end,
   script = function(name, parent)
     return not (permScript(name, parent, "", "") == -1)
   end
