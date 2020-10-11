@@ -194,7 +194,7 @@ void dlgMapper::show2dView()
     }
     if (!glWidget) {
         glWidget = new GLWidget(widget);
-        glWidget->setObjectName(QString::fromUtf8("glWidget"));
+        glWidget->setObjectName("glWidget");
 
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
