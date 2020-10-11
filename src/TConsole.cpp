@@ -652,8 +652,8 @@ Host* TConsole::getHost()
 
 void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
 {
-    QString key = QString::fromUtf8(buf.c_str());
-    QString sheet = sh.c_str();
+    QString key{buf.c_str()};
+    QString sheet{sh.c_str()};
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
         if (!pC) {
@@ -1855,7 +1855,7 @@ void TConsole::selectCurrentLine()
 
 void TMainConsole::selectCurrentLine(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         TConsole::selectCurrentLine();
         return;
@@ -1938,7 +1938,7 @@ std::list<int> TConsole::getBgColor()
 
 std::list<int> TMainConsole::getFgColor(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getFgColor();
     }
@@ -1952,7 +1952,7 @@ std::list<int> TMainConsole::getFgColor(std::string& buf)
 
 std::list<int> TMainConsole::getBgColor(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getBgColor();
     }
@@ -1991,7 +1991,7 @@ QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
 
 void TMainConsole::luaWrapLine(std::string& buf, int line)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         TConsole::luaWrapLine(line);
         return;
@@ -2106,7 +2106,7 @@ QString TConsole::getCurrentLine()
 
 QString TMainConsole::getCurrentLine(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getCurrentLine();
     }
