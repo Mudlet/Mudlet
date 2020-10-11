@@ -1444,9 +1444,12 @@ win32 {
         }
     }
 
-    # specify some windows information about the binary
+    # specify some windows information about the binary, needed to populate the
+    # Windows properties tab for the executable file:
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+    # PLACEMARKER: Date-stamp needed annual update
+    QMAKE_TARGET_COPYRIGHT = "©️ Mudlet makers 2008-2020"
 
     # Product name determines the Windows Start Menu shortcut name
     contains(BUILD, "-ptb.+") {

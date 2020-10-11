@@ -27,7 +27,8 @@ environment:
   matrix:
 # was QT_BASE_DIR: C:\Qt\5.13.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
 # We are not currently using CMake for Windows builds but it might be needed in
-# the future:
+# the future - and we now need Q_OR_C_MAKE so as to pull the version number from
+# the right project file:
   - BUILD_BITNESS: 32
     Q_OR_C_MAKE: qmake
   - BUILD_BITNESS: 64
@@ -46,8 +47,9 @@ build_script:
 #- cd C:\src
 #- bash -l -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
-# on successful build we actually use the after_build stage as we need to do it
-# then in order to have the produced files be made available as a "artifact":
+# on successful build we may need to use the after_build stage in order to have
+# the produced files be made available as a "artifact" - at present it makes
+# sure that all the needed files are in the C:\\projects\\mudlet\\package dir:
 after_build:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 

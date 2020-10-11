@@ -28,13 +28,6 @@ echo "Running windeployqt..."
 ${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt --no-virtualkeyboard mudlet.exe
 echo ""
 
-echo "Copying system libraries in..."
-if [ "${BUILD_BITNESS}" = "32" ] ; then
-    cp -v -p ${MINGW_INTERNAL_BASE_DIR}/bin/libgcc_s_dw2-1.dll .
-else
-    cp -v -p ${MINGW_INTERNAL_BASE_DIR}/bin/libgcc_s_seh-1.dll .
-fi
-
 # To determine which system libraries have to be copied in it requires
 # continually trying to run the executable on the target type system
 # and adding in the libraries to the same directory and repeating that
@@ -47,41 +40,38 @@ fi
 # can manifest as being unable to "require" the library within lua
 # and doing the above "ldd" check revealed that "zip.dll" needed
 # "libzzip-0-13.dll" and "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
+#
+echo "Examining Mudlet application to identify other needed libraries..."
+NEEDED_LIBS=$(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
+  | /usr/bin/grep -v "Qt5" \
+  | /usr/bin/grep -i "mingw" \
+  | /usr/bin/cut -d ">" -f2 \
+  | /usr/bin/cut -d "(" -f1 \
+  | /usr/bin/sort)
+echo ""
+echo "Copying these libraries..."
+for LIB in ${NEEDED_LIBS} ; do
+  cp -v ${LIB} . ;
+done
+
+echo ""
+echo "Copying other known to be needed libraries in..."
+# libjasper-4 to libwebpdemux-2 are additional image format handlers that Qt can
+# use if they are present.
+# libsqlite3 and libyajl are needed by lua modules at Mudlet run time.
+# SDL2 helps with Gamepad support that QtGamepad can use if it is present.
 cp -v -p -t . \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlicommon.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libbrotlidec.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libbz2-1.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libglib-2.0-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libgraphite2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libhunspell-1.7-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt67.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin67.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc67.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libjasper-4.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/liblzma-5.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre-1.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre2-16-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpng16-16.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpugixml.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-5.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libwebp-7.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libwebpdemux-2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libwinpthread-1.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libzip.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libzstd.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libzzip-0-13.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/SDL2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/zlib1.dll
+    ${MINGW_INTERNAL_BASE_DIR}/bin/SDL2.dll
 
+echo ""
+echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness:
 if [ "${BUILD_BITNESS}" = "32" ] ; then
     cp -v -p -t . \
@@ -105,9 +95,12 @@ fi
 echo ""
 
 # Lua libraries:
+# If there is a demand for other rocks in the Windows installer because of
+# revisions to the mappers or geyser framework or popular demand otherwise then
+# the rock for those will also have to be installed and their C(.dll)/Lua (.lua)
+# files included here:
 echo "Copying lua C libraries in..."
 cp -v -p -t . \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/lua51.dll \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lfs.dll \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lpeg.dll \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll \
@@ -144,34 +137,8 @@ echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.dic) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.aff) \
-  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.dic)
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/*.aff) \
+  $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/*.dic)
 
 echo ""
 
@@ -180,5 +147,6 @@ echo ""
 # /usr/bin/ls -aRl
 # echo ""
 
-echo "   ... appveyor.after_build.sh shell script finished!"
+echo "   ... appveyor.after_build.sh shell script finished."
+echo "${APPVEYOR_BUILD_FOLDER}/package should contain everything needed to run Mudlet!"
 echo ""

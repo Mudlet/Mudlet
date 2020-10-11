@@ -16,33 +16,13 @@ cd ./build
 # echo "  it contains:"
 # /usr/bin/ls -l
 
-# MUDLET_VERSION_BUILD may be already be set in the environment by package
-# creators on some OSes - but we defined it from scratch in this situation:
-
-if [ "${APPVEYOR_REPO_TAG}" = "false" ] ; then
-    # The leading '-' is used to append but separate the BUILD variable from the
-    # major/minor/patch numbers in the version string:
-    if [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ] ; then
-        MUDLET_VERSION_BUILD="-ptb"
-    else
-        MUDLET_VERSION_BUILD="-testing"
-    fi
-    if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then
-        COMMIT="$(git rev-parse --short ${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
-        export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
-    else
-        COMMIT="$(git rev-parse --short HEAD)"
-        if [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ] ; then
-            DATE=$(date +%Y-%m-%d)
-            export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${COMMIT}"
-        else
-            export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
-        fi
-    fi
-fi
-
 echo ""
 echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}..."
+if [ -n "S{APPVEYOR_PULL_REQUEST_HEAD_COMMIT}" ]; then
+    echo "Head commit SHA1 is: \"S{APPVEYOR_PULL_REQUEST_HEAD_COMMIT}\"."
+else
+    echo "APPVEYOR_PULL_REQUEST_HEAD_COMMIT is empty."
+fi
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug and changing references to "release" sub-directories to "debug"...
@@ -53,8 +33,12 @@ echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUIL
 export WITH_MAIN_BUILD_SYSTEM=NO
 
 echo ""
-echo "Running qmake:"
-${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
+echo "Running qmake in release + debug_info mode:"
+# We do not use CONFIG+=separate_debug_info because we may be renaming the
+# built executable and that is likely to break the:
+# objcopy --add-gnu-debuglink=foo.debug foo
+# linkage that qmake would do prior to us renaming the executable
+${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release CONFIG-=qml_debug CONFIG-=qtquickcompiler CONFIG-=separate_debug_info CONFIG+=force_debug_info ../src/mudlet.pro
 exit_status=$?
 if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
