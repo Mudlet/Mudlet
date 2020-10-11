@@ -96,18 +96,18 @@ public:
     void setPartySize(const int n) { mPartySize = n; }
     void setPartyMax(const int n) { mPartyMax = n; }
     DiscordRichPresence convert() const;
-    QString getStateText() const { return QString::fromUtf8(mState); }
-    QString getDetailText() const { return QString::fromUtf8(mDetails); }
+    QString getStateText() const { return mState; }
+    QString getDetailText() const { return mDetails; }
     int64_t getStartTimeStamp() const { return mStartTimestamp; }
     int64_t getEndTimeStamp() const { return mEndTimestamp; }
-    QString getLargeImageKey() const { return QString::fromUtf8(mLargeImageKey); }
-    QString getLargeImageText() const { return QString::fromUtf8(mLargeImageText); }
-    QString getSmallImageKey() const { return QString::fromUtf8(mSmallImageKey); }
-    QString getSmallImageText() const { return QString::fromUtf8(mSmallImageText); }
-    QString getJoinSecret() const { return QString::fromUtf8(mJoinSecret); }
-    QString getMatchSecret() const { return QString::fromUtf8(mMatchSecret); }
-    QString getSpectateSecret() const { return QString::fromUtf8(mSpectateSecret); }
-    QString getPartyId() const { return QString::fromUtf8(mPartyId); }
+    QString getLargeImageKey() const { return mLargeImageKey; }
+    QString getLargeImageText() const { return mLargeImageText; }
+    QString getSmallImageKey() const { return mSmallImageKey; }
+    QString getSmallImageText() const { return mSmallImageText; }
+    QString getJoinSecret() const { return mJoinSecret; }
+    QString getMatchSecret() const { return mMatchSecret; }
+    QString getSpectateSecret() const { return mSpectateSecret; }
+    QString getPartyId() const { return mPartyId; }
     int getPartySize() const { return mPartySize; }
     int getPartyMax() const { return mPartyMax; }
     int8_t getInstance() const { return mInstance; }
