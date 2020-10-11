@@ -3864,7 +3864,7 @@ void T2DMap::slot_spread()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
@@ -3924,7 +3924,7 @@ void T2DMap::slot_shrink()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
