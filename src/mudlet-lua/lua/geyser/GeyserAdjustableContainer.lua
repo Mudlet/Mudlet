@@ -1097,6 +1097,8 @@ function Adjustable.Container:new(cons,container)
         if Adjustable.Container.all[me.name].auto_hidden then
             me:hide(true)
         end
+        -- detach if setting at creation changed
+        Adjustable.Container.all[me.name]:detach()
     end
 
     if me.minimized then
