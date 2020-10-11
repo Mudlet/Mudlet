@@ -78,7 +78,7 @@ public:
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
     Q_DISABLE_COPY(TConsole)
-    TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
     ~TConsole();
 
     void reset();
@@ -311,7 +311,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 class TMainConsole : public TConsole
 {
 public:
-    TMainConsole(Host*, QWidget* parent = nullptr);
+    explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
 
     QMap<QString, TConsole*> mSubConsoleMap;
