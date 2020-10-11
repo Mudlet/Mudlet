@@ -10953,7 +10953,6 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
             it.next();
             int id_to = it.key();
             QString dir = it.value();
-            // lua_pushstring(L, dir.toUtf8().constData());
             QString exitStatus;
             QString exit;
             if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
