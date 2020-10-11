@@ -83,6 +83,7 @@ public:
 
     void reset();
     void resetMainConsole();
+    void resizeConsole();
     Host* getHost();
     void replace(const QString&);
     void insertHTML(const QString&);
@@ -93,6 +94,7 @@ public:
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void copy();
     void cut();
     void paste();
@@ -139,6 +141,7 @@ public:
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setHorizontalScrollBar(bool);
     void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -326,6 +329,7 @@ public:
     QWidget* mpButtonMainLayer;
     int mBgImageMode;
     QString mBgImagePath;
+    bool mHScrollBarEnabled;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet

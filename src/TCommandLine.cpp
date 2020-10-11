@@ -279,6 +279,7 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mCursorX = 0;
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
@@ -372,6 +373,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
                 historyDown(ke);
+                if (!mpHost->mHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -406,6 +410,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
                 historyUp(ke);
+                if (!mpHost->mHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -590,7 +597,7 @@ void TCommandLine::adjustHeight()
         }
         return;
     }
-    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
+    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -1017,7 +1024,7 @@ void TCommandLine::historyDown(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         mHistoryBuffer--;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
@@ -1043,7 +1050,7 @@ void TCommandLine::historyUp(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         if (toPlainText().size() != 0) {
             mHistoryBuffer++;
         }

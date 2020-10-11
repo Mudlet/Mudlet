@@ -89,7 +89,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
-, mpHScrollBar(nullptr)
+, mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -110,6 +110,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mHScrollBarEnabled(false)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -283,13 +284,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
+    auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
-    layer->setLayout(layoutLayer);
+    layer->setLayout(vLayoutLayer);
     layoutLayer->setMargin(0);  //neu rc1
     layoutLayer->setSpacing(0); //neu rc1
     layoutLayer->setMargin(0);  //neu rc1
 
     mpScrollBar->setFixedWidth(15);
+    mpHScrollBar->setFixedHeight(15);
 
     splitter = new TSplitter(Qt::Vertical);
     splitter->setContentsMargins(0, 0, 0, 0);
@@ -333,6 +336,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+
+    vLayoutLayer->addLayout(layoutLayer);
+    vLayoutLayer->addWidget(mpHScrollBar);
+    vLayoutLayer->setContentsMargins(0, 0, 0, 0);
+    vLayoutLayer->setMargin(0);
+    vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
@@ -486,6 +495,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
     }
@@ -515,19 +525,18 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mUpperPane->show();
     mLowerPane->show();
-    mLowerPane->hide();
+    mLowerPane->updateScreenView();
+    // timer needed as updateScreenView doesn't seem to finish in time
+    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
+    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
 
-    //give the ErrorConsole a horizontal scrollbar
+    mpHScrollBar->hide();
+
+    //enable horizontal scrollbar in ErrorConsole
     if (mType == ErrorConsole) {
-        mpHScrollBar = new QScrollBar(Qt::Horizontal);
-        mpHScrollBar->setFixedHeight(15);
-        connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
-        centralLayout->addWidget(mpHScrollBar);
-        mpHScrollBar->setContentsMargins(0, 0, 0, 0);
-        mpHScrollBar->setSizePolicy(sizePolicy);
-        mpHScrollBar->hide();
+        mHScrollBarEnabled = true;
     }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
@@ -612,6 +621,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
 TConsole::~TConsole()
 {
+    if (mType & ~CentralDebugConsole) {
+        // Codepoint issues reporting is not enabled for the CDC:
+        mUpperPane->reportCodepointErrors();
+    }
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
@@ -658,6 +672,27 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
     return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
 }
 
+void TConsole::resizeConsole()
+{
+    QSize s = QSize(width(), height());
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(this, &event);
+}
+
+std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (name.isEmpty() || !name.compare(QStringLiteral("main"))) {
+        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+}
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -670,7 +705,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
-
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -682,7 +716,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
-        mpBackground->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
@@ -847,8 +881,7 @@ void TConsole::closeEvent(QCloseEvent* event)
         if (mpHost->mpMap->mpRoomDB->size() > 0) {
             QDir dir_map;
             QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
             if (!dir_map.exists(directory_map)) {
                 dir_map.mkpath(directory_map);
             }
@@ -886,8 +919,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -1147,8 +1179,7 @@ void TConsole::slot_toggleReplayRecording()
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
-        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1209,6 +1240,8 @@ void TConsole::changeColors()
         }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet(QString());
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1216,6 +1249,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
@@ -1589,8 +1623,7 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
     QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
 
     if (location.isEmpty()) {
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -1848,11 +1881,21 @@ std::list<int> TConsole::_getFgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).foreground());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while (len - 1 >= x+n) {
+            if (color != line.at(x+n).foreground()) {
+                break;
+            }
+            n += 1;
+        }
+        result.push_back(n);
     }
 
     return result;
@@ -1873,12 +1916,23 @@ std::list<int> TConsole::_getBgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).background());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while (len - 1 >= x+n) {
+            if (color != line.at(x+n).background()) {
+                break;
+            }
+            n += 1;
+        }
+        result.push_back(n);
     }
+
     return result;
 }
 
@@ -2022,9 +2076,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(this, &event);
+    resizeConsole();
 }
 
 void TConsole::refreshMiniConsole() const
@@ -2233,6 +2285,14 @@ void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
         mpScrollBar->setVisible(isVisible);
+    }
+}
+
+void TConsole::setHorizontalScrollBar(bool isEnabled)
+{
+    if (mpHScrollBar) {
+        mHScrollBarEnabled = isEnabled;
+        mpHScrollBar->setVisible(isEnabled);
     }
 }
 

@@ -58,7 +58,7 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void showNewLines();
     void forceUpdate();
@@ -74,19 +74,22 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
-    void updateHorizontalScrollBar(int);
+    void updateScrollBar(int);
+    void calculateHMaxRange();
+    void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
-    int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
+    void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
     int getScreenHeight() { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
+    void reportCodepointErrors();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -121,6 +124,7 @@ public slots:
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void slot_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_copySelectionToClipboardImage();
@@ -166,7 +170,8 @@ private:
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
-    int mScreenOffset = 0;
+    int mScreenOffset;
+    int mMaxHRange;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
@@ -183,6 +188,8 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
+    bool mShowAllCodepointIssues;
+    mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 };
 
 #endif // MUDLET_TTEXTEDIT_H
