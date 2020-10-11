@@ -22,7 +22,7 @@ if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     exit 1
 fi
 
-appveyor AddMessage "This is a \"${BUILD_TYPE}\" ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} build ..."" -Catagory Information
+appveyor AddMessage "This is a \"${BUILD_TYPE}\" ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} build ..." -Catagory Information
 
 # Options:
 # --Sy = Sync, refresh as well as installing the specified packages
