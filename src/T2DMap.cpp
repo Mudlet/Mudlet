@@ -3881,8 +3881,8 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        pMovingR->x = (pMovingR->x - dx) / spread + dx;
-        pMovingR->y = (pMovingR->y - dy) / spread + dy;
+        pMovingR->x = (pMovingR->x - dx) * spread + dx;
+        pMovingR->y = (pMovingR->y - dy) * spread + dy;
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
         while (itCustomLine.hasNext()) {
