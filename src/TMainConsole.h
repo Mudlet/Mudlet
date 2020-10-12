@@ -135,26 +135,5 @@ private:
     QSet<QString> mWordSet_profile;
 };
 
-#if !defined(QT_NO_DEBUG)
-inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
-{
-    QString text;
-    QDebugStateSaver saver(debug);
-    switch (type) {
-    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
-    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
-    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
-    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
-    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
-    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
-    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
-    default:
-        text = QStringLiteral("Non-coded Type");
-    }
-    debug.nospace() << text;
-    return debug;
-}
-#endif // !defined(QT_NO_DEBUG)
-
 #endif // MUDLET_TMAINCONSOLE_H
 
