@@ -5,7 +5,7 @@
 echo "Running appveyor.after_build.sh shell script..."
 echo ""
 
-if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
+if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ]; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
     echo ""
@@ -73,7 +73,7 @@ cp -v -p -t . \
 echo ""
 echo "Copying OpenSSL libraries in..."
 # The openSSL libraries has a different name depending on the bitness:
-if [ "${BUILD_BITNESS}" = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ]; then
     cp -v -p -t . \
         ${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-1_1.dll \
         ${MINGW_INTERNAL_BASE_DIR}/bin/libssl-1_1.dll
@@ -87,7 +87,7 @@ fi
 
 echo ""
 echo "Copying discord-rpc library in..."
-if [ "${BUILD_BITNESS}" = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ]; then
     cp -v -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
 else
     cp -v -p $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .

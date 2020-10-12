@@ -18,8 +18,8 @@ cd ./build
 
 echo ""
 echo "Now building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}..."
-if [ -n "S{APPVEYOR_PULL_REQUEST_HEAD_COMMIT}" ]; then
-    echo "Head commit SHA1 is: \"S{APPVEYOR_PULL_REQUEST_HEAD_COMMIT}\"."
+if [ -n "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}" ]; then
+    echo "Head commit SHA1 is: \"${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}\"."
 else
     echo "APPVEYOR_PULL_REQUEST_HEAD_COMMIT is empty."
 fi

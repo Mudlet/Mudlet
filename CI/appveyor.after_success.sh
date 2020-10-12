@@ -3,7 +3,7 @@
 echo "Running appveyor.after_success.sh shell script..."
 echo ""
 
-if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
+if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ]; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
     echo ""
@@ -24,7 +24,7 @@ fi
 
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 
-if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ] ; then
+if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; then
     echo "=== Creating a snapshot build ==="
     echo ""
     # Now append an "-x32" or "-x64" suffix to the "windows" to match the linux
@@ -130,7 +130,7 @@ which nuget.exe
 # Note that the standard mudlet Windows icon set will change
 # from: "mudlet_main_512x512_6XS_icon.ico" to: "mudlet.ico" once
 # PR 4089 is merged in:
-        if [ "${BUILD_BITNESS}" = "64" ] ; then
+        if [ "${BUILD_BITNESS}" = "64" ]; then
             /usr/bin/sed "s|<id>Mudlet</id>|<id>Mudlet_64_-PublicTestBuild</id>|g" ${NUSPEC_FILE}.orig \
                 | /usr/bin/sed "s|<title>Mudlet</title>|<title>Mudlet x64 (Public Test Build)</title>|g" \
                 | /usr/bin/sed "s|<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</title>|<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>|g" > ${NUSPEC_FILE}
@@ -144,7 +144,7 @@ which nuget.exe
 
     else
         echo "  Modifying mudlet.nuspec file for build bitness"
-        if [ "${BUILD_BITNESS}" = "64" ] ; then
+        if [ "${BUILD_BITNESS}" = "64" ]; then
             /usr/bin/sed "s|<id>Mudlet</id>|<id>Mudlet_64_</id>|g" ${NUSPEC_FILE}.orig \
                 | /usr/bin/sed "s|<title>Mudlet</title>|<title>Mudlet x64</title>|g" > ${NUSPEC_FILE}
         else
@@ -167,7 +167,7 @@ which nuget.exe
     # After running the above a new ".nupkg" file will be in the ${SQUIRRELWIN}
     # directory - which we will test for:
     echo "  Testing for NuGet package"
-    if [ ! -f "$(/usr/bin/cygpath --windows "${NUPKG_FILE}")" ] ; then
+    if [ ! -f "$(/usr/bin/cygpath --windows "${NUPKG_FILE}")" ]; then
         echo "  ERROR: $(/usr/bin/cygpath --unix "${NUPKG_FILE}") file not found! Build aborted"
         exit 1
     fi
@@ -180,8 +180,8 @@ echo ""
 echo "Finished building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
 exit 0
 
-if [ -n "${DEPLOY_URL}" ] ; then
-    if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ] ; then
+if [ -n "${DEPLOY_URL}" ]; then
+    if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
         prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
     fi
     wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows ${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \

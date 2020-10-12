@@ -33,17 +33,14 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     # Build was NOT initiated by pushing a tag to the repository - which is required for a release build
     if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         export BUILD_TYPE="public_test"
-        # Test for a usable git
-        if [ -x "$(which git 2>/dev/null)" ] ; then
-            COMMIT_DATE=$(git show -s --format=%cs | /usr/bin/tr -d '-')
-            YESTERDAYS_DATE=$(date -v-1d '+%F' | /usr/bin/tr -d '-')
-            if [ "${COMMIT_DATE}" -lt "${YESTERDAYS_DATE}" ] ; then
-                # There hasn't been any changes in last 24 hours
-                export ABORT_PT_BUILDS="true"
-            fi
-            # add a short commit to version for changelog generation so it knows what was last released
-            COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
+        COMMIT_DATE=$(git show -s --format=%cs | /usr/bin/tr -d '-')
+        YESTERDAYS_DATE=$(date -v-1d '+%F' | /usr/bin/tr -d '-')
+        if [ "${COMMIT_DATE}" -lt "${YESTERDAYS_DATE}" ]; then
+            # There hasn't been any changes in last 24 hours
+            export ABORT_PT_BUILDS="true"
         fi
+        # add a short commit to version for changelog generation so it knows what was last released
+        COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
         DATE=$(date +'%Y%m%d')
         MUDLET_VERSION_BUILD="-ptb-${DATE}+${COMMIT}"
         if [ "${BUILD_BITNESS}" = "64" ]; then
@@ -70,14 +67,14 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
             COMMIT=$(git rev-parse --short HEAD | cut -c 1-6)
             MUDLET_VERSION_BUILD="-testing-${COMMIT}"
         fi
-        if [ "${BUILD_BITNESS}" = "64" ]; then
-            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_.${VERSION}.nupkg")"
-        else
-            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet.${VERSION}.nupkg")"
-        fi
     fi
 else
     # Build was initiated by pushing a tag (maybe this is the case for a release build?)
+    if [ "${BUILD_BITNESS}" = "64" ]; then
+        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_.${VERSION}.nupkg")"
+    else
+        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet.${VERSION}.nupkg")"
+    fi
     export BUILD_TYPE="release"
     export COMMIT=""
     export NUPKG_FILE=""

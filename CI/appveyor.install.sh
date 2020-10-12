@@ -33,7 +33,7 @@ echo "Updating MSYS2 packages..."
 
 # Uncomment this to use user luarocks
 # ROCKOPTARGS=--local
-if [ "${BUILD_BITNESS}" = "32" ] ; then
+if [ "${BUILD_BITNESS}" = "32" ]; then
     BUILDCOMPONENT="i686"
 else
     BUILDCOMPONENT="x86_64"
@@ -58,6 +58,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
     mingw-w64-${BUILDCOMPONENT}-ccache \
     mingw-w64-${BUILDCOMPONENT}-qt5 \
     mingw-w64-${BUILDCOMPONENT}-libzip \
+    mingw-w64-${BUILDCOMPONENT}-ntldd \
     mingw-w64-${BUILDCOMPONENT}-pugixml \
     mingw-w64-${BUILDCOMPONENT}-lua51 \
     mingw-w64-${BUILDCOMPONENT}-lua51-lpeg \
@@ -71,7 +72,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
 # This was to fix https://github.com/msys2/MINGW-packages/issues/5928 but that
 # has now been done by https://github.com/msys2/MINGW-packages/pull/6580:
-#if [ ${BUILD_BITNESS} = "32" ] ; then
+#if [ ${BUILD_BITNESS} = "32" ]; then
 #    # The site_config.lua file for the MINGW32 case has so many wrong values
 #    # it prevents luarocks from working - however it can be repaired by some
 #    # editing:
