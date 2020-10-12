@@ -3,7 +3,7 @@
 echo "Running appveyor.install.sh shell script..."
 
 # Source/setup some variables (including PATH):
-. $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh)
+. $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh")
 
 # The above will define ABORT_PT_BUILDS to be "true" if this is deduced to be
 # a "public_test" BUILD_TYPE - AND there has not been any change in the
@@ -15,9 +15,9 @@ if [ "${ABORT_PT_BUILDS}" = "true" ]; then
     # on_success and on_finish steps in yaml file:
     appveyor exit
     exit 0
-end
+fi
 
-if [ "${BUILD_BITNESS}" != "32" ] && [ "${BUILD_BITNESS}" != "64" ] ; then
+if [ "${BUILD_BITNESS}" != "32" ] && [ "${BUILD_BITNESS}" != "64" ]; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
     exit 1
 fi

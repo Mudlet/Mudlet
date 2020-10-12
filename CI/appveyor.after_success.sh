@@ -20,7 +20,7 @@ if [ "${ABORT_PT_BUILDS}" = "true" ]; then
     # anything else if the condition that will invoke the exit (this test) is
     # true:
     exit 0
-end
+fi
 
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 
@@ -138,7 +138,7 @@ which nuget.exe
             /usr/bin/sed "s|<id>Mudlet</id>|<id>Mudlet-PublicTestBuild</id>|g" ${NUSPEC_FILE}.orig \
                 | /usr/bin/sed "s|<title>Mudlet</title>|<title>Mudlet x32 (Public Test Build)</title>|g" \
                 | /usr/bin/sed "s|<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</title>|<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>|g" > ${NUSPEC_FILE}
-        end
+        fi
         INSTALLER_ICON_FILE="$(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/src/icons/mudlet_ptb.ico")"
         echo ""
 
