@@ -52,7 +52,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
     ruby \
     zip \
     p7zip \
-    python2 \
+    python \
     rsync \
     mingw-w64-${BUILDCOMPONENT}-toolchain \
     mingw-w64-${BUILDCOMPONENT}-ccache \
