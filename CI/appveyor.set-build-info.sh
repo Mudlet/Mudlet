@@ -90,7 +90,7 @@ fi
 # Also an additional plus-sign prefixed piece of meta information, like a git
 # commit is NOT orderable or considered.
 
-if [ -n ${DATE} ]; then
+if [ -n "${DATE}" ]; then
     export DATE
 fi
 # not all systems we deal with allow uppercase ascii characters

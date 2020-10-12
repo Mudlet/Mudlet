@@ -14,10 +14,10 @@ if [ "${ABORT_PT_BUILDS}" = "true" ]; then
     # Forcible terminate build (successfully) - but will still carry out
     # on_success and on_finish steps in yaml file:
     appveyor exit
-    exit
+    exit 0
 end
 
-if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
+if [ "${BUILD_BITNESS}" != "32" ] && [ "${BUILD_BITNESS}" != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
     exit 1
 fi
