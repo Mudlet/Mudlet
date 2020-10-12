@@ -25,13 +25,10 @@ fi
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 
 if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; then
-    echo "=== Creating a snapshot build ==="
+    echo "=== Creating a (\"${BUILD_TYPE}\") snapshot build ==="
     echo ""
-    # Now append an "-x32" or "-x64" suffix to the "windows" to match the linux
-    # snapshot file:
-    ZIP_FILE_NAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-windows-x${BUILD_BITNESS}.zip
     mv $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/mudlet.exe") $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/Mudlet.exe")
-    # Pending support for debug or relWithDebInfo builds:
+    # Pending support for controllable debug or relWithDebInfo builds:
     # Separate out the debug information
     # pushd $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")
     # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug Mudlet.exe Mudlet.exe.debug
@@ -44,8 +41,18 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
 
     # wget returns the URL that is used, which we need to capture to report it:
     echo "=== Uploading the snapshot build ==="
-    export DEPLOY_URL=$(wget --method PUT --body-file=${ZIP_FILE_NAME} "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}" -O - -q)
-
+    DEPLOY_URL=$(wget --method PUT --body-file=${ZIP_FILE_NAME} "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}" -O - -q)
+    if [ -n "${DEPLOY_URL}" ]; then
+        if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
+            prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
+        fi
+        wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows ${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+            https://webhooks.gitter.im/e/cc99072d43b642c4673a
+        echo ""
+        echo "=== Deployed the output to ${DEPLOY_URL} ==="
+        echo ""
+        echo "******************************************************"
+    fi
     # Also retain the archive as a build artifact (for longer than the 14 days)
     # that we use for our own website - i.e. 6 months, use the rename option
     # because otherwise the path is unnecessarily kept in the name:
@@ -57,7 +64,7 @@ else # BUILD_TYPE is "public_test" OR "release"
         # As Squirrel takes Start menu name from the binary we need to rename it:
         pushd $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")
         mv mudlet.exe "Mudlet PTB.exe"
-        # Pending support for debug/relWithDebInfo builds:
+        # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug "Mudlet PTB.exe" "Mudlet PTB.exe.debug"
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --strip-debug "Mudlet PTB.exe"
@@ -65,7 +72,7 @@ else # BUILD_TYPE is "public_test" OR "release"
         # popd
     else
         echo "  Creating a release build"
-        # Pending support for debug/relWithDebInfo builds:
+        # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
         # pushd $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug Mudlet.exe Mudlet.exe.debug
@@ -175,22 +182,8 @@ which nuget.exe
     .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 fi
 
-echo "  TESTED OKAY SO FAR! - Build termining early, to confirm process working so far"
 echo ""
-echo "Finished building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD}"
-exit 0
-
-if [ -n "${DEPLOY_URL}" ]; then
-    if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
-        prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
-    fi
-    wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows ${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
-        https://webhooks.gitter.im/e/cc99072d43b642c4673a
-    echo ""
-    echo "Deployed the output to ${DEPLOY_URL}"
-    echo ""
-    echo "******************************************************"
-fi
+echo "=== Finished building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} ==="
 echo ""
 echo "   ... appveyor.after_success.sh shell script finished!"
 echo ""

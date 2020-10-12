@@ -67,6 +67,9 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
             COMMIT=$(git rev-parse --short HEAD | cut -c 1-6)
             MUDLET_VERSION_BUILD="-testing-${COMMIT}"
         fi
+        # Now append an "-x32" or "-x64" suffix to the "windows" to match the linux
+        # snapshot file:
+        export ZIP_FILE_NAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-windows-x${BUILD_BITNESS}.zip
     fi
 else
     # Build was initiated by pushing a tag (maybe this is the case for a release build?)

@@ -107,8 +107,8 @@ echo ""
 echo "    luautf8"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luautf8
 echo ""
-echo "    luazip"
-${ROCKCOMMAND} ${ROCKOPTARGS} install luazip
+echo "    lua-zip"
+${ROCKCOMMAND} ${ROCKOPTARGS} install lua-zip
 echo ""
 echo "    lrexlib-pcre"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install lrexlib-pcre

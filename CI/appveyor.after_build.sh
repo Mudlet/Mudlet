@@ -5,7 +5,7 @@
 echo "Running appveyor.after_build.sh shell script..."
 echo ""
 
-if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ]; then
+if [ "${APPVEYOR_REPO_NAME}" != "Mudlet/Mudlet" ]; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
     echo ""
@@ -106,11 +106,12 @@ cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lsqlite3.dll \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/lua-utf8.dll \
     ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/rex_pcre.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/zip.dll
+    ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/yajl.dll
 
 mkdir ./luasql
 cp -v -p ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll ./luasql/sqlite3.dll
+mkdir ./brimworks
+cp -v -p ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/brimworks/zip.dll ./brimworks/zip.dll
 echo ""
 
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
@@ -148,5 +149,5 @@ echo ""
 # echo ""
 
 echo "   ... appveyor.after_build.sh shell script finished."
-echo "${APPVEYOR_BUILD_FOLDER}/package should contain everything needed to run Mudlet!"
+echo "${APPVEYOR_BUILD_FOLDER}\package should contain everything needed to run Mudlet!"
 echo ""
