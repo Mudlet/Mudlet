@@ -1414,7 +1414,7 @@ if rex then
     local back = cols[2]
     if fore ~= "" then
       if fore == "r" or fore == "reset" then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       else
         local colorNumber = ctable[fore]
         if colorNumber then
@@ -1507,7 +1507,7 @@ if rex then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1540,7 +1540,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1760,7 +1760,9 @@ function ansi2decho(text, ansi_default_color)
   local result = rex.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
-    local t = string.split(s, ";") -- split the codes into an indexed table
+    local delim = ";"
+    if s:find(":") then delim = ":" end
+    local t = string.split(s, delim) -- split the codes into an indexed table
 
     -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
@@ -1812,7 +1814,6 @@ function ansi2decho(text, ansi_default_color)
         coloursToUse = colours
       else
         isColorCode = true
-
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1826,8 +1827,13 @@ function ansi2decho(text, ansi_default_color)
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
-          colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
-          i = i + 4
+          if delim == ";" then
+            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            i = i + 4
+          elseif delim == ":" then
+            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            i = i + 5
+          end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
           colour = lightColours[cmd]
@@ -1865,9 +1871,8 @@ function ansi2decho(text, ansi_default_color)
         output[#output + 1] = table.concat(fg, ",")
       end
 
-      output[#output + 1] = ':'
-
       if bg then
+        output[#output + 1] = ':'
         output[#output + 1] = table.concat(bg, ",")
       end
       output[#output + 1] = '>'
