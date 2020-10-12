@@ -208,7 +208,7 @@ void dlgMapper::show2dView()
     }
     if (!glWidget) {
         glWidget = new GLWidget(widget);
-        glWidget->setObjectName(QString::fromUtf8("glWidget"));
+        glWidget->setObjectName("glWidget");
 
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
@@ -369,7 +369,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
         } else {
-            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area not valid.";
         }
     } else {
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";

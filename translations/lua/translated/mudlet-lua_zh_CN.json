@@ -14,5 +14,9 @@
   "AdjustableContainer.save": {
     "message": "保存",
     "description": "saves the containers settings"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "断开连接 ",
+    "description": "disconnect your container from the border frame"
   }
 }

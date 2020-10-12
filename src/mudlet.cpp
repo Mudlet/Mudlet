@@ -709,12 +709,15 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en"), tr("English")},
                                   {QStringLiteral("en_ag"), tr("English (Antigua/Barbuda)")},
                                   {QStringLiteral("en_au"), tr("English (Australia)")},
+                                  {QStringLiteral("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_bs"), tr("English (Bahamas)")},
                                   {QStringLiteral("en_bw"), tr("English (Botswana)")},
                                   {QStringLiteral("en_bz"), tr("English (Belize)")},
                                   {QStringLiteral("en_ca"), tr("English (Canada)")},
+                                  {QStringLiteral("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_dk"), tr("English (Denmark)")},
                                   {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
+                                  {QStringLiteral("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
                                   {QStringLiteral("en_gh"), tr("English (Ghana)")},
                                   {QStringLiteral("en_hk"), tr("English (Hong Kong SAR China)")},
@@ -728,6 +731,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -1966,11 +1970,58 @@ void mudlet::commitLayoutUpdates()
     while (itHostToolbarsList.hasNext()) {
         itHostToolbarsList.next();
         for (auto pToolBar : itHostToolbarsList.value()) {
-            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_LIKELY(pToolBar)) {
+                if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                    qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                } else if (pToolBar->property("layoutChanged").toBool()) {
+                    pToolBar->setProperty("layoutChanged", QVariant(false));
+                }
             }
         }
         itHostToolbarsList.remove();
+    }
+}
+
+bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -2263,7 +2314,7 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pC) {
-        pC->setConsoleBgColor(r, g, b);
+        pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
         QPalette mainPalette;
@@ -2335,6 +2386,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
+        pC->mUpperPane->resetHScrollbar();
         pC->buffer.clear();
         pC->mUpperPane->update();
         return true;
@@ -2488,6 +2540,11 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
         return false;
     }
 
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setScrollBarVisible(isVisible);
+        return true;
+    }
+
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setScrollBarVisible(isVisible);
@@ -2495,6 +2552,26 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
     } else {
         return false;
     }
+}
+
+bool mudlet::setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+   return false;
 }
 
 bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
@@ -3012,18 +3089,20 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
+bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
 {
     if (!pHost || !pHost->mpConsole) {
-        return;
+        return false;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setBgColor(r, g, b);
+        pC->setBgColor(r, g, b, a);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
+        return true;
     }
+    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
@@ -4666,7 +4745,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString entryInArchive(QString::fromUtf8(zs.name));
+            QString entryInArchive(zs.name);
             QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
@@ -4701,7 +4780,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         // No need to check return value as we've already done it first time
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString entryInArchive(QString::fromUtf8(zs.name));
+        QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
