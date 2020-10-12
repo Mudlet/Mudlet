@@ -31,6 +31,7 @@
 #include "ScriptUnit.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
+#include "TMainConsole.h"
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
