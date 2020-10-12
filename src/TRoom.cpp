@@ -34,6 +34,8 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
+                                                                              
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
 // confusing!

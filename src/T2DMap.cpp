@@ -915,8 +915,25 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
         }
 
     }
-    // Do we need to draw the room name:
+    // If there's a room name, draw it?
+    bool showName = false;
     if (mShowRoomName && areRoomNamesLegible && !isGridMode) {
+        if (pRoom->userData.contains(ROOM_UI_SHOWNAME)) {
+            QString showNameData = pRoom->userData.value(ROOM_UI_SHOWNAME);
+
+            if (!showNameData.isEmpty()) {
+                switch(showNameData[0].unicode()) {
+                  case 'y': case 'Y':
+                  case 't': case 'T':
+                  case '1':
+                    showName = true;
+                    qWarning("Name!");
+                    break;
+                }
+            }
+        }
+    }
+    if (showName) {
         painter.save();
         QColor roomNameColor;
         roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
