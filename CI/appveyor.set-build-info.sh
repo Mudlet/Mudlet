@@ -1,7 +1,5 @@
 #!/bin/sh
 
-
-
 # Commented out things only needed for failure post-mortems:
 #echo "Initial MSYSTEM is: ${MSYSTEM}"
 #echo "Initial PATH is:"
@@ -19,8 +17,15 @@ export PATH=${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/
 #echo "MSYSTEM is now: ${MSYSTEM}"
 
 # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
-if [ "${BUILD_BITNESS}" = "64" ] ; then
+if [ "${BUILD_BITNESS}" = "64" ]; then
     export WITH_UPDATER="NO"
+fi
+
+VERSION=""
+if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
+elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
 fi
 
 MUDLET_VERSION_BUILD=""
@@ -28,21 +33,25 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     # Build was NOT initiated by pushing a tag to the repository - which is required for a release build
     if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         export BUILD_TYPE="public_test"
-        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet-PublicTestBuild.${VersionAndSha}.nupkg")"
         # Test for a usable git
         if [ -x "$(which git 2>/dev/null)" ] ; then
-            COMMIT_DATE = $(git show -s --format=%cs | /usr/bin/tr -d '-')
+            COMMIT_DATE=$(git show -s --format=%cs | /usr/bin/tr -d '-')
             YESTERDAYS_DATE=$(date -v-1d '+%F' | /usr/bin/tr -d '-')
             if [ "${COMMIT_DATE}" -lt "${YESTERDAYS_DATE}" ] ; then
                 # There hasn't been any changes in last 24 hours
                 export ABORT_PT_BUILDS="true"
             fi
-        # add a short commit to version for changelog generation so it knows what was last released
+            # add a short commit to version for changelog generation so it knows what was last released
+            COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
+        fi
         DATE=$(date +'%Y%m%d')
-        COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
         MUDLET_VERSION_BUILD="-ptb-${DATE}+${COMMIT}"
+        if [ "${BUILD_BITNESS}" = "64" ]; then
+            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_-PublicTestBuild.${VERSION}-${DATE}+${COMMIT}.nupkg")"
+        else
+            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet-PublicTestBuild.${VERSION}-${DATE}+${COMMIT}.nupkg")"
+        fi
     else
-        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet.${VersionAndSha}.nupkg")"
         # -n is test for non-zero length string - so building for a PR
         # Shorten the Commit SHA1 produced (so that it is only 8 hex digits) so that
         # it matches the length used in the filename for the Linux/MacOs builds:
@@ -61,6 +70,11 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
             COMMIT=$(git rev-parse --short HEAD | cut -c 1-6)
             MUDLET_VERSION_BUILD="-testing-${COMMIT}"
         fi
+        if [ "${BUILD_BITNESS}" = "64" ]; then
+            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_.${VERSION}.nupkg")"
+        else
+            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet.${VERSION}.nupkg")"
+        fi
     fi
 else
     # Build was initiated by pushing a tag (maybe this is the case for a release build?)
@@ -73,14 +87,6 @@ fi
 #COMMIT=fake1
 #export APPVEYOR_REPO_TAG="true"
 #export APPVEYOR_SCHEDULED_BUILD="true"
-
-VERSION=""
-
-if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
-    VERSION=$(/usr/bin/perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
-elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-    VERSION=$(/usr/bin/perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
-fi
 
 # For proper Semantic versioning a version with a suffix after the number proper
 # beginning with a hyphen (and period separated sections thereafter) is
