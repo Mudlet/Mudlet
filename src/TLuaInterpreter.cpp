@@ -1179,15 +1179,11 @@ int TLuaInterpreter::getLines(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
-// Should have been called loadReplay(...) but this name is already in the
-// published Lua API
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay - Yes, a different name!
 int TLuaInterpreter::loadRawFile(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
-                           "profile's \"logs\" sub-directory, or an absolute path}, as string expected, \n"
-                           "got %s!)",
+        lua_pushfstring(L, "loadReplay: bad argument #1 type (replay file name as string expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     }
@@ -1466,11 +1462,11 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMapMenu
 int TLuaInterpreter::removeMapMenu(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "removeMapMenu: wrong first argument type");
+        lua_pushfstring(L, "removeMapMenu: bad argument #1 type (Menu name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString uniqueName = lua_tostring(L, 1);
@@ -1519,7 +1515,7 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapMenus
 int TLuaInterpreter::getMapMenus(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -1729,7 +1725,7 @@ int TLuaInterpreter::copy(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -6267,8 +6263,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     return 1;
 }
 
-// Documentation: ? - public function missing documentation in wiki
-// Now audits the whole map
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#auditAreas
 int TLuaInterpreter::auditAreas(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -11773,7 +11768,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -12043,7 +12038,7 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
 int TLuaInterpreter::pasteWindow(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -13132,19 +13127,7 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
-// Once a mapper has been created it will, by default, include the "Default
-// Area" associated with the reserved area Id -1 in the list of Areas shown in
-// the area selection widget.  This function will immediately hide that entry
-// if given a true argument and restore it if set to false.  The setting is NOT
-// saved and this function was created to address a specific need for that area
-// to not be immediately shown to users for one package writer who needed to
-// hide rooms until they have been "explored".  This setting is ALSO present on
-// the last "Special Options" tab of the "Profile Preferences" - although it is
-// hidden until there IS a mapper to apply the setting to.
-// Returns true on successfully setting the desired value or false if there is
-// (not yet) a map display to apply it to.  Also throws an Error or returned a
-// nil value - both with an accompied error string - if there are problems.
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDefaultAreaVisible
 int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -16344,6 +16327,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar);
     lua_register(pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar);
     lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadRawFile);
+    lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadRawFile);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);
     lua_register(pGlobalLua, "setOverline", TLuaInterpreter::setOverline);
