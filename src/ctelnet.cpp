@@ -1806,7 +1806,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString var;
@@ -1880,7 +1880,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString packageMessage;
@@ -2027,7 +2027,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     transcodedMsg.remove(QChar::LineFeed);
@@ -2049,7 +2049,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     // MSP specification: https://www.zuggsoft.com/zmud/msp.htm#MSP%20Specification
