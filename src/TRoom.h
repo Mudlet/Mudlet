@@ -53,10 +53,6 @@ class XMLimport;
 class XMLexport;
 class TRoomDB;
 
-// well-known room tags
-extern QString ROOM_UI_SHOWNAME;
-extern QString ROOM_UI_NAMEPOS;
-
 class TRoom
 {
     Q_DECLARE_TR_FUNCTIONS(TRoom) // Needed so we can use tr() even though TRoom is NOT derived from QObject

@@ -34,9 +34,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
-QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
-                                                                              
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
 // confusing!
@@ -802,11 +799,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             ifs >> customLinesArrow;
             ifs >> customLinesColor;
             ifs >> customLinesStyle;
-            if (version >= 21) {
-                qreal x, y;
-                ifs >> x;
-                ifs >> y;
-            }
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
             ifs >> oldLinesData;

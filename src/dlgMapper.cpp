@@ -80,8 +80,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
-    showRoomNames->setChecked(mpHost->mShowRoomName);
-    mp2dMap->mShowRoomName = mpHost->mShowRoomName;
+
+    showRoomNames->setChecked(mpMap->getRoomNamesShown());
 
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
@@ -178,12 +178,7 @@ void dlgMapper::slot_toggleShowRoomIDs(int s)
 
 void dlgMapper::slot_toggleShowRoomNames(int s)
 {
-    if (s == Qt::Checked) {
-        mp2dMap->mShowRoomName = true;
-    } else {
-        mp2dMap->mShowRoomName = false;
-    }
-    mp2dMap->mpHost->mShowRoomName = mp2dMap->mShowRoomName;
+    mpMap->setRoomNamesShown(s == Qt::Checked);
     mp2dMap->update();
 }
 

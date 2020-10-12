@@ -720,6 +720,16 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="mNoAntiAlias">
+            <property name="toolTip">
+             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0" colspan="4">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
@@ -730,16 +740,6 @@
             <property name="text">
              <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
-            </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
             </property>
            </widget>
           </item>
@@ -944,6 +944,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
          </property>
          <property name="title">
           <string>Word wrapping</string>
@@ -2001,67 +2004,31 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QWidget" name="widget_playerRoomFonts" native="true">
-            <layout class="QGridLayout" name="gridLayout_playerRoomFonts">
-             <item row="0" column="0">
-             <widget class="QLabel" name="label_mapNamesFont">
-              <property name="text">
-               <string>Room Name Font</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-             <item row="0" column="1">
-             <widget class="QFontComboBox" name="fontComboBox_mapNames"/>
-            </item>
-             <item row="0" column="2" alignment="Qt::AlignRight">
-             <widget class="QLabel" name="label_nameSizeAdjust">
-              <property name="text">
-               <string>Adjust name size by</string>
-              </property>
-             </widget>
-            </item>
-             <item row="0" column="3" alignment="Qt::AlignLeft">
-             <widget class="QSpinBox" name="spinBox_mapNamesSizeAdj">
-              <property name="minimum">
-               <number>-9</number>
-              </property>
-              <property name="maximum">
-               <number>20</number>
-              </property>
-             </widget>
-            </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_mapSymbolsFont">
-               <property name="text">
-                <string>2D Map Room Symbol Font</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
-             </item>
-             <item row="1" column="2" alignment="Qt::AlignRight">
-              <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
-               <property name="text">
-                <string>only from this font</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="3">
-              <widget class="QPushButton" name="pushButton_showGlyphUsage">
-               <property name="text">
-                <string>Show symbol usage...</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+          <item row="1" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="1" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
+            <property name="text">
+             <string>Only use symbols (glyphs) from chosen font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="pushButton_showGlyphUsage">
+            <property name="text">
+             <string>Show symbol usage...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomStyle" native="true">
             <layout class="QGridLayout" name="gridLayout_playerRoomStyle">
              <property name="leftMargin">
@@ -2790,6 +2757,22 @@ you can use it but there could be issues with aligning columns of text</string>
          </layout>
         </widget>
        </item>
+       <item>
+        <spacer name="verticalSpacer_connection">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_connection">
@@ -2823,6 +2806,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <layout class="QGridLayout" name="gridLayout_groupBox_ssl_certificate" columnstretch="0,1">
              <item row="0" column="0">
               <widget class="QLabel" name="label">
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
                <property name="text">
                 <string>Issuer:</string>
                </property>
@@ -2890,36 +2876,6 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_self_signed">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept self-signed certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_expired">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept expired certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Accept all certificate errors       (unsecure)</string>
-            </property>
            </widget>
           </item>
           <item row="3" column="0" colspan="2">
@@ -4849,6 +4805,36 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept self-signed certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept expired certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5357,6 +5343,12 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
   <tabstop>comboBox_playerRoomStyle</tabstop>
   <tabstop>checkBox_showDefaultArea</tabstop>
+  <tabstop>fontComboBox_mapSymbols</tabstop>
+  <tabstop>pushButton_showGlyphUsage</tabstop>
+  <tabstop>pushButton_playerRoomPrimaryColor</tabstop>
+  <tabstop>spinBox_playerRoomOuterDiameter</tabstop>
+  <tabstop>pushButton_playerRoomSecondaryColor</tabstop>
+  <tabstop>spinBox_playerRoomInnerDiameter</tabstop>
   <tabstop>pushButton_foreground_color_2</tabstop>
   <tabstop>pushButton_black_2</tabstop>
   <tabstop>pushButton_red_2</tabstop>
