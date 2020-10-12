@@ -51,7 +51,7 @@
 #include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");
- 
+
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
