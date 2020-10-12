@@ -35,6 +35,7 @@
 #include "post_guard.h"
 
 QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
+QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
                                                                               
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
@@ -73,7 +74,6 @@ TRoom::TRoom(TRoomDB* pRDB)
 , max_x(0)
 , max_y(0)
 , mSymbol(QString())
-, nameOffset(0, 0)
 , highlight(false)
 , highlightColor(QColor(255, 150, 0))
 , rendered(false)
@@ -806,7 +806,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 qreal x, y;
                 ifs >> x;
                 ifs >> y;
-                nameOffset = QPointF(x, y);
             }
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;

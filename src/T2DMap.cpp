@@ -936,12 +936,39 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& room
     if (showName) {
         painter.save();
         QColor roomNameColor;
+        QPointF nameOffset {0,0};
+        if (pRoom->userData.contains(ROOM_UI_NAMEPOS)) {
+            QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
+            if (!namePosData.isEmpty()) {
+                QStringList posXY = namePosData.split(" ");
+                bool ok1, ok2;
+                double posX, posY;
+
+                switch (posXY.count()) {
+                  case 1:
+                    // one value: treat as Y offset
+                    posY = posXY[0].toDouble(&ok1);
+                    if (ok1) {
+                        nameOffset.setY(posY);
+                    }
+                    break;
+                  case 2:
+                    posX = posXY[0].toDouble(&ok1);
+                    posY = posXY[1].toDouble(&ok2);
+                    if (ok1 && ok2) {
+                        nameOffset.setX(posX);
+                        nameOffset.setY(posY);
+                    }
+                    break;
+                }
+            }
+        }
         roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
                                ? Qt::black : Qt::white);
-        roomNameRectangle.adjust(mRoomWidth * pRoom->nameOffset.x(),
-                                 mRoomHeight * pRoom->nameOffset.y(),
-                                 mRoomWidth * pRoom->nameOffset.x(),
-                                 mRoomHeight * pRoom->nameOffset.y());
+        roomNameRectangle.adjust(mRoomWidth * nameOffset.x(),
+                                 mRoomHeight * nameOffset.y(),
+                                 mRoomWidth * nameOffset.x(),
+                                 mRoomHeight * nameOffset.y());
         painter.setPen(QPen(QColor(roomNameColor)));
         painter.setFont(roomVNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);

@@ -1223,10 +1223,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->customLinesArrow;
             ofs << pR->customLinesColor;
             ofs << pR->customLinesStyle;
-            if (mSaveVersion >= 21) {
-                ofs << pR->nameOffset.x();
-                ofs << pR->nameOffset.y();
-            }
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
             QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
