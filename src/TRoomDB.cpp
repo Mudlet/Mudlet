@@ -1354,12 +1354,3 @@ bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key,
     }
 }
 
-bool setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
-{
-    if (value) {
-        userData[key] = QString("1");
-    } else {
-        userData[key] = QString("0");
-    }
-}
-

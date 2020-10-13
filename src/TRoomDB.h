@@ -120,6 +120,15 @@ private:
 // helpers to get/set bools from userdata, required for storing some bool
 // values there instead of upticking the map format
 bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue = false);
-bool setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value);
+
+// this needs to be inlined due to a compiler and/or Qt bug.
+static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
+{
+    if (value) {
+        userData[key] = QStringLiteral("1");
+    } else {
+        userData[key] = QStringLiteral("0");
+    }
+}
 
 #endif // MUDLET_TROOMDB_H
