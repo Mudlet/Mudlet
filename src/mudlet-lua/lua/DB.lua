@@ -432,15 +432,24 @@ end
 ---   )
 ---   </pre>
 ---   Note that you have to use double {{ }} if you have composite index/unique constrain.
-function db:create(db_name, sheets)
+function db:create(db_name, sheets, shared)
   if not db.__env or (db.__env and db.__env == 'SQLite3 environment (closed)') then
     db.__env = luasql.sqlite3()
   end
 
   db_name = db:safe_name(db_name)
 
-  if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
-    db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+  -- Small change allows for databases to be created in a shared location for multi-play (needs additional testing)
+  local db_path
+  if shared then
+    db_path = getMudletHomeDir() .. "/../../databases" -- Save database at root of Mudlet/databases
+  else
+    db_path = getMudletHomeDir() -- Save database to profile
+  end
+  if not lfs.attributes(db_path) then lfs.mkdir(db_path) end -- Create dir if it doesn't exist
+
+  if not db.__conn[db_name] or (db.__conn[db_name] and db.__conn[db_name] == 'SQLite3 connection (closed)') or (not io.exists(db_path.."/Database_" .. db_name .. ".db")) then
+    db.__conn[db_name] = db.__env:connect(db_path.."/Database_" .. db_name .. ".db")
     db.__conn[db_name]:setautocommit(false)
     db.__autocommit[db_name] = true
   end
