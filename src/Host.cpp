@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMap.h"

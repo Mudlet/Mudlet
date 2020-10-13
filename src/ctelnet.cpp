@@ -33,6 +33,7 @@
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TTextCodec.h"

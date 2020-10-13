@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -798,7 +799,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
                 } else {
                     QAction* pA = nullptr;
-                    if (mpConsole->isUsingSharedDictionary()) {
+                    auto mainConsole = mpConsole->mpHost->mpConsole;
+                    if (mainConsole->isUsingSharedDictionary()) {
                         pA = new QAction(tr("no suggestions (shared)",
                                                  // Intentional comment
                                                  "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));

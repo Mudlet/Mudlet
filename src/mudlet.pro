@@ -563,6 +563,7 @@ SOURCES += \
     TLabel.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TMainConsole.cpp \
     TMap.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
@@ -667,6 +668,7 @@ HEADERS += \
     TLabel.h \
     TLinkStore.h \
     TLuaInterpreter.h \
+    TMainConsole.h \
     TMap.h \
     TMatchState.h \
     TMedia.h \
