@@ -1530,9 +1530,9 @@ int TLuaInterpreter::getMapMenus(lua_State* L)
                     QStringList menuInfo = it.value();
                     parent = menuInfo[0];
                     display = menuInfo[1];
-                    lua_pushstring(L, it.key().toLatin1().data());
-                    lua_pushstring(L, parent.toLatin1().data());
-                    lua_pushstring(L, display.toLatin1().data());
+                    lua_pushstring(L, it.key().toUtf8().constData());
+                    lua_pushstring(L, parent.toUtf8().constData());
+                    lua_pushstring(L, display.toUtf8().constData());
                     lua_settable(L, -3);
                 }
             }
@@ -2971,7 +2971,7 @@ int TLuaInterpreter::getModulePath(lua_State* L)
     QMap<QString, QStringList> modules = host.mInstalledModules;
     if (modules.contains(moduleName)) {
         QString modPath = modules[moduleName][0];
-        lua_pushstring(L, modPath.toLatin1().data());
+        lua_pushstring(L, modPath.toUtf8().constData());
         return 1;
     }
     return 0;
@@ -8753,11 +8753,11 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 
     if (!luaDir) {
         QString fileName = QFileDialog::getExistingDirectory(nullptr, title, QDir::currentPath());
-        lua_pushstring(L, fileName.toLatin1().data());
+        lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     } else {
         QString fileName = QFileDialog::getOpenFileName(nullptr, title, QDir::currentPath());
-        lua_pushstring(L, fileName.toLatin1().data());
+        lua_pushstring(L, fileName.toUtf8().constData());
         return 1;
     }
 }
@@ -10229,7 +10229,7 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     if (pR) {
         QStringList keys = pR->getExitWeights().keys();
         for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys[i].toLatin1().data());
+            lua_pushstring(L, keys[i].toUtf8().constData());
             lua_pushnumber(L, pR->getExitWeight(keys[i]));
             lua_settable(L, -3);
         }
@@ -10273,7 +10273,7 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
         while (it.hasNext()) {
             it.next();
             lua_pushnumber(L, it.key());
-            lua_pushstring(L, it.value().text.toLatin1().data());
+            lua_pushstring(L, it.value().text.toUtf8().constData());
             lua_settable(L, -3);
         }
     }
@@ -10329,7 +10329,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
                 lua_pushnumber(L, width);
                 lua_settable(L, -3);
                 lua_pushstring(L, "Text");
-                lua_pushstring(L, text.toLatin1().data());
+                lua_pushstring(L, text.toUtf8().constData());
                 lua_settable(L, -3);
             } else {
                 lua_pushstring(L, "getMapLabel: labelId doesn't exist");
@@ -10365,7 +10365,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
                     lua_pushnumber(L, width);
                     lua_settable(L, -3);
                     lua_pushstring(L, "Text");
-                    lua_pushstring(L, text.toLatin1().data());
+                    lua_pushstring(L, text.toUtf8().constData());
                     lua_settable(L, -3);
                     lua_pushnumber(L, id);
                     lua_insert(L, -2);
@@ -10673,8 +10673,8 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
             } else {
                 exit = dir;
             }
-            lua_pushstring(L, exit.toLatin1().data());       //done to remove the prepended special exit status
-            lua_pushstring(L, exitStatus.toLatin1().data()); //done to remove the prepended special exit status
+            lua_pushstring(L, exit.toUtf8().constData());       //done to remove the prepended special exit status
+            lua_pushstring(L, exitStatus.toUtf8().constData()); //done to remove the prepended special exit status
             lua_settable(L, -3);
             lua_pushnumber(L, id_to);
             lua_insert(L, -2);
@@ -10703,7 +10703,6 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
             it.next();
             int id_to = it.key();
             QString dir = it.value();
-            // lua_pushstring(L, dir.toLatin1().data());
             QString exitStatus;
             QString exit;
             if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
@@ -10717,7 +10716,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
             } else {
                 exit = dir;
             }
-            lua_pushstring(L, exit.toLatin1().data());
+            lua_pushstring(L, exit.toUtf8().constData());
             lua_pushnumber(L, id_to);
             lua_settable(L, -3);
         }
@@ -12848,7 +12847,7 @@ int TLuaInterpreter::getTime(lua_State* L)
     QDateTime time = QDateTime::currentDateTime();
     if (return_string) {
         tm = time.toString(format);
-        lua_pushstring(L, tm.toLatin1().data());
+        lua_pushstring(L, tm.toUtf8().constData());
     } else {
         QDate dt = time.date();
         QTime tm = time.time();
@@ -13954,7 +13953,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
             return 1;
         }
 
-        lua_pushstring(L, speechQueue.at(index).toLatin1().constData());
+        lua_pushstring(L, speechQueue.at(index).toUtf8().constData());
         return 1;
     }
 
@@ -14082,7 +14081,7 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
     }
 
     lua_pushnil(L);
-    lua_pushfstring(L, results.second.toLatin1().constData());
+    lua_pushfstring(L, results.second.toUtf8().constData());
     return 2;
 }
 
@@ -14451,8 +14450,8 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
-    lua_pushstring(L, var.toLatin1().data());
-    lua_pushstring(L, arg.toLatin1().data());
+    lua_pushstring(L, var.toUtf8().constData());
+    lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
@@ -17975,7 +17974,7 @@ void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, c
     lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     lua_insert(L, -2);
 
-    lua_pushstring(L, name.toLatin1().constData());
+    lua_pushstring(L, name.toUtf8().constData());
     lua_insert(L, -2);
     lua_settable(L, -3);
     lua_pop(L, 1);
@@ -18125,7 +18124,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         lua_insert(L, -2);
 
         QString name = QStringLiteral("ansi_%1").arg(i + 16, 3, 10, QLatin1Char('0'));
-        lua_pushstring(L, name.toLatin1().constData());
+        lua_pushstring(L, name.toUtf8().constData());
         lua_insert(L, -2);
         lua_settable(L, -3);
         lua_pop(L, 1);
@@ -18182,7 +18181,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         lua_insert(L, -2);
 
         QString name = QStringLiteral("ansi_%1").arg(i, 3, 10, QLatin1Char('0'));
-        lua_pushstring(L, name.toLatin1().constData());
+        lua_pushstring(L, name.toUtf8().constData());
         lua_insert(L, -2);
         lua_settable(L, -3);
         lua_pop(L, 1);

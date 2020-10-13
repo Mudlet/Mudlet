@@ -33,7 +33,7 @@ public:
 
     MxpTagAttribute(const QString& name, const QString& value) : QPair(name, value) {}
 
-    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, QString::fromLatin1("")) {}
+    explicit MxpTagAttribute(const QString& name) : MxpTagAttribute(name, QString()) {}
 
     MxpTagAttribute() : QPair() {}
 
