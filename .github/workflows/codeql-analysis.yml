@@ -1,0 +1,98 @@
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
+#
+# You may wish to alter this file to override the set of languages analyzed,
+# or to provide custom queries or build logic.
+name: "CodeQL"
+
+on:
+  push:
+    branches: [development, main]
+  schedule:
+    - cron: '0 7 * * 3'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Override automatic language detection by changing the below list
+        # Supported options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
+        language: ['cpp']
+        # Learn more...
+        # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection
+    env:
+      qt: "5.14.1"
+
+    steps:
+    - name: Restore Qt cache
+      uses: actions/cache@v1
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{runner.os}}-qt-${{env.qt}}
+        restore-keys: |
+          ${{runner.os}}-qt-
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      with:
+        version: ${{env.qt}}
+        dir: ${{runner.workspace}}
+        cached: ${{steps.cache-qt.outputs.cache-hit}}
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+        submodules: true
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
+        # queries: ./path/to/local/query, your-org/your-repo/queries@main
+
+    - name: "Set location of vcpkg dependencies"
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
+      run: |
+        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
+      shell: bash
+
+    - name: Install apt dependencies
+      run: |
+        # Installing packages might fail as the github image becomes outdated
+        sudo apt update
+        # These aren't available or don't work well in vcpkg
+        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
+
+    # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
+    - name: Restore from cache and run vcpkg
+      uses: lukka/run-vcpkg@v2
+      with:
+        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
+        vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
+
+    - name: Build Mudlet
+      uses: lukka/run-cmake@v2
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b/ninja'
+        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/gcc_64/
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
