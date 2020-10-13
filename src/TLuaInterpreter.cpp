@@ -3302,11 +3302,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setFont: bad argument #%d type for the optional window name - expected string, got %s!", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isstring(L, ++s)) {
@@ -3361,11 +3357,7 @@ int TLuaInterpreter::getFont(lua_State* L)
     QString windowName = QStringLiteral("main");
     QString font;
     if (lua_gettop(L) == 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getFont: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = WINDOW_NAME(L, 1);
 
         if (isMain(windowName)) {
             font = pHost->mpConsole->mUpperPane->fontInfo().family();
@@ -3394,15 +3386,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setFontSize: bad argument #%d type (more than one argument supplied and first,\n"
-                            "window name, as string expected (omission selects \"main\" window), got %s!",
-                            s,
-                            luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     int size;
@@ -3454,11 +3438,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
     QString windowName = QStringLiteral("main");
     int rval = -1;
     if (lua_gettop(L) == 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = WINDOW_NAME(L, 1);
 
         if (isMain(windowName)) {
             rval = pHost->getDisplayFont().pointSize();
@@ -4401,11 +4381,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     int x = 0, y = 0;
     bool show = true;
 
-    if (lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "setWindow: bad argument #1 type (parent windowname as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString windowname{lua_tostring(L, 1)};
+    QString windowname = WINDOW_NAME(L, 1);
 
     if (lua_type(L, 2) != LUA_TSTRING) {
         lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
@@ -4538,7 +4514,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
 
         if (!lua_isnumber(L, ++s)) {
             lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4651,19 +4627,16 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         return 2;
     }
 
-    // only either window name or font size is passed in
+    // otherwise either window name or font size is passed in
     if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
-    } else if (lua_gettop(L) == 0 || lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-        size = mudlet::self()->calcFontSize(pHost, windowName);
     } else {
-        lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
+        windowName = WINDOW_NAME(L, 1);
+        size = mudlet::self()->calcFontSize(pHost, windowName);
     }
 
     if (size.width() <= -1) {
@@ -4972,13 +4945,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     int n = lua_gettop(L);
     int s = 0;
 
-    if (!lua_isstring(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (window name as string is optional, got %s!)",
-                        s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    QString windowName{lua_tostring(L, s)};
+    QString windowName = WINDOW_NAME(L, ++s);
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     if (!lua_isnumber(L, ++s)) {
@@ -5137,11 +5104,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseWindow
 int TLuaInterpreter::raiseWindow(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "raiseWindow: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName{lua_tostring(L, 1)};
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->raiseWindow(windowName));
@@ -5151,11 +5114,7 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lowerWindow
 int TLuaInterpreter::lowerWindow(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "lowerWindow: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName{lua_tostring(L, 1)};
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->lowerWindow(windowName));
@@ -6289,17 +6248,7 @@ int TLuaInterpreter::deselect(lua_State* L)
 
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(deselect: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        // We cannot yet properly handle non-ASCII windows names but we will eventually!
-        windowName = lua_tostring(L, 1);
-        if (windowName == QLatin1String("main")) {
-            // This matches the identifier for the main window - so make it
-            // appear so by emptying it...
-            windowName.clear();
-        }
+        windowName = WINDOW_NAME(L, 1);
     }
 
     if (isMain(windowName)) {
@@ -6319,17 +6268,7 @@ int TLuaInterpreter::resetFormat(lua_State* L)
 
     QString windowName; // only for case with an argument, will be null if not assigned to which is different from being empty
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, R"(resetFormat: bad argument #1 type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        // We cannot yet properly handle non-ASCII windows names but we will eventually!
-        windowName = lua_tostring(L, 1);
-        if (windowName == QLatin1String("main")) {
-            // This matches the identifier for the main window - so make it
-            // appear so by emptying it...
-            windowName.clear();
-        }
+        windowName = WINDOW_NAME(L, 1);
     }
 
     if (isMain(windowName)) {
@@ -6353,11 +6292,7 @@ int TLuaInterpreter::hasFocus(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoUserWindow
 int TLuaInterpreter::echoUserWindow(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "echoUserWindow: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "echoUserWindow: wrong argument type");
@@ -6462,12 +6397,7 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
-    QString windowName = "";
-    if (lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-    } else {
-        windowName = "main";
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     if (isMain(windowName)) {
@@ -6481,11 +6411,7 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLastLineNumber
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getLastLineNumber: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     int number;
@@ -6529,11 +6455,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setTriggerStayOpen: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
     if (!lua_isnumber(L, s)) {
@@ -6550,14 +6472,10 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLink
 int TLuaInterpreter::setLink(lua_State* L)
 {
-    QString windowName = "";
+    QString windowName;
     int s = 1;
     if (lua_gettop(L) > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setLink: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
 
@@ -6580,10 +6498,10 @@ int TLuaInterpreter::setLink(lua_State* L)
     _linkFunction << linkFunction;
     QStringList _linkHint;
     _linkHint << linkHint;
-    if (windowName.size() > 0) {
-        mudlet::self()->setLink(&host, windowName, _linkFunction, _linkHint);
-    } else {
+    if (isMain(windowName)) {
         host.mpConsole->setLink(_linkFunction, _linkHint);
+    } else {
+        mudlet::self()->setLink(&host, windowName, _linkFunction, _linkHint);
     }
     return 0;
 }
@@ -6599,11 +6517,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n > 4) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setPopup: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -6668,13 +6582,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setBold: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6708,13 +6616,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setItalics: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6748,13 +6650,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setOverline: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6788,13 +6684,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setReverse: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6828,13 +6718,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setStrikeOut: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6868,13 +6752,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setUnderline: bad argument #%d type (window name, as string expected {omission selects \"main\" console window}, got %s!",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6952,11 +6830,7 @@ int TLuaInterpreter::showHandlerError(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "hideToolBar: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     host.getActionUnit()->hideToolBar(windowName);
@@ -6966,11 +6840,7 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showToolBar
 int TLuaInterpreter::showToolBar(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "showToolBar: wrong argument type");
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     host.getActionUnit()->showToolBar(windowName);
@@ -7234,11 +7104,7 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 //add getUserWindowSize
 int TLuaInterpreter::getUserWindowSize(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getUserWindowSize: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString windowName = lua_tostring(L, 1);
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
     QSize userWindowSize = host.mpConsole->getUserWindowSize(windowName);
@@ -11474,11 +11340,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 3) {
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setFgColor: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setFgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
@@ -11535,7 +11397,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
 
         if (!lua_isnumber(L, ++s)) {
             lua_pushfstring(L, "setBgColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -11673,11 +11535,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n >= 4) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "insertPopup: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -11746,11 +11604,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     int s = 0;
 
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "insertText: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
     if (!lua_isstring(L, ++s)) {
@@ -11862,11 +11716,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int n = lua_gettop(L);
     // console name is an optional first argument
     if (n >= 4) {
-        if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, "echoPopup: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = WINDOW_NAME(L, s);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -12894,17 +12744,8 @@ int TLuaInterpreter::getEpoch(lua_State *L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
-    int n = lua_gettop(L);
     Host& host = getHostFromLua(L);
-    QString windowName;
-
-    if (n > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "appendBuffer: wrong argument type");
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     if (isMain(windowName)) {
         host.mpConsole->appendBuffer();
@@ -17593,16 +17434,7 @@ Host& getHostFromLua(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnCount
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
-    QString windowName;
-    if (!lua_gettop(L)) {
-        windowName = QStringLiteral("main");
-    } else if (lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-    } else {
-        lua_pushfstring(L, "getColumnCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     int columns;
     Host* pHost = &getHostFromLua(L);
@@ -17626,15 +17458,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRowCount
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
-    QString windowName;
-    if (!lua_gettop(L)) {
-        windowName = QStringLiteral("main");
-    } else if (!lua_isstring(L, 1)) {
-        windowName = lua_tostring(L, 1);
-    } else {
-        lua_pushfstring(L, "getRowCount: bad argument #1 type (window name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     int rows;
     Host* pHost = &getHostFromLua(L);
@@ -17718,15 +17542,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
-    int n = lua_gettop(L);
-    QString windowName;
-    if (n == 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "enableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
 
@@ -17737,15 +17553,7 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableClickthrough
 int TLuaInterpreter::disableClickthrough(lua_State* L)
 {
-    int n = lua_gettop(L);
-    QString windowName;
-    if (n == 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "disableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-    }
+    QString windowName = WINDOW_NAME(L, 1);
 
     Host& host = getHostFromLua(L);
 
