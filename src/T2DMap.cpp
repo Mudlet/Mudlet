@@ -922,7 +922,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
         QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
         if (!namePosData.isEmpty()) {
-            QPointF nameOffset {0,0};
+            QPointF nameOffset {0, 0};
             QStringList posXY = namePosData.split(" ");
             bool ok1, ok2;
             double posX, posY;

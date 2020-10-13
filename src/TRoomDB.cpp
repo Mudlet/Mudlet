@@ -1333,14 +1333,14 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
 
 bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue)
 {
-    if (! userData.contains(key)) {
+    if (!userData.contains(key)) {
         return defaultValue;
     }
     QString value = userData.value(key);
     if (value.isEmpty()) {
         return defaultValue;
     }
-    switch(value[0].unicode()) {
+    switch (value[0].unicode()) {
       case 'y': case 'Y':
       case 't': case 'T':
       case '1':
