@@ -60,6 +60,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , emergencyStop(new QToolButton)
 , layerCommandLine(nullptr)
 , mBgColor(QColor(Qt::black))
+, mBgImageMode(0)
+, mBgImagePath()
 , mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
@@ -84,8 +86,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainFrame(new QWidget(mpBaseHFrame))
 , mpRightToolBar(new QWidget(mpBaseHFrame))
 , mpMainDisplay(new QWidget(mpMainFrame))
+, mpBackground(new QLabel(mpMainFrame))
 , mpMapper(nullptr)
 , mpScrollBar(new QScrollBar)
+, mpHScrollBar(new QScrollBar(Qt::Horizontal))
 , mRecordReplay(false)
 , mSystemMessageBgColor(mBgColor)
 , mSystemMessageFgColor(QColor(Qt::red))
@@ -106,6 +110,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mHScrollBarEnabled(false)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -244,12 +249,16 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->setMargin(0);
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpMainFrame->show();
     mpMainDisplay->show();
+    mpBackground->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
+    mpBackground->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
     mpMainDisplay->setLayout(layout);
+    mpBackground->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
@@ -275,20 +284,24 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
+    auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
-    layer->setLayout(layoutLayer);
+    layer->setLayout(vLayoutLayer);
     layoutLayer->setMargin(0);  //neu rc1
     layoutLayer->setSpacing(0); //neu rc1
     layoutLayer->setMargin(0);  //neu rc1
 
     mpScrollBar->setFixedWidth(15);
+    mpHScrollBar->setFixedHeight(15);
 
     splitter = new TSplitter(Qt::Vertical);
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    splitter->setPalette(splitterPalette);
+    //QSplitter covers the background if not set to transparent and a new AppStyleSheet is set for example by DarkTheme
+    auto styleSheet = QStringLiteral("QSplitter { background-color: rgba(0,0,0,0) }");
+    splitter->setStyleSheet(styleSheet);
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
@@ -323,6 +336,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+
+    vLayoutLayer->addLayout(layoutLayer);
+    vLayoutLayer->addWidget(mpHScrollBar);
+    vLayoutLayer->setContentsMargins(0, 0, 0, 0);
+    vLayoutLayer->setMargin(0);
+    vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
@@ -476,6 +495,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchDown->setIcon(QIcon(QStringLiteral(":/icons/import.png")));
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
+
     if (mpCommandLine) {
         layoutLayer2->addWidget(mpCommandLine);
     }
@@ -505,9 +525,19 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mUpperPane->show();
     mLowerPane->show();
-    mLowerPane->hide();
+    mLowerPane->updateScreenView();
+    // timer needed as updateScreenView doesn't seem to finish in time
+    QTimer::singleShot(0, [this]() { mLowerPane->hide(); });
 
     connect(mpScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_scrollBarMoved);
+    connect(mpHScrollBar, &QAbstractSlider::valueChanged, mUpperPane, &TTextEdit::slot_hScrollBarMoved);
+
+    mpHScrollBar->hide();
+
+    //enable horizontal scrollbar in ErrorConsole
+    if (mType == ErrorConsole) {
+        mHScrollBarEnabled = true;
+    }
 
     if (mType & (ErrorConsole|SubConsole|UserWindow)) {
         mpScrollBar->hide();
@@ -515,6 +545,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         layerCommandLine->hide();
         mpMainFrame->move(0, 0);
         mpMainDisplay->move(0, 0);
+        mpBackground->move(0, 0);
     }
     if (mType & CentralDebugConsole) {
         layerCommandLine->hide();
@@ -590,6 +621,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
 TConsole::~TConsole()
 {
+    if (mType & ~CentralDebugConsole) {
+        // Codepoint issues reporting is not enabled for the CDC:
+        mUpperPane->reportCodepointErrors();
+    }
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
         mpHunspell_system = nullptr;
@@ -610,8 +646,8 @@ Host* TConsole::getHost()
 
 void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
 {
-    QString key = QString::fromUtf8(buf.c_str());
-    QString sheet = sh.c_str();
+    QString key{buf.c_str()};
+    QString sheet{sh.c_str()};
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
         if (!pC) {
@@ -636,6 +672,27 @@ std::pair<bool, QString> TConsole::setUserWindowStyleSheet(const QString& name, 
     return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
 }
 
+void TConsole::resizeConsole()
+{
+    QSize s = QSize(width(), height());
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(this, &event);
+}
+
+std::pair<bool, QString> TConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
+{
+    if (name.isEmpty() || !name.compare(QStringLiteral("main"))) {
+        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+
+    auto pN = mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setStyleSheet(styleSheet);
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+}
 
 void TConsole::resizeEvent(QResizeEvent* event)
 {
@@ -648,7 +705,6 @@ void TConsole::resizeEvent(QResizeEvent* event)
     int x = event->size().width();
     int y = event->size().height();
 
-
     if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
@@ -656,11 +712,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
         x = x - mpLeftToolBar->width() - mpRightToolBar->width();
         y = y - mpTopToolBar->height();
         mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpBackground->resize(x, y);  //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
     }
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
@@ -738,8 +797,10 @@ void TConsole::refresh()
     }
 
     mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+    mpBackground->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
 
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     x = width();
     y = height();
     QSize s = QSize(x, y);
@@ -820,8 +881,7 @@ void TConsole::closeEvent(QCloseEvent* event)
         if (mpHost->mpMap->mpRoomDB->size() > 0) {
             QDir dir_map;
             QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
             if (!dir_map.exists(directory_map)) {
                 dir_map.mkpath(directory_map);
             }
@@ -859,8 +919,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -1120,8 +1179,7 @@ void TConsole::slot_toggleReplayRecording()
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
         QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
-        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
         QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1140,6 +1198,11 @@ void TConsole::slot_toggleReplayRecording()
         QString message = QString("Replay recording has been stopped. File: ") + mReplayFile.fileName() + "\n";
         printSystemMessage(message);
     }
+}
+
+QString getColorCode(QColor color)
+{
+    return QStringLiteral("%1,%2,%3,%4").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
 }
 
 void TConsole::changeColors()
@@ -1169,8 +1232,16 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        if (!mBgImageMode) {
+            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(palette.color(QPalette::Base)));
+            mpBackground->setStyleSheet(styleSheet);
+        } else {
+            setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
+        }
     } else if (mType == MainConsole) {
         if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet(QString());
             QPalette pal;
             pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
             pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -1178,6 +1249,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
@@ -1196,6 +1268,12 @@ void TConsole::changeColors()
         layer->setPalette(palette);
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
+        if (!mBgImageMode) {
+            auto styleSheet = QStringLiteral("QLabel {background-color: rgba(%1);}").arg(getColorCode(palette.color(QPalette::Base)));
+            mpBackground->setStyleSheet(styleSheet);
+        } else {
+            setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
+        }
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
@@ -1223,11 +1301,11 @@ void TConsole::changeColors()
     }
 }
 
-void TConsole::setConsoleBgColor(int r, int g, int b)
+void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 {
-    mBgColor = QColor(r, g, b);
-    mUpperPane->setConsoleBgColor(r, g, b);
-    mLowerPane->setConsoleBgColor(r, g, b);
+    mBgColor = QColor(r, g, b, a);
+    mUpperPane->setConsoleBgColor(r, g, b, a);
+    mLowerPane->setConsoleBgColor(r, g, b, a);
     changeColors();
 }
 
@@ -1545,8 +1623,7 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
     QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
 
     if (location.isEmpty()) {
-        // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -1778,7 +1855,7 @@ void TConsole::selectCurrentLine()
 
 void TConsole::selectCurrentLine(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         selectCurrentLine();
         return;
@@ -1804,11 +1881,21 @@ std::list<int> TConsole::_getFgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).foreground());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while (len - 1 >= x+n) {
+            if (color != line.at(x+n).foreground()) {
+                break;
+            }
+            n += 1;
+        }
+        result.push_back(n);
     }
 
     return result;
@@ -1829,18 +1916,29 @@ std::list<int> TConsole::_getBgColor()
         return result;
     }
 
-    if (static_cast<int>(buffer.buffer.at(y).size()) - 1 >= x) {
-        QColor color(buffer.buffer.at(y).at(x).background());
+    auto line = buffer.buffer.at(y);
+    int len = static_cast<int>(line.size());
+    if (len - 1 >= x) {
+        int n = 1;
+        QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
+        while (len - 1 >= x+n) {
+            if (color != line.at(x+n).background()) {
+                break;
+            }
+            n += 1;
+        }
+        result.push_back(n);
     }
+
     return result;
 }
 
 std::list<int> TConsole::getFgColor(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return _getFgColor();
     }
@@ -1854,7 +1952,7 @@ std::list<int> TConsole::getFgColor(std::string& buf)
 
 std::list<int> TConsole::getBgColor(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return _getBgColor();
     }
@@ -1893,7 +1991,7 @@ QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
 
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         _luaWrapLine(line);
         return;
@@ -1921,6 +2019,43 @@ bool TConsole::setMiniConsoleFontSize(int size)
     return true;
 }
 
+bool TConsole::setConsoleBackgroundImage(const QString& imgPath, int mode)
+{
+    QColor bgColor;
+    QString styleSheet;
+
+    if (mType == MainConsole) {
+        bgColor = mpHost->mBgColor;
+    } else {
+        bgColor = mBgColor;
+    }
+
+    if (mode == 1) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); border-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else if (mode == 2) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2); background-repeat: no-repeat; background-position: center; background-origin: margin;}")
+                             .arg(getColorCode(bgColor))
+                             .arg(imgPath);
+    } else if (mode == 3) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); background-image: url(%2);}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else if (mode == 4) {
+        styleSheet = QStringLiteral("QLabel {background-color: rgba(%1); %2}").arg(getColorCode(bgColor)).arg(imgPath);
+    } else {
+        return false;
+    }
+    mpBackground->setStyleSheet(styleSheet);
+    mBgImageMode = mode;
+    mBgImagePath = imgPath;
+    return true;
+}
+
+bool TConsole::resetConsoleBackgroundImage()
+{
+    mBgImageMode = 0;
+    changeColors();
+    return true;
+}
+
 void TConsole::setMiniConsoleCmdVisible(bool isVisible)
 {
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -1941,9 +2076,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(this, &event);
+    resizeConsole();
 }
 
 void TConsole::refreshMiniConsole() const
@@ -1973,7 +2106,7 @@ QString TConsole::getCurrentLine()
 
 QString TConsole::getCurrentLine(std::string& buf)
 {
-    QString key = QString::fromUtf8(buf.c_str());
+    QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return getCurrentLine();
     }
@@ -2125,9 +2258,9 @@ void TConsole::setFgColor(int r, int g, int b)
     mLowerPane->forceUpdate();
 }
 
-void TConsole::setBgColor(int r, int g, int b)
+void TConsole::setBgColor(int r, int g, int b, int a)
 {
-    setBgColor(QColor(r, g, b));
+    setBgColor(QColor(r, g, b, a));
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }
@@ -2152,6 +2285,14 @@ void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
         mpScrollBar->setVisible(isVisible);
+    }
+}
+
+void TConsole::setHorizontalScrollBar(bool isEnabled)
+{
+    if (mpHScrollBar) {
+        mHScrollBarEnabled = isEnabled;
+        mpHScrollBar->setVisible(isEnabled);
     }
 }
 
@@ -2281,6 +2422,7 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
 
         pC->setMiniConsoleFontSize(12);
         pC->show();
+
         return pC;
     } else {
         return nullptr;
@@ -2566,21 +2708,26 @@ bool TConsole::lowerWindow(const QString& name)
 
     if (pC) {
         pC->lower();
+        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pL) {
         pL->lower();
+        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
+        mpBackground->lower();
         mpMainDisplay->lower();
         return true;
     }
     if (pN) {
         pN->lower();
+        mpBackground->lower();
+        mpMainDisplay->lower();
         return true;
     }
     return false;
@@ -2802,7 +2949,7 @@ void TConsole::slot_searchBufferUp()
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
                 selectSection(begin, length);
-                setBgColor(255, 255, 0);
+                setBgColor(255, 255, 0, 255);
                 setFgColor(0, 0, 0);
                 deselect();
                 reset();
@@ -2841,7 +2988,7 @@ void TConsole::slot_searchBufferDown()
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
                 selectSection(begin, length);
-                setBgColor(255, 255, 0);
+                setBgColor(255, 255, 0, 255);
                 setFgColor(0, 0, 0);
                 deselect();
                 reset();

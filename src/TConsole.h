@@ -34,6 +34,7 @@
 #include <QDataStream>
 #include <QHBoxLayout>
 #include <QFile>
+#include <QLabel>
 #include <QPointer>
 #include <QTextStream>
 #include <QWidget>
@@ -82,6 +83,7 @@ public:
 
     void reset();
     void resetMainConsole();
+    void resizeConsole();
     Host* getHost();
     void replace(const QString&);
     void insertHTML(const QString&);
@@ -92,6 +94,7 @@ public:
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void copy();
     void cut();
     void paste();
@@ -135,9 +138,10 @@ public:
     void skipLine();
     void setFgColor(int, int, int);
     void setFgColor(const QColor&);
-    void setBgColor(int, int, int);
+    void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
+    void setHorizontalScrollBar(bool);
     void setMiniConsoleCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -171,6 +175,8 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
+    bool setConsoleBackgroundImage(const QString&, int);
+    bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
@@ -179,7 +185,7 @@ public:
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
-    void setConsoleBgColor(int, int, int);
+    void setConsoleBgColor(int, int, int, int);
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> _getFgColor();
     std::list<int> _getBgColor();
@@ -285,10 +291,12 @@ public:
     QWidget* mpMainFrame;
     QWidget* mpRightToolBar;
     QWidget* mpMainDisplay;
+    QLabel* mpBackground;
 
     dlgMapper* mpMapper;
 
     QScrollBar* mpScrollBar;
+    QScrollBar* mpHScrollBar;
 
 
     QTime mProcessingTime;
@@ -319,6 +327,9 @@ public:
     QList<int> mSearchResults;
     QString mSearchQuery;
     QWidget* mpButtonMainLayer;
+    int mBgImageMode;
+    QString mBgImagePath;
+    bool mHScrollBarEnabled;
 
 signals:
     // Raised when new data is incoming to trigger Alert handling in mudlet
