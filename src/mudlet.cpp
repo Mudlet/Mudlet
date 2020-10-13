@@ -4282,7 +4282,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
