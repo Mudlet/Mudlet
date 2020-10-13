@@ -73,14 +73,14 @@ jobs:
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v2
+      uses: lukka/run-vcpkg@v4
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v2
+      uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
