@@ -34,6 +34,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -1672,7 +1673,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }

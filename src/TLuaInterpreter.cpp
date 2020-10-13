@@ -705,11 +705,7 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (isMain(QString::fromStdString(windowName))) {
-        host.mpConsole->selectCurrentLine();
-    } else {
-        host.mpConsole->selectCurrentLine(windowName);
-    }
+    host.mpConsole->selectCurrentLine(windowName);
     return 0;
 }
 

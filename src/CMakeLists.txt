@@ -92,6 +92,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
@@ -222,6 +223,7 @@ set(mudlet_HDRS
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
+    TMainConsole.h
     TMap.h
     TMatchState.h
     TMedia.h
