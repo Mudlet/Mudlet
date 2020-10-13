@@ -2102,7 +2102,7 @@ end
 -- @param flag (bool)
 function setRoomNameVisible(room, flag)
   assert(type(room) == 'number', 'setRoomNameVisible: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
-  assert(type(flag) == 'bool', 'setRoomNameVisible: bad argument #2 type (flag as bool expected, got '..type(flag)..'!)')
+  assert(type(flag) == 'boolean', 'setRoomNameVisible: bad argument #2 type (flag as boolean expected, got '..type(flag)..'!)')
 
   setRoomUserData(room, "room.ui_showName", flag and "1" or "0")
 end
