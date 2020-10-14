@@ -267,10 +267,10 @@ void Discord::timerEvent(QTimerEvent* event)
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Discord::smReadWriteLock.lockForWrite(); // Will block until gets lock
-    Discord::smUserName = QString::fromUtf8(request->username);
-    Discord::smUserId = QString::fromUtf8(request->userId);
-    Discord::smDiscriminator = QString::fromUtf8(request->discriminator);
-    Discord::smAvatar = QString::fromUtf8(request->avatar);
+    Discord::smUserName = request->username;
+    Discord::smUserId = request->userId;
+    Discord::smDiscriminator = request->discriminator;
+    Discord::smAvatar = request->avatar;
     Discord::smReadWriteLock.unlock();
 
 #if defined(DEBUG_DISCORD)

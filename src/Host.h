@@ -31,6 +31,7 @@
 #include "ScriptUnit.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
+#include "TMainConsole.h"
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
@@ -58,6 +59,7 @@ class LuaInterface;
 class TMedia;
 class TRoom;
 class TConsole;
+class TMainConsole;
 class dlgNotepad;
 class TMap;
 
@@ -325,18 +327,21 @@ public:
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    void setDebugShowAllProblemCodepoints(const bool);
+    bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
 
 
     cTelnet mTelnet;
-    QPointer<TConsole> mpConsole;
+    QPointer<TMainConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    bool mHighlightHistory;
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
@@ -560,6 +565,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summery upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_reloadModules();
@@ -690,6 +698,10 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+    // Whether the TTextEditor class should immediately report to debug output
+    // any dodgy codepoints that it has problems with - if false it only reports
+    // each codepoint the first time it encounters itL
+    bool mDebugShowAllProblemCodepoints;
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;

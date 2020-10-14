@@ -383,7 +383,7 @@ function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
     self.timer_active = self.timer_active or true
     -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event
+    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
     if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
         self.timer_active = false
         tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
@@ -999,6 +999,7 @@ end
 --@param cons.buttonstyle close and minimize buttons style
 --@param[opt=false] cons.minimized  minimized at creation?
 --@param[opt=false] cons.locked  locked at creation?
+--@param[opt=false] cons.attached  attached to a border at creation? possible borders are ("top", "bottom", "left", "right")
 --@param cons.lockLabel.txt  text of the "lock" menu item
 --@param cons.minLabel.txt  text of the "min/restore" menu item
 --@param cons.saveLabel.txt  text of the "save" menu item
@@ -1076,7 +1077,6 @@ function Adjustable.Container:new(cons,container)
     me.minimizeLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.attLabel:setOnEnter("Adjustable.Container.onEnterAtt", me)
     me.goInside = true
-    me:adjustBorder()
     me.titleTxtColor = me.titleTxtColor or "green"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
     me.titleText = "&nbsp;&nbsp; "..me.titleText
@@ -1097,6 +1097,8 @@ function Adjustable.Container:new(cons,container)
         if Adjustable.Container.all[me.name].auto_hidden then
             me:hide(true)
         end
+        -- detach if setting at creation changed
+        Adjustable.Container.all[me.name]:detach()
     end
 
     if me.minimized then
@@ -1105,6 +1107,12 @@ function Adjustable.Container:new(cons,container)
 
     if me.locked then
         me:lockContainer()
+    end
+
+    if me.attached then
+        local attached = me.attached
+        me.attached = nil
+        me:attachToBorder(attached)
     end
 
     -- hide/show on creation
@@ -1127,6 +1135,7 @@ function Adjustable.Container:new(cons,container)
     end
 
     Adjustable.Container.all[me.name] = me
+    me:adjustBorder()
     return me
 end
 

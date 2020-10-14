@@ -34,6 +34,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -709,12 +710,15 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en"), tr("English")},
                                   {QStringLiteral("en_ag"), tr("English (Antigua/Barbuda)")},
                                   {QStringLiteral("en_au"), tr("English (Australia)")},
+                                  {QStringLiteral("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_bs"), tr("English (Bahamas)")},
                                   {QStringLiteral("en_bw"), tr("English (Botswana)")},
                                   {QStringLiteral("en_bz"), tr("English (Belize)")},
                                   {QStringLiteral("en_ca"), tr("English (Canada)")},
+                                  {QStringLiteral("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_dk"), tr("English (Denmark)")},
                                   {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
+                                  {QStringLiteral("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
                                   {QStringLiteral("en_gh"), tr("English (Ghana)")},
                                   {QStringLiteral("en_hk"), tr("English (Hong Kong SAR China)")},
@@ -728,6 +732,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -1668,7 +1673,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -2382,6 +2387,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
+        pC->mUpperPane->resetHScrollbar();
         pC->buffer.clear();
         pC->mUpperPane->update();
         return true;
@@ -2535,6 +2541,11 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
         return false;
     }
 
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setScrollBarVisible(isVisible);
+        return true;
+    }
+
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setScrollBarVisible(isVisible);
@@ -2542,6 +2553,26 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
     } else {
         return false;
     }
+}
+
+bool mudlet::setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+   return false;
 }
 
 bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
@@ -4252,7 +4283,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -4715,7 +4746,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString entryInArchive(QString::fromUtf8(zs.name));
+            QString entryInArchive(zs.name);
             QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
@@ -4750,7 +4781,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         // No need to check return value as we've already done it first time
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString entryInArchive(QString::fromUtf8(zs.name));
+        QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);

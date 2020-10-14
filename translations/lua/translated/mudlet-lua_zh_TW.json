@@ -30,5 +30,21 @@
   "AdjustableContainer.standard": {
     "message": "標準",
     "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.border": {
+    "message": "邊框",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "儲存",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "載入",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.disconnect": {
+    "message": "断开连接 ",
+    "description": "disconnect your container from the border frame"
   }
 }

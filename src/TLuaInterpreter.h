@@ -365,6 +365,7 @@ public:
     static int setLabelClickCallback(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
+    static int setCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -420,6 +421,8 @@ public:
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
+    static int disableHorizontalScrollBar(lua_State*);
+    static int enableHorizontalScrollBar(lua_State*);
     static int enableCommandLine(lua_State*);
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State* L);
@@ -568,6 +571,10 @@ public:
     static int unzipAsync(lua_State* L);
     static int setMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
+    static int getMapBackgroundColor(lua_State*);
+    static int setMapBackgroundColor(lua_State*);
+    static int getMapRoomExitsColor(lua_State*);
+    static int setMapRoomExitsColor(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
