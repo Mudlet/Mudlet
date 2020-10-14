@@ -3864,7 +3864,7 @@ void T2DMap::slot_spread()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
@@ -3872,8 +3872,8 @@ void T2DMap::slot_spread()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    int dx = pR_centerRoom->x * (1 - spread);
-    int dy = pR_centerRoom->y * (1 - spread);
+    int dx = pR_centerRoom->x;
+    int dy = pR_centerRoom->y;
     QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -3881,10 +3881,8 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        pMovingR->x *= spread;
-        pMovingR->y *= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
+        pMovingR->x = (pMovingR->x - dx) * spread + dx;
+        pMovingR->y = (pMovingR->y - dy) * spread + dy;
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
         while (itCustomLine.hasNext()) {
@@ -3892,8 +3890,8 @@ void T2DMap::slot_spread()
             QList<QPointF> customLinePoints = itCustomLine.value();
             for (auto& customLinePoint : customLinePoints) {
                 QPointF movingPoint = customLinePoint;
-                customLinePoint.setX(static_cast<float>(movingPoint.x() * spread + dx));
-                customLinePoint.setY(static_cast<float>(movingPoint.y() * spread + dy));
+                customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -3926,7 +3924,7 @@ void T2DMap::slot_shrink()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
@@ -3934,8 +3932,8 @@ void T2DMap::slot_shrink()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    int dx = pR_centerRoom->x * (1 - 1 / spread);
-    int dy = pR_centerRoom->y * (1 - 1 / spread);
+    int dx = pR_centerRoom->x;
+    int dy = pR_centerRoom->y;
 
     QSetIterator<int> itSelectionRoom(mMultiSelectionSet);
     while (itSelectionRoom.hasNext()) {
@@ -3943,10 +3941,8 @@ void T2DMap::slot_shrink()
         if (!pMovingR) {
             continue;
         }
-        pMovingR->x /= spread;
-        pMovingR->y /= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
+        pMovingR->x = (pMovingR->x - dx) / spread + dx;
+        pMovingR->y = (pMovingR->y - dy) / spread + dy;
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
         while (itCustomLine.hasNext()) {
@@ -3954,8 +3950,8 @@ void T2DMap::slot_shrink()
             QList<QPointF> customLinePoints = itCustomLine.value();
             for (auto& customLinePoint : customLinePoints) {
                 QPointF movingPoint = customLinePoint;
-                customLinePoint.setX(static_cast<float>(movingPoint.x() / spread + dx));
-                customLinePoint.setY(static_cast<float>(movingPoint.y() / spread + dy));
+                customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) / spread + dx));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) / spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
