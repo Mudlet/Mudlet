@@ -11597,10 +11597,9 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
         lua_pushfstring(L, "pasteWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    QString window{lua_tostring(L, 1)};
-
+    QString windowName = WINDOW_NAME(L, 1);
     Host& host = getHostFromLua(L);
-    mudlet::self()->pasteWindow(&host, window);
+    mudlet::self()->pasteWindow(&host, windowName);
     return 0;
 }
 
