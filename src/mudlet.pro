@@ -1388,7 +1388,7 @@ macx {
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
     } else {
-        contains(BUILD, "-dev.+") {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             ICON = icons/mudlet_dev.icns
         } else {
             ICON = icons/mudlet.icns
