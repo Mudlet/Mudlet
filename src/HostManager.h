@@ -29,29 +29,45 @@
 #include <QMap>
 #include <QReadWriteLock>
 #include <QString>
-#include <QStringList>
+#include <QSharedPointer>
 #include "post_guard.h"
 
 
 class TEvent;
+typedef QMap<QString, QSharedPointer<Host>> HostMap;
+class HostManager;
 
+class HostIter
+{
+  public:
+    HostIter(const HostManager* mgr, bool top);
+    bool operator!= (const HostIter& other) const;
+    HostIter& operator++();
+    QSharedPointer<Host> operator*() const;
+    
+  private:
+    HostMap::const_iterator it, it_end;
+};
 
 class HostManager
 {
+    friend HostIter;
+
 public:
     HostManager() = default; /* : mpActiveHost() - Not needed */
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     int getHostCount();
-    QMapIterator<QString, QSharedPointer<Host>> allHosts();
     bool deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
+    HostIter begin() const { return HostIter(this, true); }
+    HostIter end() const { return HostIter(this, false); }
 
 private:
     QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
-    QMap<QString, QSharedPointer<Host>> mHostPool;
+    HostMap mHostPool;
 };
 
 #endif // MUDLET_HOSTMANAGER_H

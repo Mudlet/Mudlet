@@ -185,7 +185,6 @@ public:
     static QPointer<TConsole> mpDebugConsole;
     static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
-    QMap<Host*, TConsole*> mConsoleMap;
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
@@ -240,7 +239,6 @@ public:
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
-    QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;

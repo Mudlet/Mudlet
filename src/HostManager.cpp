@@ -33,12 +33,6 @@
 
 #include "mudlet.h"
 
-QMapIterator<QString, QSharedPointer<Host>> HostManager::allHosts()
-{
-    QMapIterator<QString, QSharedPointer<Host>> it {mHostPool};
-    return it;
-}
-
 bool HostManager::deleteHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
@@ -169,3 +163,28 @@ Host* HostManager::getHost(const QString& hostname)
 
     return pHost;
 }
+
+HostIter::HostIter(const HostManager* mgr, bool top)   
+{
+    if (top) {
+        it = mgr->mHostPool.begin();
+    } else {
+        it = mgr->mHostPool.end();
+    }
+}
+    
+bool HostIter::operator!= (const HostIter& other) const  
+{
+    return it != other.it;
+}
+                                  
+HostIter& HostIter::operator++()
+{
+    it++;
+}                             
+
+QSharedPointer<Host> HostIter::operator* () const  
+{
+    return *it;
+}
+                                  

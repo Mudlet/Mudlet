@@ -36,6 +36,7 @@
 #include "TScript.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgIRC.h"
 #include "mudlet.h"
 
 
@@ -188,6 +189,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, hostname, id)
+, mDlgIRC(nullptr)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -493,15 +495,11 @@ void Host::slot_reloadModules()
     updateModuleZips();
 
     //synchronize modules across sessions
-    QMap<Host*, TConsole*> activeSessions = mudlet::self()->mConsoleMap;
-    QMapIterator<Host*, TConsole*> sessionIterator(activeSessions);
-    while (sessionIterator.hasNext()) {
-        sessionIterator.next();
-        Host* otherHost = sessionIterator.key();
-        if (otherHost->getName() == mHostName) {
+    for (auto otherHost: mudlet::self()->getHostManager()) {
+        if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
-        QMap<QString, int> modulePri = otherHost->mModulePriorities;
+        QMap<QString, int>& modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
 
         auto modulePrioritiesIt = modulePri.constBegin();
