@@ -3208,13 +3208,14 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        console->mUpperPane->setFont(host.getDisplayFont());
-        console->mUpperPane->updateScreenView();
-        console->mUpperPane->forceUpdate();
-        console->mLowerPane->setFont(host.getDisplayFont());
-        console->mLowerPane->updateScreenView();
-        console->mLowerPane->forceUpdate();
-        console->refresh();
+        auto result = host.setDisplayFont(font);
+        if (!result.first) {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, result.second.toUtf8().constData());
+            return 2;
+        }
+        //console->refresh();
+        console->refreshView();
     } else {
         console->setFont(font);
     }
