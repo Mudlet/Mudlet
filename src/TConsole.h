@@ -171,8 +171,6 @@ public:
     bool printWindow(const QString& name, const QString& text);
     bool setBackgroundImage(const QString& name, const QString& path);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-    QString getCurrentLine(std::string&);
-    void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
