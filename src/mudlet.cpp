@@ -2052,7 +2052,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
         dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        console->setMiniConsoleFontSize(10);
+        console->setFontSize(10);
     }
 
     if (!console || !dockwidget) {
@@ -2120,7 +2120,7 @@ std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& w
     if (!pC) {
         pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
-            pC->setMiniConsoleFontSize(12);
+            pC->setFontSize(12);
             return {true, QString()};
         }
     } else if (pC) {
