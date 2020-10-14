@@ -51,11 +51,9 @@ jobs:
         fetch-depth: 0
 
     - name: "Set location of vcpkg dependencies"
-      env:
+      uses: lukka/set-shell-env@v1
+      with:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
-      run: |
-        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
-      shell: bash
 
     - name: (macOS) Install homebrew dependencies
       if: runner.os == 'macOS'
