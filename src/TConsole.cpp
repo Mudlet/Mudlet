@@ -1578,6 +1578,19 @@ void TConsole::selectCurrentLine()
     selectSection(0, buffer.line(mUserCursor.y()).size());
 }
 
+void TConsole::selectCurrentLine(std::string& buf)
+{
+    QString key = buf.c_str();
+    if (key.isEmpty() || key == QLatin1String("main")) {
+        selectCurrentLine();
+        return;
+    }
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
+        pC->selectCurrentLine();
+    }
+}
+
 std::list<int> TConsole::getFgColor()
 {
     std::list<int> result;

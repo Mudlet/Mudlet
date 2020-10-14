@@ -149,6 +149,8 @@ public:
     int getLastLineNumber();
     void refresh();
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
+    QString getCurrentLine(std::string&);
+    void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);
     bool setMiniConsoleFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);

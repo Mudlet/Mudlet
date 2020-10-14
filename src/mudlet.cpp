@@ -1986,104 +1986,6 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setConsoleBackgroundImage(imgPath, mode);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->resetConsoleBackgroundImage();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(window);
-    if (pC) {
-        pC->setMiniConsoleFont(font);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-QString mudlet::getWindowFont(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return QString();
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->mUpperPane->fontInfo().family();
-    } else {
-        return QString();
-    }
-}
-
-bool mudlet::setWindowFontSize(Host *pHost, const QString &name, int size)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setMiniConsoleFontSize(size);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-int mudlet::getFontSize(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->mUpperPane->mDisplayFont.pointSize();
-    } else {
-        return -1;
-    }
-}
-
 QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2150,7 +2052,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
         dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        setWindowFontSize(pHost, name, 10);
+        console->setMiniConsoleFontSize(10);
     }
 
     if (!console || !dockwidget) {
@@ -2348,25 +2250,6 @@ bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& path)
     }
 }
 
-bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        // Set or reset all the specified attributes (but leave others unchanged)
-        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (state ? attributes : TChar::None));
-        pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 void mudlet::showEvent(QShowEvent* event)
 {
     mWindowMinimized = false;
@@ -2513,96 +2396,6 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
     }
 
     return false;
-}
-
-bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name == QLatin1String("main")) {
-        pHost->mpConsole->buffer.setBufferSize(x1, y1);
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->buffer.setBufferSize(x1, y1);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisible)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->setScrollBarVisible(isVisible);
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setScrollBarVisible(isVisible);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->setHorizontalScrollBar(isEnabled);
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setHorizontalScrollBar(isEnabled);
-        return true;
-    }
-
-   return false;
-}
-
-bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setMiniConsoleCmdVisible(isVisible);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::resetFormat(Host* pHost, QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->reset();
-        return true;
-    } else {
-        return false;
-    }
 }
 
 bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
@@ -2975,21 +2768,6 @@ int mudlet::getLastLineNumber(Host* pHost, const QString& name)
     }
 }
 
-bool mudlet::moveCursorEnd(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->moveCursorEnd();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::moveCursor(Host* pHost, const QString& name, int x, int y)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -3004,18 +2782,6 @@ bool mudlet::moveCursor(Host* pHost, const QString& name, int x, int y)
     }
 }
 
-void mudlet::deleteLine(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->skipLine();
-    }
-}
-
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
     QImage image(imageLocation);
@@ -3025,85 +2791,6 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
     }
 
     return image.size();
-}
-
-bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
-    if (pC) {
-        pC->insertText(text);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void mudlet::insertLink(Host* pHost, const QString& name, const QString& text, QStringList& func, QStringList& hint, bool customFormat)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->insertLink(text, func, hint, customFormat);
-    }
-}
-
-void mudlet::replace(Host* pHost, const QString& name, const QString& text)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->replace(text);
-    }
-}
-
-void mudlet::setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList& linkHint)
-{
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setLink(linkFunction, linkHint);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-    }
-}
-
-void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setFgColor(r, g, b);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-    }
-}
-
-bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setBgColor(r, g, b, a);
-        pC->mUpperPane->forceUpdate();
-        pC->mLowerPane->forceUpdate();
-        return true;
-    }
-    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
@@ -3148,52 +2835,6 @@ std::tuple<bool, QString, int, int> mudlet::getSelection(Host* pHost, const QStr
     }
 }
 
-// Added a return value to indicate whether the given windows name was found
-bool mudlet::deselect(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->deselect();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::setWindowWrap(Host* pHost, const QString& name, int& wrap)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setWrapAt(wrap);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::setWindowWrapIndent(Host* pHost, const QString& name, int& wrap)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setIndentCount(wrap);
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -3207,21 +2848,6 @@ bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
         return true;
     } else if (pL) {
         pL->setText(text);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::echoLink(Host* pHost, const QString& name, const QString& text, QStringList& func, QStringList& hint, bool customFormat)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->echoLink(text, func, hint, customFormat);
         return true;
     } else {
         return false;
@@ -3252,21 +2878,6 @@ bool mudlet::pasteWindow(Host* pHost, const QString& name)
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->pasteWindow(mConsoleMap[pHost]->mClipboard);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::appendBuffer(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->appendBuffer(mConsoleMap[pHost]->mClipboard);
         return true;
     } else {
         return false;
@@ -5250,44 +4861,6 @@ void mudlet::showChangelogIfUpdated()
     updater->showChangelog();
 }
 #endif // INCLUDE_UPDATER
-
-int mudlet::getColumnCount(Host* pHost, QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->mUpperPane->getColumnCount();
-    } else {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#else
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#endif
-        return -1;
-    }
-}
-
-int mudlet::getRowCount(Host* pHost, QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->mUpperPane->getRowCount();
-    } else {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#else
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#endif
-        return -1;
-    }
-}
 
 // Can be called from lua sub-system OR from slot_replay(), the presence of a
 // non-NULLPTR pErrMsg indicates the former; also the replayFileName CAN be
