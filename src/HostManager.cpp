@@ -33,6 +33,11 @@
 
 #include "mudlet.h"
 
+QMapIterator<QString, QSharedPointer<Host>> HostManager::allHosts()
+{
+    QMapIterator<QString, QSharedPointer<Host>> it {mHostPool};
+    return it;
+}
 
 bool HostManager::deleteHost(const QString& hostname)
 {
@@ -85,20 +90,6 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     mHostPool.insert(hostname, pNewHost);
     mPoolReadWriteLock.unlock();
     return true;
-}
-
-QStringList HostManager::getHostList()
-{
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-
-    QStringList strlist;
-    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
-    mPoolReadWriteLock.unlock();
-    if (!hostList.isEmpty()) {
-        strlist << hostList;
-    }
-
-    return strlist;
 }
 
 int HostManager::getHostCount()

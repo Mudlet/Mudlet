@@ -2806,8 +2806,8 @@ void mudlet::closeEvent(QCloseEvent* event)
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
-        auto host = mHostManager.getHost(hostName);
+    for (auto& it: mHostManager.allHosts()) {
+        auto host = it.second;
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
@@ -2854,8 +2854,8 @@ void mudlet::forceClose()
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
-        auto host = mHostManager.getHost(hostName);
+    for (auto& it: mHostManager.allHosts()) {
+        auto host = it.second;
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
