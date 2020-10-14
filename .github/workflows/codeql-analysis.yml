@@ -64,11 +64,9 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: "Set location of vcpkg dependencies"
-      env:
+      uses: lukka/set-shell-env@v1
+      with:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
-      run: |
-        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
-      shell: bash
 
     - name: Install apt dependencies
       run: |
