@@ -112,18 +112,23 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
         int pos = (_pos);                                                                      \
-        if (!lua_isstring(_L, pos)) {                                                          \
+        const char *res;                                                                       \
+        if ((lua_gettop(_L) < pos) || lua_isnil(_L, pos)) {                                    \
+            res = "";                                                                          \
+        } else if (!lua_isstring(_L, pos)) {                                                   \
             lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos, luaL_typename(_L, pos));   \
             return lua_error(_L);                                                              \
+        } else {                                                                               \
+            res = lua_tostring(_L, pos);                                                       \
         }                                                                                      \
-        lua_tostring(_L, pos);                                                                 \
+        res;                                                                                   \
     })
 
-#define CMDLINE_NAME(_L, _pos)                                                                  \
+#define CMDLINE_NAME(_L, _pos)                                                                 \
     ({                                                                                         \
         int pos = (_pos);                                                                      \
         if (!lua_isstring(_L, pos)) {                                                          \
-            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos, luaL_typename(_L, pos));   \
+            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos, luaL_typename(_L, pos));  \
             return lua_error(_L);                                                              \
         }                                                                                      \
         lua_tostring(_L, pos);                                                                 \
