@@ -2311,21 +2311,6 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
     return false;
 }
 
-bool mudlet::paste(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->paste();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::hideWindow(Host* pHost, const QString& name)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2710,77 +2695,6 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const int func)
     return false;
 }
 
-std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return std::make_pair(false, -1);
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
-    if (pC) {
-        return std::make_pair(true, pC->getLineNumber());
-    } else {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#else
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#endif
-        return std::make_pair(false, -1);
-    }
-}
-
-int mudlet::getColumnNumber(Host* pHost, QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->getColumnNumber();
-    } else {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#else
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#endif
-        return -1;
-    }
-}
-
-int mudlet::getLastLineNumber(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->getLastLineNumber();
-    } else {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#else
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-#endif
-        return -1;
-    }
-}
-
-bool mudlet::moveCursor(Host* pHost, const QString& name, int x, int y)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->moveCursor(x, y);
-    } else {
-        return false;
-    }
-}
-
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
     QImage image(imageLocation);
@@ -2790,48 +2704,6 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
     }
 
     return image.size();
-}
-
-int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->select(text, num);
-    } else {
-        return -1;
-    }
-}
-
-int mudlet::selectSection(Host* pHost, const QString& name, int f, int t)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->selectSection(f, t);
-    } else {
-        return -1;
-    }
-}
-
-std::tuple<bool, QString, int, int> mudlet::getSelection(Host* pHost, const QString& windowName)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return std::make_tuple(false, QStringLiteral(R"(internal error, Host pointer had nullptr value)"), 0, 0);
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
-    if (pC) {
-        return pC->getSelection();
-    } else {
-        return std::make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
-    }
 }
 
 bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
@@ -2847,21 +2719,6 @@ bool mudlet::echoWindow(Host* pHost, const QString& name, const QString& text)
         return true;
     } else if (pL) {
         pL->setText(text);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::copy(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->copy();
         return true;
     } else {
         return false;
@@ -3716,16 +3573,6 @@ void mudlet::slot_replay()
 
     // No third argument causes error messages to be sent to pHost's main console:
     loadReplay(pHost, fileName);
-}
-
-void mudlet::printSystemMessage(Host* pH, const QString& s)
-{
-    mConsoleMap[pH]->printSystemMessage(s);
-}
-
-void mudlet::print(Host* pH, const QString& s)
-{
-    mConsoleMap[pH]->print(s);
 }
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)

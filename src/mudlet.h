@@ -133,10 +133,6 @@ public:
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
-    int getColumnNumber(Host* pHost, QString& name);
-    std::pair<bool, int> getLineNumber(Host* pHost, QString& windowName);
-    void printSystemMessage(Host* pH, const QString& s);
-    void print(Host*, const QString&);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
@@ -156,7 +152,6 @@ public:
     bool createBuffer(Host*, const QString&);
     bool showWindow(Host*, const QString&);
     bool hideWindow(Host*, const QString&);
-    bool paste(Host*, const QString&);
     bool closeWindow(Host*, const QString&);
     bool resizeWindow(Host*, const QString&, int, int);
     bool clearWindow(Host*, const QString&);
@@ -177,16 +172,9 @@ public:
     std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget(Host* pHost);
     std::optional<QSize> getImageSize(const QString& imageLocation);
-    bool insertText(Host*, const QString& windowName, const QString&);
-    int selectString(Host*, const QString& name, const QString& what, int);
-    int selectSection(Host*, const QString& name, int, int);
-    std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     QString readProfileData(const QString& profile, const QString& item);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void deleteProfileData(const QString &profile, const QString &item);
-    bool copy(Host* pHost, const QString& name);
-    bool moveCursor(Host*, const QString&, int, int);
-    int getLastLineNumber(Host*, const QString&);
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void writeSettings();
