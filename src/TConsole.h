@@ -142,7 +142,7 @@ public:
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
-    void setMiniConsoleCmdVisible(bool);
+    void setCmdVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
     void scrollDown(int lines);
@@ -157,6 +157,7 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
+    void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
     TLabel* createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
@@ -171,8 +172,8 @@ public:
     bool printWindow(const QString& name, const QString& text);
     bool setBackgroundImage(const QString& name, const QString& path);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-    bool setMiniConsoleFontSize(int);
-    bool setMiniConsoleFont(const QString& font);
+    bool setFontSize(int);
+    bool setFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
@@ -355,9 +356,6 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 private:
-    void refreshMiniConsole() const;
-
-
     ConsoleType mType;
 
     // Was public in Host class but made private there and cloned to here

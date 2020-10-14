@@ -784,18 +784,22 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
+    if (mpConsole)
+        mpConsole->refreshView();
+
     if (mpEditorDialog) {
         if (mpEditorDialog->mpErrorConsole) {
-            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
-            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+            mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
         }
-        if (mudlet::self()->mpDebugArea) {
-            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
-            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
-        }
+    }
+    if (mudlet::self()->mpDebugArea) {
+        mudlet::self()->mpDebugConsole->setFont(mDisplayFont.family());
+        mudlet::self()->mpDebugConsole->setFontSize(mDisplayFont.pointSize());
     }
 }
 

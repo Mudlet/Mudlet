@@ -606,7 +606,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
-        refreshMiniConsole();
+        refreshView();
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -1998,11 +1998,11 @@ void TConsole::_luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setMiniConsoleFontSize(int size)
+bool TConsole::setFontSize(int size)
 {
     mDisplayFontSize = size;
 
-    refreshMiniConsole();
+    refreshView();
     return true;
 }
 
@@ -2043,7 +2043,7 @@ bool TConsole::resetConsoleBackgroundImage()
     return true;
 }
 
-void TConsole::setMiniConsoleCmdVisible(bool isVisible)
+void TConsole::setCmdVisible(bool isVisible)
 {
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
@@ -2066,7 +2066,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     resizeConsole();
 }
 
-void TConsole::refreshMiniConsole() const
+void TConsole::refreshView() const
 {
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mUpperPane->setFont(mUpperPane->mDisplayFont);
@@ -2078,11 +2078,11 @@ void TConsole::refreshMiniConsole() const
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setMiniConsoleFont(const QString& font)
+bool TConsole::setFont(const QString& font)
 {
     mDisplayFontName = font;
 
-    refreshMiniConsole();
+    refreshView();
     return true;
 }
 
@@ -2394,7 +2394,7 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
 
-        pC->setMiniConsoleFontSize(12);
+        pC->setFontSize(12);
         pC->show();
 
         return pC;

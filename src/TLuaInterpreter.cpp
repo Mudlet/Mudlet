@@ -1314,23 +1314,6 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
-int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
-{
-    QString windowName = WINDOW_NAME(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #2 type (font size as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int size = lua_tointeger(L, 2);
-
-    auto console = CONSOLE(L, windowName);
-    console->setMiniConsoleFontSize(size);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
 int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
 {
@@ -2519,7 +2502,7 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
     QString windowName = WINDOW_NAME(L, 1);
     auto console = CONSOLE(L, windowName);
-    console->setMiniConsoleCmdVisible(true);
+    console->setCmdVisible(true);
     return 0;
 }
 
@@ -2528,7 +2511,7 @@ int TLuaInterpreter::disableCommandLine(lua_State* L)
 {
     QString windowName = WINDOW_NAME(L, 1);
     auto console = CONSOLE(L, windowName);
-    console->setMiniConsoleCmdVisible(false);
+    console->setCmdVisible(false);
     return 0;
 }
 
@@ -3237,7 +3220,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         console->mLowerPane->forceUpdate();
         console->refresh();
     } else {
-        console->setMiniConsoleFont(font);
+        console->setFont(font);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3283,14 +3266,8 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     if (console == host.mpConsole) {
         // get host profile display font and alter it, since that is how it's done in Settings.
         host.setDisplayFontSize(size);
-        // apply changes to main console and its while-scrolling component too.
-        console->mUpperPane->updateScreenView();
-        console->mUpperPane->forceUpdate();
-        console->mLowerPane->updateScreenView();
-        console->mLowerPane->forceUpdate();
-        console->refresh();
     } else {
-        console->setMiniConsoleFontSize(size);
+        console->setFontSize(size);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -15744,7 +15721,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
-    lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
+    lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setFontSize);
     lua_register(pGlobalLua, "setConsoleBackgroundImage", TLuaInterpreter::setConsoleBackgroundImage);
     lua_register(pGlobalLua, "resetConsoleBackgroundImage", TLuaInterpreter::resetConsoleBackgroundImage);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
