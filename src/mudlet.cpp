@@ -1554,20 +1554,19 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     // close IRC client window if it is open.
-    if (mpIrcClientMap.contains(pH)) {
-        mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
-        mpIrcClientMap[pH]->deleteLater();
+    if (pH->mDlgIRC) {
+        pH->mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        pH->mDlgIRC->deleteLater();
     }
 
     migrateDebugConsole(pH);
 
-    mConsoleMap.value(pH)->close();
+    pH->mpConsole->close();
     if (!mTabMap.contains(pH->getName())) {
         return;
     }
 
     mpTabBar->removeTab(tab);
-    mConsoleMap.remove(pH);
     mTabMap.remove(pH->getName());
     // PLACEMARKER: Host destruction (1) - from close button on tab bar
     // Unfortunately the spaghetti nature of the code means that the profile
@@ -1595,7 +1594,7 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabItalic(tabID, false);
     mpTabBar->setTabUnderline(tabID, false);
 
-    if (mConsoleMap.contains(mpCurrentActiveHost)) {
+    if (mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost->mpConsole->hide();
         QString host = mpTabBar->tabData(tabID).toString();
         if (mTabMap.contains(host)) {
@@ -1613,16 +1612,15 @@ void mudlet::slot_tab_changed(int tabID)
         }
     }
 
-    if (!mpCurrentActiveHost || mConsoleMap.contains(mpCurrentActiveHost)) {
-        if (!mpCurrentActiveHost) {
-            return;
-        }
+    if (!mpCurrentActiveHost) {
+        return;
+    }
+    if (mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost->mpConsole->show();
         mpCurrentActiveHost->mpConsole->repaint();
         mpCurrentActiveHost->mpConsole->refresh();
         mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
         mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-        mpCurrentActiveHost->mpConsole->show();
 
         int x = mpCurrentActiveHost->mpConsole->width();
         int y = mpCurrentActiveHost->mpConsole->height();
@@ -1649,10 +1647,10 @@ void mudlet::slot_tab_changed(int tabID)
             dactionMultiView->setEnabled(true);
         }
         if (mMultiView) {
-            QMapIterator<Host*, TConsole*> it(mConsoleMap);
-            while (it.hasNext()) {
-                it.next();
-                it.value()->show();
+            for (auto host: mHostManager) {
+                if (host->mpConsole) {
+                    host->mpConsole->show();
+                }
             }
         }
 
@@ -1668,7 +1666,7 @@ void mudlet::slot_tab_changed(int tabID)
 
 void mudlet::addConsoleForNewHost(Host* pH)
 {
-    if (mConsoleMap.contains(pH)) {
+    if (pH->mpConsole) {
         return;
     }
     pH->mLogStatus = mAutolog;
@@ -1679,7 +1677,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
-    mConsoleMap[pH] = pConsole;
     QString tabName = pH->getName();
     int newTabID = mpTabBar->addTab(tabName);
     /*
@@ -2733,7 +2730,7 @@ bool mudlet::pasteWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->pasteWindow(mConsoleMap[pHost]->mClipboard);
+        pC->pasteWindow(pHost->mpConsole->mClipboard);
         return true;
     } else {
         return false;
@@ -2742,7 +2739,7 @@ bool mudlet::pasteWindow(Host* pHost, const QString& name)
 
 Host* mudlet::getActiveHost()
 {
-    if (mConsoleMap.contains(mpCurrentActiveHost)) {
+    if (mpCurrentActiveHost->mpConsole) {
         return mpCurrentActiveHost;
     } else {
         return nullptr;
@@ -2757,7 +2754,11 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    for (auto pC : mConsoleMap) {
+    for (auto host: mHostManager) {
+        auto pC = host->mpConsole;
+        if (!pC) {
+            continue;
+        }
         if (!pC->close()) {
             event->ignore();
             return;
@@ -2774,7 +2775,11 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
 
-    for (auto pC : mConsoleMap) {
+    for (auto host: mHostManager) {
+        auto pC = host->mpConsole;
+        if (!pC) {
+            continue;
+        }
         // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
         if (pC->mpHost->mSslTsl) {
             pC->mpHost->mTelnet.abortConnection();
@@ -2794,9 +2799,9 @@ void mudlet::closeEvent(QCloseEvent* event)
             pC->mpHost->mpNotePad = nullptr;
         }
         // close IRC client window if it is open.
-        if (mpIrcClientMap.contains(pC->mpHost)) {
-            mpIrcClientMap[pC->mpHost]->setAttribute(Qt::WA_DeleteOnClose);
-            mpIrcClientMap[pC->mpHost]->deleteLater();
+        if (pC->mpHost->mDlgIRC) {
+            pC->mpHost->mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mDlgIRC->deleteLater();
         }
 
         // close console
@@ -2806,8 +2811,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto& it: mHostManager.allHosts()) {
-        auto host = it.second;
+    for (auto host: mHostManager) {
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
@@ -2820,8 +2824,11 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto& console : mConsoleMap) {
-        auto host = console->getHost();
+    for (auto host: mHostManager) {
+        auto console = host->mpConsole;
+        if (!console) {
+            continue;
+        }
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
@@ -2844,8 +2851,8 @@ void mudlet::forceClose()
             host->mpNotePad = nullptr;
         }
 
-        if (mpIrcClientMap.contains(host)) {
-            mpIrcClientMap.value(host)->close();
+        if (host->mDlgIRC) {
+            host->mDlgIRC->close();
         }
 
         console->close();
@@ -2854,8 +2861,7 @@ void mudlet::forceClose()
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto& it: mHostManager.allHosts()) {
-        auto host = it.second;
+    for (auto host: mHostManager) {
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
@@ -3475,12 +3481,11 @@ void mudlet::slot_irc()
         return;
     }
 
-    if (!mpIrcClientMap.contains(pHost)) {
-        QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        mpIrcClientMap[pHost] = dlg;
+    if (!pHost->mDlgIRC) {
+        pHost->mDlgIRC.reset(new dlgIRC(pHost));
     }
-    mpIrcClientMap.value(pHost)->raise();
-    mpIrcClientMap.value(pHost)->show();
+    pHost->mDlgIRC->raise();
+    pHost->mDlgIRC->show();
 }
 
 void mudlet::slot_discord()
@@ -3872,18 +3877,20 @@ void mudlet::slot_multi_view(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    QMapIterator<Host*, TConsole*> it(mConsoleMap);
-    while (it.hasNext()) {
-        it.next();
-        if (mpCurrentActiveHost && (mpCurrentActiveHost == it.key())) {
+    for (auto host: mHostManager) {
+        auto console = host->mpConsole;
+        if (!console) {
+            continue;
+        }
+        if (mpCurrentActiveHost && (&*mpCurrentActiveHost == &*host)) {
             // After switching the option off need to redraw the, now only, main
             // TConsole to be displayed for the currently active profile:
             foundActiveHost = true;
-            it.value()->show();
+            console->show();
         } else if (mMultiView) {
-            it.value()->show();
+            console->show();
         } else {
-            it.value()->hide();
+            console->hide();
         }
     }
     if (!foundActiveHost && mpTabBar->count() > 0) {

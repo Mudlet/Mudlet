@@ -60,6 +60,7 @@ class TRoom;
 class TConsole;
 class dlgNotepad;
 class TMap;
+class dlgIRC;
 
 class stopWatch {
     friend class XMLimport;
@@ -555,6 +556,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    QScopedPointer<dlgIRC> mDlgIRC;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
