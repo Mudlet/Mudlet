@@ -16095,7 +16095,7 @@ int TLuaInterpreter::check_for_mappingscript()
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::check_for_speedwalkscript()
+int TLuaInterpreter::check_for_custom_speedwalk()
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "mudlet");

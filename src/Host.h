@@ -196,7 +196,7 @@ public:
     bool isClosingDown();
     unsigned int assemblePath();
     bool checkForMappingScript();
-    bool checkForSpeedwalkScript();
+    bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }

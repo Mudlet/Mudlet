@@ -686,7 +686,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
         mpMap->mTargetID = speedWalkTargetRoomId;
 
-        if (mpHost->checkForSpeedwalkScript()) {
+        if (mpHost->checkForCustomSpeedwalk()) {
             mpHost->startSpeedWalk(speedWalkStartRoomId, speedWalkTargetRoomId);
         } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();

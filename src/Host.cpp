@@ -907,9 +907,9 @@ bool Host::checkForMappingScript()
     return ret;
 }
 
-bool Host::checkForSpeedwalkScript()
+bool Host::checkForCustomSpeedwalk()
 {
-    bool ret = mLuaInterpreter.check_for_speedwalkscript();
+    bool ret = mLuaInterpreter.check_for_custom_speedwalk();
     return ret;
 }
 
