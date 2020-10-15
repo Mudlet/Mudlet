@@ -12751,21 +12751,21 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     QString msg = lua_tostring(L, 2);
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mDlgIRC) {
+    if (!pHost->mpDlgIRC) {
         // create a new irc client if one isn't ready.
-        pHost->mDlgIRC.reset(new dlgIRC(pHost));
-        pHost->mDlgIRC->raise();
-        pHost->mDlgIRC->show();
+        pHost->mpDlgIRC.reset(new dlgIRC(pHost));
+        pHost->mpDlgIRC->raise();
+        pHost->mpDlgIRC->show();
     }
 
     // wait for our client to be ready before sending messages.
-    if (!pHost->mDlgIRC->mReadyForSending) {
+    if (!pHost->mpDlgIRC->mReadyForSending) {
         lua_pushnil(L);
         lua_pushstring(L, "not ready to send");
         return 2;
     }
 
-    QPair<bool, QString> rval = pHost->mDlgIRC->sendMsg(target, msg);
+    QPair<bool, QString> rval = pHost->mpDlgIRC->sendMsg(target, msg);
 
     if (rval.first) {
         lua_pushboolean(L, true);
@@ -12781,8 +12781,8 @@ int TLuaInterpreter::getIrcNick(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString nick;
-    if (pHost->mDlgIRC) {
-        nick = pHost->mDlgIRC->getNickName();
+    if (pHost->mpDlgIRC) {
+        nick = pHost->mpDlgIRC->getNickName();
     } else {
         nick = dlgIRC::readIrcNickName(pHost);
     }
@@ -12797,9 +12797,9 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString hname;
     int hport;
-    if (pHost->mDlgIRC) {
-        hname = pHost->mDlgIRC->getHostName();
-        hport = pHost->mDlgIRC->getHostPort();
+    if (pHost->mpDlgIRC) {
+        hname = pHost->mpDlgIRC->getHostName();
+        hport = pHost->mpDlgIRC->getHostPort();
     } else {
         hname = dlgIRC::readIrcHostName(pHost);
         hport = dlgIRC::readIrcHostPort(pHost);
@@ -12815,8 +12815,8 @@ int TLuaInterpreter::getIrcChannels(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QStringList channels;
-    if (pHost->mDlgIRC) {
-        channels = pHost->mDlgIRC->getChannels();
+    if (pHost->mpDlgIRC) {
+        channels = pHost->mpDlgIRC->getChannels();
     } else {
         channels = dlgIRC::readIrcChannels(pHost);
     }
@@ -12837,8 +12837,8 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString cHostName;
     QString error = QStringLiteral("no client active");
-    if (pHost->mDlgIRC) {
-        cHostName = pHost->mDlgIRC->getConnectedHost();
+    if (pHost->mpDlgIRC) {
+        cHostName = pHost->mpDlgIRC->getConnectedHost();
 
         if (cHostName.isEmpty()) {
             error = QStringLiteral("not yet connected");
@@ -12973,8 +12973,8 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     bool rv = false;
-    if (pHost->mDlgIRC) {
-        pHost->mDlgIRC->ircRestart();
+    if (pHost->mpDlgIRC) {
+        pHost->mpDlgIRC->ircRestart();
         rv = true;
     }
 

@@ -120,8 +120,8 @@ dlgIRC::~dlgIRC()
         connection->close();
     }
 
-    if (mpHost->mDlgIRC) {
-        mpHost->mDlgIRC.reset(nullptr);
+    if (mpHost->mpDlgIRC) {
+        mpHost->mpDlgIRC.reset(nullptr);
     }
 }
 

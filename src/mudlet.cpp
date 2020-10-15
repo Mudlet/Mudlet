@@ -1556,9 +1556,9 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     // close IRC client window if it is open.
-    if (pH->mDlgIRC) {
-        pH->mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        pH->mDlgIRC->deleteLater();
+    if (pH->mpDlgIRC) {
+        pH->mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        pH->mpDlgIRC->deleteLater();
     }
 
     migrateDebugConsole(pH);
@@ -2089,8 +2089,8 @@ void mudlet::forceClose()
             host->mpNotePad = nullptr;
         }
 
-        if (host->mDlgIRC) {
-            host->mDlgIRC->close();
+        if (host->mpDlgIRC) {
+            host->mpDlgIRC->close();
         }
 
         console->close();
@@ -2452,20 +2452,20 @@ void mudlet::show_options_dialog(const QString& tab)
 
     // value will automatically return a nullptr if there is NO entry for this
     // Host in the QMap
-    if (!pHost->mDlgProfilePreferences) {
-        pHost->mDlgProfilePreferences.reset(new dlgProfilePreferences(this, pHost));
+    if (!pHost->mpDlgProfilePreferences) {
+        pHost->mpDlgProfilePreferences.reset(new dlgProfilePreferences(this, pHost));
 
-        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, pHost->mDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, pHost->mDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
-        pHost->mDlgProfilePreferences->setAttribute(Qt::WA_DeleteOnClose);
+        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
+        pHost->mpDlgProfilePreferences->setAttribute(Qt::WA_DeleteOnClose);
     }
 
-    pHost->mDlgProfilePreferences->setStyleSheet(pHost->mProfileStyleSheet);
-    pHost->mDlgProfilePreferences->setTab(tab);
-    pHost->mDlgProfilePreferences->raise();
-    pHost->mDlgProfilePreferences->show();
+    pHost->mpDlgProfilePreferences->setStyleSheet(pHost->mProfileStyleSheet);
+    pHost->mpDlgProfilePreferences->setTab(tab);
+    pHost->mpDlgProfilePreferences->raise();
+    pHost->mpDlgProfilePreferences->show();
 }
 
 void mudlet::slot_update_shortcuts()
@@ -2630,11 +2630,11 @@ void mudlet::slot_irc()
         return;
     }
 
-    if (!pHost->mDlgIRC) {
-        pHost->mDlgIRC.reset(new dlgIRC(pHost));
+    if (!pHost->mpDlgIRC) {
+        pHost->mpDlgIRC.reset(new dlgIRC(pHost));
     }
-    pHost->mDlgIRC->raise();
-    pHost->mDlgIRC->show();
+    pHost->mpDlgIRC->raise();
+    pHost->mpDlgIRC->show();
 }
 
 void mudlet::slot_discord()
