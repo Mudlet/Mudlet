@@ -2124,7 +2124,7 @@ void dlgProfilePreferences::copyMap()
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
-    for (auto pOtherHost: mudlet::self()->getHostManager()) {
+    for (auto pOtherHost : mudlet::self()->getHostManager()) {
         if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
