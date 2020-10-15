@@ -41,14 +41,11 @@ public:
     static bool isQuote(QChar ch);
     static bool isOneOf(QChar ch, const QString &chars);
 
-    static QStringRef trimmedRef(const QStringRef& ref);
-    static QStringRef stripRef(const QString& str, QChar start, QChar end);
+    static QStringView strip(QStringView str, QChar start, QChar end);
+    static QStringView unquote(QStringView ref);
 
-    static QStringRef unquoteRef(const QStringRef& ref);
-    static bool isBetween(const QString& str, char first, char last);
-    static bool isBetween(const QStringRef& str, char first, char last);
-    static QStringRef trimmedRef(const QString& str);
-    static bool isQuoted(const QStringRef& ref);
+    static bool isBetween(QStringView str, char first, char last);
+    static bool isQuoted(QStringView ref);
 
     static void apply(QStringList& strList, const std::function<void(QString&)>& func)
     {

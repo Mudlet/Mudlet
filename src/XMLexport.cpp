@@ -119,8 +119,6 @@ XMLexport::XMLexport( TKey * pT )
 {
 }
 
-XMLexport::~XMLexport() = default;
-
 void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileName)
 {
     auto pHost = mpHost;
@@ -373,6 +371,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // that can be expressed solely with the Latin1 character encoding so that
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
+    host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
@@ -410,6 +409,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
+    host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
@@ -445,11 +445,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     QColor outerColor;
     QColor innerColor;
     pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
-    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
-    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
-    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toUtf8().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toUtf8().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toUtf8().constData();
+    host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
@@ -457,7 +458,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         ignore = ignore.append(it.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
-    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toLatin1().constData();
+    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
+    host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -559,13 +561,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             if (pStopWatch->persistent()) {
                 auto stopwatch = stopwatches.append_child("stopwatch");
                 // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
-                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toUtf8().constData();
                 if (pStopWatch->running()) {
                     stopwatch.append_attribute("running") = "yes";
-                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 } else {
                     stopwatch.append_attribute("running") = "no";
-                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 }
                 stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
             }
@@ -820,8 +822,13 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toUtf8().constData());
             trigger.append_child("mCommand").text().set(pT->mCommand.toUtf8().constData());
             trigger.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-            trigger.append_child("mFgColor").text().set(pT->mFgColor.name().toUtf8().constData());
-            trigger.append_child("mBgColor").text().set(pT->mBgColor.name().toUtf8().constData());
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColorConstants::Transparent ? "transparent": pT->mFgColor.name().toUtf8().constData());
+            trigger.append_child("mBgColor").text().set(pT->mBgColor == QColorConstants::Transparent ? "transparent": pT->mBgColor.name().toUtf8().constData());
+#else
+            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColor("transparent") ? "transparent": pT->mFgColor.name().toUtf8().constData());
+            trigger.append_child("mBgColor").text().set(pT->mBgColor == QColor("transparent") ? "transparent": pT->mBgColor.name().toUtf8().constData());
+#endif
             trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toUtf8().constData());
             trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toUtf8().constData());
             trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());

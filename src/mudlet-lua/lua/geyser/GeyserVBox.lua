@@ -26,23 +26,45 @@ end
 --- Responsible for organizing the elements inside the VBox
 -- Called when a new element is added
 function Geyser.VBox:organize()
-  self.parent:reposition()
-
-  local window_height = (self:calculate_dynamic_window_size().height / self.get_height()) * 100
+  local self_height = self:get_height()
+  local self_width = self:get_width()
+  local calculated_height = self:calculate_dynamic_window_size().height
+  -- Workaround for issue with width/height being 0 at creation
+  self_height = self_height <= 0 and #self.windows or self_height
+  self_width = self_width <= 0 and 0.9 or self_width
+  calculated_height = calculated_height <= 0 and 1 or calculated_height
+  
+  local window_height = (calculated_height / self_height) * 100
   local start_y = 0
+  self.contains_fixed = false
   for _, window_name in ipairs(self.windows) do
     local window = self.windowList[window_name]
     window:move("0%", start_y.."%")
-    local width = (window:get_width() / self:get_width()) * 100
-    local height = (window:get_height() / self:get_height()) * 100
+    local width = (window:get_width() / self_width) * 100
+    local height = (window:get_height() / self_height) * 100
+    if window.h_policy == Geyser.Fixed or window.v_policy == Geyser.Fixed then
+      self.contains_fixed = true
+    end
     if window.h_policy == Geyser.Dynamic then
       width = 100
+      if window.width ~= width .. "%" then
+        window:resize(width .. "%", nil)
+      end
     end
     if window.v_policy == Geyser.Dynamic then
       height = window_height * window.v_stretch_factor
+      if window.height ~= height .. "%" then
+        window:resize(nil, height .. "%")
+      end
     end
-    window:resize(width.."%", height.."%")
-    start_y = start_y + (window:get_height() / self:get_height()) * 100
+    start_y = start_y + height
+  end
+end
+
+function Geyser.VBox:reposition()
+  Geyser.Container.reposition(self)
+  if self.contains_fixed then -- prevent gaps when items have fixed size
+    self:organize()
   end
 end
 

@@ -76,7 +76,7 @@ end</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>^\s*\[\s*[Ee]xits:\s*(.*)\]</string>
+					<string>(?i)^\s*\[\s*Exits:\s*(.*)\]</string>
 					<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
 					<string>^\[?\s*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
 					<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
@@ -184,7 +184,7 @@ end</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>^Visible Exits:</string>
+					<string>(?i:^(obvious|visible) exits:)</string>
 				</regexCodeList>
 				<regexCodePropertyList>
 					<integer>1</integer>
@@ -192,7 +192,7 @@ end</script>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Exit Line Trigger</name>
 					<script>map.prompt.exits = map.prompt.exits .. ", " .. string.trim(matches[2])
-setTriggerStayOpen("Multi-Line Exits Trigger",1)</script>
+setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
 					<mStayOpen>0</mStayOpen>
@@ -204,7 +204,7 @@ setTriggerStayOpen("Multi-Line Exits Trigger",1)</script>
 					<colorTriggerFgColor>#000000</colorTriggerFgColor>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
-						<string>^([\w\s]+)\s+: [\w\s]+</string>
+						<string>^([\w\s]+)\s*: [\w\s]+</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
@@ -412,7 +412,7 @@ map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 				<name>Map Config Alias</name>
 				<script>-- adjust pattern to allow no argument, if no argument show general help about configs
 if not matches[2] then
-	cecho(map.help.configs)
+	cecho(map.help.config)
 else
   local startStr, endStr = string.match(matches[2],"(.*) ([%w%.]+)")
   local vals = {'on', 'off', 'true', 'false'}

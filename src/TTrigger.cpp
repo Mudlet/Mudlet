@@ -294,14 +294,17 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    int ovector[MAX_CAPTURE_GROUPS * 3];
 
-    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         return false;
     } else if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+        }
+        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::blue), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
@@ -357,7 +360,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
@@ -368,7 +371,10 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         } else if (rc < 0) {
             goto END;
         } else if (rc == 0) {
-            qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            }
+            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
 
         for (i = 0; i < rc; i++) {
@@ -418,12 +424,24 @@ END : {
                 // otherwise highlight complete expression match
                 if (i % numberOfCaptureGroups != 1) {
                     pC->selectSection(begin, length);
-                    pC->setBgColor(r1, g1, b1);
-                    pC->setFgColor(r2, g2, b2);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                    if (mBgColor != QColorConstants::Transparent) {
+#else
+                    if (mBgColor != QColor("transparent")) {
+#endif
+                        pC->setBgColor(r1, g1, b1, 255);
+                    }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                    if (mFgColor != QColorConstants::Transparent) {
+#else
+                    if (mFgColor != QColor("transparent")) {
+#endif
+                        pC->setFgColor(r2, g2, b2);
+                    }
                 }
             } else {
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
+                pC->setBgColor(r1, g1, b1, 255);
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -491,8 +509,20 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mBgColor != QColorConstants::Transparent) {
+#else
+                if (mBgColor != QColor("transparent")) {
+#endif
+                    pC->setBgColor(r1, g1, b1, 255);
+                }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mFgColor != QColorConstants::Transparent) {
+#else
+                if (mFgColor != QColor("transparent")) {
+#endif
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -611,8 +641,20 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mBgColor != QColorConstants::Transparent) {
+#else
+                if (mBgColor != QColor("transparent")) {
+#endif
+                    pC->setBgColor(r1, g1, b1, 255);
+                }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mFgColor != QColorConstants::Transparent) {
+#else
+                if (mFgColor != QColor("transparent")) {
+#endif
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -718,12 +760,24 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
-                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
+//                qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mBgColor != QColorConstants::Transparent) {
+#else
+                if (mBgColor != QColor("transparent")) {
+#endif
+                    pC->setBgColor(r1, g1, b1, 255);
+                }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mFgColor != QColorConstants::Transparent) {
+#else
+                if (mFgColor != QColor("transparent")) {
+#endif
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }
@@ -850,8 +904,20 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
-                pC->setBgColor(r1, g1, b1);
-                pC->setFgColor(r2, g2, b2);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mBgColor != QColorConstants::Transparent) {
+#else
+                if (mBgColor != QColor("transparent")) {
+#endif
+                    pC->setBgColor(r1, g1, b1, 255);
+                }
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+                if (mFgColor != QColorConstants::Transparent) {
+#else
+                if (mFgColor != QColor("transparent")) {
+#endif
+                    pC->setFgColor(r2, g2, b2);
+                }
             }
             pC->reset();
         }

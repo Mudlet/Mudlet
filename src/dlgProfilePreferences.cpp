@@ -27,6 +27,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
@@ -430,9 +431,8 @@ void dlgProfilePreferences::disableHostDetails()
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
 
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+    groupBox_ircOptions->setEnabled(false);
+
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
 
@@ -494,9 +494,9 @@ void dlgProfilePreferences::enableHostDetails()
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(true);
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
+
+    groupBox_ircOptions->setEnabled(true);
+
     groupbox_searchEngineSelection->setEnabled(true);
 
 #if defined(QT_NO_SSL)
@@ -518,6 +518,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
@@ -637,6 +638,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors2();
 
+    checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
 
@@ -665,11 +667,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
+    checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-    //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
-    //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
@@ -1167,6 +1168,7 @@ void dlgProfilePreferences::clearHostDetails()
     edbeePreviewWidget->textDocument()->setText(QString());
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
+    mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
@@ -1260,6 +1262,8 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
+
+    checkBox_debugShowAllCodepointProblems->setChecked(false);
 
     groupBox_ssl_certificate->hide();
     notificationArea->hide();
@@ -1451,7 +1455,6 @@ void dlgProfilePreferences::resetColors()
     if (!pHost) {
         return;
     }
-
     pHost->mCommandLineFgColor = Qt::darkGray;
     pHost->mCommandLineBgColor = Qt::black;
     pHost->mCommandFgColor = QColor(113, 113, 0);
@@ -1478,6 +1481,7 @@ void dlgProfilePreferences::resetColors()
 
     setColors();
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 
@@ -2385,9 +2389,11 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setUserDictionaryOptions(true, false);
         }
         pHost->mWrapAt = wrap_at_spinBox->value();
+        pHost->adjustNAWS();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
+        pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
@@ -2432,6 +2438,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mBorderRightWidth = rightBorderWidth->value();
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
+        pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -2451,7 +2458,6 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
-
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();
@@ -2610,6 +2616,7 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+        pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
 
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the

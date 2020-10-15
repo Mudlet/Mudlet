@@ -73,19 +73,7 @@ class TMxpNodeBuilder
     void processAttribute();
 
 public:
-    explicit TMxpNodeBuilder(bool ignoreText = false)
-    : mOptionIgnoreText(ignoreText)
-    , mIsInsideTag(false)
-    , mHasNode(false)
-    , mIsInsideAttr(false)
-    , mIsInsideSequence(false)
-    , mHasSequence(false)
-    , mIsQuotedSequence(false)
-    , mIsText(false)
-    , mIsInsideText(false)
-    , mSequenceHasSpaces(false)
-    {
-    }
+    explicit TMxpNodeBuilder(bool ignoreText = false);
 
     // returns true when a node (text/tag start/tag end) is available
     // the same char has to be input again when a match is found as it may be a boundary

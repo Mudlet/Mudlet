@@ -61,7 +61,7 @@ void TimerUnit::compileAll()
 {
     for (auto timer : mTimerRootNodeList) {
         if (timer->isActive()) {
-            timer->mNeedsToBeCompiled = true;
+            timer->compileAll();
         }
     }
 }
@@ -159,20 +159,12 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
 
 TTimer* TimerUnit::getTimer(int id)
 {
-    if (mTimerMap.find(id) != mTimerMap.end()) {
-        return mTimerMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mTimerMap.value(id);
 }
 
 TTimer* TimerUnit::getTimerPrivate(int id)
 {
-    if (mTimerMap.find(id) != mTimerMap.end()) {
-        return mTimerMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mTimerMap.value(id);
 }
 
 bool TimerUnit::registerTimer(TTimer* pT)

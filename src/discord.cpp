@@ -41,7 +41,7 @@ const QString Discord::mMudletApplicationId = QStringLiteral("450571881909583884
 Discord::Discord(QObject* parent)
 : QObject(parent)
 , mLoaded{}
-// For details see https://discordapp.com/developers/docs/rich-presence/how-to#initialization
+// For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
 // N. B. for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
@@ -267,10 +267,10 @@ void Discord::timerEvent(QTimerEvent* event)
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
     Discord::smReadWriteLock.lockForWrite(); // Will block until gets lock
-    Discord::smUserName = QString::fromUtf8(request->username);
-    Discord::smUserId = QString::fromUtf8(request->userId);
-    Discord::smDiscriminator = QString::fromUtf8(request->discriminator);
-    Discord::smAvatar = QString::fromUtf8(request->avatar);
+    Discord::smUserName = request->username;
+    Discord::smUserId = request->userId;
+    Discord::smDiscriminator = request->discriminator;
+    Discord::smAvatar = request->avatar;
     Discord::smReadWriteLock.unlock();
 
 #if defined(DEBUG_DISCORD)
@@ -389,6 +389,13 @@ void Discord::UpdatePresence()
 
         Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0, nullptr);
         mCurrentApplicationId = applicationID;
+    }
+
+    // Coverity thinks that pDiscordPresence could be a nullptr here, which
+    // would be bad {CID 1473922} so lets test for that and abort:
+    if (!pDiscordPresence) {
+        qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
+        return;
     }
 
     if (pHost->mDiscordAccessFlags & Host::DiscordSetDetail) {

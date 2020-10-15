@@ -8,8 +8,15 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
-loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
-loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
+local builddir_env = os.getenv("TRAVIS_BUILD_DIR")
+if builddir_env then
+  -- the script struggles to load the load files relatively in Travis
+  loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
+else
+  loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
+end
 
 local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from the HEAD until the most recent published commit.")
 parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
@@ -121,7 +128,7 @@ local historical_commits = extract_historical_sha1s()
 local released_commits = extract_released_sha1s(get_releases(args.releasefile))
 local unpublished_commits = scan_commits(historical_commits, released_commits)
 
-if table.is_empty(unpublished_commits) then os.exit(1) end
+if table.is_empty(unpublished_commits) then print("(changelog couldn't be generated)") os.exit() end
 
 local changelog = get_changelog(unpublished_commits[#unpublished_commits], unpublished_commits[1])
 

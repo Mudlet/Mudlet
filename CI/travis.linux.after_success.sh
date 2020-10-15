@@ -32,6 +32,10 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     exit
   fi
 
+  # get commit date now before we check out an change into another git repository
+  commitDate=$(git show -s --format=%cs | tr -d '-')
+  yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
+
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
@@ -53,6 +57,12 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
                    "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
+
+      if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
+        echo "== No new commits, aborting public test build generation =="
+        exit 0
+      fi
+
       echo "== Creating a public test build =="
     else
       echo "== Creating a release build =="
@@ -108,10 +118,8 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
-      pushd "${TRAVIS_BUILD_DIR}/CI/"
+      cd "${TRAVIS_BUILD_DIR}"
       changelog=$(lua "${TRAVIS_BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
-      popd
-
 
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
@@ -138,4 +146,3 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   fi
   export DEPLOY_URL
 fi
-

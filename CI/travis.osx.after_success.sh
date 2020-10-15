@@ -8,6 +8,11 @@ fi
 
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
+
+  # get commit date now before we check out an change into another git repository
+  commitDate=$(git show -s --format=%cs | tr -d '-')
+  yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
+
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
@@ -51,6 +56,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
   else # ptb/release build
     app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
+
+      if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
+        echo "== No new commits, aborting public test build generation =="
+        exit 0
+      fi
+
       echo "== Creating a public test build =="
       mv "$app" "source/build/Mudlet PTB.app"
       app="source/build/Mudlet PTB.app"
@@ -122,4 +133,3 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   export DEPLOY_URL
 fi
-

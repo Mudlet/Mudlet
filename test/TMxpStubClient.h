@@ -121,6 +121,17 @@ public:
 
         return true;
     }
+
+    void playMedia(TMediaData& mediaData) override
+    {
+
+    }
+
+    void stopMedia(TMediaData& mediaData) override
+    {
+
+    }
+
     void publishEntity(const QString& name, const QString& value) override {}
 
     void setVariable(const QString& name, const QString& value) override {}

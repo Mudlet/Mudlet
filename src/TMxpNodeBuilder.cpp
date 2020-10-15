@@ -16,9 +16,27 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "TMxpNodeBuilder.h"
 #include "TMxpTagParser.h"
 #include "TStringUtils.h"
+
+TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
+: mOptionIgnoreText(ignoreText)
+, mIsEndTag(false)
+, mIsInsideTag(false)
+, mIsInsideAttr(false)
+, mReadingAttrValue(false)
+, mIsInsideSequence(false)
+, mIsQuotedSequence(false)
+, mOpeningQuote('\0')
+, mSequenceHasSpaces(false)
+, mHasSequence(false)
+, mIsInsideText(false)
+, mHasNode(false)
+, mIsText(false)
+{
+}
 
 bool TMxpNodeBuilder::accept(char ch)
 {
@@ -124,7 +142,7 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
 
     resetCurrentSequence();
 
-    if (ch == '=') {
+    if (ch == '=' && !mReadingAttrValue) {
         mReadingAttrValue = true;
         return false;
     } else {
@@ -164,12 +182,17 @@ bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
         if (QChar(ch).isSpace()) {
             mHasSequence = true;
             return false;
-        } else if (ch == '>' || ch == '/' || ch == '=') {
+        } else if (ch == '/') {
+            // Special case for end tags in the format <a given prefix/tag_name> used in MateriaMagica
+            mCurrentTagName.clear();
+            resetCurrentAttribute();
+            return true;
+        } else if (ch == '>' || ch == '=') {
             return true;
         }
     }
 
-    if (mIsQuotedSequence && !mSequenceHasSpaces && ch == '=') {
+    if (mIsQuotedSequence && !mSequenceHasSpaces && !mReadingAttrValue && ch == '=') {
         return true;
     }
 

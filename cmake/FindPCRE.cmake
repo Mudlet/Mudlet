@@ -81,7 +81,7 @@ find_package_handle_standard_args(PCRE REQUIRED_VARS PCRE_LIBRARY
 mark_as_advanced(PCRE_INCLUDE_DIR PCRE_LIBRARY PCRE_LIBRARY_RELEASE
                  PCRE_LIBRARY_DEBUG)
 
-get_filename_component(PCRE_FILENAME ${PCRE_LIBRARY} NAME_WE)
+get_filename_component(PCRE_FILENAME ${PCRE_LIBRARY} NAME)
 string(FIND ${PCRE_FILENAME} .a PCRE_STATIC)
 
 if(PCRE_FOUND AND NOT TARGET PCRE::PCRE)

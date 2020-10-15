@@ -1,6 +1,6 @@
 
-#ifndef MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H
-#define MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#ifndef MUDLET_TMXPTAGPARSER_H
+#define MUDLET_TMXPTAGPARSER_H
 
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
@@ -32,10 +32,10 @@
 
 class TMxpTagParser
 {
-    static int readTextBlock(const QStringRef& str, int start, int end, QChar terminatingChar);
+    static int readTextBlock(QStringView str, int start, int end, QChar terminatingChar);
 
 public:
-    static QStringList parseToList(const QStringRef& tagText);
+    static QStringList parseToList(QStringView tagText);
     static QStringList parseToList(const QString& tagText);
 
     QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false) const;
@@ -47,4 +47,4 @@ public:
     MxpTagAttribute parseAttribute(const QString& attr) const;
 };
 
-#endif //MUDLET_MXPSUPPORT_CPP_TMXPTAGPARSER_H
+#endif //MUDLET_TMXPTAGPARSER_H
