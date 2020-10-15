@@ -24,7 +24,7 @@ jobs:
             compiler: clang_64
           - os: windows-latest
             buildname: 'windows'
-            triplet: x64-windows
+            triplet: x64-mingw-dynamic
             compiler: win64_mingw73
     env:
       qt: "5.14.1"
