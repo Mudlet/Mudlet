@@ -61,6 +61,7 @@ class TConsole;
 class dlgNotepad;
 class TMap;
 class dlgIRC;
+class dlgProfilePreferences;
 
 class stopWatch {
     friend class XMLimport;
@@ -339,6 +340,33 @@ public:
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool setClickthrough(const QString& name, bool clickthrough);
     void hideMudletsVariables();
+    bool createBuffer(const QString& name);
+    QSize calcFontSize(const QString& windowName);
+    bool clearWindow(const QString&);
+    bool showWindow(const QString&);
+    bool hideWindow(const QString&);
+    bool resizeWindow(const QString&, int, int);
+    bool moveWindow(const QString& name, int, int);
+    std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget();
+    bool closeWindow(const QString&);
+    bool echoWindow(const QString&, const QString&);
+    bool pasteWindow(const QString& name);
+    bool setCmdLineAction(const QString&, const int);
+    bool resetCmdLineAction(const QString&);
+    bool setLabelClickCallback(const QString&, const int);
+    bool setLabelDoubleClickCallback(const QString&, const int);
+    bool setLabelReleaseCallback(const QString&, const int);
+    bool setLabelMoveCallback(const QString&, const int);
+    bool setLabelWheelCallback(const QString&, const int);
+    bool setLabelOnEnter(const QString&, const int);
+    bool setLabelOnLeave(const QString&, const int);
+    bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setBackgroundImage(const QString& name, QString& path);
+    void createMapper(bool loadDefaultMap);
+    bool setProfileStyleSheet(const QString& styleSheet);
+    void check_for_mappingscript();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -565,6 +593,7 @@ public:
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     QScopedPointer<dlgIRC> mDlgIRC;
+    QScopedPointer<dlgProfilePreferences> mDlgProfilePreferences;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

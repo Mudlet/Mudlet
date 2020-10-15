@@ -35,16 +35,19 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "TTextEdit.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "dlgNotepad.h"
+#include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
 
 
 #include "pre_guard.h"
 #include <chrono>
+#include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
 #include <zip.h>
@@ -911,6 +914,26 @@ bool Host::checkForMappingScript()
     mHaveMapperScript = true;
     return ret;
 }
+
+void Host::check_for_mappingscript()
+{
+    if (!checkForMappingScript()) {
+        QUiLoader loader;
+
+        QFile file(":/ui/lacking_mapper_script.ui");
+        file.open(QFile::ReadOnly);
+
+        QDialog* dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
+        file.close();
+
+        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
+
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    }
+}
+
 
 void Host::startSpeedWalk()
 {
@@ -2857,3 +2880,645 @@ void Host::close()
     }
 }
 
+bool Host::createBuffer(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (!pC) {
+        pC = mpConsole->createBuffer(name);
+        if (pC) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool Host::clearWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->mUpperPane->resetHScrollbar();
+        pC->buffer.clear();
+        pC->mUpperPane->update();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::showWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    // check labels first as they are shown/hidden more often
+    if (pL) {
+        pL->show();
+        return true;
+    } else if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->update();
+            pD->show();
+            // TODO: conside refactoring TConsole::showWindow(name) so that there is a TConsole::showWindow() that can be called directly on the TConsole concerned?
+            return mpConsole->showWindow(name);
+        } else {
+            return mpConsole->showWindow(name);
+        }
+    }
+
+    if (pN) {
+        pN->show();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::hideWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    // check labels first as they are shown/hidden more often
+    if (pL) {
+        pL->hide();
+        return true;
+    } else if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->hide();
+            pD->update();
+        }
+        return mpConsole->hideWindow(name);
+    }
+
+    if (pN) {
+        pN->hide();
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::resizeWindow(const QString& name, int x1, int y1)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (pL) {
+        pL->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->resize(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->resize(x1, y1);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::moveWindow(const QString& name, int x1, int y1)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (pL) {
+        pL->move(x1, y1);
+        return true;
+    }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->move(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->move(x1, y1);
+        return true;
+    }
+
+    return false;
+}
+
+std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pD = mpConsole->mDockWidgetMap.value(windowname);
+    auto pW = mpConsole->mpMainFrame;
+    auto pM = mpConsole->mpMapper;
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+
+    if (!pD && windowname.toLower() != QLatin1String("main")) {
+        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+    }
+
+    if (pD) {
+        pW = pD->widget();
+    }
+
+    if (pL) {
+        pL->setParent(pW);
+        pL->move(x1, y1);
+        if (show) {
+            pL->show();
+        }
+        return {true, QString()};
+    } else if (pC) {
+        pC->setParent(pW);
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        if (show) {
+            pC->show();
+        }
+        return {true, QString()};
+    } else if (pN) {
+        pN->setParent(pW);
+        pN->move(x1, y1);
+        if (show) {
+            pN->show();
+        }
+        return {true, QString()};
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->setParent(pW);
+        pM->move(x1, y1);
+        if (show) {
+            pM->show();
+        }
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+}
+
+std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableMapWidget;
+    auto pMapper = mpMap.data()->mpMapper;
+    if (!pM && !pMapper) {
+        createMapper(true);
+        pM = mpDockableMapWidget;
+    }
+    if (!pM) {
+        return {false, QStringLiteral("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> Host::closeMapWidget()
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableMapWidget;
+    if (!pM) {
+        return {false, QStringLiteral("no map widget found to close")};
+    }
+    if (!pM->isVisible()) {
+        return {false, QStringLiteral("map widget already closed")};
+    }
+    pM->hide();
+    return {true, QString()};
+}
+
+bool Host::closeWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        auto pD = mpConsole->mDockWidgetMap.value(name);
+        if (pD) {
+            pD->hide();
+            pD->update();
+        }
+        return mpConsole->hideWindow(name);
+    }
+    return false;
+}
+
+bool Host::echoWindow(const QString& name, const QString& text)
+{
+    if (!mpConsole) {
+        return -1;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->print(text);
+        return true;
+    } else if (pL) {
+        pL->setText(text);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::pasteWindow(const QString& name)
+{
+    if (!mpConsole) {
+        return -1;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->pasteWindow(mpConsole->mClipboard);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Host::setCmdLineAction(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setAction(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::resetCmdLineAction(const QString& name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+    auto pN = mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->resetAction();
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelClickCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setClick(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setDoubleClick(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelReleaseCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setRelease(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelMoveCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setMove(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelWheelCallback(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setWheel(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelOnEnter(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setEnter(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelOnLeave(const QString& name, const int func)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setLeave(func);
+        return true;
+    }
+    return false;
+}
+
+QSize Host::calcFontSize(const QString& windowName)
+{
+    if (!mpConsole) {
+        return QSize(-1, -1);
+    }
+
+    QFont font;
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        font = mDisplayFont;
+    } else {
+        auto pC = mpConsole->mSubConsoleMap.value(windowName);
+        if (pC) {
+            Q_ASSERT_X(pC->mUpperPane, "calcFontSize", "located console does not have the upper pane available");
+            font = pC->mUpperPane->mDisplayFont;
+        } else {
+            return QSize(-1, -1);
+        }
+    }
+
+    auto fontMetrics = QFontMetrics(font);
+    return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+}
+
+bool Host::setProfileStyleSheet(const QString& styleSheet)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    mProfileStyleSheet = styleSheet;
+    mpConsole->setStyleSheet(styleSheet);
+    mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mDlgProfilePreferences) {
+        mDlgProfilePreferences->setStyleSheet(styleSheet);
+    }
+    if (mpNotePad) {
+        mpNotePad->setStyleSheet(styleSheet);
+        mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+    if (this == mudlet::self()->mpCurrentActiveHost) {
+        mudlet::self()->setGlobalStyleSheet(styleSheet);
+    }
+    return true;
+}
+
+
+bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pC) {
+        pC->setConsoleBgColor(r, g, b, alpha);
+        return true;
+    } else if (pL) {
+        QPalette mainPalette;
+        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
+        pL->setPalette(mainPalette);
+        return true;
+    }
+
+    return false;
+}
+
+bool Host::setBackgroundImage(const QString& name, QString& path)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        if (QDir::homePath().contains('\\')) {
+            path.replace('/', R"(\)");
+        } else {
+            path.replace('\\', "/");
+        }
+        QPixmap bgPixmap(path);
+        pL->setPixmap(bgPixmap);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+// Needed to extract into a separate method from slot_mapper() so that we can
+// use it WITHOUT loading a file - at least for the TConsole::importMap(...)
+// case that may need to create a map widget before it loads/imports a
+// non-default (last saved map in profile's map directory.
+void Host::createMapper(bool loadDefaultMap)
+{
+    auto pMap = mpMap.data();
+    if (pMap->mpMapper) {
+        bool visStatus = mpMap->mpMapper->isVisible();
+        if (pMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
+            pMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        }
+        pMap->mpMapper->setVisible(!visStatus);
+        return;
+    }
+
+    auto hostName(getName());
+    mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
+                                     pMap->mPlayerRoomOuterDiameterPercentage,
+                                     pMap->mPlayerRoomInnerDiameterPercentage,
+                                     pMap->mPlayerRoomOuterColor,
+                                     pMap->mPlayerRoomInnerColor);
+
+    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(pMap->mpMapper);
+
+    if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
+        qDebug() << "mudlet::slot_mapper() - restore map case 3.";
+        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
+        QDateTime now(QDateTime::currentDateTime());
+        if (pMap->restore(QString())) {
+            pMap->audit();
+            pMap->mpMapper->mp2dMap->init();
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pMap->mpMapper->show();
+        }
+
+        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
+
+    } else {
+        if (pMap->mpMapper) {
+            pMap->mpMapper->show();
+        }
+    }
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableMapWidget);
+
+    // XXX: should this be called multiple times?
+    mudlet::self()->loadWindowLayout();
+
+    check_for_mappingscript();
+    TEvent mapOpenEvent {};
+    mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+    mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mapOpenEvent);
+}

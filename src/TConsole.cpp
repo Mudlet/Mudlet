@@ -1660,7 +1660,7 @@ bool TConsole::loadMap(const QString& location)
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1719,7 +1719,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // No map or mapper currently loaded/present - so try and create mapper
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {

@@ -1961,7 +1961,7 @@ void dlgProfilePreferences::downloadMap()
     }
     if (!pHost->mpMap->mpMapper) {
         // CHECK: What happens if we are NOT the current profile anymore?
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     pHost->mpMap->downloadMap();
