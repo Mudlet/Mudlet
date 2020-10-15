@@ -143,31 +143,7 @@ public:
     void setDockLayoutUpdated(Host*, const QString&);
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
-    QSize calcFontSize(Host* pHost, const QString& windowName);
-    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
-    bool echoWindow(Host*, const QString&, const QString&);
-    bool createBuffer(Host*, const QString&);
-    bool showWindow(Host*, const QString&);
-    bool hideWindow(Host*, const QString&);
-    bool closeWindow(Host*, const QString&);
-    bool resizeWindow(Host*, const QString&, int, int);
-    bool clearWindow(Host*, const QString&);
-    bool pasteWindow(Host* pHost, const QString& name);
-    bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
-    bool setBackgroundImage(Host*, const QString& name, QString& path);
-    bool setCmdLineAction(Host*, const QString&, const int);
-    bool resetCmdLineAction(Host*, const QString&);
-    bool setLabelClickCallback(Host*, const QString&, const int);
-    bool setLabelDoubleClickCallback(Host*, const QString&, const int);
-    bool setLabelReleaseCallback(Host*, const QString&, const int);
-    bool setLabelMoveCallback(Host*, const QString&, const int);
-    bool setLabelWheelCallback(Host*, const QString&, const int);
-    bool setLabelOnEnter(Host*, const QString&, const int);
-    bool setLabelOnLeave(Host*, const QString&, const int);
-    bool moveWindow(Host*, const QString& name, int, int);
-    std::pair<bool, QString> setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show);
-    std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
-    std::pair<bool, QString> closeMapWidget(Host* pHost);
+
     std::optional<QSize> getImageSize(const QString& imageLocation);
     QString readProfileData(const QString& profile, const QString& item);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
@@ -250,7 +226,6 @@ public:
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgConnectionProfiles> mConnectionDialog;
-    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
@@ -287,8 +262,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
-    void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
+    void setGlobalStyleSheet(const QString& styleSheet);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
@@ -555,7 +530,6 @@ private:
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
-    void check_for_mappingscript();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadMaps();

@@ -3905,7 +3905,7 @@ int TLuaInterpreter::createBuffer(lua_State* L)
     QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->createBuffer(&host, text);
+    host.createBuffer(text);
     return 0;
 }
 
@@ -3922,7 +3922,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->clearWindow(&host, text);
+    host.clearWindow(text);
 
     return 0;
 }
@@ -3937,7 +3937,7 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->closeWindow(&host, text);
+    host.closeWindow(text);
 
     return 0;
 }
@@ -3952,7 +3952,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
     QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->hideWindow(&host, text);
+    host.hideWindow(text);
 
     return 0;
 }
@@ -4181,7 +4181,7 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     double y1 = lua_tonumber(L, 3);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->resizeWindow(&host, text, static_cast<int>(x1), static_cast<int>(y1));
+    host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
 
     return 0;
 }
@@ -4209,7 +4209,7 @@ int TLuaInterpreter::moveWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    mudlet::self()->moveWindow(&host, text, static_cast<int>(x1), static_cast<int>(y1));
+    host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
 }
 
@@ -4249,7 +4249,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->setWindow(&host, windowname, name, x, y, show); !success) {
+    if (auto [success, message] = host.setWindow(windowname, name, x, y, show); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -4299,7 +4299,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->openMapWidget(&host, area.toLower(), x, y, width, height); !success) {
+    if (auto [success, message] = host.openMapWidget(area.toLower(), x, y, width, height); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -4311,7 +4311,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 int TLuaInterpreter::closeMapWidget(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->closeMapWidget(&host); !success) {
+    if (auto [success, message] = host.closeMapWidget(); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -4422,7 +4422,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
-    } else if (!mudlet::self()->setBackgroundColor(&host, windowName, r, g, b, alpha)) {
+    } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
         lua_pushnil(L);
         lua_pushfstring(L, R"(window/label "%s" not found)", windowName.toUtf8().constData());
         return 2;
@@ -4469,7 +4469,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
     } else {
         windowName = WINDOW_NAME(L, 1);
-        size = mudlet::self()->calcFontSize(&host, windowName);
+        size = host.calcFontSize(windowName);
     }
 
     if (size.width() <= -1) {
@@ -4550,7 +4550,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     QString name = lua_tostring(L, 2);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->setBackgroundImage(&host, text, name);
+    host.setBackgroundImage(text, name);
 
     return 0;
 }
@@ -4602,7 +4602,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L){
     }
     func = luaL_ref(L, LUA_REGISTRYINDEX);
     bool lua_result = false;
-    lua_result = mudlet::self()->setCmdLineAction(&host, name, func);
+    lua_result = host.setCmdLineAction(name, func);
 
     if (lua_result) {
         lua_pushboolean(L, true);
@@ -4630,7 +4630,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     }
 
     bool lua_result = false;
-    lua_result = mudlet::self()->resetCmdLineAction(&host, name);
+    lua_result = host.resetCmdLineAction(name);
     if (lua_result) {
         lua_pushboolean(L, true);
         return 1;
@@ -4699,19 +4699,19 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
-        lua_result = mudlet::self()->setLabelClickCallback(&host, labelName, func);
+        lua_result = host.setLabelClickCallback(labelName, func);
     else if (funcName == QStringLiteral("setLabelDoubleClickCallback"))
-        lua_result = mudlet::self()->setLabelDoubleClickCallback(&host, labelName, func);
+        lua_result = host.setLabelDoubleClickCallback(labelName, func);
     else if (funcName == QStringLiteral("setLabelReleaseCallback"))
-        lua_result = mudlet::self()->setLabelReleaseCallback(&host, labelName, func);
+        lua_result = host.setLabelReleaseCallback(labelName, func);
     else if (funcName == QStringLiteral("setLabelMoveCallback"))
-        lua_result = mudlet::self()->setLabelMoveCallback(&host, labelName, func);
+        lua_result = host.setLabelMoveCallback(labelName, func);
     else if (funcName == QStringLiteral("setLabelWheelCallback"))
-        lua_result = mudlet::self()->setLabelWheelCallback(&host, labelName, func);
+        lua_result = host.setLabelWheelCallback(labelName, func);
     else if (funcName == QStringLiteral("setLabelOnEnter"))
-        lua_result = mudlet::self()->setLabelOnEnter(&host, labelName, func);
+        lua_result = host.setLabelOnEnter(labelName, func);
     else if (funcName == QStringLiteral("setLabelOnLeave"))
-        lua_result = mudlet::self()->setLabelOnLeave(&host, labelName, func);
+        lua_result = host.setLabelOnLeave(labelName, func);
     else {
         lua_pushnil(L);
         lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
@@ -4964,7 +4964,7 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
     QString text = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, mudlet::self()->showWindow(&host, text));
+    lua_pushboolean(L, host.showWindow(text));
     return 1;
 }
 
@@ -6114,7 +6114,7 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     QString text = lua_tostring(L, 2);
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->echoWindow(&host, windowName, text);
+    host.echoWindow(windowName, text);
     return 0;
 }
 
@@ -6166,7 +6166,7 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
     styleSheet = lua_tostring(L, 1);
 
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, mudlet::self()->setProfileStyleSheet(&host, styleSheet));
+    lua_pushboolean(L, host.setProfileStyleSheet(styleSheet));
     return 1;
 }
 
@@ -11400,7 +11400,7 @@ int TLuaInterpreter::Echo(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        if (mudlet::self()->echoWindow(&host, consoleName, displayText)) {
+        if (host.echoWindow(consoleName, displayText)) {
             lua_pushboolean(L, true);
             return 1;
         } else {
@@ -11604,7 +11604,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
     }
     QString windowName = WINDOW_NAME(L, 1);
     Host& host = getHostFromLua(L);
-    mudlet::self()->pasteWindow(&host, windowName);
+    host.pasteWindow(windowName);
     return 0;
 }
 
