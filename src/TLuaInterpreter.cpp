@@ -4778,7 +4778,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     int n = lua_gettop(L);
     int s = 0;
 
-    QString windowName = WINDOW_NAME(L, +s);
+    QString windowName = WINDOW_NAME(L, ++s);
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     if (!lua_isnumber(L, ++s)) {
