@@ -61,12 +61,16 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
+#include <QMediaPlayer>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QTableWidget>
 #include <QTextStream>
+#include <QTimer>
 #include <QToolBar>
+#include <QToolButton>
 #include <QVariantHash>
 #include <QRandomGenerator>
 #include <zip.h>
