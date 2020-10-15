@@ -3334,7 +3334,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     Host& host = getHostFromLua(L);
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
 
-    if (auto [success, message] = mudlet::self()->openWindow(&host, name, loadLayout, autoDock, area.toLower()); !success) {
+    if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -3492,7 +3492,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     int height = lua_tonumber(L, counter);
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->createMiniConsole(&host, windowName, name, x, y, width, height); !success) {
+    if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -3580,7 +3580,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->createLabel(&host, windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         lua_pushboolean(L, false);
@@ -3646,7 +3646,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->createLabel(&host, windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
         lua_pushboolean(L, false);
@@ -17162,7 +17162,7 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    mudlet::self()->setClickthrough(&host, windowName, true);
+    host.setClickthrough(windowName, true);
     return 0;
 }
 
@@ -17173,7 +17173,7 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    mudlet::self()->setClickthrough(&host, windowName, false);
+    host.setClickthrough(windowName, false);
     return 0;
 }
 

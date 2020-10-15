@@ -29,6 +29,7 @@
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMedia.h"
@@ -2633,3 +2634,192 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
         return qMakePair(false, failMessage);
     }
 }
+
+std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    if (name.isEmpty()) {
+        return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
+    }
+
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
+    }
+
+    auto hostName(getName());
+    auto console = mpConsole->mSubConsoleMap.value(name);
+    auto dockwidget = mpConsole->mDockWidgetMap.value(name);
+
+    if (!console && !dockwidget) {
+        // The name is not used in either the QMaps of all user created TConsole
+        // or TDockWidget instances - so we can make a NEW one:
+        dockwidget = new TDockWidget(this, name);
+        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
+        dockwidget->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
+        dockwidget->setWindowTitle(name);
+        mpConsole->mDockWidgetMap.insert(name, dockwidget);
+        // It wasn't obvious but the parent passed to the TConsole constructor
+        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+        console = new TConsole(this, TConsole::UserWindow, dockwidget->widget());
+        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Without this the TConsole instance inside the TDockWidget will be
+        // left being called the default value of "main":
+        console->mConsoleName = name;
+        console->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setTConsole(console);
+        console->layerCommandLine->hide();
+        console->mpScrollBar->hide();
+        mpConsole->mSubConsoleMap.insert(name, console);
+        dockwidget->setStyleSheet(mProfileStyleSheet);
+        mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+        console->setFontSize(10);
+    }
+    if (!console || !dockwidget) {
+        return {false, QStringLiteral("cannot create userwindow \"%1\": name collision").arg(name)};
+    }
+
+    // The name is used in BOTH the QMaps of all user created TConsole
+    // and TDockWidget instances - so we HAVE an existing user window,
+    // Lets confirm this:
+    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+    dockwidget->update();
+
+    if (loadLayout && !dockwidget->hasLayoutAlready) {
+        mudlet::self()->loadWindowLayout();
+        dockwidget->hasLayoutAlready = true;
+    }
+    dockwidget->show();
+
+    if (!autoDock) {
+        dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
+    } else {
+        dockwidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+    }
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!dockwidget->isFloating()) {
+            dockwidget->setFloating(true);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            dockwidget->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    auto pW = mpConsole->mDockWidgetMap.value(name);
+    if (!pC) {
+        pC = mpConsole->createMiniConsole(windowname, name, x, y, width, height);
+        if (pC) {
+            pC->setFontSize(12);
+            return {true, QString()};
+        }
+    } else if (pC) {
+        // CHECK: The absence of an explict return statement in this block means that
+        // reusing an existing mini console causes the lua function to seem to
+        // fail - is this as per Wiki?
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+        }
+    }
+    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
+}
+
+std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        pL = mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
+        if (pL) {
+            return {true, QString()};
+        }
+    } else if (pL) {
+        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+    } else if (pC) {
+        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
+    }
+    return {false, QString()};
+
+}
+
+bool Host::setClickthrough(const QString& name, bool clickthrough)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->setClickThrough(clickthrough);
+        return true;
+    }
+
+    return false;
+}
+
+void Host::hideMudletsVariables()
+{
+    auto varUnit = getLuaInterface()->getVarUnit();
+
+    // remember which users' saved variables shouldn't be hidden
+    QVector<QString> unhideSavedVars;
+    for (const auto& variable : qAsConst(varUnit->savedVars)) {
+        if (!varUnit->isHidden(variable)) {
+            unhideSavedVars.append(variable);
+        }
+    }
+
+    // mark all currently loaded Lua variables as hidden
+    // this covers entirety of Mudlets API (good!) and but unfortunately
+    // user's saved variables as well
+    LuaInterface* lI = getLuaInterface();
+    lI->getVars(true);
+
+    // unhide user's saved variables
+    for (const auto& variable : qAsConst(unhideSavedVars)) {
+        varUnit->removeHidden(variable);
+    }
+}
+

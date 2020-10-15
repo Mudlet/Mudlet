@@ -2002,156 +2002,6 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
     return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
 }
 
-std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout, bool autoDock, const QString& area)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return {false, QString()};
-    }
-
-    if (name.isEmpty()) {
-        return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
-    }
-
-    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
-    auto pL = pHost->mpConsole->mLabelMap.value(name);
-    if (pL) {
-        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
-    }
-
-    auto hostName(pHost->getName());
-    auto console = pHost->mpConsole->mSubConsoleMap.value(name);
-    auto dockwidget = pHost->mpConsole->mDockWidgetMap.value(name);
-
-    if (!console && !dockwidget) {
-        // The name is not used in either the QMaps of all user created TConsole
-        // or TDockWidget instances - so we can make a NEW one:
-        dockwidget = new TDockWidget(pHost, name);
-        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
-        dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        dockwidget->setWindowTitle(name);
-        pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
-        // It wasn't obvious but the parent passed to the TConsole constructor
-        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(pHost, TConsole::UserWindow, dockwidget->widget());
-        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
-        // Without this the TConsole instance inside the TDockWidget will be
-        // left being called the default value of "main":
-        console->mConsoleName = name;
-        console->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setTConsole(console);
-        console->layerCommandLine->hide();
-        console->mpScrollBar->hide();
-        pHost->mpConsole->mSubConsoleMap.insert(name, console);
-        dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
-        addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        console->setFontSize(10);
-    }
-
-    if (!console || !dockwidget) {
-        return {false, QStringLiteral("cannot create userwindow \"%1\"").arg(name)};
-    }
-
-    // The name is used in BOTH the QMaps of all user created TConsole
-    // and TDockWidget instances - so we HAVE an existing user window,
-    // Lets confirm this:
-    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-    dockwidget->update();
-
-    if (loadLayout && !dockwidget->hasLayoutAlready) {
-        loadWindowLayout();
-        dockwidget->hasLayoutAlready = true;
-    }
-    dockwidget->show();
-
-    if (!autoDock) {
-        dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
-    } else {
-        dockwidget->setAllowedAreas(Qt::AllDockWidgetAreas);
-    }
-
-    if (area.isEmpty()) {
-        return {true, QString()};
-    }
-
-    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
-        if (!dockwidget->isFloating()) {
-            dockwidget->setFloating(true);
-        }
-        return {true, QString()};
-    } else {
-        if (area == QLatin1String("r") || area == QLatin1String("right")) {
-            dockwidget->setFloating(false);
-            addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
-            dockwidget->setFloating(false);
-            addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
-            dockwidget->setFloating(false);
-            addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-            dockwidget->setFloating(false);
-            addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
-            return {true, QString()};
-        } else {
-            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
-        }
-    }
-}
-
-std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return {false, QString()};
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
-    if (!pC) {
-        pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
-        if (pC) {
-            pC->setFontSize(12);
-            return {true, QString()};
-        }
-    } else if (pC) {
-        // CHECK: The absence of an explict return statement in this block means that
-        // reusing an existing mini console causes the lua function to seem to
-        // fail - is this as per Wiki?
-        // This part was causing problems with UserWindows
-        if (!pW) {
-            pC->resize(width, height);
-            pC->move(x, y);
-            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
-        }
-    }
-    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
-}
-
-std::pair<bool, QString> mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return {false, QString()};
-    }
-
-    auto pL = pHost->mpConsole->mLabelMap.value(name);
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (!pL && !pC) {
-        pL = pHost->mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
-        if (pL) {
-            return {true, QString()};
-        }
-    } else if (pL) {
-        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
-    } else if (pC) {
-        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
-    }
-    return {false, QString()};
-
-}
-
 bool mudlet::createBuffer(Host* pHost, const QString& name)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -3763,30 +3613,6 @@ void mudlet::processEventLoopHack_timerRun()
     pH->mpConsole->refresh();
 }
 
-void mudlet::hideMudletsVariables(Host* pHost)
-{
-    auto varUnit = pHost->getLuaInterface()->getVarUnit();
-
-    // remember which users' saved variables shouldn't be hidden
-    QVector<QString> unhideSavedVars;
-    for (const auto& variable : qAsConst(varUnit->savedVars)) {
-        if (!varUnit->isHidden(variable)) {
-            unhideSavedVars.append(variable);
-        }
-    }
-
-    // mark all currently loaded Lua variables as hidden
-    // this covers entirety of Mudlets API (good!) and but unfortunately
-    // user's saved variables as well
-    LuaInterface* lI = pHost->getLuaInterface();
-    lI->getVars(true);
-
-    // unhide user's saved variables
-    for (const auto& variable : qAsConst(unhideSavedVars)) {
-        varUnit->removeHidden(variable);
-    }
-}
-
 void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 {
     Host* pHost = getHostManager().getHost(profile);
@@ -3797,7 +3623,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     addConsoleForNewHost(pHost);
     pHost->mBlockScriptCompile = false;
     pHost->mLuaInterpreter.loadGlobal();
-    hideMudletsVariables(pHost);
+    pHost->hideMudletsVariables();
 
     pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
@@ -5007,22 +4833,6 @@ QString mudlet::autodetectPreferredLanguage()
 
     return QStringLiteral("en_US");
 }
-
-bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pL = pHost->mpConsole->mLabelMap.value(name);
-    if (pL) {
-        pL->setClickThrough(clickthrough);
-        return true;
-    }
-
-    return false;
-}
-
 
 // Returns false on significant failure (where the caller will have to bail out)
 bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned int>&gc, QStringList& wl)

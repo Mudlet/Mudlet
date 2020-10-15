@@ -144,10 +144,7 @@ public:
     void setToolbarLayoutUpdated(Host*, TToolBar*);
     void commitLayoutUpdates();
     QSize calcFontSize(Host* pHost, const QString& windowName);
-    std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
     bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
-    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
-    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool echoWindow(Host*, const QString&, const QString&);
     bool createBuffer(Host*, const QString&);
     bool showWindow(Host*, const QString&);
@@ -214,7 +211,6 @@ public:
     void stopSounds();
     void playSound(const QString &s, int);
     QStringList getAvailableFonts();
-    void hideMudletsVariables(Host *pHost);
     void updateMudletDiscordInvite();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
