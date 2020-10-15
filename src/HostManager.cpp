@@ -164,7 +164,7 @@ Host* HostManager::getHost(const QString& hostname)
     return pHost;
 }
 
-HostManager::Iter::Iter(const HostManager* mgr, bool top)   
+HostManager::Iter::Iter(HostManager* mgr, bool top)
 {
     if (top) {
         it = mgr->mHostPool.begin();
@@ -172,19 +172,25 @@ HostManager::Iter::Iter(const HostManager* mgr, bool top)
         it = mgr->mHostPool.end();
     }
 }
-    
-bool HostManager::Iter::operator!= (const Iter& other) const  
+
+bool HostManager::Iter::operator== (const Iter& other)
+{
+    return it == other.it;
+}
+
+bool HostManager::Iter::operator!= (const Iter& other)
 {
     return it != other.it;
 }
-                                  
+
 HostManager::Iter& HostManager::Iter::operator++()
 {
     it++;
-}                             
+    return *this;
+}
 
-QSharedPointer<Host> HostManager::Iter::operator* () const  
+QSharedPointer<Host> HostManager::Iter::operator*()
 {
     return *it;
 }
-                                  
+
