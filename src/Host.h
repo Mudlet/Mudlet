@@ -333,6 +333,10 @@ public:
     QPointer<TConsole> findConsole(QString name);
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+    std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    bool setClickthrough(const QString& name, bool clickthrough);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
