@@ -5304,7 +5304,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
         // replay already in progess in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
-        // loadRawFile happens at the same time as a file was selected for a
+        // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
         // profile - but the window for this is likely to be a fraction of a
         // second...

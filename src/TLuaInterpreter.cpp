@@ -1175,8 +1175,8 @@ int TLuaInterpreter::getLines(lua_State* L)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay - Yes, a different name!
-int TLuaInterpreter::loadRawFile(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
+int TLuaInterpreter::loadReplay(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "loadReplay: bad argument #1 type (replay file name as string expected, got %s!)",
@@ -16321,8 +16321,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);
     lua_register(pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar);
     lua_register(pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar);
-    lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadRawFile);
-    lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadRawFile);
+    lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadReplay);
+    lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);
     lua_register(pGlobalLua, "setOverline", TLuaInterpreter::setOverline);

@@ -585,6 +585,8 @@ if false then
 
 
   --- <b><u>TODO</u></b>  loadRawFile - TLuaInterpreter::loadRawFile
+  --- in TLuaInterpreter, loadRawFile is established as an alias to
+  --- loadReplay. We override the old name to do nothing instead.
   function loadRawFile()
   end
 
