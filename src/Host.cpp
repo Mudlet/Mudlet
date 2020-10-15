@@ -503,7 +503,7 @@ void Host::slot_reloadModules()
     updateModuleZips();
 
     //synchronize modules across sessions
-    for (auto otherHost: mudlet::self()->getHostManager()) {
+    for (auto otherHost : mudlet::self()->getHostManager()) {
         if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }

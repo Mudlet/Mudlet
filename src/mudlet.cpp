@@ -1609,7 +1609,7 @@ void mudlet::slot_tab_changed(int tabID)
         }
     } else {
         mpCurrentActiveHost = nullptr;
-        for (auto pH: mHostManager) {
+        for (auto pH : mHostManager) {
             if (pH->mpConsole) {
                 mpCurrentActiveHost = &*pH;
                 break;
@@ -1965,7 +1965,7 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         auto pC = host->mpConsole;
         if (!pC) {
             continue;
@@ -1986,14 +1986,14 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
 
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         host->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
@@ -2006,7 +2006,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         auto console = host->mpConsole;
         if (!console) {
             continue;
@@ -2043,7 +2043,7 @@ void mudlet::forceClose()
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         if (host->currentlySavingProfile()) {
             host->waitForProfileSave();
         }
@@ -2946,7 +2946,7 @@ void mudlet::slot_multi_view(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    for (auto host: mHostManager) {
+    for (auto host : mHostManager) {
         auto console = host->mpConsole;
         if (!console) {
             continue;
