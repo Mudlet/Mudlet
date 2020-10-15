@@ -567,7 +567,6 @@ private:
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
 
-    QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
     static QPointer<mudlet> _self;

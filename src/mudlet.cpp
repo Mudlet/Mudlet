@@ -1563,12 +1563,8 @@ void mudlet::slot_close_profile_requested(int tab)
     migrateDebugConsole(pH);
 
     pH->mpConsole->close();
-    if (!mTabMap.contains(pH->getName())) {
-        return;
-    }
 
     mpTabBar->removeTab(tab);
-    mTabMap.remove(pH->getName());
     // PLACEMARKER: Host destruction (1) - from close button on tab bar
     // Unfortunately the spaghetti nature of the code means that the profile
     // is also (maybe) saved (or not) in the TConsole::close() call prior to
@@ -1584,7 +1580,9 @@ void mudlet::slot_close_profile_requested(int tab)
 
 void mudlet::slot_tab_changed(int tabID)
 {
-    if ((tabID != -1) && (!mTabMap.contains(mpTabBar->tabData(tabID).toString()))) {
+    QString host = mpTabBar->tabData(tabID).toString();
+    auto pHost = mHostManager.getHost(host);
+    if (!pHost || !pHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
@@ -1595,46 +1593,45 @@ void mudlet::slot_tab_changed(int tabID)
     mpTabBar->setTabItalic(tabID, false);
     mpTabBar->setTabUnderline(tabID, false);
 
-    if (mpCurrentActiveHost->mpConsole) {
+    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost->mpConsole->hide();
-        QString host = mpTabBar->tabData(tabID).toString();
-        if (mTabMap.contains(host)) {
-            mpCurrentActiveHost = mTabMap[host]->mpHost;
+        if (pHost) {
+            mpCurrentActiveHost = &*pHost;
         } else {
             mpCurrentActiveHost = nullptr;
             return;
         }
     } else {
-        if (!mTabMap.empty()) {
-            mpCurrentActiveHost = mTabMap.begin().value()->mpHost;
-        } else {
-            mpCurrentActiveHost = nullptr;
+        mpCurrentActiveHost = nullptr;
+        for (auto pH: mHostManager) {
+            if (pH->mpConsole) {
+                mpCurrentActiveHost = &*pH;
+                break;
+            }
+        }
+        if (!mpCurrentActiveHost) {
             return;
         }
     }
 
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-    if (mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost->mpConsole->show();
-        mpCurrentActiveHost->mpConsole->repaint();
-        mpCurrentActiveHost->mpConsole->refresh();
-        mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-        mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-
-        int x = mpCurrentActiveHost->mpConsole->width();
-        int y = mpCurrentActiveHost->mpConsole->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
-        mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-        mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-        menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    } else {
+    if (!mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
     }
+    mpCurrentActiveHost->mpConsole->show();
+    mpCurrentActiveHost->mpConsole->repaint();
+    mpCurrentActiveHost->mpConsole->refresh();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+
+    int x = mpCurrentActiveHost->mpConsole->width();
+    int y = mpCurrentActiveHost->mpConsole->height();
+    QSize s = QSize(x, y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
     // update the window title for the currently selected profile
     setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
@@ -1696,7 +1693,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
      *    a shortcut key for switching to that tab." in 'QTabBar' documentation"
      */
     mpTabBar->setTabData(newTabID, tabName);
-    mTabMap[pH->getName()] = pConsole;
 
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
