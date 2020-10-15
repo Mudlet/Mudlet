@@ -1411,17 +1411,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-        }
+        host.mpMap->update();
     }
     return 0;
 }

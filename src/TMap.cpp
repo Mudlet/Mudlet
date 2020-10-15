@@ -2544,6 +2544,11 @@ QString TMap::getMmpMapLocation() const
     return mMmpMapLocation;
 }
 
+bool TMap::getRoomNamesPresent()
+{
+    return mUserData.contains(ROOM_UI_SHOWNAME);
+}
+
 bool TMap::getRoomNamesShown()
 {
     return getUserDataBool(mUserData, ROOM_UI_SHOWNAME, false);
@@ -2552,5 +2557,23 @@ bool TMap::getRoomNamesShown()
 void TMap::setRoomNamesShown(bool shown)
 {
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
+}
+
+void TMap::update()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (mpM) {
+        mpM->update();
+    }
+#endif
+    if (mpMapper) {
+        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
+        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
+
+        if (mpMapper->mp2dMap) {
+            mpMapper->mp2dMap->mNewMoveAction = true;
+            mpMapper->mp2dMap->update();
+        }
+    }
 }
 

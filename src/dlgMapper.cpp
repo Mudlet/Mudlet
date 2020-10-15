@@ -81,6 +81,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
+    showRoomNames->setVisible(mpMap->getRoomNamesPresent());
     showRoomNames->setChecked(mpMap->getRoomNamesShown());
 
     panel->setVisible(mpHost->mShowPanel);
