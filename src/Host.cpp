@@ -196,7 +196,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, hostname, id)
-, mDlgIRC(nullptr)
+, mpDlgIRC(nullptr)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -2872,10 +2872,10 @@ void Host::close()
         mpNotePad = nullptr;
     }
     // close IRC client window
-    if (mDlgIRC) {
-        mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mDlgIRC->deleteLater();
-        mDlgIRC.reset(nullptr);
+    if (mpDlgIRC) {
+        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        mpDlgIRC->deleteLater();
+        mpDlgIRC.reset(nullptr);
     }
     if (mpConsole) {
         mpConsole->close();
@@ -3401,8 +3401,8 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     mpConsole->setStyleSheet(styleSheet);
     mpEditorDialog->setStyleSheet(styleSheet);
 
-    if (mDlgProfilePreferences) {
-        mDlgProfilePreferences->setStyleSheet(styleSheet);
+    if (mpDlgProfilePreferences) {
+        mpDlgProfilePreferences->setStyleSheet(styleSheet);
     }
     if (mpNotePad) {
         mpNotePad->setStyleSheet(styleSheet);

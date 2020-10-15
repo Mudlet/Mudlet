@@ -2515,8 +2515,8 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pHost->mDlgIRC) {
-                pHost->mDlgIRC->connection->setNickName(newIrcNick);
+            if (pHost->mpDlgIRC) {
+                pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
         }
 
@@ -2535,8 +2535,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pHost->mDlgIRC) {
-            pHost->mDlgIRC->ircRestart();
+        if (restartIrcClient && pHost->mpDlgIRC) {
+            pHost->mpDlgIRC->ircRestart();
         }
 
         setDisplayFont();
