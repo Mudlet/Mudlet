@@ -332,6 +332,8 @@ public:
     bool getCompactInputLine() const { return mCompactInputLine; }
     QPointer<TConsole> findConsole(QString name);
 
+    QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
+
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;

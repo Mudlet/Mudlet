@@ -5028,27 +5028,6 @@ bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough
     return false;
 }
 
-QPair<bool, QStringList> mudlet::getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo)
-{
-    if (!pHost || !pHost->mpConsole) {
-        QStringList failMessage;
-        failMessage << QStringLiteral("internal error: the Host class pointer or its pointer to the main TConsole was a nullptr - please report").arg(windowName);
-        return qMakePair(false, failMessage);
-    }
-
-    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
-        return qMakePair(true, pHost->mpConsole->getLines(lineFrom, lineTo));
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
-    if (pC) {
-        return qMakePair(true, pC->getLines(lineFrom, lineTo));
-    } else {
-        QStringList failMessage;
-        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
-        return qMakePair(false, failMessage);
-    }
-}
 
 // Returns false on significant failure (where the caller will have to bail out)
 bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned int>&gc, QStringList& wl)

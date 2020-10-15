@@ -2609,3 +2609,24 @@ QPointer<TConsole> Host::findConsole(QString name)
     }
 }
 
+QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lineFrom, const int lineTo)
+{
+    if (!mpConsole) {
+        QStringList failMessage;
+        failMessage << QStringLiteral("internal error: no main TConsole - please report").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+
+    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
+        return qMakePair(true, mpConsole->getLines(lineFrom, lineTo));
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(windowName);
+    if (pC) {
+        return qMakePair(true, pC->getLines(lineFrom, lineTo));
+    } else {
+        QStringList failMessage;
+        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+}
