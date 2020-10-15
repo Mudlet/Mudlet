@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TCommandLine.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -2631,7 +2632,7 @@ void Host::setCompactInputLine(const bool state)
 QPointer<TConsole> Host::findConsole(QString name)
 {
     if (name.isEmpty() or name == QStringLiteral("main")) {
-        return mpConsole;
+        return &*mpConsole;
     } else {
         return mpConsole->mSubConsoleMap.value(name);
     }

@@ -27,6 +27,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
