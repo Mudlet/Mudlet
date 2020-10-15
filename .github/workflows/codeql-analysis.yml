@@ -74,7 +74,7 @@ jobs:
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v2
       env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies      
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
