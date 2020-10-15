@@ -36,6 +36,7 @@
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
+#include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -3522,3 +3523,60 @@ void Host::createMapper(bool loadDefaultMap)
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(mapOpenEvent);
 }
+
+void Host::setDockLayoutUpdated(const QString& name)
+{
+    if (!mpConsole) {
+        return;
+    }
+
+    auto pD = mpConsole->mDockWidgetMap.value(name);
+    if (Q_LIKELY(pD) && !mDockLayoutChanges.contains(name)) {
+        pD->setProperty("layoutChanged", QVariant(true));
+        mDockLayoutChanges.append(name);
+    }
+}
+
+void Host::setToolbarLayoutUpdated(TToolBar* pTB)
+{
+    if (!mToolbarLayoutChanges.contains(pTB)) {
+        pTB->setProperty("layoutChanged", QVariant(true));
+        mToolbarLayoutChanges.append(pTB);
+    }
+}
+
+bool Host::commitLayoutUpdates(bool flush)
+{
+    bool updated = false;
+    if (mpConsole && !flush) {
+        // commit changes (or rather clear the layout changed flags) for dockwidget
+        // consoles (user windows)
+        for (auto dockedConsoleName : mDockLayoutChanges) {
+            auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
+            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
+                pD->setProperty("layoutChanged", QVariant(false));
+                updated = true;
+            }
+        }
+    }
+    mDockLayoutChanges.clear();
+
+    // commit changes (or rather clear the layout changed flags) for
+    // dockable/floating toolbars across all profiles:
+    if (!flush) {
+        for (auto pToolBar : mToolbarLayoutChanges) {
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+            } else if (pToolBar->property("layoutChanged").toBool()) {
+                pToolBar->setProperty("layoutChanged", QVariant(false));
+                updated = true;
+            }
+        }
+    }
+    mToolbarLayoutChanges.clear();
+    return updated;
+}
+

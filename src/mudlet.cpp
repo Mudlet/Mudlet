@@ -1901,68 +1901,21 @@ bool mudlet::loadWindowLayout()
 
             bool rv = restoreState(layoutData);
 
+            commitLayoutUpdates(true);
             mIsLoadingLayout = false;
+
             return rv;
         }
     }
     return false;
 }
 
-void mudlet::setDockLayoutUpdated(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return;
-    }
-
-    auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
-    if (Q_LIKELY(pD) && !pHost->mDockLayoutChanges.contains(name)) {
-        pD->setProperty("layoutChanged", QVariant(true));
-        pHost->mDockLayoutChanges.append(name);
-        mHasSavedLayout = false;
-    }
-}
-
-void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar* pTB)
-{
-    if (!pHost) {
-        return;
-    }
-
-    // Using the operator[] will instantiate an empty QList<TToolBar*> if there
-    // is not already one in existance for that pHost:
-    if (!pHost->mToolbarLayoutChanges.contains(pTB)) {
-        pTB->setProperty("layoutChanged", QVariant(true));
-        pHost->mToolbarLayoutChanges.append(pTB);
-        mHasSavedLayout = false;
-    }
-}
-
-void mudlet::commitLayoutUpdates()
+void mudlet::commitLayoutUpdates(bool flush)
 {
     for (auto host : mHostManager) {
-        // commit changes (or rather clear the layout changed flags) for dockwidget
-        // consoles (user windows)
-        for (auto dockedConsoleName : host->mDockLayoutChanges) {
-            auto pD = host->mpConsole->mDockWidgetMap.value(dockedConsoleName);
-            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
-                pD->setProperty("layoutChanged", QVariant(false));
-            }
+        if (host->commitLayoutUpdates(flush)) {
+            mHasSavedLayout = false;
         }
-        host->mDockLayoutChanges.clear();
-
-        // commit changes (or rather clear the layout changed flags) for
-        // dockable/floating toolbars across all profiles:
-        for (auto pToolBar : host->mToolbarLayoutChanges) {
-            // Under some circumstances there is NOT a
-            // pToolBar->property("layoutChanged") and examining that
-            // non-existant variant to see if it was true or false causes seg. faults!
-            if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
-                qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
-            } else if (pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
-            }
-        }
-        host->mToolbarLayoutChanges.clear();
     }
 }
 
