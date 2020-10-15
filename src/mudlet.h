@@ -220,8 +220,6 @@ public:
     bool mIsLoadingLayout;
     static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
-    QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
-    QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;

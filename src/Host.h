@@ -41,6 +41,7 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
+#include <QList>
 #include <QPointer>
 #include <QTextStream>
 #include "post_guard.h"
@@ -596,6 +597,8 @@ public:
     dlgTriggerEditor::SearchOptions mSearchOptions;
     QScopedPointer<dlgIRC> mpDlgIRC;
     QScopedPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    QList<QString> mDockLayoutChanges;
+    QList<TToolBar*> mToolbarLayoutChanges;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
