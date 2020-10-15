@@ -2624,36 +2624,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     }
 
     for (auto host: mHostManager) {
-        auto pC = host->mpConsole;
-        if (!pC) {
-            continue;
-        }
-        // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-        if (pC->mpHost->mSslTsl) {
-            pC->mpHost->mTelnet.abortConnection();
-        } else {
-            pC->mpHost->mTelnet.disconnectIt();
-        }
-
-        // close script-editor
-        if (pC->mpHost->mpEditorDialog) {
-            pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-            pC->mpHost->mpEditorDialog->close();
-        }
-        if (pC->mpHost->mpNotePad) {
-            pC->mpHost->mpNotePad->save();
-            pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-            pC->mpHost->mpNotePad->close();
-            pC->mpHost->mpNotePad = nullptr;
-        }
-        // close IRC client window if it is open.
-        if (pC->mpHost->mDlgIRC) {
-            pC->mpHost->mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-            pC->mpHost->mDlgIRC->deleteLater();
-        }
-
-        // close console
-        pC->close();
+        host->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
