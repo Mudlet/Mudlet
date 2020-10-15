@@ -1209,7 +1209,7 @@ int TLuaInterpreter::getLines(lua_State* L)
     int lineTo = lua_tointeger(L, s);
 
     Host& host = getHostFromLua(L);
-    QPair<bool, QStringList> result = mudlet::self()->getLines(&host, windowName, lineFrom, lineTo);
+    QPair<bool, QStringList> result = host.getLines(windowName, lineFrom, lineTo);
     if (!result.first) {
         // Only one QString in .second - the error message
         lua_pushnil(L);

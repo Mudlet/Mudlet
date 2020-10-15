@@ -394,7 +394,6 @@ public:
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
-    QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
     bool migratePasswordsToProfileStorage();
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
