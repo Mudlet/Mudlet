@@ -387,7 +387,7 @@ public:
     static int getButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
-    static int loadRawFile(lua_State*);
+    static int loadReplay(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);

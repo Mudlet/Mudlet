@@ -34,6 +34,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -1672,7 +1673,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -4282,7 +4283,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -5303,7 +5304,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
         // replay already in progess in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
-        // loadRawFile happens at the same time as a file was selected for a
+        // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
         // profile - but the window for this is likely to be a fraction of a
         // second...
