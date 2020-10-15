@@ -31,12 +31,15 @@
 #include "TCommandLine.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
+#include "VarUnit.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgNotepad.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
 
@@ -2820,6 +2823,40 @@ void Host::hideMudletsVariables()
     // unhide user's saved variables
     for (const auto& variable : qAsConst(unhideSavedVars)) {
         varUnit->removeHidden(variable);
+    }
+}
+
+void Host::close()
+{
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    if (mSslTsl) {
+        mTelnet.abortConnection();
+    } else {
+        mTelnet.disconnectIt();
+    }
+
+    // close script editor
+    if (mpEditorDialog) {
+        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        mpEditorDialog->close();
+        mpEditorDialog = nullptr;
+    }
+    // close notepad
+    if (mpNotePad) {
+        mpNotePad->save();
+        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        mpNotePad->close();
+        mpNotePad = nullptr;
+    }
+    // close IRC client window
+    if (mDlgIRC) {
+        mDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        mDlgIRC->deleteLater();
+        mDlgIRC.reset(nullptr);
+    }
+    if (mpConsole) {
+        mpConsole->close();
+        mpConsole = nullptr;
     }
 }
 
