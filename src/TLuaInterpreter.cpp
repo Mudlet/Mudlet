@@ -7409,7 +7409,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     int triggerID;
-    int expirationCount = -1;
+    int expiryCount = -1;
 
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #1 type (exact match pattern as string expected, got %s!)", luaL_typename(L, 1));
@@ -7418,19 +7418,22 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
     QString exactMatchPattern{lua_tostring(L, 1)};
 
     if (lua_isnumber(L, 3)) {
-        expirationCount = lua_tonumber(L, 3);
+        expiryCount = lua_tonumber(L, 3);
 
-        if (expirationCount < 1) {
+        if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expirationCount);
+            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 3)) {
+        lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(lua_tostring(L, 2)), expirationCount);
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(lua_tostring(L, 2)), expiryCount);
     } else if (lua_isfunction(L, 2)) {
-        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expirationCount);
+        triggerID = pLuaInterpreter->startTempExactMatchTrigger(exactMatchPattern, QString(), expiryCount);
 
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
@@ -7460,14 +7463,17 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     }
     QString pattern{lua_tostring(L, 1)};
 
-        if (lua_isnumber(L, 3)) {
+    if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 3)) {
+        lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 2)) {
@@ -7509,9 +7515,12 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 3)) {
+        lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 2)) {
@@ -7550,6 +7559,9 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 2)) {
+        lua_pushfstring(L, "tempTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 1)) {
@@ -7665,6 +7677,9 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 4)) {
+        lua_pushfstring(L, "tempTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 3)) {
@@ -7691,6 +7706,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 // colour or TTrigger::scmIgnored ignore; it is anticipated that additional
 // special values less than zero may be added to detect other types of text (or
 // for a 16M colour value where the components have to be given)
+// Note that this function has four arguments, of which the *second* may be omitted. :-/
 // Documentation: https://wiki.mudlet.org/w/Manual:Mudlet_Object_Functions#tempAnsiColorTrigger
 int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
 {
@@ -7700,65 +7716,93 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     QString code;
     int ansiFgColor = TTrigger::scmIgnored;
     int ansiBgColor = TTrigger::scmIgnored;
-    int value;
+    int s = 0;
 
-    if (lua_isstring(L, 1)) {
-        code = lua_tostring(L, 1);
-    } else if (lua_isfunction(L, 1)) {
-        // leave code as a null QString()
-    } else {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
         return lua_error(L);
     }
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #2 type (foreground color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
-                        TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    value = lua_tointeger(L, 2);
-    // At present we limit the range to (Trigger::scmIgnored),
-    // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
-    // extend it to other "coded" values for locally generated textual
-    // content
-    if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "invalid ANSI color number %d, currently only %d (ignore foreground color), %d (default foregroud colour) or 0 to 255 recognised",
-                        value, TTrigger::scmIgnored, TTrigger::scmDefault);
-    } else if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used (to ignore the foreground color) if the background color is ommitted",
-                        value);
-    } else {
-        ansiFgColor = value;
-    }
-
-    if (lua_gettop(L) >= 3) {
-        if (!lua_isnumber(L, 3)) {
-            lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (background color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
-                            TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 3));
-            return lua_error(L);
+    {   // separate block so that "value" is not scoped to the whole function
+        int value = lua_tointeger(L, s);
+        if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used (to ignore the foreground color) if the background color is ommitted",
+                            value);
+        } else {
+            // At present we limit the range to (Trigger::scmIgnored),
+            // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
+            // extend it to other "coded" values for locally generated textual
+            // content
+            if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "bad argument #%d: invalid ANSI color number %d, only %d (ignore foreground color), %d (default foregroud color) or 0 to 255 recognised",
+                                s, value, TTrigger::scmIgnored, TTrigger::scmDefault);
+                return 2;
+            } else if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "invalid ANSI color number %d, you cannot ignore both foreground and background color (omitted)",
+                                value);
+                return 2;
+            } else {
+                ansiFgColor = value;
+            }
         }
-        value = lua_tointeger(L, 3);
+    }
+
+    // s=1 at this point. If top=4 the next argument must be the BG color number,
+    // otherwise it may have been omitted.
+    if (lua_gettop(L) < s+3 && !lua_isnumber(L, s+1)) {
+        // BG color omitted, skip this part
+    } else if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (background color as ANSI Color number {%d = ignore foreground color, %d = default color, 0 to 255 ANSI color} expected, got %s!)",
+                        s, TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        int value = lua_tointeger(L, s);
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, currently only %d (ignore background color), %d (default background color) or 0 to 255 recognised",
+            lua_pushfstring(L, "invalid ANSI color number %d, only %d (ignore background color), %d (default background color) or 0 to 255 recognised",
                             value, TTrigger::scmIgnored, TTrigger::scmDefault);
+            return 2;
         } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
             lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used for the background color (to ignore that) if the foreground is also set to that value to also be ignored",
+            lua_pushfstring(L, "invalid ANSI color number %d, you cannot ignore both forground and background color",
                             value);
+            return 2;
         } else {
             ansiBgColor = value;
         }
     }
 
-    int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code);
+    if (lua_isstring(L, ++s)) {
+        code = QString::fromUtf8(lua_tostring(L, s));
+    } else if (lua_isfunction(L, s)) {
+        // leave code as a null QString(), see below
+    } else {
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d type (code to run as a string or a function expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int expiryCount = -1;
+    if (lua_isnumber(L, ++s)) {
+        expiryCount = lua_tonumber(L, s);
+        if (expiryCount < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
+            return 2;
+        }
+    } else if (!lua_isnil(L, ++s)) {
+        lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int triggerID = pLuaInterpreter->startTempColorTrigger(ansiFgColor, ansiBgColor, code, expiryCount);
     if (code.isNull()) {
         auto trigger = host.getTriggerUnit()->getTrigger(triggerID);
         trigger->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, trigger);
-        lua_pushvalue(L, 3);
+        lua_pushvalue(L, s-1);
         lua_settable(L, LUA_REGISTRYINDEX);
     }
 
@@ -7790,9 +7834,12 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 4)) {
+        lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 3)) {
@@ -7901,9 +7948,13 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 14);
 
         if (expiryCount < 1) {
-            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return lua_error(L);
+            lua_pushnil(L);
+            lua_pushfstring(L, "bad argument #14 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
+            return 2;
         }
+    } else if (!lua_isnil(L, 14)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
+        return lua_error(L);
     }
 
     QString pattern{lua_tostring(L, 2)};
@@ -8143,9 +8194,12 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             lua_pushnil(L);
-            lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
+    } else if (!lua_isnil(L, 3)) {
+        lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     }
 
     if (lua_isstring(L, 2)) {
