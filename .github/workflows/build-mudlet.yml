@@ -75,9 +75,8 @@ jobs:
     - name: (Windows) Install boost dependency
       if: runner.os == 'Windows'
       run: |
-        . ${{github.workspace}}\CI\appveyor.functions.ps1   
-        echo "I worked!"     
-        InstallBoost()
+        . ${{github.workspace}}\CI\appveyor.functions.ps1  
+        InstallBoost
       shell: powershell
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
