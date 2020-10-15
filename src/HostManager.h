@@ -41,13 +41,14 @@ class HostManager
     class Iter
     {
     public:
-        Iter(const HostManager* mgr, bool top);
-        bool operator!= (const Iter& other) const;
+        Iter(HostManager* mgr, bool top);
+        bool operator!= (const Iter& other);
+        bool operator== (const Iter& other);
         Iter& operator++();
-        QSharedPointer<Host> operator*() const;
+        QSharedPointer<Host> operator*();
         
     private:
-        HostMap::const_iterator it;
+        HostMap::iterator it;
     };
 
 
@@ -60,8 +61,8 @@ public:
     bool deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
-    Iter begin() const { return Iter(this, true); }
-    Iter end() const { return Iter(this, false); }
+    Iter begin() { return Iter(this, true); }
+    Iter end() { return Iter(this, false); }
 
 private:
     QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
