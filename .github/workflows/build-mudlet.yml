@@ -75,8 +75,8 @@ jobs:
     - name: (Windows) Install boost dependency
       if: runner.os == 'Windows'
       run: |
-        . ${{github.workspace}}/CI/appveyor.functions.ps1
-        
+        . ${{github.workspace}}\CI\appveyor.functions.ps1   
+        echo "I worked!"     
         # InstallBoost()
       shell: powershell
 
