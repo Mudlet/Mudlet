@@ -53,16 +53,12 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
-    }
+    mpHost->setDockLayoutUpdated(widgetConsoleName);
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
-    }
+    mpHost->setDockLayoutUpdated(widgetConsoleName);
 }
 
 void TDockWidget::setVisible(bool visible)

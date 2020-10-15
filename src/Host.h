@@ -371,6 +371,10 @@ public:
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
 
+    void setDockLayoutUpdated(const QString&);
+    void setToolbarLayoutUpdated(TToolBar*);
+    bool commitLayoutUpdates(bool flush = false);
+
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;

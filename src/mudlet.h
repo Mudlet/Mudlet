@@ -140,9 +140,7 @@ public:
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();
-    void setDockLayoutUpdated(Host*, const QString&);
-    void setToolbarLayoutUpdated(Host*, TToolBar*);
-    void commitLayoutUpdates();
+    void commitLayoutUpdates(bool flush = false);
 
     std::optional<QSize> getImageSize(const QString& imageLocation);
     QString readProfileData(const QString& profile, const QString& item);
