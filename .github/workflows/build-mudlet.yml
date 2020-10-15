@@ -12,8 +12,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
-          # - os: windows-latest
-          #   triplet: x64-windows
           - os: ubuntu-latest
             buildname: 'ubuntu'
             triplet: x64-linux
@@ -74,6 +72,14 @@ jobs:
         sudo apt update
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
+    - name: (Windows) Install boost dependency
+      if: runner.os == 'Windows'
+      run: |
+        . ${{github.workspace}}/CI/appveyor.functions.ps1
+        
+        InstallBoost()
+      shell: powershell
+
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
