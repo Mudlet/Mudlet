@@ -11731,7 +11731,7 @@ int TLuaInterpreter::openWebPage(lua_State* L)
 {
     if (lua_isstring(L, 1)) {
         QString url = lua_tostring(L, 1);
-        lua_pushboolean(L, mudlet::self()->openWebPage(url));
+        lua_pushboolean(L, Mudlet::openWebPage(url));
         return 1;
     } else {
         lua_pushfstring(L, "openWebPage: bad argument #%d (string expected, got %s)", 1, luaL_typename(L, 1));

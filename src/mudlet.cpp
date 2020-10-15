@@ -71,6 +71,8 @@
 #include <zip.h>
 #include "post_guard.h"
 
+using namespace Mudlet;
+
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -1271,7 +1273,7 @@ void mudlet::slot_module_manager()
     mpModuleDlg->show();
 }
 
-bool mudlet::openWebPage(const QString& path)
+bool Mudlet::openWebPage(const QString& path)
 {
     if (path.isEmpty() || path.isNull()) {
         return false;

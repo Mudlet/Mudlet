@@ -116,6 +116,10 @@ class dlgProfilePreferences;
 
 class translation;
 
+namespace Mudlet {
+    bool openWebPage(const QString& path);
+};
+
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
@@ -178,7 +182,6 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void writeSettings();
-    bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
