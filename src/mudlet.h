@@ -28,7 +28,6 @@
 
 #include "HostManager.h"
 #include "FontManager.h"
-#include "TBuffer.h" // Needed for TChar details
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -47,17 +46,11 @@
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
-#include <QMediaPlayer>
 #include <QPointer>
-#include <QProxyStyle>
-#include <QQueue>
 #include <QReadWriteLock>
 #include <QSettings>
-#include <QShortcut>
 #include <QTextOption>
 #include <QTime>
-#include <QTimer>
-#include <QToolButton>
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
@@ -91,10 +84,12 @@
 
 class QAction;
 class QCloseEvent;
+class QMediaPlayer;
 class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
+class QShortcut;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
