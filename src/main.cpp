@@ -154,25 +154,9 @@ int main(int argc, char* argv[])
     app->setOrganizationName(QStringLiteral("Mudlet"));
 
     if (mudlet::scmIsPublicTestVersion) {
-#if defined(Q_OS_WIN64)
-        // Only defined on 64-bit windows
-        app->setApplicationName(QStringLiteral("Mudlet(x64) Public Test Build"));
-#elif defined(Q_OS_WIN32)
-        // Defined on both 32 and 64-bit windows
-        app->setApplicationName(QStringLiteral("Mudlet(x32) Public Test Build"));
-#else
         app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
-#endif
     } else {
-#if defined(Q_OS_WIN64)
-        // Only defined on 64-bit windows
-        app->setApplicationName(QStringLiteral("Mudlet(x64)"));
-#elif defined(Q_OS_WIN32)
-        // Defined on both 32 and 64-bit windows
-        app->setApplicationName(QStringLiteral("Mudlet(x32)"));
-#else
         app->setApplicationName(QStringLiteral("Mudlet"));
-#endif
     }
     if (mudlet::scmIsReleaseVersion) {
         app->setApplicationVersion(APP_VERSION);
