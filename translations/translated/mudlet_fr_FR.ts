@@ -1542,7 +1542,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="161"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>fichier journal</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="202"/>
@@ -1559,7 +1559,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="242"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Version du Client Mudlet MUD : %1%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="244"/>
