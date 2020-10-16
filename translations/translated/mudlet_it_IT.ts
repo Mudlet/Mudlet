@@ -1596,52 +1596,54 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="161"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>File di log</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="202"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è iniziata. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="212"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è stata interrotta. File di log è %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="242"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD Client versione: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="244"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, File di log del profilo %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="280"/>
       <location filename="../src/TMainConsole.cpp" line="302"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione a partire &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="307"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Interrompi la registrazione dei dati ricevuti dal gioco sul file di log.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="311"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log di sessione terminato a &apos;hh:mm:ss&apos; su &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="324"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Inizia la registrazione dei dati ricevuti dal gioco sul file di log.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="634"/>
@@ -1656,7 +1658,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1047"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Utente - %1 - %2</translation>
     </message>
   </context>
   <context>
