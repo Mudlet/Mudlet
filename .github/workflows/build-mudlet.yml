@@ -84,11 +84,11 @@ jobs:
     - name: debug stdout/stderr
       if: always()
       run: |
-        echo "stdout"
-        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        cat $env:WORKING_BASE_DIR\stdout.log
         echo "stderr"
         cat $env:WORKING_BASE_DIR\stderr.log
+        echo "stdout"
+        cat $env:WORKING_BASE_DIR\stdout.log
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
