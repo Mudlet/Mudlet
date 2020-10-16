@@ -1654,22 +1654,22 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="324"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="634"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Pre-Map loading(2) report</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="644"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Loading map(2) at %1 report</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1047"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>User window - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -8466,7 +8466,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>English (Australia, Large)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
@@ -8477,7 +8477,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>English (Canada, Large)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -8493,7 +8493,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>English (United Kingdom, Large)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
@@ -8565,7 +8565,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="735"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>English (United States, Large)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="736"/>
@@ -10990,7 +10990,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5180"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarised in a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5066"/>
