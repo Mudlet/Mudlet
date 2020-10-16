@@ -1,5 +1,9 @@
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
+if (Test-Path env:WORKING_BASE_DIR) {
+  $workingBaseDir = $env:WORKING_BASE_DIR
+}
+
 $logFile = "$workingBaseDir\verbose_output.log"
 $ciScriptDir = (Get-Item -Path ".\" -Verbose).FullName
 
