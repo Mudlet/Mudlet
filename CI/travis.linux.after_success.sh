@@ -6,11 +6,11 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
-# we deploy only linux+deploy or cron+clang+cmake for PTB
-if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
-   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
+# we deploy only deploy or cron+clang+cmake for PTB
+if { [ "${DEPLOY}" = "deploy" ]; } ||
+   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
 
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; then
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${DEPLOY}" = "deploy" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
@@ -47,7 +47,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
 
   if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
-    make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
+    ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
@@ -80,9 +80,9 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
     else
-      make-installer.sh -r "${VERSION}"
+      ./make-installer.sh -r "${VERSION}"
     fi
 
     if [ "${public_test_build}" == "true" ]; then
