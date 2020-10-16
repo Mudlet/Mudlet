@@ -6,11 +6,11 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
-# we deploy only linux+deploy or cron+clang+cmake for PTB
-if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
-   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
+# we deploy only if told to deploy or we run a cron+clang+cmake job (for PTB)
+if { [ "${DEPLOY}" = "deploy" ]; } ||
+   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
 
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; then
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${DEPLOY}" = "deploy" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
