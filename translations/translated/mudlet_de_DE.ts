@@ -1613,67 +1613,69 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMainConsole.cpp" line="161"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>Protokolldatei</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="202"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Protokoll gestartet. Datei ist %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="212"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Protokoll beendet. Datei ist %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="242"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD-Client Version: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="244"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, Log aus Profil %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="280"/>
       <location filename="../src/TMainConsole.cpp" line="302"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log Sitzung startet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;JJJJ&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="307"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Protokollierung der Ausgabe des Spiels als Log-Datei beenden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="311"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Protokoll der Sitzung endet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos;. &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="324"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Protokollierung der Ausgabe des Spiels als Log-Datei beginnen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="634"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(2)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="644"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(2) bei %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1047"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster - %1 - %2</translation>
     </message>
   </context>
   <context>
