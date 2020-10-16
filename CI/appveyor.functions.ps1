@@ -123,7 +123,7 @@ function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
   $file = Get-ChildItem $tarFile
   echo "Extracting source distribution $($file.FullName)"
-  exec "7z" @("x", "$($file.FullName)", "-y")
+  exec "7z" @("-o$outputPath", "x", "$($file.FullName)", "-y")
   exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
 }
 
