@@ -76,8 +76,12 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         . ${{github.workspace}}\CI\appveyor.functions.ps1  
-        InstallBoost
+        # InstallBoost
       shell: powershell
+    
+    - name: debug boost fail
+      if: runner.os == 'Windows'
+      run: 'cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\boost-locale\install-x64-mingw-dynamic-dbg-out.log'
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
