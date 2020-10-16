@@ -798,11 +798,9 @@ void Host::updateConsolesFont()
     if (mpConsole)
         mpConsole->refreshView();
 
-    if (mpEditorDialog) {
-        if (mpEditorDialog->mpErrorConsole) {
-            mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
-            mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
-        }
+    if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
+        mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
+        mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
     }
     if (mudlet::self()->mpDebugArea) {
         mudlet::self()->mpDebugConsole->setFont(mDisplayFont.family());
@@ -2655,13 +2653,12 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     }
 
     auto pC = mpConsole->mSubConsoleMap.value(windowName);
-    if (pC) {
-        return qMakePair(true, pC->getLines(lineFrom, lineTo));
-    } else {
+    if (!pC) {
         QStringList failMessage;
         failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
+    return qMakePair(true, pC->getLines(lineFrom, lineTo));
 }
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
@@ -2724,12 +2721,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget->hasLayoutAlready = true;
     }
     dockwidget->show();
-
-    if (!autoDock) {
-        dockwidget->setAllowedAreas(Qt::NoDockWidgetArea);
-    } else {
-        dockwidget->setAllowedAreas(Qt::AllDockWidgetAreas);
-    }
+    dockwidget->setAllowedAreas(autodock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
     if (area.isEmpty()) {
         return {true, QString()};
