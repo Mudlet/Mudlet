@@ -1648,12 +1648,12 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="634"/>
       <source>Pre-Map loading(2) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto pre-caricamento(2) del file di mappa</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="644"/>
       <source>Loading map(2) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto caricamento(2) del file di mappa in %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1047"/>
@@ -8564,7 +8564,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Inglese (Australia, Grande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
@@ -8575,7 +8575,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Inglese (Canada, Grande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -8591,7 +8591,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Inglese (Regno Unito, Grande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
@@ -8663,7 +8663,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
       <location filename="../src/mudlet.cpp" line="735"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Inglese (Stati Uniti, Grande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="736"/>
