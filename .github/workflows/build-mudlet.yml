@@ -85,6 +85,7 @@ jobs:
       if: always()
       run: |
         echo "stdout"
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         echo "$env:WORKING_BASE_DIR\stdout.log"
         echo "stderr"
         echo "$env:WORKING_BASE_DIR\stderr.log"
