@@ -122,7 +122,6 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
   $file = Get-ChildItem $tarFile
-  echo "Extracting source distribution $($file.FullName)"
   exec "7z" @("-o$outputPath", "x", "$($file.FullName)", "-y")
   exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
 }
@@ -212,7 +211,7 @@ function InstallMsys() {
   exec "mingw-get" @("install", "mingw32-autotools")
 }
 
-function InstallBoost() {
+function InstallBoost([string] outputLocation = "C:\Libraries\") {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
@@ -220,7 +219,7 @@ function InstallBoost() {
   }
   ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
-  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "$workingBaseDir\boost_1_71_0" "$outputLocation" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
