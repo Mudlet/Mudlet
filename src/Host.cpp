@@ -2713,7 +2713,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     // The name is used in BOTH the QMaps of all user created TConsole
     // and TDockWidget instances - so we HAVE an existing user window,
     // Lets confirm this:
-    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+    Q_ASSERT_X(console->getType() == TConsole::UserWindow, "host::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
     dockwidget->update();
 
     if (loadLayout && !dockwidget->hasLayoutAlready) {
@@ -3491,7 +3491,7 @@ void Host::createMapper(bool loadDefaultMap)
     mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
-        qDebug() << "mudlet::slot_mapper() - restore map case 3.";
+        qDebug() << "Host::create_mapper() - restore map case 3.";
         pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
         QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
@@ -3566,7 +3566,7 @@ bool Host::commitLayoutUpdates(bool flush)
             // pToolBar->property("layoutChanged") and examining that
             // non-existant variant to see if it was true or false causes seg. faults!
             if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
-                qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
             } else if (pToolBar->property("layoutChanged").toBool()) {
                 pToolBar->setProperty("layoutChanged", QVariant(false));
                 updated = true;
