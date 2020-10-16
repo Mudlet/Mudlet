@@ -111,10 +111,6 @@ class dlgProfilePreferences;
 
 class translation;
 
-namespace Mudlet {
-    bool openWebPage(const QString& path);
-};
-
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
@@ -191,6 +187,7 @@ public:
 #endif
     void activateProfile(Host*);
 
+    bool openWebPage(const QString& path);
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
