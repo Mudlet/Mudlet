@@ -75,11 +75,12 @@ jobs:
     - name: (Windows) Install boost dependency
       if: runner.os == 'Windows'
       run: |
-        . ${{github.workspace}}\CI\appveyor.functions.ps1
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        echo "WORKING_BASE_DIR has been set to $env:WORKING_BASE_DIR"
+        . ${{github.workspace}}\CI\appveyor.functions.ps1
         InstallBoost
       shell: powershell
-    
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v4
