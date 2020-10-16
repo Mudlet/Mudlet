@@ -211,7 +211,7 @@ function InstallMsys() {
   exec "mingw-get" @("install", "mingw32-autotools")
 }
 
-function InstallBoost([string] outputLocation = "C:\Libraries\") {
+function InstallBoost([string] $outputLocation = "C:\Libraries\") {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
