@@ -1336,6 +1336,30 @@ raiseEvent("mmapper updated pdb")</script>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Oppression Predator</name>
+					<script>mmp.locateAndEchoSide(multimatches[3][3], multimatches[3][2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>1</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Your oppressive gaze sweeps across the land, seeking out your prey.</string>
+						<string>1</string>
+						<string>^You see that (\w+) (?:conquers|) at (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+						<integer>5</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Allsight</name>
 					<script>mmp.locateAndEcho(multimatches[2][3], multimatches[2][2])</script>
 					<triggerType>0</triggerType>
@@ -5326,7 +5350,7 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "20.6.2"
+local newversion = "20.10.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -6423,27 +6447,29 @@ function mmp.clearspecials(deleterooms)
   end
 end
 
-local function getShortestOfMultipleRooms(possibleRooms)
-  local shortestPath, closestRoom = {}, 0
+function mmp.getShortestOfMultipleRooms(possibleRooms)
+  local shortestWeight, closestRoom = 10000000, 0
+  local checkedsofar, outoftime = 0, false
+  local getStopWatchTime, tonumber = getStopWatchTime, tonumber
+  
+  -- allocate only 500ms to finding the shortest path, or more if we failed to find anything
   mmp.computeShortestWatch = mmp.computeShortestWatch or createStopWatch()
   startStopWatch(mmp.computeShortestWatch)
   raiseEvent("mmp link externals")
-  local getStopWatchTime, tonumber, getPath = getStopWatchTime, tonumber, mmp.getPath
-  --mmp.echo(string.format("Have %s rooms nodes, %ss taken so far...", table.size(possibleRooms), getStopWatchTime(mmp.computeShortestWatch)))
-  -- allocate only 500ms to finding the shortest path, or more if we failed to find anything
-  local checkedsofar, outoftime = 0
-  for id, _ in pairs(possibleRooms) do
-    if mmp.getPath(mmp.currentroom, tonumber(id)) then
-      if closestRoom == 0 or #shortestPath &gt; #speedWalkPath then
-        shortestPath = speedWalkPath
-        closestRoom = tonumber(id)
-      end
+  
+  -- mmp.echo(string.format("Have %s rooms nodes, %ss taken so far...", table.size(possibleRooms), getStopWatchTime(mmp.computeShortestWatch)))
+  for _, id in pairs(possibleRooms) do
+    local possible, thisWeight = getPath(mmp.currentroom, tonumber(id))
+    if possible and thisWeight &lt; shortestWeight then
+      shortestWeight = thisWeight
+      closestRoom = tonumber(id)
     end
     checkedsofar = checkedsofar + 1
     if (getStopWatchTime(mmp.computeShortestWatch) &gt;= .5) then
       outoftime = true
       break
     end
+	
     -- mmp.echo(string.format("pathed from %s to %s, running time so far: %s", mmp.currentroom, id, getStopWatchTime(mmp.computeShortestWatch)))
   end
   --mmp.echo(string.format("total time took: %s", getStopWatchTime(mmp.computeShortestWatch)))
@@ -6462,8 +6488,10 @@ function mmp.gotoAreaID(areaid, number, dashtype)
     return
   end
   local possibleRooms, shortestBorder = {}, 0
-  possibleRooms = mmp.getAreaBorders(areaid)
-  shortestBorder, outoftime, checkedsofar = getShortestOfMultipleRooms(possibleRooms)
+  for id,_ in pairs(mmp.getAreaBorders(areaid)) do
+    possibleRooms[#possibleRooms+1] = id
+  end
+  shortestBorder, outoftime, checkedsofar = mmp.getShortestOfMultipleRooms(possibleRooms)
   if shortestBorder == 0 then
     if outoftime then
       mmp.echo(
@@ -6509,13 +6537,8 @@ function mmp.gotoFeature(partialFeatureName, dashtype)
     mmp.echo("No feature like " .. partialFeatureName .. " found.")
     return
   end
-  local rooms = searchRoomUserData("feature-" .. feature, "true")
-  -- change the structure of the table so it fits getShortestOfMultipleRooms
-  local possibleRooms = {}
-  for _, room in pairs(rooms) do
-    possibleRooms[room] = true
-  end
-  closestFeature, outoftime, checkedsofar = getShortestOfMultipleRooms(possibleRooms)
+  local possibleRooms = searchRoomUserData("feature-" .. feature, "true")
+  closestFeature, outoftime, checkedsofar = mmp.getShortestOfMultipleRooms(possibleRooms)
   if closestFeature == 0 then
     if outoftime then
       mmp.echo(
@@ -11096,20 +11119,20 @@ end</script>
 						</eventHandlerList>
 					</Script>
 				</Script>
-					<Script isActive="yes" isFolder="no">
-						<name>StickMUD</name>
-						<packageName></packageName>
-						<script>-------------------------------------------------
+				<Script isActive="yes" isFolder="no">
+					<name>StickMUD</name>
+					<packageName></packageName>
+					<script>-------------------------------------------------
 --         Put your Lua functions here.        --
 --                                             --
 -- Note that you can also use external scripts --
 -------------------------------------------------
 </script>
-						<eventHandlerList />
-						<Script isActive="yes" isFolder="no">
-							<name>stickmud_stop_speedwalk_for_wrong_dir</name>
-							<packageName></packageName>
-							<script>function stickmud_stop_speedwalk_for_wrong_dir()
+					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>stickmud_stop_speedwalk_for_wrong_dir</name>
+						<packageName></packageName>
+						<script>function stickmud_stop_speedwalk_for_wrong_dir()
   if mmp.game and mmp.game ~= "StickMUD" then
     return
   end
@@ -11118,11 +11141,11 @@ end</script>
     mmp.stop()
   end
 end</script>
-							<eventHandlerList>
-								<string>gmcp.Room.WrongDir</string>
-							</eventHandlerList>
-						</Script>
+						<eventHandlerList>
+							<string>gmcp.Room.WrongDir</string>
+						</eventHandlerList>
 					</Script>
+				</Script>
 			</ScriptGroup>
 			<ScriptGroup isActive="yes" isFolder="yes">
 				<name>Test / one-time things</name>
