@@ -63,13 +63,6 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    - name: "Set location of vcpkg dependencies"
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
-      run: |
-        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
-      shell: bash
-
     - name: Install apt dependencies
       run: |
         # Installing packages might fail as the github image becomes outdated
@@ -80,6 +73,8 @@ jobs:
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v2
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-x64-linux-dependencies
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'

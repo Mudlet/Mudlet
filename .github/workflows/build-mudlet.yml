@@ -50,13 +50,6 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: "Set location of vcpkg dependencies"
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
-      run: |
-        echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
-      shell: bash
-
     - name: (macOS) Install homebrew dependencies
       if: runner.os == 'macOS'
       run: |
@@ -74,6 +67,8 @@ jobs:
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v4
+      env:
+        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
