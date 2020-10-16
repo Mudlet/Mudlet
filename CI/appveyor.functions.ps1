@@ -218,7 +218,7 @@ function InstallBoost() {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
-  ExtractTar "$workingBaseDir\boost.tar.gz" "."
+  ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
   Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
