@@ -1435,11 +1435,8 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon, the proper .ico file should contains several
-    # layers of increasing sizes: 16, 24, 32, 48, 64, 128, 256 - as well as
-    # being used for the executable application file when it is displayed in
-    # the Windows explorer it is also used in some other places (installed
-    # applications in Windows settings/control panel)
+    # set the Windows binary icon, a proper .ico file will contains several
+    # images/layers in specific formats and is used in MORE than one way!
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
