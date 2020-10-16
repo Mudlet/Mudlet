@@ -81,15 +81,6 @@ jobs:
         InstallBoost
       shell: powershell
 
-    - name: debug stdout/stderr
-      if: always()
-      run: |
-        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        echo "stderr"
-        cat $env:WORKING_BASE_DIR\stderr.log
-        echo "stdout"
-        cat $env:WORKING_BASE_DIR\stdout.log
-
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v4
@@ -111,3 +102,12 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: (windows) Show error logs
+      if: output-on-failure() && runner.os = 'Windows'
+      run: |
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        echo "Standard error log: "
+        cat $env:WORKING_BASE_DIR\stderr.log
+        echo "Standard output log: "
+        cat $env:WORKING_BASE_DIR\stdout.log
