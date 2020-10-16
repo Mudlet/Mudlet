@@ -4,6 +4,8 @@ if (Test-Path env:WORKING_BASE_DIR) {
   $workingBaseDir = $env:WORKING_BASE_DIR
 }
 
+echo "workingBaseDir is $workingBaseDir"
+
 $logFile = "$workingBaseDir\verbose_output.log"
 $ciScriptDir = (Get-Item -Path ".\" -Verbose).FullName
 
@@ -112,6 +114,7 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
     $stepText = "$stepText, this is a huge download and may take a while"
   }
   Step $stepText
+  echo "Downloading into $workingBaseDir\$outputFile"
   (New-Object System.Net.WebClient).DownloadFile($url, "$workingBaseDir\$outputFile") >> "$logFile" 2>&1
 }
 
