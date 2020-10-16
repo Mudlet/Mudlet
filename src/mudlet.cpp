@@ -1584,8 +1584,8 @@ void mudlet::slot_close_profile_requested(int tab)
 
 void mudlet::slot_tab_changed(int tabID)
 {
-    QString host = mpTabBar->tabData(tabID).toString();
-    auto pHost = mHostManager.getHost(host);
+    QString hostName = mpTabBar->tabData(tabID).toString();
+    auto pHost = mHostManager.getHost(hostName);
     if (!pHost || !pHost->mpConsole) {
         mpCurrentActiveHost = nullptr;
         return;
@@ -1649,9 +1649,9 @@ void mudlet::slot_tab_changed(int tabID)
             dactionMultiView->setEnabled(true);
         }
         if (mMultiView) {
-            for (auto host: mHostManager) {
-                if (host->mpConsole) {
-                    host->mpConsole->show();
+            for (auto pHost: mHostManager) {
+                if (pHost->mpConsole) {
+                    pHost->mpConsole->show();
                 }
             }
         }
@@ -1915,8 +1915,8 @@ bool mudlet::loadWindowLayout()
 
 void mudlet::commitLayoutUpdates(bool flush)
 {
-    for (auto host : mHostManager) {
-        if (host->commitLayoutUpdates(flush)) {
+    for (auto pHost : mHostManager) {
+        if (pHost->commitLayoutUpdates(flush)) {
             mHasSavedLayout = false;
         }
     }
@@ -1963,8 +1963,8 @@ void mudlet::addSubWindow(TConsole* pConsole)
 
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    for (auto host : mHostManager) {
-        auto pC = host->mpConsole;
+    for (auto pHost : mHostManager) {
+        auto pC = pHost->mpConsole;
         if (!pC) {
             continue;
         }
@@ -1984,16 +1984,16 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->close();
     }
 
-    for (auto host : mHostManager) {
-        host->close();
+    for (auto pHost : mHostManager) {
+        pHost->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto host : mHostManager) {
-        if (host->currentlySavingProfile()) {
-            host->waitForProfileSave();
+    for (auto pHost : mHostManager) {
+        if (pHost->currentlySavingProfile()) {
+            pHost->waitForProfileSave();
         }
     }
 
@@ -2004,35 +2004,35 @@ void mudlet::closeEvent(QCloseEvent* event)
 
 void mudlet::forceClose()
 {
-    for (auto host : mHostManager) {
-        auto console = host->mpConsole;
+    for (auto pHost : mHostManager) {
+        auto console = pHost->mpConsole;
         if (!console) {
             continue;
         }
-        host->saveProfile();
+        pHost->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        if (host->mSslTsl) {
-            host->mTelnet.abortConnection();
+        if (pHost->mSslTsl) {
+            pHost->mTelnet.abortConnection();
         } else {
-            host->mTelnet.disconnectIt();
+            pHost->mTelnet.disconnectIt();
         }
 
         // close script-editor
-        if (host->mpEditorDialog) {
-            host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-            host->mpEditorDialog->close();
+        if (pHost->mpEditorDialog) {
+            pHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            pHost->mpEditorDialog->close();
         }
 
-        if (host->mpNotePad) {
-            host->mpNotePad->save();
-            host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-            host->mpNotePad->close();
-            host->mpNotePad = nullptr;
+        if (pHost->mpNotePad) {
+            pHost->mpNotePad->save();
+            pHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            pHost->mpNotePad->close();
+            pHost->mpNotePad = nullptr;
         }
 
-        if (host->mpDlgIRC) {
-            host->mpDlgIRC->close();
+        if (pHost->mpDlgIRC) {
+            pHost->mpDlgIRC->close();
         }
 
         console->close();
@@ -2041,9 +2041,9 @@ void mudlet::forceClose()
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
-    for (auto host : mHostManager) {
-        if (host->currentlySavingProfile()) {
-            host->waitForProfileSave();
+    for (auto pHost : mHostManager) {
+        if (pHost->currentlySavingProfile()) {
+            pHost->waitForProfileSave();
         }
     }
 
@@ -2720,10 +2720,10 @@ void mudlet::startAutoLogin(const QString& cliProfile)
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
 
-    for (auto& host : hostList) {
-        QString val = readProfileData(host, QStringLiteral("autologin"));
-        if (val.toInt() == Qt::Checked || host == cliProfile) {
-            doAutoLogin(host);
+    for (auto& pHost : hostList) {
+        QString val = readProfileData(pHost, QStringLiteral("autologin"));
+        if (val.toInt() == Qt::Checked || pHost == cliProfile) {
+            doAutoLogin(pHost);
             openedProfile = true;
         }
     }
@@ -2775,8 +2775,8 @@ void mudlet::attachDebugArea(const QString& hostname)
     }
 
     mpDebugArea = new QMainWindow(nullptr);
-    const auto host = mHostManager.getHost(hostname);
-    mpDebugConsole = new TConsole(host, TConsole::CentralDebugConsole);
+    const auto pHost = mHostManager.getHost(hostname);
+    mpDebugConsole = new TConsole(pHost, TConsole::CentralDebugConsole);
     mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget(mpDebugConsole);
@@ -2944,12 +2944,12 @@ void mudlet::slot_multi_view(const bool state)
     }
     mMultiView = state;
     bool foundActiveHost = false;
-    for (auto host : mHostManager) {
-        auto console = host->mpConsole;
+    for (auto pHost : mHostManager) {
+        auto console = pHost->mpConsole;
         if (!console) {
             continue;
         }
-        if (mpCurrentActiveHost && (&*mpCurrentActiveHost == &*host)) {
+        if (mpCurrentActiveHost && (&*mpCurrentActiveHost == &*pHost)) {
             // After switching the option off need to redraw the, now only, main
             // TConsole to be displayed for the currently active profile:
             foundActiveHost = true;

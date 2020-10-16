@@ -187,15 +187,17 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::updateScrollBar(int line)
 {
     int screenHeight{mScreenHeight};
+    int hPlus = mpConsole->mLowerPane->getScreenHeight();
+    std::cout << "USB cY:" << mpBuffer->mCursorY << " +" << line + " / sz:" << mpBuffer->size() << " plus:" << hPlus << " scrH:" << mScreenHeight << " TM:" << mIsTailMode << " last:" << mpBuffer->getLastLineNumber() << std::endl;
     if (mIsTailMode){
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
         disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
-        mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
+        mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() -hPlus+ 1);
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(screenHeight);
-        mpConsole->mpScrollBar->setValue(std::max(0, line));
+        mpConsole->mpScrollBar->setValue(std::max(0, line-(mIsTailMode?0:hPlus)));
         connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
     }
 }
@@ -344,12 +346,14 @@ void TTextEdit::scrollTo(int line)
     // be wrong:
     Q_ASSERT_X(!mIsLowerPane, "Inappropriate use of method on lower pane which should only be used for the upper one", "TTextEdit::scrollTo()");
     if ((line > -1) && (line <= mpBuffer->size())) {
-        if ((line < (mpBuffer->getLastLineNumber() + 1) && mIsTailMode)) {
+        int hPlus = mpConsole->mLowerPane->getScreenHeight();
+        std::cout << "SCT cY:" << mpBuffer->mCursorY << " +" << line + " / sz:" << mpBuffer->size() << " plus:" << hPlus << " scrH:" << mScreenHeight << " TM:" << mIsTailMode << " last:" << mpBuffer->getLastLineNumber() << std::endl;
+        if ((line < (mpBuffer->getLastLineNumber()-hPlus + 1) && mIsTailMode)) {
             mIsTailMode = false;
             mpConsole->mLowerPane->mCursorY = mpBuffer->size();
             mpConsole->mLowerPane->show();
             mpConsole->mLowerPane->forceUpdate();
-        } else if ((line > (mpBuffer->getLastLineNumber())) && !mIsTailMode) {
+        } else if ((line > (mpBuffer->getLastLineNumber()-hPlus) ) && !mIsTailMode) {
             mpConsole->mLowerPane->mCursorY = mpConsole->buffer.getLastLineNumber();
             mpConsole->mLowerPane->hide();
             mIsTailMode = true;
@@ -1738,7 +1742,9 @@ int TTextEdit::imageTopLine()
 // This should only be used on the upper pane:
 int TTextEdit::bufferScrollDown(int lines)
 {
-    if ((mpBuffer->mCursorY + lines) < static_cast<int>(mpBuffer->size())) {
+    int hPlus = mpConsole->mLowerPane->getScreenHeight();
+    std::cout << "BSD cY:" << mpBuffer->mCursorY << " +" << lines + " / sz:" << mpBuffer->size() << " plus:" << hPlus << " scrH:" << mScreenHeight << " TM:" << mIsTailMode << std::endl;
+    if ((mpBuffer->mCursorY + lines) < static_cast<int>(mpBuffer->size()) -hPlus) {
         if (mpBuffer->mCursorY < mScreenHeight) {
             mpBuffer->mCursorY = mScreenHeight + lines;
             if (mpBuffer->mCursorY > static_cast<int>(mpBuffer->size() - 1)) {
@@ -1752,7 +1758,7 @@ int TTextEdit::bufferScrollDown(int lines)
         }
         return lines;
 
-    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
+    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1 -hPlus)) {
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
@@ -1760,7 +1766,7 @@ int TTextEdit::bufferScrollDown(int lines)
 
     } else {
         lines = static_cast<int>(mpBuffer->size() - 1) - mpBuffer->mCursorY;
-        if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
+        if (mpBuffer->mCursorY < mScreenHeight) {
             mpBuffer->mCursorY = mScreenHeight + lines;
             if (mpBuffer->mCursorY > static_cast<int>(mpBuffer->size() - 1)) {
                 mpBuffer->mCursorY = static_cast<int>(mpBuffer->size() - 1);
