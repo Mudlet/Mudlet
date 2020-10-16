@@ -8579,7 +8579,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Английский (Австралия, Большой)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
@@ -8590,7 +8590,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Английский (Канада, Большой)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -8606,7 +8606,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Английский (Великобритания)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
@@ -8678,7 +8678,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="735"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Английский (Соединенные Штаты, Большой)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="736"/>
@@ -11111,7 +11111,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5180"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если отмечено то это приведет к тому, что все проблемы с кодовыми точками Unicode будут сообщаться в отладочном выводе по мере их возникновения; если они будут удалены, то о каждой различной кодовой точке будет сообщаться только один раз, и она будет обобщена в виде таблицы, когда консоль, в которой они возникли, будет окончательно уничтожена (когда профиль будет закрыт).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5066"/>
