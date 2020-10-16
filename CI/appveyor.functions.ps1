@@ -120,6 +120,7 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
 
 function ExtractTar([string] $tarFile, [string] $outputPath) {
   Step "Extracting source distribution"
+  echo "Extracting source distribution $tarFile"
   $file = Get-ChildItem $tarFile
   exec "7z" @("x", "$($file.FullName)", "-y")
   exec "7z" @("-o$outputPath", "x", "$($file.Directory)\$($file.BaseName)", "-y")
@@ -216,7 +217,7 @@ function InstallBoost() {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
-  ExtractTar "boost.tar.gz" "."
+  ExtractTar "$workingBaseDir\boost.tar.gz" "."
   Step "Copying folder"
   Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
