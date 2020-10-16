@@ -1934,7 +1934,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
 
-    QRectF drawRect = QRectF(0, 0, width * zoom, height * zoom);
+    QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap(drawRect.size().toSize());
     pix.fill(Qt::transparent);
