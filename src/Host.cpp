@@ -2721,7 +2721,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget->hasLayoutAlready = true;
     }
     dockwidget->show();
-    dockwidget->setAllowedAreas(autodock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
+    dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
     if (area.isEmpty()) {
         return {true, QString()};
