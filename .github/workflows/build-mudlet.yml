@@ -81,6 +81,14 @@ jobs:
         InstallBoost
       shell: powershell
 
+    - name: debug stdout/stderr
+      if: always()
+      run: |
+        echo "stdout"
+        echo "$env:WORKING_BASE_DIR\stdout.log"
+        echo "stderr"
+        echo "$env:WORKING_BASE_DIR\stderr.log"
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v4
