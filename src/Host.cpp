@@ -925,8 +925,12 @@ void Host::check_for_mappingscript()
         QFile file(":/ui/lacking_mapper_script.ui");
         file.open(QFile::ReadOnly);
 
-        QDialog* dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
+        auto dialog = dynamic_cast<QDialog*>(loader.load(&file, mudlet::self()));
         file.close();
+        if (!dialog) {
+            // could not load / not a QDialog
+            return;
+        }
 
         connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
 
