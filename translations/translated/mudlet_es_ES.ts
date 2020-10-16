@@ -1559,12 +1559,13 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="212"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Registro detenido. Archivo: %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="242"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Versión del cliente Mudlet: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="244"/>
