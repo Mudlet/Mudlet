@@ -8558,7 +8558,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch (Australien, groß)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
@@ -8569,7 +8569,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch (Kanada, groß)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -8585,7 +8585,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch (Großbritannien, groß)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
