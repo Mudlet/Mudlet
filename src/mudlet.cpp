@@ -1948,7 +1948,7 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 
 Host* mudlet::getActiveHost()
 {
-    if (mpCurrentActiveHost->mpConsole) {
+    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         return mpCurrentActiveHost;
     } else {
         return nullptr;
