@@ -5207,12 +5207,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Das ausgewählte Profil laden, aber nicht verbinden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Das ausgewählte Profil laden und verbinden.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
