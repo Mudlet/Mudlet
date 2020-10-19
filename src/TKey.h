@@ -55,7 +55,7 @@ public:
     bool compileScript();
     void execute();
     QString getScript() { return mScript; }
-    bool setScript(QString& script);
+    bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
 
@@ -64,6 +64,7 @@ public:
 
     bool exportItem;
     bool mModuleMasterFolder;
+    bool mRegisteredAnonymousLuaFunction;
 
 private:
     TKey() = default;

@@ -35,6 +35,7 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -46,6 +47,7 @@ TAlias::TAlias(const QString& name, Host* pHost)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -339,5 +341,15 @@ void TAlias::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpHost->mLuaInterpreter.call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     mpHost->mLuaInterpreter.call(mFuncName, mName);
 }
