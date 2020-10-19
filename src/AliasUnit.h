@@ -24,7 +24,6 @@
 
 #include "pre_guard.h"
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -65,7 +64,6 @@ public:
 
     QMultiMap<QString, TAlias*> mLookupTable;
     std::list<TAlias*> mCleanupList;
-    QMutex mAliasUnitLock;
     int statsAliasTotal;
     int statsTempAliases;
     int statsActiveAliases;

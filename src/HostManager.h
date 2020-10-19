@@ -27,7 +27,6 @@
 
 #include "pre_guard.h"
 #include <QMap>
-#include <QReadWriteLock>
 #include <QString>
 #include <QSharedPointer>
 #include "post_guard.h"
@@ -65,7 +64,6 @@ public:
     Iter end() { return Iter(this, false); }
 
 private:
-    QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access
     HostMap mHostPool;
 };
 

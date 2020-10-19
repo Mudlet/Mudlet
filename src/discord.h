@@ -26,7 +26,6 @@
 #include <functional>
 #include <utility>
 #include <QDebug>
-#include <QReadWriteLock>
 #include <QTimer>
 #include <QTimerEvent>
 #include <QLibrary>
@@ -197,9 +196,6 @@ public:
     QPair<int64_t ,int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
     QPair<int, int> getParty(Host* pHost) const { return qMakePair(mPartySize.value(pHost), mPartyMax.value(pHost)); }
 
-    // Returns the Discord user received from the Discord_Ready callback
-    QStringList getDiscordUserDetails() const;
-
     // Runs the Host::discordUserIdMatch(...) check for the given Host:
     bool discordUserIdMatch(Host* pHost) const;
 
@@ -268,8 +264,6 @@ private:
     // https://github.com/discordapp/discord-rpc/issues/202
     QString mCurrentApplicationId;
 
-    // Protect the four values after this one from async processes:
-    static QReadWriteLock smReadWriteLock;
     // These are needed to validate the local user's presence on Discord to
     // the one that they want to be associated with a profile's character name
     // - it may be desired to not reveal the character name on Discord until

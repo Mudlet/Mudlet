@@ -47,7 +47,6 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
-#include <QReadWriteLock>
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
@@ -636,8 +635,6 @@ private:
     Hunhandle* mHunspell_sharedDictionary;
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
-    // Prevent problems when updating the dictionary:
-    QReadWriteLock mDictionaryReadWriteLock;
 
     QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 

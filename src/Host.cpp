@@ -1503,13 +1503,11 @@ void Host::connectToServer()
 
 void Host::closingDown()
 {
-    QMutexLocker locker(&mLock);
     mIsClosingDown = true;
 }
 
 bool Host::isClosingDown()
 {
-    QMutexLocker locker(&mLock);
     return mIsClosingDown;
 }
 
@@ -2001,7 +1999,6 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     bool needToEmit = false;
     const QByteArray encoding(mTelnet.getEncoding());
 
-    QMutexLocker locker(& mLock);
     if (state == Qt::PartiallyChecked) {
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
@@ -2043,9 +2040,6 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
 
     }
 
-    locker.unlock();
-    // We do not need to keep the mutex any longer as we have a local copy to
-    // work with whilst the connected methods react to the signal:
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
@@ -2344,16 +2338,12 @@ void Host::processDiscordMSDP(const QString& variable, QString value)
 
 void Host::setDiscordApplicationID(const QString& s)
 {
-    QMutexLocker locker(& mLock);
     mDiscordApplicationID = s;
-    locker.unlock();
-
     writeProfileData(QStringLiteral("discordApplicationId"), s);
 }
 
 const QString& Host::getDiscordApplicationID()
 {
-    QMutexLocker locker(&mLock);
     return mDiscordApplicationID;
 }
 
@@ -2374,13 +2364,11 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
 
 void Host::setSpellDic(const QString& newDict)
 {
-    QMutexLocker locker(& mLock);
     bool isChanged = false;
     if (!newDict.isEmpty() && mSpellDic != newDict) {
         mSpellDic = newDict;
         isChanged = true;
     }
-    locker.unlock();
     if (isChanged && mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
     }
@@ -2393,7 +2381,6 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    QMutexLocker locker(&mLock);
     bool dictionaryChanged {};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
@@ -2406,7 +2393,6 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
         mUseSharedDictionary = useShared;
         dictionaryChanged = true;
     }
-    locker.unlock();
 
     if (!mpConsole) {
         return;
@@ -2448,11 +2434,8 @@ void Host::setName(const QString& newName)
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
-    QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
-    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
@@ -2559,21 +2542,15 @@ void Host::updateAnsi16ColorsInTable()
 
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
 {
-    QMutexLocker locker(& mLock);
-    // Now we have the exclusive lock on this class's protected members
-
     mPlayerRoomStyle = styleCode;
     mPlayerRoomOuterDiameterPercentage = outerDiameter;
     mPlayerRoomInnerDiameterPercentage = innerDiameter;
     mPlayerRoomOuterColor = outerColor;
     mPlayerRoomInnerColor = innerColor;
-    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 }
 
 void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& primaryColor, QColor& secondaryColor)
 {
-    QMutexLocker locker(& mLock);
     // Now we have the exclusive lock on this class's protected members
 
     styleCode = mPlayerRoomStyle;
@@ -2581,8 +2558,6 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     innerDiameter = mPlayerRoomInnerDiameterPercentage;
     primaryColor = mPlayerRoomOuterColor;
     secondaryColor = mPlayerRoomInnerColor;
-    // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
-    locker.unlock();
 }
 
 // Used to set the searchOptions here and the one in the editor if present, for
