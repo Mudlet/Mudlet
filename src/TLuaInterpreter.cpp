@@ -8231,15 +8231,37 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     }
     QString regex{lua_tostring(L, 1)};
 
+
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    if (lua_isfunction(L, 2)) {
+
+        int result = pLuaInterpreter->startTempAlias(regex, QString());
+        if (result == -1) {
+            lua_pushnumber(L, -1);
+            return 2;
+        }
+
+        TAlias* alias = host.getAliasUnit()->getAlias(result);
+        Q_ASSERT_X(alias,
+                   "TLuaInterpreter::tempAlias(...)",
+                   "Got a positive result from LuaInterpreter::startTempAlias(...) but that failed to produce pointer to it from Host::mAliasUnit::getAlias(...)");
+        alias->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, alias);
+        lua_pushvalue(L, 2);
+        lua_settable(L, LUA_REGISTRYINDEX);
+        lua_pushnumber(L, result);
+        return 1;
+    }
+
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "tempAlias: bad argument #2 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 2));
+        lua_pushfstring(L, "tempAlias: bad argument #2 type (lua script as string or function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString script{lua_tostring(L, 2)};
 
-    Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     lua_pushnumber(L, pLuaInterpreter->startTempAlias(regex, script));
     return 1;
 }
@@ -8681,14 +8703,35 @@ int TLuaInterpreter::tempKey(lua_State* L)
     }
     int keyCode = lua_tointeger(L, argIndex);
 
-    if (!lua_isstring(L, ++argIndex)) {
-        lua_pushfstring(L, "tempKey: bad argument #%d type (lua script as string expected, got %s!)", argIndex, luaL_typename(L, argIndex));
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    if (lua_isfunction(L, ++argIndex)) {
+
+        int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString());
+        if (result == -1) {
+            lua_pushnumber(L, -1);
+            return 2;
+        }
+
+        TKey* key = host.getKeyUnit()->getKey(result);
+        Q_ASSERT_X(key,
+                   "TLuaInterpreter::tempKey(...)",
+                   "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
+        key->mRegisteredAnonymousLuaFunction = true;
+        lua_pushlightuserdata(L, key);
+        lua_pushvalue(L, argIndex);
+        lua_settable(L, LUA_REGISTRYINDEX);
+        lua_pushnumber(L, result);
+        return 1;
+    }
+
+    if (!lua_isstring(L, argIndex)) {
+        lua_pushfstring(L, "tempKey: bad argument #%d type (lua script as string or function expected, got %s!)", argIndex, luaL_typename(L, argIndex));
         return lua_error(L);
     }
     QString luaFunction{lua_tostring(L, argIndex)};
 
-    Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     int timerID = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
     lua_pushnumber(L, timerID);
     return 1;
@@ -17311,7 +17354,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function)
+int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
 {
     TKey* pT;
     pT = new TKey("a", mpHost);
