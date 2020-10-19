@@ -33,21 +33,42 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
     # Build was NOT initiated by pushing a tag to the repository - which is required for a release build
     if [ "${APPVEYOR_SCHEDULED_BUILD}" = "true" ]; then
         export BUILD_TYPE="public_test"
-        COMMIT_DATE=$(git show -s --format=%cs | /usr/bin/tr -d '-')
+        COMMIT_DATE=$(git show -s --format="%cs" | /usr/bin/tr -d '-')
         YESTERDAYS_DATE=$(date -v-1d '+%F' | /usr/bin/tr -d '-')
         if [ "${COMMIT_DATE}" -lt "${YESTERDAYS_DATE}" ]; then
             # There hasn't been any changes in last 24 hours
             export ABORT_PT_BUILDS="true"
         fi
-        # add a short commit to version for changelog generation so it knows what was last released
+        # add a short commit to version for changelog generation so it knows
+        # what was last released
         COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
         DATE=$(date +'%Y%m%d')
         MUDLET_VERSION_BUILD="-ptb-${DATE}+${COMMIT}"
+        export SQUIRREL_DIR=$(/usr/bin/cygpath --windows "/c/projects/packaging")
+        # As the nuget/squirrel stuff is built on a NET 4.5 framework the stuff
+        # we want to include in the project must be in a ./lib/Net45
+        # sub-directory - the name of the generated file is tied to the "id"
+        # "version" (and "version-suffix") elements within the nuspec file
+        # with the last two of them as overridden by the nuget pack command
+        # arguments. The "id" for the 32 Bit release and ptb builds must remain
+        # the same even after 64 Bit versions start to be created so that the
+        # they continue to be updated. The "id" must also NOT end with a number
+        # (or any sort of braces) which is why the "64" is surrounded by '_'s
+        # instead:
         if [ "${BUILD_BITNESS}" = "64" ]; then
-            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_-PublicTestBuild.${VERSION}-${DATE}+${COMMIT}.nupkg")"
+            export NUPKG_FILE="Mudlet_x64_-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
+            export EXPORT_NUSPEC_FILE="mudlet64-ptb.nuspec"
+            export SQUIRREL_FULL_NUPKG_FILE="Mudlet_x64_-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
+            export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-ptb${DATE}-full.nupkg"
         else
-            export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet-PublicTestBuild.${VERSION}-${DATE}+${COMMIT}.nupkg")"
+            export NUPKG_FILE="Mudlet-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
+            export EXPORT_NUSPEC_FILE="mudlet-ptb.nuspec"
+            export SQUIRREL_FULL_NUPKG_FILE="Mudlet-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
+            export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudlet-${VERSION}-ptb${DATE}-full.nupkg"
         fi
+        export SUFFIX_FOR_NUGET="-ptb${DATE}"
+        export LOADING_GIF_PATHFILE="/c/projects/installers/windows/splash-installing-ptb-2x.png"
+        export SETUP_ICON_PATHFILE="${APPVEYOR_BUILD_FOLDER}/src/icons/mudlet_ptb.ico"
     else
         # -n is test for non-zero length string - so building for a PR
         # Shorten the Commit SHA1 produced (so that it is only 8 hex digits) so that
@@ -72,15 +93,28 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
         export ZIP_FILE_NAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-windows-x${BUILD_BITNESS}.zip
     fi
 else
-    # Build was initiated by pushing a tag (maybe this is the case for a release build?)
-    if [ "${BUILD_BITNESS}" = "64" ]; then
-        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet_64_.${VERSION}.nupkg")"
-    else
-        export NUPKG_FILE="$(/usr/bin/cygpath --windows "/c/projects/squirrel-packaging-prep/Mudlet.${VERSION}.nupkg")"
-    fi
     export BUILD_TYPE="release"
     export COMMIT=""
-    export NUPKG_FILE=""
+    export SQUIRREL_DIR=$(/usr/bin/cygpath --windows "/c/projects/packaging")
+    # As the nuget/squirrel stuff is built on a NET 4.5 framework the stuff
+    # we want to include in the project must be in a ./lib/Net45
+    # sub-directory:
+    # Build was initiated by pushing a tag (this should be the case for a
+    # release build)
+    if [ "${BUILD_BITNESS}" = "64" ]; then
+        export NUPKG_FILE="Mudlet_x64_.${VERSION}.nupkg"
+        export EXPORT_NUSPEC_FILE="mudlet64.nuspec"
+        export SQUIRREL_FULL_NUPKG_FILE="Mudlet_x64_-${VERSION}-full.nupkg"
+        export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-full.nupkg"
+    else
+        export NUPKG_FILE="Mudlet.${VERSION}.nupkg"
+        export EXPORT_NUSPEC_FILE="mudlet.nuspec"
+        export SQUIRREL_FULL_NUPKG_FILE="Mudlet-${VERSION}-full.nupkg"
+        export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudlet-${VERSION}-full.nupkg"
+    fi
+    export SUFFIX_FOR_NUGET=""
+    export LOADING_GIF_PATHFILE="/c/projects/installers/windows/splash-installing-2x.png"
+    export SETUP_ICON_PATHFILE="${APPVEYOR_BUILD_FOLDER}/src/icons/mudlet.ico"
 fi
 #MUDLET_VERSION_BUILD=-ptb20200930+fake1
 #DATE=20200930

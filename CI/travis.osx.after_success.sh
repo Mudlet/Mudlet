@@ -10,7 +10,7 @@ fi
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
-  commitDate=$(git show -s --format=%cs | tr -d '-')
+  commitDate=$(git show -s --format="%cs" | tr -d '-')
   yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
@@ -46,7 +46,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     bash make-installer.sh "${appBaseName}.app"
 
-    if [ ! -z "$CERT_PW" ]; then
+    if [ -n "$CERT_PW" ]; then
       codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
       echo "Signed final .dmg"
     fi
@@ -127,7 +127,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   fi
 
   # delete keychain just in case
-  if [ ! -z "$CERT_PW" ]; then
+  if [ -n "$CERT_PW" ]; then
     security delete-keychain $KEYCHAIN
   fi
 

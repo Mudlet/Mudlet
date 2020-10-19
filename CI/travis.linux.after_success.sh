@@ -6,11 +6,11 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
-# we deploy only linux+deploy or cron+clang+cmake for PTB
-if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
-   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] &&  [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
+# we deploy only deploy or cron+clang+cmake for PTB
+if { [ "${DEPLOY}" = "deploy" ]; } ||
+   { [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "cmake" ]; } then
 
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; then
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${DEPLOY}" = "deploy" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
@@ -33,7 +33,7 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
   fi
 
   # get commit date now before we check out an change into another git repository
-  commitDate=$(git show -s --format=%cs | tr -d '-')
+  commitDate=$(git show -s --format="%cs" | tr -d '-')
   yesterdaysDate=$(date -d "yesterday" '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
@@ -81,27 +81,15 @@ if { [ "${TRAVIS_OS_NAME}" = "linux" ] && [ "${DEPLOY}" = "deploy" ]; } ||
 
     if [ "${public_test_build}" == "true" ]; then
       bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
-    else
-      bash make-installer.sh -r "${VERSION}"
-    fi
-
-    if [ "${public_test_build}" == "true" ]; then
       chmod +x "Mudlet PTB.AppImage"
-    else
-      chmod +x "Mudlet.AppImage"
-    fi
-
-    if [ "${public_test_build}" == "true" ]; then
       tar -czvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
-    else
-      tar -czvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
-    fi
-
-    if [ "${public_test_build}" == "true" ]; then
       echo "=== Uploading public test build to make.mudlet.org ==="
       DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
                      "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
     else
+      bash make-installer.sh -r "${VERSION}"
+      chmod +x "Mudlet.AppImage"
+      tar -czvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
       # upload an unzipped, unversioned release for appimage.github.io

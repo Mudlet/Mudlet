@@ -10,7 +10,7 @@ echo "Running appveyor.install.sh shell script..."
 # development branch in the last 24 hours - so we should abort this build
 # as soon as possible.
 if [ "${ABORT_PT_BUILDS}" = "true" ]; then
-    appveyor AddMessage "No change in development code in last day, scheduled public test build halted." -Catagory Information
+    appveyor AddMessage "No change in development code in last day, scheduled public test build halted." -Category Information
     # Forcible terminate build (successfully) - but will still carry out
     # on_success and on_finish steps in yaml file:
     appveyor exit
@@ -19,10 +19,12 @@ fi
 
 if [ "${BUILD_BITNESS}" != "32" ] && [ "${BUILD_BITNESS}" != "64" ]; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
+    appveyor AddMessage "Environmental variable BUILD_BITNESS does not exist or not set to \"32\" or \"64\" - build aborted."
+    appveyor exit
     exit 1
 fi
 
-appveyor AddMessage "This is a \"${BUILD_TYPE}\" ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} build ..." -Catagory Information
+appveyor AddMessage "This is a \"${BUILD_TYPE}\" ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} build ..." -Category Information
 
 # Options:
 # --Sy = Sync, refresh as well as installing the specified packages
@@ -54,6 +56,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
     p7zip \
     python \
     rsync \
+    openssh \
     mingw-w64-${BUILDCOMPONENT}-toolchain \
     mingw-w64-${BUILDCOMPONENT}-ccache \
     mingw-w64-${BUILDCOMPONENT}-qt5 \

@@ -32,14 +32,14 @@ echo ""
 # continually trying to run the executable on the target type system
 # and adding in the libraries to the same directory and repeating that
 # until the executable actually starts to run. Alternatively running
-# ldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
+# ntldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
 # the other one} inside an Mingw32 (or 64) shell as appropriate will
 # produce the libraries that are likely to be needed below. Unfortunetly
 # this process is a little recursive in that you may have to repeat the
 # process for individual librarys. For ones used by lua modules this
 # can manifest as being unable to "require" the library within lua
-# and doing the above "ldd" check revealed that "zip.dll" needed
-# "libzzip-0-13.dll" and "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
+# and doing the above "ntldd" check revealed that, for instance,
+# "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
 #
 echo "Examining Mudlet application to identify other needed libraries..."
 NEEDED_LIBS=$(${MINGW_INTERNAL_BASE_DIR}/bin/ntldd --recursive ./mudlet.exe \
@@ -58,7 +58,7 @@ echo ""
 echo "Copying other known to be needed libraries in..."
 # libjasper-4 to libwebpdemux-2 are additional image format handlers that Qt can
 # use if they are present.
-# libsqlite3 and libyajl are needed by lua modules at Mudlet run time.
+# libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3 and at Mudlet run time.
 # SDL2 helps with Gamepad support that QtGamepad can use if it is present.
 cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libjasper-4.dll \
