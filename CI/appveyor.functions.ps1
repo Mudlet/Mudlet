@@ -68,6 +68,7 @@ function script:exec {
   if($parameter.Length -eq 0){
     $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   } else {
+    echo "Running '$cmd' with args '$parameter'"
     $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
