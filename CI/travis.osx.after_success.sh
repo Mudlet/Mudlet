@@ -10,8 +10,8 @@ fi
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
-  commitDate=$(git show -s --format=%cs | tr -d '-')
-  yesterdaysDate=$(date -v-1d '+%F' | tr -d '-')
+  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
+  YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
@@ -57,7 +57,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     app="${TRAVIS_BUILD_DIR}/build/Mudlet.app"
     if [ "${public_test_build}" == "true" ]; then
 
-      if [[ "$commitDate" -lt "$yesterdaysDate" ]]; then
+      if [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
         echo "== No new commits, aborting public test build generation =="
         exit 0
       fi

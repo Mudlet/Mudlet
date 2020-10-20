@@ -31,9 +31,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 } else {
   if ($Script:PublicTestBuild) {
 
-    $commitDate = Get-Date -date $(git show -s --format=%cs)
-    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
-    if ($commitDate -lt $yesterdaysDate) {
+    $COMMIT_DATE = Get-Date -date $(git show -s --format="%cs")
+    $YESTERDAY_DATE = $(Get-Date).AddDays(-1).Date
+    if ($COMMIT_DATE -lt $YESTERDAY_DATE) {
       Write-Output "=== No new commits, aborting public test build generation ==="
       exit 0
     }

@@ -126,7 +126,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, QString&);
+    int startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -376,7 +376,6 @@ public:
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
-    static int setMiniConsoleFontSize(lua_State*);
     static int setConsoleBackgroundImage(lua_State*);
     static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);

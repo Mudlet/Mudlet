@@ -36,6 +36,7 @@ TKey::TKey(TKey* parent, Host* pHost)
 , mModuleMember(false)
 , mKeyCode()
 , mKeyModifier()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -49,6 +50,7 @@ TKey::TKey(QString name, Host* pHost)
 , mModuleMember(false)
 , mKeyCode()
 , mKeyModifier()
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -158,7 +160,7 @@ void TKey::compile()
     }
 }
 
-bool TKey::setScript(QString& script)
+bool TKey::setScript(const QString& script)
 {
     mScript = script;
     mNeedsToBeCompiled = true;
@@ -192,5 +194,15 @@ void TKey::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpHost->mLuaInterpreter.call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     mpHost->mLuaInterpreter.call(mFuncName, mName);
 }
