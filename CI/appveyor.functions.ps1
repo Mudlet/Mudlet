@@ -313,8 +313,8 @@ function InstallSqlite() {
 
 function InstallZlib() {
   DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "zlib-1.2.11.tar.gz"
-  ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "zlib"
-  Set-Location zlib\zlib-1.2.11
+  ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.11"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
@@ -327,8 +327,8 @@ function InstallZlib() {
 function InstallLibzip() {
   $Env:Path = $NoShPath
   DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
-  ExtractTar "$workingBaseDir\libzip.tar.gz" "libzip"
-  Set-Location libzip\libzip-1.5.2
+  ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
+  Set-Location "$workingBaseDir\libzip\libzip-1.5.2"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
