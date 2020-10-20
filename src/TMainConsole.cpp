@@ -484,7 +484,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
 
-        pC->setMiniConsoleFontSize(12);
+        pC->setFontSize(12);
         pC->show();
 
         return pC;
