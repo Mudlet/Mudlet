@@ -164,12 +164,12 @@ Host* HostManager::getHost(const QString& hostname)
     return pHost;
 }
 
-HostManager::Iter::Iter(HostManager* mgr, bool top)
+HostManager::Iter::Iter(HostManager* manager, bool at_start)
 {
-    if (top) {
-        it = mgr->mHostPool.begin();
+    if (at_start) {
+        it = manager->mHostPool.begin();
     } else {
-        it = mgr->mHostPool.end();
+        it = manager->mHostPool.end();
     }
 }
 
