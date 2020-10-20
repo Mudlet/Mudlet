@@ -795,8 +795,9 @@ QString Host::getMmpMapLocation() const
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
-    if (mpConsole)
+    if (mpConsole) {
         mpConsole->refreshView();
+    }
 
     if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
         mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
