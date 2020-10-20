@@ -3212,17 +3212,24 @@ bool Host::echoWindow(const QString& name, const QString& text)
         return -1;
     }
 
-    auto pL = mpConsole->mLabelMap.value(name);
+    if (name.isEmpty() || name == QStringLiteral("main")) {
+        mpConsole->print(text);
+        return true;
+    }
+
     auto pC = mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->print(text);
         return true;
-    } else if (pL) {
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
         pL->setText(text);
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 bool Host::pasteWindow(const QString& name)

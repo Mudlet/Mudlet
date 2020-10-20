@@ -11390,25 +11390,14 @@ int TLuaInterpreter::Echo(lua_State* L)
     }
     QString displayText{lua_tostring(L, n)};
 
-    auto console = CONSOLE(L, consoleName);
-    if (console == host.mpConsole) {
-        host.mpConsole->buffer.mEchoingText = true;
-        host.mpConsole->echo(displayText);
-        host.mpConsole->buffer.mEchoingText = false;
-        // Writing to the main window must always succeed, but for consistent
-        // results, we now return a true for that
+    if (host.echoWindow(consoleName, displayText)) {
         lua_pushboolean(L, true);
         return 1;
     } else {
-        if (host.echoWindow(consoleName, displayText)) {
-            lua_pushboolean(L, true);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(
-                    L, R"(echo: bad argument #1 value (console/label "%s" does not exist, omit this {or use the default "main"} to send text to main console!))", consoleName.toUtf8().constData());
-            return 2;
-        }
+        lua_pushnil(L);
+        lua_pushfstring(
+                L, R"(echo: bad argument #1 value (console/label "%s" does not exist, omit this {or use the default "main"} to send text to main console!))", consoleName.toUtf8().constData());
+        return 2;
     }
 }
 
