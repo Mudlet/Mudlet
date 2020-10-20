@@ -120,8 +120,8 @@ dlgIRC::~dlgIRC()
         connection->close();
     }
 
-    if (mudlet::self() && mudlet::self()->mpIrcClientMap.value(mpHost)) {
-        mudlet::self()->mpIrcClientMap.remove(mpHost);
+    if (mpHost->mpDlgIRC) {
+        mpHost->mpDlgIRC.reset(nullptr);
     }
 }
 
