@@ -79,6 +79,8 @@ jobs:
         echo "WORKING_BASE_DIR has been set to $env:WORKING_BASE_DIR"
         . ${{github.workspace}}\CI\appveyor.functions.ps1
         InstallBoost "${{github.workspace}}"
+        InstallZlib
+        InstallLibzip
       shell: powershell
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
