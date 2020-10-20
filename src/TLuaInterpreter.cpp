@@ -6303,10 +6303,6 @@ int TLuaInterpreter::setLink(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->setLink(_linkFunction, _linkHint);
-    if (console != host.mpConsole) {
-        console->mUpperPane->forceUpdate();
-        console->mLowerPane->forceUpdate();
-    }
     return 0;
 }
 
@@ -6371,11 +6367,6 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->setLink(_commandList, _hintList);
-    if (console != host.mpConsole) {
-        console->mUpperPane->forceUpdate();
-        console->mLowerPane->forceUpdate();
-    }
-
     return 0;
 }
 
