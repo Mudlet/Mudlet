@@ -1,5 +1,4 @@
 /build*
-/.vscode
 *.pro.user
 Makefile
 ui_*.h
