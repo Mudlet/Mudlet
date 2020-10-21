@@ -150,10 +150,6 @@ public:
     void refresh();
     void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    QString getCurrentLine(std::string&);
-    void selectCurrentLine(std::string&);
-    bool setMiniConsoleFontSize(int);
-    bool setMiniConsoleFont(const QString& font);
     bool setFontSize(int);
     bool setFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
@@ -307,8 +303,6 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 private:
-    void refreshMiniConsole() const;
-
     ConsoleType mType;
 };
 
