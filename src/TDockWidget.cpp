@@ -42,7 +42,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
     if (!mpHost->isClosingDown()) {
-        mpHost->hideWindow(widgetConsoleName);
+        mudlet::self()->hideWindow(mpHost, widgetConsoleName);
         event->ignore();
         return;
     } else {
@@ -53,12 +53,16 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
-    mpHost->setDockLayoutUpdated(widgetConsoleName);
+    if (!mudlet::self()->mIsLoadingLayout) {
+        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
+    }
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
-    mpHost->setDockLayoutUpdated(widgetConsoleName);
+    if (!mudlet::self()->mIsLoadingLayout) {
+        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
+    }
 }
 
 void TDockWidget::setVisible(bool visible)
