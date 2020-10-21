@@ -28,6 +28,7 @@
 
 #include "HostManager.h"
 #include "FontManager.h"
+#include "TBuffer.h" // Needed for TChar details
 
 #include "edbee/views/texttheme.h"
 #include "ui_main_window.h"
@@ -46,11 +47,17 @@
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
+#include <QMediaPlayer>
 #include <QPointer>
+#include <QProxyStyle>
+#include <QQueue>
 #include <QReadWriteLock>
 #include <QSettings>
+#include <QShortcut>
 #include <QTextOption>
 #include <QTime>
+#include <QTimer>
+#include <QToolButton>
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
@@ -84,12 +91,10 @@
 
 class QAction;
 class QCloseEvent;
-class QMediaPlayer;
 class QMenu;
 class QLabel;
 class QListWidget;
 class QPushButton;
-class QShortcut;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
@@ -128,6 +133,10 @@ public:
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
     void addSubWindow(TConsole* p);
+    int getColumnNumber(Host* pHost, QString& name);
+    std::pair<bool, int> getLineNumber(Host* pHost, QString& windowName);
+    void printSystemMessage(Host* pH, const QString& s);
+    void print(Host*, const QString&);
     void addConsoleForNewHost(Host* pH);
     void disableToolbarButtons();
     void enableToolbarButtons();
@@ -135,21 +144,78 @@ public:
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();
-    void commitLayoutUpdates(bool flush = false);
-
+    void setDockLayoutUpdated(Host*, const QString&);
+    void setToolbarLayoutUpdated(Host*, TToolBar*);
+    void commitLayoutUpdates();
+    bool setWindowFont(Host*, const QString&, const QString&);
+    QString getWindowFont(Host*, const QString&);
+    bool setWindowFontSize(Host *, const QString &, int);
+    bool setWindowBackgroundImage(Host *, const QString&, const QString&, int);
+    bool resetWindowBackgroundImage(Host *, const QString&);
+    int getFontSize(Host*, const QString&);
+    QSize calcFontSize(Host* pHost, const QString& windowName);
+    std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
+    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
+    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    bool echoWindow(Host*, const QString&, const QString&);
+    bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
+    void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
+    bool appendBuffer(Host*, const QString&);
+    bool createBuffer(Host*, const QString&);
+    bool showWindow(Host*, const QString&);
+    bool hideWindow(Host*, const QString&);
+    bool paste(Host*, const QString&);
+    bool closeWindow(Host*, const QString&);
+    bool resizeWindow(Host*, const QString&, int, int);
+    bool clearWindow(Host*, const QString&);
+    bool pasteWindow(Host* pHost, const QString& name);
+    bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
+    bool setBackgroundImage(Host*, const QString& name, QString& path);
+    bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
+    bool setCmdLineAction(Host*, const QString&, const int);
+    bool resetCmdLineAction(Host*, const QString&);
+    bool setLabelClickCallback(Host*, const QString&, const int);
+    bool setLabelDoubleClickCallback(Host*, const QString&, const int);
+    bool setLabelReleaseCallback(Host*, const QString&, const int);
+    bool setLabelMoveCallback(Host*, const QString&, const int);
+    bool setLabelWheelCallback(Host*, const QString&, const int);
+    bool setLabelOnEnter(Host*, const QString&, const int);
+    bool setLabelOnLeave(Host*, const QString&, const int);
+    bool moveWindow(Host*, const QString& name, int, int);
+    std::pair<bool, QString> setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show);
+    std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget(Host* pHost);
+    void deleteLine(Host*, const QString& name);
     std::optional<QSize> getImageSize(const QString& imageLocation);
+    bool insertText(Host*, const QString& windowName, const QString&);
+    void replace(Host*, const QString& name, const QString&);
+    int selectString(Host*, const QString& name, const QString& what, int);
+    int selectSection(Host*, const QString& name, int, int);
+    void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
+    std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
+    void setFgColor(Host*, const QString& name, int, int, int);
+    bool setBgColor(Host*, const QString& name, int, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void deleteProfileData(const QString &profile, const QString &item);
+    bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
+    bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
+    bool copy(Host* pHost, const QString& name);
+    bool moveCursorEnd(Host*, const QString&);
+    bool moveCursor(Host*, const QString&, int, int);
+    int getLastLineNumber(Host*, const QString&);
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void writeSettings();
+    bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
     void processEventLoopHack();
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
     static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
+    QMap<Host*, TConsole*> mConsoleMap;
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
@@ -169,16 +235,25 @@ public:
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     bool replayStart();
+    bool setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1);
+    bool setScrollBarVisible(Host* pHost, const QString& name, bool isVisible);
+    bool setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled);
+    bool setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible);
     bool setClickthrough(Host* pHost, const QString& name, bool clickthrough);
     void replayOver();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
+    bool resetFormat(Host*, QString& name);
     bool moduleTableVisible();
     bool mWindowMinimized;
     void doAutoLogin(const QString&);
+    bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
+    int getColumnCount(Host* pHost, QString& name);
+    int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
+    void hideMudletsVariables(Host *pHost);
     void updateMudletDiscordInvite();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
@@ -187,7 +262,6 @@ public:
 #endif
     void activateProfile(Host*);
 
-    bool openWebPage(const QString& path);
 
     // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
@@ -204,6 +278,7 @@ public:
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
+    QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
@@ -213,10 +288,13 @@ public:
     bool mIsLoadingLayout;
     static QVariantHash mLuaFunctionNames;
     bool mHasSavedLayout;
+    QMap<Host*, QList<QString>> mHostDockLayoutChangeMap;
+    QMap<Host*, QList<TToolBar*>> mHostToolbarLayoutChangeMap;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
     QPointer<dlgConnectionProfiles> mConnectionDialog;
+    QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
@@ -253,8 +331,8 @@ public:
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
     void setShowMapAuditErrors(const bool);
+    void createMapper(bool loadDefaultMap = true);
     void setShowIconsOnMenu(const Qt::CheckState);
-    void setGlobalStyleSheet(const QString& styleSheet);
 
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
 
@@ -356,6 +434,7 @@ public:
     const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
     const QLocale& getUserLocale() const { return mUserLocale; }
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
+    QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
     bool migratePasswordsToProfileStorage();
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
@@ -521,6 +600,7 @@ private:
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
+    void check_for_mappingscript();
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadMaps();
@@ -528,6 +608,7 @@ private:
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
 
+    QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
     static QPointer<mudlet> _self;

@@ -59,7 +59,9 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
-    mpTAction->mpHost->setToolbarLayoutUpdated(this);
+    if (!mudlet::self()->mIsLoadingLayout) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
 }
 
 void TToolBar::setName(const QString& name)
@@ -78,7 +80,9 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    mpTAction->mpHost->setToolbarLayoutUpdated(this);
+    if (!mudlet::self()->mIsLoadingLayout) {
+        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
+    }
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();

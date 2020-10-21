@@ -583,7 +583,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
-        refreshView();
+        refreshMiniConsole();
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -1385,7 +1385,7 @@ bool TConsole::loadMap(const QString& location)
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
-        pHost->createMapper(false);
+        mudlet::self()->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1444,7 +1444,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // No map or mapper currently loaded/present - so try and create mapper
-        pHost->createMapper(false);
+        mudlet::self()->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1668,11 +1668,11 @@ void TConsole::luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setFontSize(int size)
+bool TConsole::setMiniConsoleFontSize(int size)
 {
     mDisplayFontSize = size;
 
-    refreshView();
+    refreshMiniConsole();
     return true;
 }
 
@@ -1713,7 +1713,7 @@ bool TConsole::resetConsoleBackgroundImage()
     return true;
 }
 
-void TConsole::setCmdVisible(bool isVisible)
+void TConsole::setMiniConsoleCmdVisible(bool isVisible)
 {
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
@@ -1736,7 +1736,7 @@ void TConsole::setCmdVisible(bool isVisible)
     resizeConsole();
 }
 
-void TConsole::refreshView() const
+void TConsole::refreshMiniConsole() const
 {
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mUpperPane->setFont(mUpperPane->mDisplayFont);
@@ -1748,11 +1748,11 @@ void TConsole::refreshView() const
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setFont(const QString& font)
+bool TConsole::setMiniConsoleFont(const QString& font)
 {
     mDisplayFontName = font;
 
-    refreshView();
+    refreshMiniConsole();
     return true;
 }
 
