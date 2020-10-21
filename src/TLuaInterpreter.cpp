@@ -11390,8 +11390,7 @@ int TLuaInterpreter::Echo(lua_State* L)
     }
     QString displayText{lua_tostring(L, n)};
 
-    auto console = CONSOLE(L, consoleName);
-    if (console == host.mpConsole) {
+    if (isMain(consoleName)) {
         host.mpConsole->buffer.mEchoingText = true;
         host.mpConsole->echo(displayText);
         host.mpConsole->buffer.mEchoingText = false;
