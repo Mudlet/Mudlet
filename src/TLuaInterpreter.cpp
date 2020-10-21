@@ -7425,7 +7425,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7471,7 +7471,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7518,7 +7518,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7559,7 +7559,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 2)) {
+    } else if (!lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "tempTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
@@ -7677,7 +7677,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 4)) {
+    } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
@@ -7792,7 +7792,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, ++s)) {
+    } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -7837,7 +7837,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 4)) {
+    } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
@@ -7952,7 +7952,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #14 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 14)) {
+    } else if (!lua_isnoneornil(L, 14)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
         return lua_error(L);
     }
@@ -8197,7 +8197,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
