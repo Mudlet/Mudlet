@@ -2089,8 +2089,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
                         // changed by this method:
-                        if (pHost->mpConsole) {
-                            pHost->mpConsole->changeColors();
+                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+                            mudlet::self()->mConsoleMap[pHost]->changeColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -2148,8 +2148,8 @@ void TBuffer::resetColors()
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
     // decodeOSC(...) method:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
+    if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"

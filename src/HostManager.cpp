@@ -33,6 +33,7 @@
 
 #include "mudlet.h"
 
+
 bool HostManager::deleteHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
@@ -84,6 +85,20 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     mHostPool.insert(hostname, pNewHost);
     mPoolReadWriteLock.unlock();
     return true;
+}
+
+QStringList HostManager::getHostList()
+{
+    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
+
+    QStringList strlist;
+    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
+    mPoolReadWriteLock.unlock();
+    if (!hostList.isEmpty()) {
+        strlist << hostList;
+    }
+
+    return strlist;
 }
 
 int HostManager::getHostCount()
@@ -163,34 +178,3 @@ Host* HostManager::getHost(const QString& hostname)
 
     return pHost;
 }
-
-HostManager::Iter::Iter(HostManager* manager, bool at_start)
-{
-    if (at_start) {
-        it = manager->mHostPool.begin();
-    } else {
-        it = manager->mHostPool.end();
-    }
-}
-
-bool HostManager::Iter::operator== (const Iter& other)
-{
-    return it == other.it;
-}
-
-bool HostManager::Iter::operator!= (const Iter& other)
-{
-    return it != other.it;
-}
-
-HostManager::Iter& HostManager::Iter::operator++()
-{
-    it++;
-    return *this;
-}
-
-QSharedPointer<Host> HostManager::Iter::operator*()
-{
-    return *it;
-}
-
