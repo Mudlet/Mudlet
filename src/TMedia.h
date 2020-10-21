@@ -27,11 +27,6 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QMediaPlayer>
-#include "post_guard.h"
-
-
 class TMediaData
 {
 public:

@@ -134,7 +134,7 @@ public:
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
-    void setCmdVisible(bool);
+    void setMiniConsoleCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
@@ -148,10 +148,9 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    bool setFontSize(int);
-    bool setFont(const QString& font);
+    bool setMiniConsoleFontSize(int);
+    bool setMiniConsoleFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
@@ -303,6 +302,8 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 private:
+    void refreshMiniConsole() const;
+
     ConsoleType mType;
 };
 
