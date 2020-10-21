@@ -7079,7 +7079,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             return 2;
         }
     } else if (!lua_isnoneornil(L, 2)) {
-        lua_pushfstring(L, "tempTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -7197,7 +7197,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             return 2;
         }
     } else if (!lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "tempTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
+        lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
 
