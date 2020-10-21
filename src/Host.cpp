@@ -907,10 +907,27 @@ bool Host::checkForMappingScript()
     return ret;
 }
 
+bool Host::checkForCustomSpeedwalk()
+{
+    bool ret = mLuaInterpreter.check_for_custom_speedwalk();
+    return ret;
+}
+
 void Host::startSpeedWalk()
 {
     int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
+    QString f = QStringLiteral("doSpeedWalk");
+    QString n = QString();
+    mLuaInterpreter.call(f, n);
+}
+
+void Host::startSpeedWalk(int sourceRoom, int targetRoom)
+{
+    QString sourceName = QStringLiteral("speedWalkFrom");
+    mLuaInterpreter.set_lua_integer(sourceName, sourceRoom);
+    QString targetName = QStringLiteral("speedWalkTo");
+    mLuaInterpreter.set_lua_integer(targetName, targetRoom);
     QString f = QStringLiteral("doSpeedWalk");
     QString n = QString();
     mLuaInterpreter.call(f, n);
