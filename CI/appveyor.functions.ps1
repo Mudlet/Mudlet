@@ -312,7 +312,7 @@ function InstallSqlite() {
 }
 
 function InstallZlib() {
-  DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "$workingBaseDir\zlib-1.2.11.tar.gz"
+  DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "zlib-1.2.11.tar.gz"
   ls "$workingBaseDir"
   ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "$workingBaseDir\zlib"
   Set-Location "$workingBaseDir\zlib\zlib-1.2.11"
@@ -327,7 +327,7 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "$workingBaseDir\libzip.tar.gz"
+  DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
   ls "$workingBaseDir"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
   Set-Location "$workingBaseDir\libzip\libzip-1.5.2"
