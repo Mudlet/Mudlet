@@ -16139,6 +16139,17 @@ void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varV
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::set_lua_integer(const QString& varName, int varValue)
+{
+    lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
+
+    lua_pushnumber(L, varValue);
+    lua_setglobal(L, varName.toUtf8().constData());
+    lua_settop(L, top);
+}
+
+// No documentation available in wiki - internal function
 QString TLuaInterpreter::getLuaString(const QString& stringName)
 {
     lua_State* L = pGlobalLua;
@@ -16175,6 +16186,26 @@ int TLuaInterpreter::check_for_mappingscript()
         return 0;
     }
 
+    int r = lua_toboolean(L, -1);
+    lua_pop(L, 2);
+    return r;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::check_for_custom_speedwalk()
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return 0;
+    }
+
+    lua_getfield(L, -1, "custom_speedwalk");
+    if (!lua_isboolean(L, -1)) {
+        lua_pop(L, 2);
+        return 0;
+    }
     int r = lua_toboolean(L, -1);
     lua_pop(L, 2);
     return r;

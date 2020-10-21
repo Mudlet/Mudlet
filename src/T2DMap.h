@@ -218,7 +218,7 @@ private:
     void drawRoom(QPainter&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const int, const float, const float, const bool);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
     void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
-    void initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
+    void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     bool mDialogLock;
 

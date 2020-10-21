@@ -680,12 +680,15 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 }
 
 // Helper that refactors out code to start a speedwalk:
-void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
+void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
 {
     mTarget = speedWalkTargetRoomId;
     if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
         mpMap->mTargetID = speedWalkTargetRoomId;
-        if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
+
+        if (mpHost->checkForCustomSpeedwalk()) {
+            mpHost->startSpeedWalk(speedWalkStartRoomId, speedWalkTargetRoomId);
+        } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
             mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
@@ -798,7 +801,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
-            initiateSpeeWalk(speedWalkStartRoomId, currentRoomId);
+            initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
         }
 
     } else {
@@ -1168,7 +1171,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
                 painter.drawPath(myPath);
 
                 mPick = false;
-                initiateSpeeWalk(speedWalkStartRoomId, it.key());
+                initiateSpeedWalk(speedWalkStartRoomId, it.key());
             }
         }
     }
