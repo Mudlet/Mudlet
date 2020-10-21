@@ -8,6 +8,7 @@ cache:
     - $HOME/Library/Caches/Homebrew
 os: linux # this gets overwritten in the jobs definition below.
 dist: xenial
+virt: lxd
 addons:
   apt:
     sources: &add-sources
