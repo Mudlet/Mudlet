@@ -35,6 +35,7 @@ TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
 , mIsInsideText(false)
 , mHasNode(false)
 , mIsText(false)
+, mIsEmptyTag(false)
 {
 }
 

@@ -92,7 +92,7 @@ private:
 class TMediaPlayer
 {
 public:
-    TMediaPlayer() {}
+    TMediaPlayer() : mpHost(nullptr), mMediaPlayer(nullptr), initialized(false) {}
     ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
