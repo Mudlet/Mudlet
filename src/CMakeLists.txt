@@ -30,7 +30,13 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  if(APP_BUILD MATCHES "^-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD MATCHES "^-dev.+") OR (APP_BUILD MATCHES "^-test.+"))
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -70,6 +76,7 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mudlet.cpp
+    MxpTag.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -110,7 +117,6 @@ set(mudlet_SRCS
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
-    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
@@ -197,6 +203,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mudlet.h
+    MxpTag.h
     post_guard.h
     pre_guard.h
     ScriptUnit.h
@@ -244,7 +251,6 @@ set(mudlet_HDRS
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
-    MxpTag.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
