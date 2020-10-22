@@ -82,10 +82,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
     $TestBuildString = "-PublicTestBuild"
-    $InstallerIconFile = $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet_ptb.ico
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet_ptb.ico"
   } else {
     $TestBuildString = ""
-    $InstallerIconFile = $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet.ico
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet.ico"
   }
 
   $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
