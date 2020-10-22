@@ -88,12 +88,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
-    $TestBuildString = "-PublicTestBuild"
+    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet-PublicTestBuild.$Script:VersionAndSha.nupkg"
   } else {
-    $TestBuildString = ""
+    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet.$Script:VersionAndSha.nupkg"
   }
 
-  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
