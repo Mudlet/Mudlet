@@ -77,6 +77,7 @@ public:
     bool mModuleMasterFolder;
     QString mFuncName;
     bool exportItem;
+    bool mRegisteredAnonymousLuaFunction;
 };
 
 #endif // MUDLET_TALIAS_H
