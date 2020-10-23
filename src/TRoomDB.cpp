@@ -30,6 +30,10 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+const QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
+const QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
+const QString ROOM_UI_NAMEFONT = QStringLiteral("room.ui_nameFont");
+const QString ROOM_UI_NAMESIZE = QStringLiteral("room.ui_nameSize");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
@@ -1326,3 +1330,27 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
 
     pA->calcSpan(); // The area extents will need recalculation after adding the rooms
 }
+
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue)
+{
+    if (!userData.contains(key)) {
+        return defaultValue;
+    }
+    QString value = userData.value(key);
+    if (value.isEmpty()) {
+        return defaultValue;
+    }
+    switch (value[0].unicode()) {
+      case 'y': case 'Y':
+      case 't': case 'T':
+      case '1':
+        return true;
+      case 'n': case 'N':
+      case 'f': case 'F':
+      case '0':
+        return false;
+      default:
+        return defaultValue;
+    }
+}
+

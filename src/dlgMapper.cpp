@@ -81,6 +81,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
+    showRoomNames->setVisible(mpMap->getRoomNamesPresent());
+    showRoomNames->setChecked(mpMap->getRoomNamesShown());
+
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
@@ -96,6 +99,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
     connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
@@ -170,6 +174,12 @@ void dlgMapper::slot_toggleShowRoomIDs(int s)
         mp2dMap->mShowRoomID = false;
     }
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
+    mp2dMap->update();
+}
+
+void dlgMapper::slot_toggleShowRoomNames(int s)
+{
+    mpMap->setRoomNamesShown(s == Qt::Checked);
     mp2dMap->update();
 }
 

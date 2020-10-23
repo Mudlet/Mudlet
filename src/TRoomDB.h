@@ -34,6 +34,11 @@ class TArea;
 class TMap;
 class TRoom;
 
+// well-known userData tags
+extern const QString ROOM_UI_SHOWNAME;
+extern const QString ROOM_UI_NAMEPOS;
+extern const QString ROOM_UI_NAMEFONT;  // global only
+extern const QString ROOM_UI_NAMESIZE;  // TODO
 
 class TRoomDB
 {
@@ -111,5 +116,19 @@ private:
     friend class XMLexport;
     friend class XMLimport;
 };
+
+// helpers to get/set bools from userdata, required for storing some bool
+// values there instead of upticking the map format
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue = false);
+
+// this needs to be inlined due to a compiler and/or Qt bug.
+static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
+{
+    if (value) {
+        userData[key] = QStringLiteral("1");
+    } else {
+        userData[key] = QStringLiteral("0");
+    }
+}
 
 #endif // MUDLET_TROOMDB_H

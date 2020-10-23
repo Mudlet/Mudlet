@@ -102,6 +102,7 @@ public:
     void tidyMap(int area);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    void update();
 
     // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     void audit();
@@ -233,6 +234,12 @@ public:
     qreal mMapSymbolFontFudgeFactor;
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
+
+    // has setRoomNamesShown ever been called on this map?
+    bool getRoomNamesPresent();
+    // show room labels on the map?
+    bool getRoomNamesShown();
+    void setRoomNamesShown(bool shown);
 
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
