@@ -1514,7 +1514,7 @@ per le stanze selezionate:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16215"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation>[  OK  ] - Modulo Lua %1 caricato.</translation>
+      <translation>[  OK  ]  - Modulo Lua %1 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16744"/>
