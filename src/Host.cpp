@@ -906,6 +906,16 @@ unsigned int Host::assemblePath()
     return totalWeight;
 }
 
+bool Host::checkForMappingScript()
+{
+    // the mapper script reminder is only shown once
+    // because it is too difficult and error prone (->proper script sequence)
+    // to disable this message
+    bool ret = (mLuaInterpreter.check_for_mappingscript() || mHaveMapperScript);
+    mHaveMapperScript = true;
+    return ret;
+}
+
 void Host::check_for_mappingscript()
 {
     if (!checkForMappingScript()) {
