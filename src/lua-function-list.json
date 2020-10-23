@@ -435,7 +435,7 @@
     "stopStopWatch": "stopStopWatch(watchID or watchName)",
     "suffix": "suffix(text, [writingFunction], [foregroundColor], [backgroundColor], [windowName])",
     "tempAlias": "aliasID = tempAlias(regex, code to do)",
-    "tempAnsiColorTrigger": "tempAnsiColorTrigger(foregroundColor, backgroundColor, code, expireAfter)",
+    "tempAnsiColorTrigger": "tempAnsiColorTrigger(foregroundColor[, backgroundColor], code[, expireAfter])",
     "tempBeginOfLineTrigger": "tempBeginOfLineTrigger(part of line, code, expireAfter)",
     "tempButton": "tempButton(toolbar name, button text, orientation)",
     "tempButtonToolbar": "tempButtonToolbar(name, location, orientation)",

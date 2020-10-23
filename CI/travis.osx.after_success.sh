@@ -44,7 +44,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
-    bash make-installer.sh "${appBaseName}.app"
+    ./make-installer.sh "${appBaseName}.app"
 
     if [ ! -z "$CERT_PW" ]; then
       codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
@@ -81,9 +81,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
     else
-      bash make-installer.sh -r "${VERSION}" "$app"
+      ./make-installer.sh -r "${VERSION}" "$app"
     fi
 
     if [ ! -z "$CERT_PW" ]; then

@@ -906,16 +906,6 @@ unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-bool Host::checkForMappingScript()
-{
-    // the mapper script reminder is only shown once
-    // because it is too difficult and error prone (->proper script sequence)
-    // to disable this message
-    bool ret = (mLuaInterpreter.check_for_mappingscript() || mHaveMapperScript);
-    mHaveMapperScript = true;
-    return ret;
-}
-
 void Host::check_for_mappingscript()
 {
     if (!checkForMappingScript()) {
@@ -939,11 +929,27 @@ void Host::check_for_mappingscript()
     }
 }
 
+bool Host::checkForCustomSpeedwalk()
+{
+    bool ret = mLuaInterpreter.check_for_custom_speedwalk();
+    return ret;
+}
 
 void Host::startSpeedWalk()
 {
     int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
+    QString f = QStringLiteral("doSpeedWalk");
+    QString n = QString();
+    mLuaInterpreter.call(f, n);
+}
+
+void Host::startSpeedWalk(int sourceRoom, int targetRoom)
+{
+    QString sourceName = QStringLiteral("speedWalkFrom");
+    mLuaInterpreter.set_lua_integer(sourceName, sourceRoom);
+    QString targetName = QStringLiteral("speedWalkTo");
+    mLuaInterpreter.set_lua_integer(targetName, targetRoom);
     QString f = QStringLiteral("doSpeedWalk");
     QString n = QString();
     mLuaInterpreter.call(f, n);

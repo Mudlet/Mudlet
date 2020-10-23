@@ -199,6 +199,7 @@ public:
     bool isClosingDown();
     unsigned int assemblePath();
     bool checkForMappingScript();
+    bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }
@@ -256,6 +257,7 @@ public:
     QPair<bool, QString> resetAndRestartStopWatch(const int);
 
     void startSpeedWalk();
+    void startSpeedWalk(int sourceRoom, int targetRoom);
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);

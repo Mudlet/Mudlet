@@ -30,7 +30,13 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  if(BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((BUILD matches "-dev.+") or (BUILD matches "-test.+"))
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  endif()
 endif()
 
 set(mudlet_SRCS

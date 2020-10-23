@@ -47,7 +47,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
 
   if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
-    bash make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
+    ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
@@ -80,9 +80,9 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
     else
-      bash make-installer.sh -r "${VERSION}"
+      ./make-installer.sh -r "${VERSION}"
     fi
 
     if [ "${public_test_build}" == "true" ]; then
@@ -139,7 +139,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
 
       cd "${TRAVIS_BUILD_DIR}"
       # generate and upload the tarball
-      bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
+      "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
       scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
     fi
