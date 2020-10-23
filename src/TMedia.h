@@ -92,7 +92,12 @@ private:
 class TMediaPlayer
 {
 public:
-    TMediaPlayer() : mpHost(nullptr), mMediaPlayer(nullptr), initialized(false) {}
+    TMediaPlayer()
+        : mpHost(nullptr)
+        , mMediaData(mediaData)
+        , mMediaPlayer(nullptr)
+        , initialized(true)
+        {}
     ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
@@ -112,7 +117,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer;
-    bool initialized = false;
+    bool initialized;
 };
 
 class TMedia : public QObject
