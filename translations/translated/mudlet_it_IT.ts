@@ -10269,7 +10269,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se sei collegato ad un gioco che utilizza un alfabeto non-latino e vedi il simbolo � invece del testo o i caratteri speciali accentati come &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; non sono visualizzati correttamente, prova a cambiare la codifica in UTF-8 o in quella suggerita dal tuo gioco.&lt;/p&gt;&lt;p&gt;Per alcune codifiche, in alcuni sistemi operativi, Mudlet dispone già delle informazioni di decodifica necessarie, in tal caso sarà presente una &lt;tt&gt;m&lt;/tt&gt; come prefisso al nome della codifica.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="302"/>
