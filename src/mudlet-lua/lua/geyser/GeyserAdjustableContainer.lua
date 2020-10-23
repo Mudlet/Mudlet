@@ -111,10 +111,10 @@ function Adjustable.Container:onClick(label, event)
             label:showMenuLabel("attLabel") 
         end
 
-        if table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel) and not self.customItemsLabel.nestedLabels then
+        if not self.customItemsLabel.nestedLabels then
             label:hideMenuLabel("customItemsLabel")
         else
-            label:showMenuLabel("customItemsLabel") 
+            label:showMenuLabel("customItemsLabel")
         end
     end
     label:onRightClick(event)
