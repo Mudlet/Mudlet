@@ -111,10 +111,10 @@ function Adjustable.Container:onClick(label, event)
             label:showMenuLabel("attLabel") 
         end
 
-        if table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel) and not self.customItemsLabel.nestedLabels then
+        if not self.customItemsLabel.nestedLabels then
             label:hideMenuLabel("customItemsLabel")
         else
-            label:showMenuLabel("customItemsLabel") 
+            label:showMenuLabel("customItemsLabel")
         end
     end
     label:onRightClick(event)
@@ -612,6 +612,7 @@ function Adjustable.Container:onEnterAtt()
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
+    doNestShow(self.attLabel)
 end
 
 -- internal function to create the Minimize/Close and the right click Menu Labels
