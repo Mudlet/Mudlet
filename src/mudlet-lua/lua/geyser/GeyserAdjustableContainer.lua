@@ -612,6 +612,7 @@ function Adjustable.Container:onEnterAtt()
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
+    doNestShow(self.attLabel)
 end
 
 -- internal function to create the Minimize/Close and the right click Menu Labels
