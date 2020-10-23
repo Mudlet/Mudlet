@@ -94,7 +94,7 @@ class TMediaPlayer
 public:
     TMediaPlayer()
         : mpHost(nullptr)
-        , mMediaData(mediaData)
+        , mMediaData()
         , mMediaPlayer(nullptr)
         , initialized(true)
         {}
