@@ -698,6 +698,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         }
 
 COMMIT_LINE:
+        // some rudimentary handling of backspace:
+        if (ch == '\b') {
+            ++localBufferPosition;
+            // FIXME: It is tempting to remove the last character of mMudline and
+            // mMudBuffer here. But, what if it was a two character sequence?
+            // so we just ignore it to avoid printing a corrupt symbol.
+            continue;
+        }
         if (CHAR_IS_COMMIT_CHAR(ch)) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
@@ -824,12 +832,12 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
-                | (mItalics ? TChar::Italic : TChar::None)
+                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.isBold(): false) ? TChar::Bold : TChar::None)
+                | (mItalics || mpHost->mMxpClient.isItalic() ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
-                | (mStrikeOut ? TChar::StrikeOut : TChar::None)
-                | (mUnderline ? TChar::Underline : TChar::None);
+                | (mStrikeOut || mpHost->mMxpClient.isStrikeOut() ? TChar::StrikeOut : TChar::None)
+                | (mUnderline || mpHost->mMxpClient.isUnderline() ? TChar::Underline : TChar::None);
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 

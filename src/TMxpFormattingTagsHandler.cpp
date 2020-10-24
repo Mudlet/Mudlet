@@ -26,7 +26,10 @@ bool TMxpFormattingTagsHandler::supports(TMxpContext& ctx, TMxpClient& client, M
     Q_UNUSED(ctx)
     Q_UNUSED(client)
 
-    return tag->isNamed(QStringLiteral("B")) || tag->isNamed(QStringLiteral("I")) || tag->isNamed(QStringLiteral("U"));
+    return tag->isNamed(QStringLiteral("B")) || tag->isNamed(QStringLiteral("BOLD")) || tag->isNamed(QStringLiteral("STRONG")) ||
+           tag->isNamed(QStringLiteral("I")) || tag->isNamed(QStringLiteral("ITALIC")) || tag->isNamed(QStringLiteral("EM")) ||
+           tag->isNamed(QStringLiteral("U")) || tag->isNamed(QStringLiteral("UNDERLINE")) ||
+           tag->isNamed(QStringLiteral("S")) || tag->isNamed(QStringLiteral("STRIKEOUT"));
 }
 
 TMxpTagHandlerResult TMxpFormattingTagsHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -49,12 +52,14 @@ TMxpTagHandlerResult TMxpFormattingTagsHandler::handleEndTag(TMxpContext& ctx, T
 
 void TMxpFormattingTagsHandler::setAttribute(TMxpClient& client, MxpTag* tag, bool value) const
 {
-    if (tag->isNamed("B")) {
+    if (tag->isNamed("B") || tag->isNamed("BOLD") || tag->isNamed("STRONG")) {
         client.setBold(value);
-    } else if (tag->isNamed("I")) {
+    } else if (tag->isNamed("I") || tag->isNamed("ITALIC") || tag->isNamed("EM")) {
         client.setItalic(value);
-    } else if (tag->isNamed("U")) {
+    } else if (tag->isNamed("U") || tag->isNamed("UNDERLINE")) {
         client.setUnderline(value);
+    } else if (tag->isNamed("S") || tag->isNamed("STRIKEOUT")) {
+        client.setStrikeOut(value);
     } else {
         // do nothing
     }

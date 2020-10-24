@@ -28,7 +28,16 @@ TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMx
     Q_UNUSED(tag)
     const QString& version = client.getVersion();
 
+    if (tag->getAttributesCount() > 0) {
+        // Spaces in a quoted arg are unlikely and will not parse
+        client.setStyle(tag->getAttrName(0));
+        // Don't return the version string, if a style was set!
+        return MXP_TAG_HANDLED;
+    }
+
     QString payload = scmVersionString.arg(version);
+    if (!client.getStyle().isNull())
+        payload.replace(QStringLiteral(">"), QStringLiteral(" STYLE=%1>").arg(client.getStyle()));
     client.sendToServer(payload);
 
     return MXP_TAG_HANDLED;
