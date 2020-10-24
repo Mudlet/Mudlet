@@ -96,17 +96,16 @@ public:
         : mpHost(nullptr)
         , mMediaData()
         , mMediaPlayer(nullptr)
-        , initialized(true)
+        , initialized(false)
         {}
     ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    {
-        mpHost = pHost;
-        mMediaPlayer = new QMediaPlayer(pHost);
-        mMediaData = mediaData;
-        initialized = true;
-    }
+        : mpHost(pHost)
+        , mMediaData(mediaData)
+        , mMediaPlayer(new QMediaPlayer(pHost))
+        , initialized(true)
+        {}
 
     TMediaData getMediaData() { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
