@@ -61,9 +61,10 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         for (; i < hsize; i++) {
              hints.append(hrefs[i]);
         }
-        if (hints.size() <= hrefs.size()) {
-            // We now have a multi line menu, with #hints=#hrefs. Add a special tooltip:
-            hints.prepend(hrefs[0] + " (right-click for more)");
+        if (hints.size() <= hsize) {
+            // We now have a multi line menu, with no tooltip for the menulink. Add a special tooltip:
+            // Note hints.size() is at least 2 when we come here.
+            hints.prepend(hints[0] + " (right-click for more)");
         }
     }
 
