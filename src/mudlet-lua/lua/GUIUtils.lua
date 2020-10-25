@@ -1922,7 +1922,7 @@ function setHexBgColor(windowName, colorString)
   end
 
   if #col ~= 6 then
-    error("setHexFgColor needs a 6 digit hex color code.")
+    error("setHexBgColor needs a 6 digit hex color code.")
   end
 
   local colTable = {
