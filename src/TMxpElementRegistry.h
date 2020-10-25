@@ -33,6 +33,7 @@ struct TMxpElement
     QString name;
     QString definition;
     QStringList attrs;
+    QMap<QString, QString> defval;
     QString tag;
     QString flags;
     bool open;

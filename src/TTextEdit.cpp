@@ -987,7 +987,12 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
-                QToolTip::showText(event->globalPos(), tooltip.join("\n"));
+                QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+
+                if (tooltip.size() > commands.size())
+                    QToolTip::showText(event->globalPos(), tooltip[0]);
+                else
+                    QToolTip::showText(event->globalPos(), tooltip.join("\n"));
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
@@ -1233,11 +1238,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
+                        // If more hints than command given, the first is a tool tip, only use the last ones..
+                        int hi = hint.size() > command.size() ? hint.size() - command.size() : 0;
+
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
-                            if (i < hint.size()) {
-                                pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = command[i];
+                            if (hi < hint.size()) {
+                                pA = popup->addAction(hint[hi]);
+                                mPopupCommands[hint[hi++]] = command[i];
                             } else {
                                 pA = popup->addAction(command[i]);
                                 mPopupCommands[command[i]] = command[i];

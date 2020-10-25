@@ -22,6 +22,7 @@
 #include "TStringUtils.h"
 
 TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
+
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     //    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
@@ -33,16 +34,26 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     if (href.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive) || hint.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive)) {
         mIsHrefInContent = true;
     }
+    // Entities in href and hint may contain | seperators, but there are
+    // no | chars in the entity names (allowed, at least), so interpolate
+    // first:
+    href = ctx.getEntityResolver().interpolate(href);
+    if (!hint.isEmpty())
+        hint = ctx.getEntityResolver().interpolate(hint);
+
 
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
-    while (hints.size() > hrefs.size()) {
+    while (hints.size() > hrefs.size() + 1) {
         hints.removeFirst();
     }
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of e131630f... RevertToSplitInBranches
     if (hrefs.size() > 1) {
         int i = hints.size();
         int hsize = hrefs.size();
@@ -60,6 +71,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
             // Note hints.size() is at least 2 when we come here.
             hints.prepend(hints[0] + " (right-click for more)");
         }
+<<<<<<< HEAD
 =======
     // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
     if (hrefs.size() > 1 && hints.size() == 1) {
@@ -70,6 +82,8 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     if (hrefs.size() > 1 && hints.size() == 1) {
         hints = hrefs;
 >>>>>>> parent of 394c71a1... Basic MXP Enhancements
+=======
+>>>>>>> parent of e131630f... RevertToSplitInBranches
     }
 
     // handle print to prompt feature PROMPT
@@ -77,12 +91,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QString command = tag->hasAttribute(ATTR_PROMPT) ? QStringLiteral("printCmdLine") : QStringLiteral("send");
 
     for (int i = 0; i < hrefs.size(); i++) {
-        hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
         hrefs[i] = QStringLiteral("%1([[%2]])").arg(command, hrefs[i]);
-
-        if (i < hints.size()) {
-            hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
-        }
     }
 
     mLinkId = client.setLink(hrefs, hints);
@@ -91,6 +100,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     return MXP_TAG_HANDLED;
 }
+
 QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {
@@ -159,6 +169,7 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
         }
     }
 }
+
 void TMxpSendTagHandler::handleContent(char ch)
 {
     if (mIsHrefInContent) {
