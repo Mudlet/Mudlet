@@ -90,16 +90,9 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
         if (!attr.hasValue()) {
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
         } else {
-
-// Michael Weller: What is this? Why are hints forced to be all Upper?????
-// And only when <send> is used in custom element, but not when used directly????
-#if 0
             if (attr.isNamed("hint")) { // not needed according to the spec, but kept to avoid changes for the user interface
                 return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue().toUpper(), customTag));
             } else {
-#else
-            {
-#endif
                 return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
             }
         }
@@ -125,11 +118,6 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
         int attrIndex = element.attrs.indexOf(attrName.toLower());
         if (attrIndex != -1 && tag->getAttributesCount() > attrIndex) {
             return tag->getAttribute(attrIndex).getName();
-        }
-
-        // not given, use default it defined:
-        if (element.defval.contains(attrName.toLower())) {
-            return element.defval.value(attrName);
         }
 
         return input;
@@ -162,8 +150,6 @@ const QMap<QString, QString>& TMxpCustomElementTagHandler::parseFlagAttributes(c
             values[attrName] = tag->getAttributeValue(attrName);
         } else if (tag->getAttributesCount() > i) {
             values[attrName] = tag->getAttribute(i).getName();
-        } else if (el.defval.contains(attrName)) {
-            values[attrName] = el.defval.value(attrName);
         }
     }
     return values;

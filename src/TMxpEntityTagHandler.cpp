@@ -19,21 +19,18 @@
 #include "TMxpEntityTagHandler.h"
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->getAttributesCount() < 1) {
+    if (tag->getAttributesCount() < 2) {
         return MXP_TAG_NOT_HANDLED;
     }
 
     static const QStringList boolOptions({"PRIVATE", "PUBLISH", "DELETE", "ADD", "REMOVE"});
     TEntityResolver& resolver = ctx.getEntityResolver();
 
-    QString name = tag->getAttrName(0);
-    // MXP passes the name as alphanum, while we expect it in &NAME; form:
-    name = name.prepend('&').append(';');
+    const QString& name = tag->getAttrName(1);
 
     if (tag->hasAttribute("DELETE")) {
         resolver.unregisterEntity(name);
-    } else if (tag->getAttributesCount() > 1 && !boolOptions.contains(tag->getAttribute(1).getName(), Qt::CaseInsensitive)) {
-        // 2nd attribute is actually the value
+    } else if (!boolOptions.contains(tag->getAttribute(1).getName(), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
             QString newDefinition = resolver.getResolution(name);
@@ -49,11 +46,6 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
             resolver.registerEntity(name, value);
             client.publishEntity(name, value);
         }
-    } else if (!tag->hasAttribute("ADD") && !tag->hasAttribute("REMOVE")) {
-        // Apparently there is no (or an empty value), so set us to empty string:
-        const QString& value = "";
-        resolver.registerEntity(name, value);
-        client.publishEntity(name, value);
     }
 
     return MXP_TAG_HANDLED;

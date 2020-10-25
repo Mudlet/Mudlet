@@ -52,7 +52,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
                  "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
                  "Cleft of Dimensions"})
-
 {
     setupUi(this);
 
@@ -826,17 +825,6 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QStringLiteral("fierymud.org")) {
         return QStringLiteral(
                 "The original vision of FieryMUD was to create a challanging MUD for advanced players. This new reborne Fiery is a hope to bring back the goals of the past by inflicting certain death on unsuspecting players. FieryMUD will continue to grow and change through the coming years and those players who seek challenge and possess imagination will come in search of what the 3D world fails to offer them.");
-    } else if (hostUrl == QStringLiteral("mud.tap.de")) {
-        return QStringLiteral(
-                "Aldebaran is a classical LPmud which is focused on exploration and quest solving - there is no PK.\n\n"
-                "Originally founded by some Ex-Nemesis wizzes when that one was shut down, it uses a genuine mudlib with a complex damage and skill "
-                "system.\n\n"
-                "There are some cults and clans, but in general participating in one of these should not exclude you from exploring any parts of the "
-                "rest of the world.\n\n"
-                "Efforts are made to emphasize a consistent medieval fantasy setting of the game.\n\n"
-                "Also, over time the game driver did move away from the original Amylaar sources and can now even do full-featured MXP.\n\n"
-                "We invite you to share our fantasies and we also welcome newbie coders with a huge amount of coding documentation & working, "
-                "walkable examples. Be part of a journey started aeons ago, when 3-letter domain names were still available: The Aldebaran Project!");
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -925,9 +913,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Fierymud")) {
             host_url = QStringLiteral("fierymud.org");
-        }
-        if (profile_name == QStringLiteral("Aldebaran")) {
-            host_url = QStringLiteral("mud.tap.de");
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_url = QStringLiteral("mudlet.org");
@@ -1051,9 +1036,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Fierymud")) {
             host_port = QStringLiteral("4000");
-        }
-        if (profile_name == QStringLiteral("Aldebaran")) {
-            host_port = QStringLiteral("2000");
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_port = QStringLiteral("23");
@@ -1184,10 +1166,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
                                  "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n");
-        }
-        if (profile_name == QStringLiteral("Aldebaran")) {
-            val = QStringLiteral("<center><a href='http://mud.tap.de/'>Aldebaran</a></center>\n"
-                                 );
         }
     }
     website_entry->setText(val);
@@ -1479,26 +1457,6 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("cleftofdimensions.net"), 0, mudServer), QStringLiteral(":/icons/cleftofdimensions.png"));
-    }
-
-    mudServer = QStringLiteral("Aldebaran");
-    if (!deletedDefaultMuds.contains(mudServer)) {
-        pItem = new QListWidgetItem();
-        pItem->setData(csmNameRole, mudServer);
-        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
-        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
-
-        profiles_tree_widget->addItem(pItem);
-        if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QStringLiteral(":/icons/aldebaran.png"));
-            pItem->setIcon(mi);
-        } else {
-            setCustomIcon(mudServer, pItem);
-        }
-        description = getDescription(QStringLiteral("mud.tap.de"), 0, mudServer);
-        if (!description.isEmpty()) {
-            pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
-        }
     }
 
 
