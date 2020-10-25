@@ -42,6 +42,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (hrefs.size() > 1) {
         int i = hints.size();
         int hsize = hrefs.size();
@@ -59,6 +60,11 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
             // Note hints.size() is at least 2 when we come here.
             hints.prepend(hints[0] + " (right-click for more)");
         }
+=======
+    // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
+    if (hrefs.size() > 1 && hints.size() == 1) {
+        hints = hrefs;
+>>>>>>> parent of 394c71a1... Basic MXP Enhancements
 =======
     // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
     if (hrefs.size() > 1 && hints.size() == 1) {
