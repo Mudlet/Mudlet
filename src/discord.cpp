@@ -279,14 +279,8 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 QStringList Discord::getDiscordUserDetails() const
 {
     QStringList results;
-    if (Discord::smReadWriteLock.tryLockForRead()) {
-        results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-        // Make a deep copy whilst we hold a lock on the details to avoid the
-        // writer {handleDiscordReady(...)} having to invoking the C-o-W itself.
-        results.detach();
-        Discord::smReadWriteLock.unlock();
-    }
-
+    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+    results.detach();
     return results;
 }
 
