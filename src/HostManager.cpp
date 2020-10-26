@@ -23,11 +23,12 @@
 
 #include "mudlet.h"
 
+
 bool HostManager::deleteHost(const QString& hostname)
 {
     // make sure this is really a new host
     if (!mHostPool.contains(hostname)) {
-        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: it is not a member of host pool... releasing lock and aborting, returning false!";
+        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
         return false;
     } else {
         int ret = mHostPool.remove(hostname);
@@ -52,20 +53,27 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         return false;
     }
 
-
-    // Was an ONLY use of a createNewHostID() method here but that extra
-    // function call was unnecessary and wastes time while we are locking access
-    // to the host pool
     int id = mHostPool.size() + 1;
     QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
-        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... releasing lock and aborting, returning false!";
+        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... aborting!";
         return false;
     }
 
     mHostPool.insert(hostname, pNewHost);
     return true;
+}
+
+QStringList HostManager::getHostList()
+{
+    QStringList strlist;
+    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
+    if (!hostList.isEmpty()) {
+        strlist << hostList;
+    }
+
+    return strlist;
 }
 
 int HostManager::getHostCount()
@@ -132,34 +140,3 @@ Host* HostManager::getHost(const QString& hostname)
     Host* pHost = mHostPool.value(hostname).data();
     return pHost;
 }
-
-HostManager::Iter::Iter(HostManager* manager, bool at_start)
-{
-    if (at_start) {
-        it = manager->mHostPool.begin();
-    } else {
-        it = manager->mHostPool.end();
-    }
-}
-
-bool HostManager::Iter::operator== (const Iter& other)
-{
-    return it == other.it;
-}
-
-bool HostManager::Iter::operator!= (const Iter& other)
-{
-    return it != other.it;
-}
-
-HostManager::Iter& HostManager::Iter::operator++()
-{
-    it++;
-    return *this;
-}
-
-QSharedPointer<Host> HostManager::Iter::operator*()
-{
-    return *it;
-}
-

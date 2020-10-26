@@ -2089,8 +2089,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
                         // changed by this method:
-                        if (pHost->mpConsole) {
-                            pHost->mpConsole->changeColors();
+                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
+                            mudlet::self()->mConsoleMap[pHost]->changeColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -2148,8 +2148,8 @@ void TBuffer::resetColors()
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
     // decodeOSC(...) method:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
+    if (mudlet::self()->mConsoleMap.contains(pHost)) {
+        mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"
@@ -2387,7 +2387,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
 // This was called "insert" but that is commonly used for built in methods and
 // it makes it harder to pick out usages of this specific method:
-bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
+bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 {
     if (text.isEmpty()) {
         return false;
@@ -2458,7 +2458,7 @@ TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 }
 
 // This only copies the first line of chunk's contents:
-void TBuffer::paste(QPoint& P, TBuffer chunk)
+void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
     bool needAppend = false;
     bool hasAppended = false;
@@ -2483,7 +2483,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
         // This is rather inefficient as s is only ever one QChar long
         QPoint P_current(cx, y);
         if ((y < getLastLineNumber()) && (!needAppend)) {
-            TChar& format = chunk.buffer.at(0).at(cx);
+            const TChar& format = chunk.buffer.at(0).at(cx);
             QString s = QString(chunk.lineBuffer.at(0).at(cx));
             insertInLine(P_current, s, format);
         } else {

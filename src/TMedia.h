@@ -27,11 +27,6 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
-#include "pre_guard.h"
-#include <QMediaPlayer>
-#include "post_guard.h"
-
-
 class TMediaData
 {
 public:
@@ -97,16 +92,20 @@ private:
 class TMediaPlayer
 {
 public:
-    TMediaPlayer() {}
+    TMediaPlayer()
+        : mpHost(nullptr)
+        , mMediaData()
+        , mMediaPlayer(nullptr)
+        , initialized(false)
+        {}
     ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    {
-        mpHost = pHost;
-        mMediaPlayer = new QMediaPlayer(pHost);
-        mMediaData = mediaData;
-        initialized = true;
-    }
+        : mpHost(pHost)
+        , mMediaData(mediaData)
+        , mMediaPlayer(new QMediaPlayer(pHost))
+        , initialized(true)
+        {}
 
     TMediaData getMediaData() { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
@@ -117,7 +116,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer;
-    bool initialized = false;
+    bool initialized;
 };
 
 class TMedia : public QObject

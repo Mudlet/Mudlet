@@ -55,6 +55,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mpHunspellCodec_system(nullptr)
 , mLogFileName(QString(""))
 , mLogToLogFile(false)
 {
@@ -484,7 +485,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
 
-        pC->setFontSize(12);
+        pC->setMiniConsoleFontSize(12);
         pC->show();
 
         return pC;

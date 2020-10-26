@@ -104,6 +104,8 @@ public:
     void loadGlobal();
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
+    int check_for_custom_speedwalk();
+    void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
@@ -375,6 +377,7 @@ public:
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
+    static int setMiniConsoleFontSize(lua_State*);
     static int setConsoleBackgroundImage(lua_State*);
     static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);
