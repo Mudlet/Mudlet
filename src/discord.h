@@ -26,7 +26,6 @@
 #include <functional>
 #include <utility>
 #include <QDebug>
-#include <QReadWriteLock>
 #include <QTimer>
 #include <QTimerEvent>
 #include <QLibrary>
@@ -268,8 +267,6 @@ private:
     // https://github.com/discordapp/discord-rpc/issues/202
     QString mCurrentApplicationId;
 
-    // Protect the four values after this one from async processes:
-    static QReadWriteLock smReadWriteLock;
     // These are needed to validate the local user's presence on Discord to
     // the one that they want to be associated with a profile's character name
     // - it may be desired to not reveal the character name on Discord until

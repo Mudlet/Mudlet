@@ -207,8 +207,6 @@ void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition, bo
 
 void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
 {
-    QMutexLocker locker(&mKeyUnitLock);
-
     TKey* pOldParent = getKeyPrivate(oldParentID);
     TKey* pNewParent = getKeyPrivate(newParentID);
     TKey* pChild = getKeyPrivate(childID);
@@ -245,7 +243,6 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
 
 TKey* KeyUnit::getKey(int id)
 {
-    QMutexLocker locker(&mKeyUnitLock);
     if (mKeyMap.find(id) != mKeyMap.end()) {
         return mKeyMap.value(id);
     } else {

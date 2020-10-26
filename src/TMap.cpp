@@ -2161,17 +2161,17 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
-    if (!mXmlImportMutex.tryLock(0)) {
+    if (mImportRunning) {
         QString warnMsg = QStringLiteral("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
                                          "requested or is being imported from a local file - wait for that\n"
                                          "operation to complete (if it cannot be canceled) before retrying!");
         postMessage(warnMsg);
         return;
     }
+    mImportRunning = true;
+    // MUST clear this flag when done under ALL circumstances
 
-    // We have the mutex locked - MUST unlock it when done under ALL circumstances
     QUrl url;
-
     if (remoteUrl.isEmpty()) {
         if (!getMmpMapLocation().isEmpty()) {
             url = QUrl::fromUserInput(getMmpMapLocation());
@@ -2189,7 +2189,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                         "\"%2\".")
                                  .arg(url.toString(), url.errorString());
         postMessage(errMsg);
-        mXmlImportMutex.unlock();
+        mImportRunning = false;
         return;
     }
 
@@ -2203,7 +2203,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                             "and there is enough space. The download operation has failed.")
                                     .arg(toProfileDirPathString);
         pHost->postMessage(errMsg);
-        mXmlImportMutex.unlock();
+        mImportRunning = false;
         return;
     }
 
@@ -2259,7 +2259,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 // error message to the console
 bool TMap::importMap(QFile& file, QString* errMsg)
 {
-    if (!mXmlImportMutex.tryLock(0)) {
+    if (mImportRunning) {
         if (errMsg) {
             *errMsg = tr("loadMap: unable to perform request, a map is already being downloaded or\n"
                          "imported at user request.");
@@ -2271,12 +2271,11 @@ bool TMap::importMap(QFile& file, QString* errMsg)
         }
         return false;
     }
-    // We have the mutex and MUST unlock it when we are done
+    mImportRunning = true;
+    // MUST clear this flag when done under ALL circumstances
 
     bool result = readXmlMapFile(file, errMsg);
-
-    // Finally release the lock on the XMLimporter
-    mXmlImportMutex.unlock();
+    mImportRunning = false;
 
     return result;
 }
@@ -2394,9 +2393,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
-
-        // We have finished with the XMLimporter so must release the lock on it
-        mXmlImportMutex.unlock();
+        // We have finished with the XMLimporter so must clear the flag
+        mImportRunning = false;
     };
 
 

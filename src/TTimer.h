@@ -26,7 +26,6 @@
 
 
 #include "pre_guard.h"
-#include <QMutex>
 #include <QPointer>
 #include <QTime>
 #include "post_guard.h"
@@ -98,7 +97,6 @@ private:
     QString mFuncName;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
-    QMutex mLock;
     QTimer* mpQTimer;
     bool mModuleMember;
     // temporary timers are single-shot by default, unless repeating is set

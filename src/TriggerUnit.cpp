@@ -141,7 +141,6 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
 
 TTrigger* TriggerUnit::getTrigger(int id)
 {
-    QMutexLocker locker(&mTriggerUnitLock);
     if (mTriggerMap.find(id) != mTriggerMap.end()) {
         return mTriggerMap.value(id);
     } else {

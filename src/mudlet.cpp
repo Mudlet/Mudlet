@@ -5986,62 +5986,36 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
 
 QPair<bool, bool> mudlet::addWordToSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isAdded = false;
-        Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (!mWordSet_shared.contains(word)) {
-            mWordSet_shared.insert(word);
-            qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
-            isAdded = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isAdded);
+    bool isAdded = false;
+    Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (!mWordSet_shared.contains(word)) {
+        mWordSet_shared.insert(word);
+        qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
+        isAdded = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::addWordToSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isAdded);
 }
 
 QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isRemoved = false;
-        Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (mWordSet_shared.remove(word)) {
-            qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
-            isRemoved = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isRemoved);
+    bool isRemoved = false;
+    Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (mWordSet_shared.remove(word)) {
+        qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
+        isRemoved = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::removeWordFromSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isRemoved);
 }
 
 QSet<QString> mudlet::getWordSet()
 {
-    bool gotWordSet = false;
     QSet<QString> wordSet;
-    do {
-        if (mDictionaryReadWriteLock.tryLockForRead(100)) {
-            // Got read lock within the timeout:
-            wordSet = mWordSet_shared;
-            // Ensure we make a deep copy of it so the caller is not affected by
-            // other profiles' edits after we unlock.
-            wordSet.detach();
-            // Now we can unlock it:
-            mDictionaryReadWriteLock.unlock();
-            gotWordSet = true;
-        } else {
-            qDebug() << "mudlet::getWordSet() ALERT - failed to get a read lock to access mWordSet_shared, retrying...";
-        }
-    } while (!gotWordSet);
-
+    // Got read lock within the timeout:
+    wordSet = mWordSet_shared;
+    // Ensure we make a deep copy of it so the caller is not affected by
+    // other profiles' edits.
+    wordSet.detach();
+    // Now we can unlock it:
     return wordSet;
 }
 

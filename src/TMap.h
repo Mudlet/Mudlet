@@ -34,7 +34,6 @@
 #include <QColor>
 #include <QFont>
 #include <QMap>
-#include <QMutex>
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
@@ -134,14 +133,14 @@ public:
     // from the operation.
     void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
-    // Moved and revised from dlgMapper:
+    // Downloads a map, then installs it via readXmlMapFile().
+    // Protected from running twice by 'mImportRunning' flag
     void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
-    // Also uses readXmlMapFile(...) but for local files:
+    // like 'downloadMap' but for local files:
     bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
 
-    // Used at end of downloadMap(...) OR as part of importMap(...) but not by
-    // both at the same time thanks to mXmlImportMutex
+    // Used at end of downloadMap(...) OR as part of importMap(...)
     bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
 
     // Use progress dialog for post-download operations.
@@ -291,7 +290,7 @@ private:
     QNetworkReply* mpNetworkReply;
     QString mLocalMapFileName;
     int mExpectedFileSize;
-    QMutex mXmlImportMutex;
+    bool mImportRunning;
 };
 
 #endif // MUDLET_TMAP_H

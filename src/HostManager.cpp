@@ -19,33 +19,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/*
- * Revised to allow concurrent read access to mHostPool but as some methods
- * were not used they have been commented out - if they are needed again they
- * will need to be rewritten to use the (QReadWriteLock) mPoolReadWriteLock
- * that is now used instead of the previous (QMutex) mPoolLock which was used
- * with a QMutexLocker - the latter is not suitable for a QReadWriteLock I
- * think - SlySven Dec 2016
- */
-
 #include "HostManager.h"
-
 
 #include "mudlet.h"
 
 
 bool HostManager::deleteHost(const QString& hostname)
 {
-    mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
-
     // make sure this is really a new host
     if (!mHostPool.contains(hostname)) {
-        mPoolReadWriteLock.unlock();
-        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: it is not a member of host pool... releasing lock and aborting, returning false!";
+        qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
         return false;
     } else {
         int ret = mHostPool.remove(hostname);
-        mPoolReadWriteLock.unlock();
         return ret;
     }
 }
@@ -62,38 +48,27 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         portnumber = port.toInt();
     }
 
-    mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
     // make sure this is really a new host
     if (mHostPool.contains(hostname)) {
-        mPoolReadWriteLock.unlock();
         return false;
     }
 
-
-    // Was an ONLY use of a createNewHostID() method here but that extra
-    // function call was unnecessary and wastes time while we are locking access
-    // to the host pool
     int id = mHostPool.size() + 1;
     QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
-        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... releasing lock and aborting, returning false!";
-        mPoolReadWriteLock.unlock();
+        qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... aborting!";
         return false;
     }
 
     mHostPool.insert(hostname, pNewHost);
-    mPoolReadWriteLock.unlock();
     return true;
 }
 
 QStringList HostManager::getHostList()
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-
     QStringList strlist;
     const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
-    mPoolReadWriteLock.unlock();
     if (!hostList.isEmpty()) {
         strlist << hostList;
     }
@@ -103,20 +78,12 @@ QStringList HostManager::getHostList()
 
 int HostManager::getHostCount()
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-    // This assumes that there will not be nullptr values for destroyed Host
-    // instances:
-    const unsigned int total = mHostPool.count();
-    mPoolReadWriteLock.unlock();
-    return total;
+    return mHostPool.count();
 }
 
 void HostManager::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
-
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
-    mPoolReadWriteLock.unlock();
     for (const auto& i : hostList) {
         if (i) {
             i->postIrcMessage(a, b, c);
@@ -136,9 +103,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
         return;
     }
 
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     const QList<QSharedPointer<Host>> hostList = mHostPool.values();
-    mPoolReadWriteLock.unlock();
 
     int i = 0;
     QList<int> beforeSendingHost;
@@ -172,9 +137,6 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
 
 Host* HostManager::getHost(const QString& hostname)
 {
-    mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     Host* pHost = mHostPool.value(hostname).data();
-    mPoolReadWriteLock.unlock();
-
     return pHost;
 }

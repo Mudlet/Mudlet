@@ -25,7 +25,6 @@
 
 #include "pre_guard.h"
 #include <QMultiMap>
-#include <QMutex>
 #include <QPointer>
 #include <QSet>
 #include <QString>
