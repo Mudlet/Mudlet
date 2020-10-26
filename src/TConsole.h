@@ -96,7 +96,7 @@ public:
     void cut();
     void paste();
     void appendBuffer();
-    void appendBuffer(TBuffer);
+    void appendBuffer(const TBuffer&);
     int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

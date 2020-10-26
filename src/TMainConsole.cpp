@@ -55,6 +55,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mpHunspellCodec_system(nullptr)
 , mLogFileName(QString(""))
 , mLogToLogFile(false)
 {
