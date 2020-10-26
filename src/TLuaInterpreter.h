@@ -29,7 +29,6 @@
 
 #include "pre_guard.h"
 #include <QEvent>
-#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
