@@ -24,6 +24,7 @@
 TMxpNodeBuilder::TMxpNodeBuilder(bool ignoreText)
 : mOptionIgnoreText(ignoreText)
 , mIsEndTag(false)
+, mIsEmptyTag(false)
 , mIsInsideTag(false)
 , mIsInsideAttr(false)
 , mReadingAttrValue(false)
