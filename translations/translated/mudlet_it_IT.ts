@@ -8135,12 +8135,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/mapper.ui" line="699"/>
       <source>IDs</source>
-      <translation type="unfinished"/>
+      <translation>IDs</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="715"/>
       <source>Names</source>
-      <translation type="unfinished"/>
+      <translation>Nomi</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="894"/>
