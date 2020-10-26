@@ -8134,12 +8134,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/mapper.ui" line="699"/>
       <source>IDs</source>
-      <translation type="unfinished"/>
+      <translation>IDs</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="715"/>
       <source>Names</source>
-      <translation type="unfinished"/>
+      <translation>Namen</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="894"/>
