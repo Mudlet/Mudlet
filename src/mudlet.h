@@ -49,9 +49,6 @@
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
-#include <QProxyStyle>
-#include <QQueue>
-#include <QReadWriteLock>
 #include <QSettings>
 #include <QShortcut>
 #include <QTextOption>
@@ -717,8 +714,6 @@ private:
     Hunhandle* mHunspell_sharedDictionary;
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
-    // Prevent problems when updating the dictionary:
-    QReadWriteLock mDictionaryReadWriteLock;
 
     QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 
