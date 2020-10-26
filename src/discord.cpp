@@ -276,6 +276,20 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     // when profile autostart is enabled
 }
 
+QStringList Discord::getDiscordUserDetails() const
+{
+    QStringList results;
+    if (Discord::smReadWriteLock.tryLockForRead()) {
+        results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+        // Make a deep copy whilst we hold a lock on the details to avoid the
+        // writer {handleDiscordReady(...)} having to invoking the C-o-W itself.
+        results.detach();
+        Discord::smReadWriteLock.unlock();
+    }
+
+    return results;
+}
+
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
 {
     qWarning() << "Discord disconnected - code:" << errorCode << "message:" << message;
