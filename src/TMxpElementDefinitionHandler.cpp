@@ -52,8 +52,9 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
             QString arg = attr.section("=", 1);
 
             el.attrs[i] = attr = attr.section("=", 0, 0).toLower();
-            if (!arg.isEmpty())
-                el.defval[attr] = arg;
+            if (!arg.isEmpty()) {
+                el.defaultValues[attr] = arg;
+            }
         }
     }
 

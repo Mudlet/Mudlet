@@ -33,7 +33,9 @@ struct TMxpElement
     QString name;
     QString definition;
     QStringList attrs;
-    QMap<QString, QString> defval;
+
+    // if custom element definition specified a default for an attr, it's in defaultValues[attr]
+    QMap<QString, QString> defaultValues;
     QString tag;
     QString flags;
     bool open;

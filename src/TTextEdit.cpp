@@ -1238,8 +1238,13 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
-                        // If more hints than command given, the first is a tool tip, only use the last ones..
-                        int hi = hint.size() > command.size() ? hint.size() - command.size() : 0;
+
+                        // If more hints than commands given, the first is a tool tip, only use the last ones for the menu
+                        int hi = hint.size() - command.size();
+
+                        if (hi < 0) {
+                            hi = 0;
+                        }
 
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;

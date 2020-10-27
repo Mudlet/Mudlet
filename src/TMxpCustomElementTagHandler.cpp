@@ -91,17 +91,21 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
         } else {
 
-// Michael Weller: What is this? Why are hints forced to be all Upper?????
-// And only when <send> is used in custom element, but not when used directly????
+/*
+ * Michael Weller: What is this? Why are hints forced to be all upper, even when
+ * explicitly set by the Mud in mixed case?
+ * And only when <send> is used in a custom element, but not when used directly?
+ * Let the mud choose about its user interface.
+ */
 #if 0
             if (attr.isNamed("hint")) { // not needed according to the spec, but kept to avoid changes for the user interface
                 return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue().toUpper(), customTag));
             } else {
-#else
-            {
-#endif
                 return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
             }
+#else
+            return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
+#endif
         }
     };
 
@@ -128,8 +132,8 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
         }
 
         // not given, use default it defined:
-        if (element.defval.contains(attrName.toLower())) {
-            return element.defval.value(attrName);
+        if (element.defaultValues.contains(attrName.toLower())) {
+            return element.defaultValues.value(attrName);
         }
 
         return input;
@@ -162,8 +166,8 @@ const QMap<QString, QString>& TMxpCustomElementTagHandler::parseFlagAttributes(c
             values[attrName] = tag->getAttributeValue(attrName);
         } else if (tag->getAttributesCount() > i) {
             values[attrName] = tag->getAttribute(i).getName();
-        } else if (el.defval.contains(attrName)) {
-            values[attrName] = el.defval.value(attrName);
+        } else if (el.defaultValues.contains(attrName)) {
+            values[attrName] = el.defaultValues.value(attrName);
         }
     }
     return values;

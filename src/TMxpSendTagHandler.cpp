@@ -38,9 +38,9 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     // no | chars in the entity names (allowed, at least), so interpolate
     // first:
     href = ctx.getEntityResolver().interpolate(href);
-    if (!hint.isEmpty())
+    if (!hint.isEmpty()) {
         hint = ctx.getEntityResolver().interpolate(hint);
-
+    }
 
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');

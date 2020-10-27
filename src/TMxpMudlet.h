@@ -94,10 +94,10 @@ public:
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 
-    void setBold(bool bold) override {boldCtr += bold ? 1 : -1; if(boldCtr <0) boldCtr = 0; }
-    void setItalic(bool italic) override { italicCtr += italic ? 1 : -1; if(italicCtr <0) italicCtr = 0;  }
-    void setUnderline(bool underline) override { underlineCtr += underline ? 1 : -1; if(underlineCtr <0) underlineCtr = 0;  }
-    void setStrikeOut(bool strikeOut) override { strikeOutCtr += strikeOut ? 1 : -1; if(strikeOutCtr <0) strikeOutCtr = 0;  }
+    void setBold(bool bold) override;
+    void setItalic(bool italic) override;
+    void setUnderline(bool underline) override;
+    void setStrikeOut(bool strikeOut) override;
 
     bool isBold() override { return boldCtr > 0; }
     bool isItalic() override { return italicCtr > 0; }
@@ -105,7 +105,7 @@ public:
     bool isStrikeOut() override { return strikeOutCtr > 0; }
 
     void setStyle(const QString& val) override {mxpStyle = val; }
-    virtual const QString &getStyle() override {return mxpStyle;}
+    const QString &getStyle() override {return mxpStyle;}
 
     void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
         Q_UNUSED(elementName)
