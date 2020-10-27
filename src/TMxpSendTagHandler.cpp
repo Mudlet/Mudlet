@@ -34,7 +34,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     if (href.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive) || hint.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive)) {
         mIsHrefInContent = true;
     }
-    // Entities in href and hint may contain | seperators, but there are
+    // Entities in href and hint may contain | separators, but there are
     // no | chars in the entity names (allowed, at least), so interpolate
     // first:
     href = ctx.getEntityResolver().interpolate(href);
