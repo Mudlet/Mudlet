@@ -10673,7 +10673,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>Benachrichtigung bei neuen Daten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -10683,7 +10683,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Allow server to download and play media</source>
-      <translation type="unfinished"/>
+      <translation>Erlaube Servern das Herunterladen und Abspielen von Medien</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
