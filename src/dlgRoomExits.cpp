@@ -541,7 +541,7 @@ void dlgRoomExits::save()
     exitKey = QStringLiteral("s");
     dirCode = DIR_SOUTH;
     if (s->isEnabled() && !s->text().isEmpty() && mpHost->mpMap->mpRoomDB->getRoom(s->text().toInt()) != nullptr) {
-        if (originalExits.value(dirCode)->destination != s->text().toInt()) {
+        if (originalExits.contains(dirCode) && originalExits.value(dirCode)->destination != s->text().toInt()) {
             pR->setExit(s->text().toInt(), dirCode);
         }
         if (pR->hasExitStub(dirCode)) {
