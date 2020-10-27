@@ -55,7 +55,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
         // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
         if (hints.size() == 1) {
-            i = 0; // add hints for all commands.
+            i = 0; // Take hint as tooltip, add hints for all commands in the loop below.
         }
         // if less hints than commands, add commands as hints
         for (; i < hsize; i++) {
