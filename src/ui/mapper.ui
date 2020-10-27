@@ -290,7 +290,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>◀</string>
+                  <string>⯇</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -330,7 +330,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>▼</string>
+                  <string>⯆</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -370,7 +370,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>▲</string>
+                  <string>⯅</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
@@ -410,7 +410,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>►</string>
+                  <string>⯈</string>
                  </property>
                  <property name="autoRepeat">
                   <bool>true</bool>
