@@ -3,7 +3,7 @@
 echo "Running appveyor.install.sh shell script..."
 
 # Source/setup some variables (including PATH):
-. $(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh")
+. "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh")"
 
 # The above will define ABORT_PT_BUILDS to be "true" if this is deduced to be
 # a "public_test" BUILD_TYPE - AND there has not been any change in the
@@ -96,28 +96,28 @@ echo " Lua configuration files are: (system): $(${ROCKCOMMAND} config --system-c
 echo "                            and (user): $(${ROCKCOMMAND} config --user-config)"
 echo ""
 echo "   The system one contains:"
-/usr/bin/cat $(${ROCKCOMMAND} config --system-config)
+/usr/bin/cat "$(${ROCKCOMMAND} config --system-config)"
 
 echo ""
 echo "  Installing needed luarocks..."
 echo ""
 echo "    luafilesystem"
-${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
+${ROCKCOMMAND} "${ROCKOPTARGS}" install luafilesystem
 echo ""
 echo "    lua-yajl"
-${ROCKCOMMAND} ${ROCKOPTARGS} install lua-yajl
+${ROCKCOMMAND} "${ROCKOPTARGS}" install lua-yajl
 echo ""
 echo "    luautf8"
-${ROCKCOMMAND} ${ROCKOPTARGS} install luautf8
+${ROCKCOMMAND} "${ROCKOPTARGS}" install luautf8
 echo ""
 echo "    lua-zip"
-${ROCKCOMMAND} ${ROCKOPTARGS} install lua-zip
+${ROCKCOMMAND} "${ROCKOPTARGS}" install lua-zip
 echo ""
 echo "    lrexlib-pcre"
-${ROCKCOMMAND} ${ROCKOPTARGS} install lrexlib-pcre
+${ROCKCOMMAND} "${ROCKOPTARGS}" install lrexlib-pcre
 echo ""
 echo "    luasql-sqlite3"
-${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
+${ROCKCOMMAND} "${ROCKOPTARGS}" install luasql-sqlite3
 echo ""
 echo "    ... luarocks installation done"
 echo ""

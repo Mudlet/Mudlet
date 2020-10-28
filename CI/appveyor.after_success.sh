@@ -3,7 +3,7 @@
 echo "Running appveyor.after_success.sh shell script..."
 echo ""
 
-if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ]; then
+if [ "${APPVEYOR_REPO_NAME}" != "Mudlet/Mudlet" ]; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
     echo "This does not appear to be running on the main Mudlet repository, packaging is not appropriate....!"
     echo ""
@@ -12,11 +12,6 @@ fi
 
 # Source/setup some variables (including PATH):
 . /c/projects/mudlet/CI/appveyor.set-build-info.sh
-
-echo "TEMP: Location of secure-file utility:"
-which secure-file
-echo ""
-
 
 if [ "${ABORT_PT_BUILDS}" = "true" ]; then
     # If the build has been forcible terminated with an "appveyor exit" command
@@ -31,7 +26,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     echo "=== Creating a (\"${BUILD_TYPE}\") snapshot build ==="
     echo ""
     echo "Moving to package directory: $(/usr/bin/cygpath --windows "/c/projects/package") ..."
-    cd /c/projects/package
+    cd /c/projects/package || exit 1
 
     mv /c/projects/package/mudlet.exe /c/projects/package/Mudlet.exe
     # Pending support for controllable debug or relWithDebInfo builds:
@@ -41,11 +36,11 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --add-gnu-debuglink=Mudlet.exe.debug Mudlet.exe
 
     # Compress everything up (at maximum compression) into an zip archive:
-    /usr/bin/zip -rv9 ${ZIP_FILE_NAME} ./*
+    /usr/bin/zip -rv9 "${ZIP_FILE_NAME}" ./*
 
     # wget returns the URL that is used, which we need to capture to report it:
     echo "=== Uploading the (\"${BUILD_TYPE}\") snapshot build ==="
-    DEPLOY_URL=$(wget --method PUT --body-file=${ZIP_FILE_NAME} "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}" -O - -q)
+    DEPLOY_URL=$(wget --method PUT --body-file="${ZIP_FILE_NAME}" "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}" -O - -q)
     if [ -n "${DEPLOY_URL}" ]; then
         if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
             prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
@@ -63,7 +58,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     # Also retain the archive as a build artifact (for longer than the 14 days)
     # that we use for our own website - i.e. 6 months, use the FileName option
     # because otherwise the path is unnecessarily kept in the name:
-    appveyor PushArtifact $(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/package/${ZIP_FILE_NAME}") -FileName ${ZIP_FILE_NAME}
+    appveyor PushArtifact "$(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/package/${ZIP_FILE_NAME}")" -FileName "${ZIP_FILE_NAME}"
 
 else # BUILD_TYPE is "public_test" OR "release"
     if [ "${BUILD_TYPE}" = "public_test" ]; then
@@ -95,7 +90,7 @@ else # BUILD_TYPE is "public_test" OR "release"
     echo ""
 
     echo "  Moving to installer's Windows sub-directory: $(/usr/bin/cygpath --windows "/c/projects/installers/windows") ..."
-    cd /c/projects/installers/windows
+    cd /c/projects/installers/windows || exit 1
     echo ""
 
     # Install squirrel for Windows here, NuGet 5.1.0 is present as part of the
@@ -170,23 +165,22 @@ which nuget.exe
     echo ""
 
 echo "TEMP: ensuring we have modified the nuspec file:"
-/usr/bin/diff -w ${NUSPEC_FILE}.orig ${NUSPEC_FILE}
+/usr/bin/diff -w "${NUSPEC_FILE}.orig" "${NUSPEC_FILE}"
 # And temporarily retain it for post mortems:
-appveyor PushArtifact $(/usr/bin/cygpath --windows "${NUSPEC_FILE}") -FileName "mudlet.nuspec"
+appveyor PushArtifact "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -FileName "mudlet.nuspec"
 echo ""
 
     echo "  Creating the package based on the nuspec file:"
     # As well as the files from the Mudlet build there will be 4 additional
     # files, two each: NuGet.Squirrel and Squirrel with types .dll & .pdb
     # i.e. library and debug symbols from the mudlet-installer.
-    #  /c/Tools/NuGet/nuget.exe pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -Version "4.9.1.20200922" -BasePath "$(/usr/bin/cygpath --windows "${SQUIRREL_DIR}")" -OutputDirectory "$(/usr/bin/cygpath --windows "${SQUIRREL_DIR}")"
     if [ -n "${SUFFIX_FOR_NUGET}" ]; then
         # A '-' will automagically get inserted between the ${VERSION} and the
         # ${SUFFIX_FOR_NUGET} values:
-        nuget pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -NonInteractive -NoPackageAnalysis -Version "${VERSION}" -Suffix ${SUFFIX_FOR_NUGET} -BasePath "/c/projects/packaging" -OutputDirectory "/c/projects/package"
+        nuget pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -NonInteractive -NoPackageAnalysis -Version "${VERSION}" -Suffix "${SUFFIX_FOR_NUGET}" -BasePath "/c/projects/packaging" -OutputDirectory "/c/projects/package"
     else
-        nuget pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -NonInteractive -NoPackageAnalysis -Version "${VERSION}"                             -BasePath "/c/projects/packaging" -OutputDirectory "/c/projects/package"
-    end
+        nuget pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -NonInteractive -NoPackageAnalysis -Version "${VERSION}"                               -BasePath "/c/projects/packaging" -OutputDirectory "/c/projects/package"
+    fi
     # For a nuspec file "Mudlet.nuspec", with -Version "4.9.2" and suffix
     # "ptb20201020" this will produce a nupkg file:
     # "Mudlet.4.9.2-ptb20201020.nupkg"
@@ -240,12 +234,12 @@ echo ""
         fi
     else
         echo "=== Registering Mudlet SSH keys for release upload ==="
-        /usr/bin/openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in /c/projects/mudlet/CI/mudlet-deploy-key.enc -out /tmp/mudlet-deploy-key -d
+        # /usr/bin/openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in /c/projects/mudlet/CI/mudlet-deploy-key.enc -out /tmp/mudlet-deploy-key -d
         eval "$(ssh-agent -s)"
         chmod 600 /tmp/mudlet-deploy-key
         ssh-add /tmp/mudlet-deploy-key
 
-        DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-x${BUILD_BITNESS}-installer.exe"
+        DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-x${BUILD_BITNESS}-installer.exe"
         /usr/bin/scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "/c/projects/squirel_output/Setup.exe" "keneanung@mudlet.org:${DEPLOY_PATH}"
     fi
 # temporarily retain built files for post-mortems

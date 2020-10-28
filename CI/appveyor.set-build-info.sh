@@ -44,7 +44,6 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
         COMMIT=$(echo "${COMMIT}" | cut -c 1-5)
         DATE=$(date +'%Y%m%d')
         MUDLET_VERSION_BUILD="-ptb-${DATE}+${COMMIT}"
-        export SQUIRREL_DIR=$(/usr/bin/cygpath --windows "/c/projects/packaging")
         # As the nuget/squirrel stuff is built on a NET 4.5 framework the stuff
         # we want to include in the project must be in a ./lib/Net45
         # sub-directory - the name of the generated file is tied to the "id"
@@ -95,7 +94,6 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
 else
     export BUILD_TYPE="release"
     export COMMIT=""
-    export SQUIRREL_DIR=$(/usr/bin/cygpath --windows "/c/projects/packaging")
     # As the nuget/squirrel stuff is built on a NET 4.5 framework the stuff
     # we want to include in the project must be in a ./lib/Net45
     # sub-directory:
@@ -134,6 +132,9 @@ if [ -n "${DATE}" ]; then
     export DATE
 fi
 # not all systems we deal with allow uppercase ascii characters
-export COMMIT=$(echo "${COMMIT}" | /usr/bin/tr '[:upper:]' '[:lower:]')
-export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | /usr/bin/tr '[:upper:]' '[:lower:]')
-export VERSION=$(echo "${VERSION}" | /usr/bin/tr '[:upper:]' '[:lower:]')
+COMMIT=$(echo "${COMMIT}" | /usr/bin/tr '[:upper:]' '[:lower:]')
+MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | /usr/bin/tr '[:upper:]' '[:lower:]')
+VERSION=$(echo "${VERSION}" | /usr/bin/tr '[:upper:]' '[:lower:]')
+export COMMIT
+export MUDLET_VERSION_BUILD
+export VERSION
