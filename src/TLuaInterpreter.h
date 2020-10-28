@@ -29,7 +29,6 @@
 
 #include "pre_guard.h"
 #include <QEvent>
-#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -105,6 +104,8 @@ public:
     void loadGlobal();
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
+    int check_for_custom_speedwalk();
+    void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
@@ -126,7 +127,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, QString&);
+    int startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -387,7 +388,7 @@ public:
     static int getButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
-    static int loadRawFile(lua_State*);
+    static int loadReplay(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);

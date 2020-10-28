@@ -31,9 +31,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 } else {
   if ($Script:PublicTestBuild) {
 
-    $commitDate = Get-Date -date $(git show -s --format=%cs)
-    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
-    if ($commitDate -lt $yesterdaysDate) {
+    $COMMIT_DATE = Get-Date -date $(git show -s --format="%cs")
+    $YESTERDAY_DATE = $(Get-Date).AddDays(-1).Date
+    if ($COMMIT_DATE -lt $YESTERDAY_DATE) {
       Write-Output "=== No new commits, aborting public test build generation ==="
       exit 0
     }
@@ -82,8 +82,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
     $TestBuildString = "-PublicTestBuild"
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet_ptb.ico"
   } else {
     $TestBuildString = ""
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet.ico"
   }
 
   $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
@@ -93,8 +95,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   # fails silently if the nupkg file is not found
-  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico
-
+  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="

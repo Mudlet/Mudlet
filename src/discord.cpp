@@ -30,8 +30,6 @@
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
 
-QReadWriteLock Discord::smReadWriteLock;
-
 QString Discord::smUserName;
 QString Discord::smUserId;
 QString Discord::smDiscriminator;
@@ -266,12 +264,10 @@ void Discord::timerEvent(QTimerEvent* event)
 
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
-    Discord::smReadWriteLock.lockForWrite(); // Will block until gets lock
-    Discord::smUserName = QString::fromUtf8(request->username);
-    Discord::smUserId = QString::fromUtf8(request->userId);
-    Discord::smDiscriminator = QString::fromUtf8(request->discriminator);
-    Discord::smAvatar = QString::fromUtf8(request->avatar);
-    Discord::smReadWriteLock.unlock();
+    Discord::smUserName = request->username;
+    Discord::smUserId = request->userId;
+    Discord::smDiscriminator = request->discriminator;
+    Discord::smAvatar = request->avatar;
 
 #if defined(DEBUG_DISCORD)
     qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
@@ -283,14 +279,8 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 QStringList Discord::getDiscordUserDetails() const
 {
     QStringList results;
-    if (Discord::smReadWriteLock.tryLockForRead()) {
-        results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-        // Make a deep copy whilst we hold a lock on the details to avoid the
-        // writer {handleDiscordReady(...)} having to invoking the C-o-W itself.
-        results.detach();
-        Discord::smReadWriteLock.unlock();
-    }
-
+    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+    results.detach();
     return results;
 }
 

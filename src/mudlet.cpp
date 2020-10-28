@@ -34,6 +34,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -1672,7 +1673,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -4282,7 +4283,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -4745,7 +4746,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString entryInArchive(QString::fromUtf8(zs.name));
+            QString entryInArchive(zs.name);
             QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
@@ -4780,7 +4781,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         // No need to check return value as we've already done it first time
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString entryInArchive(QString::fromUtf8(zs.name));
+        QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
@@ -5303,7 +5304,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
         // replay already in progess in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
-        // loadRawFile happens at the same time as a file was selected for a
+        // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
         // profile - but the window for this is likely to be a fraction of a
         // second...
@@ -5985,62 +5986,36 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
 
 QPair<bool, bool> mudlet::addWordToSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isAdded = false;
-        Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (!mWordSet_shared.contains(word)) {
-            mWordSet_shared.insert(word);
-            qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
-            isAdded = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isAdded);
+    bool isAdded = false;
+    Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (!mWordSet_shared.contains(word)) {
+        mWordSet_shared.insert(word);
+        qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
+        isAdded = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::addWordToSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isAdded);
 }
 
 QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isRemoved = false;
-        Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (mWordSet_shared.remove(word)) {
-            qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
-            isRemoved = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isRemoved);
+    bool isRemoved = false;
+    Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (mWordSet_shared.remove(word)) {
+        qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
+        isRemoved = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::removeWordFromSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isRemoved);
 }
 
 QSet<QString> mudlet::getWordSet()
 {
-    bool gotWordSet = false;
     QSet<QString> wordSet;
-    do {
-        if (mDictionaryReadWriteLock.tryLockForRead(100)) {
-            // Got read lock within the timeout:
-            wordSet = mWordSet_shared;
-            // Ensure we make a deep copy of it so the caller is not affected by
-            // other profiles' edits after we unlock.
-            wordSet.detach();
-            // Now we can unlock it:
-            mDictionaryReadWriteLock.unlock();
-            gotWordSet = true;
-        } else {
-            qDebug() << "mudlet::getWordSet() ALERT - failed to get a read lock to access mWordSet_shared, retrying...";
-        }
-    } while (!gotWordSet);
-
+    // Got read lock within the timeout:
+    wordSet = mWordSet_shared;
+    // Ensure we make a deep copy of it so the caller is not affected by
+    // other profiles' edits.
+    wordSet.detach();
+    // Now we can unlock it:
     return wordSet;
 }
 

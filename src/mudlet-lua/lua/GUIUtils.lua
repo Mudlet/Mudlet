@@ -10,8 +10,6 @@
 --- @name gaugesTable
 gaugesTable = {}
 
-
-
 --- The <i>color_table table</i> holds definition of color names. These are intended to be
 -- used in conjunction with fg() and bg() colorizer functions.
 -- Mudlet's original table - going back a few years - differs from the
@@ -1414,7 +1412,7 @@ if rex then
     local back = cols[2]
     if fore ~= "" then
       if fore == "r" or fore == "reset" then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       else
         local colorNumber = ctable[fore]
         if colorNumber then
@@ -1507,7 +1505,7 @@ if rex then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1540,7 +1538,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1760,7 +1758,9 @@ function ansi2decho(text, ansi_default_color)
   local result = rex.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
-    local t = string.split(s, ";") -- split the codes into an indexed table
+    local delim = ";"
+    if s:find(":") then delim = ":" end
+    local t = string.split(s, delim) -- split the codes into an indexed table
 
     -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
@@ -1812,7 +1812,6 @@ function ansi2decho(text, ansi_default_color)
         coloursToUse = colours
       else
         isColorCode = true
-
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1826,8 +1825,13 @@ function ansi2decho(text, ansi_default_color)
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
-          colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
-          i = i + 4
+          if delim == ";" then
+            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            i = i + 4
+          elseif delim == ":" then
+            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            i = i + 5
+          end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
           colour = lightColours[cmd]
@@ -1865,9 +1869,8 @@ function ansi2decho(text, ansi_default_color)
         output[#output + 1] = table.concat(fg, ",")
       end
 
-      output[#output + 1] = ':'
-
       if bg then
+        output[#output + 1] = ':'
         output[#output + 1] = table.concat(bg, ",")
       end
       output[#output + 1] = '>'
@@ -1919,7 +1922,7 @@ function setHexBgColor(windowName, colorString)
   end
 
   if #col ~= 6 then
-    error("setHexFgColor needs a 6 digit hex color code.")
+    error("setHexBgColor needs a 6 digit hex color code.")
   end
 
   local colTable = {
@@ -2064,6 +2067,49 @@ function resizeMapWidget(width, height)
   assert(type(width) == 'number', 'resizeMapWidget: bad argument #1 type (width as number expected, got '..type(width)..'!)')
   assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
   openMapWidget(-1, -1, width, height)
+end
+
+-- 
+-- functions to manipulate room label display and offsets
+--
+-- get offset of room's label (x,y)
+-- @param room Room ID
+function getRoomNameOffset(room)
+  assert(type(room) == 'number', 'getRoomNameOffset: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+
+  local d = getRoomUserData(room, "room.ui_nameOffset")
+  if d == nil or d == "" then return 0,0 end
+  local split = {}
+  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end 
+  if #split == 1 then return 0,split[1] end
+  if #split >= 2 then return split[1],split[2] end
+  return 0,0
+end
+
+-- set offset of room's label (x,y)
+-- @param room Room ID
+-- @param room X shift (positive = to the right)
+-- @param room Y shift (positive = down)
+function setRoomNameOffset(room, x, y)
+  assert(type(room) == 'number', 'setRoomNameOffset: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+  assert(type(x) == 'number', 'setRoomNameOffset: bad argument #2 type (X shift as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'setRoomNameOffset: bad argument #3 type (y shift as number expected, got '..type(y)..'!)')
+
+  if x == 0 then
+    setRoomUserData(room, "room.ui_nameOffset", y)
+  else
+    setRoomUserData(room, "room.ui_nameOffset", x .. " " .. y)
+  end
+end
+
+-- show or hide a room's name
+-- @param room Room ID
+-- @param flag (bool)
+function setRoomNameVisible(room, flag)
+  assert(type(room) == 'number', 'setRoomNameVisible: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+  assert(type(flag) == 'boolean', 'setRoomNameVisible: bad argument #2 type (flag as boolean expected, got '..type(flag)..'!)')
+
+  setRoomUserData(room, "room.ui_showName", flag and "1" or "0")
 end
 
 --wrapper for createButton 
