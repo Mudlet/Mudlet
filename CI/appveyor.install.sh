@@ -41,7 +41,7 @@ else
     BUILDCOMPONENT="x86_64"
 fi
 
-ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
+ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks"
 
 /usr/bin/pacman -S --needed --noconfirm \
     base-devel \
@@ -92,32 +92,32 @@ echo ""
 echo "    .... MSYS2 Package installation completed."
 echo ""
 
-echo " Lua configuration files are: (system): $(${ROCKCOMMAND} config --system-config)"
-echo "                            and (user): $(${ROCKCOMMAND} config --user-config)"
+echo " Lua configuration files are: (system): $("${ROCKCOMMAND}" config --system-config)"
+echo "                            and (user): $("${ROCKCOMMAND}" config --user-config)"
 echo ""
 echo "   The system one contains:"
-/usr/bin/cat "$(${ROCKCOMMAND} config --system-config)"
+/usr/bin/cat "$("${ROCKCOMMAND}" config --system-config)"
 
 echo ""
 echo "  Installing needed luarocks..."
 echo ""
 echo "    luafilesystem"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install luafilesystem
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install luafilesystem
 echo ""
 echo "    lua-yajl"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install lua-yajl
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install lua-yajl
 echo ""
 echo "    luautf8"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install luautf8
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install luautf8
 echo ""
 echo "    lua-zip"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install lua-zip
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install lua-zip
 echo ""
 echo "    lrexlib-pcre"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install lrexlib-pcre
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install lrexlib-pcre
 echo ""
 echo "    luasql-sqlite3"
-${ROCKCOMMAND} "${ROCKOPTARGS}" install luasql-sqlite3
+"${ROCKCOMMAND}" ${ROCKOPTARGS} install luasql-sqlite3
 echo ""
 echo "    ... luarocks installation done"
 echo ""

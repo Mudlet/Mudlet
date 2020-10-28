@@ -43,11 +43,11 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     DEPLOY_URL=$(wget --method PUT --body-file="${ZIP_FILE_NAME}" "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}" -O - -q)
     if [ -n "${DEPLOY_URL}" ]; then
         if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
-            prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
+            PR_ID=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
         fi
         # This sends a notification message to Gitter - back quotes are used by
         # it to show the enclosed text in a special format!
-        wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows ${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+        wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows${PR_ID}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
             https://webhooks.gitter.im/e/cc99072d43b642c4673a
         echo ""
         appveyor AddMessage "Deployed the output to ${DEPLOY_URL}" -Category Information
@@ -220,9 +220,6 @@ echo ""
         PTB_DATE=$(date +'%Y-%m-%d')
         DEPLOY_URL=$(wget --method PUT --body-file="/c/projects/squirel_output/Setup.exe" "https://make.mudlet.org/snapshots/Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe" -O - -q)
         if [ -n "${DEPLOY_URL}" ]; then
-            if [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
-                prId=", #${APPVEYOR_PULL_REQUEST_NUMBER}"
-            fi
             # This sends a notification message to Gitter!
             wget --post-data "message=Deployed Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe (${BUILD_BITNESS}-bit windows PTB for $(date +"%Y/%m/%d")) to [${DEPLOY_URL}](${DEPLOY_URL})" \
                 https://webhooks.gitter.im/e/cc99072d43b642c4673a

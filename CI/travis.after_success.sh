@@ -14,12 +14,12 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 fi
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
-  prId=", #${TRAVIS_PULL_REQUEST}"
+  PR_ID=", #${TRAVIS_PULL_REQUEST}"
 fi
 
 if [ -n "${DEPLOY_URL}" ]; then
   curl \
-    --data-urlencode "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${TRAVIS_OS_NAME}${prId}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+    --data-urlencode "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${TRAVIS_OS_NAME}${PR_ID}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
     https://webhooks.gitter.im/e/cc99072d43b642c4673a
 fi
 
