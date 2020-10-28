@@ -58,7 +58,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     # Also retain the archive as a build artifact (for longer than the 14 days)
     # that we use for our own website - i.e. 6 months, use the FileName option
     # because otherwise the path is unnecessarily kept in the name:
-    appveyor PushArtifact "$(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/package/${ZIP_FILE_NAME}")" -FileName "${ZIP_FILE_NAME}"
+    appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/mudlet/package/${ZIP_FILE_NAME}")" -FileName "${ZIP_FILE_NAME}"
 
 else # BUILD_TYPE is "public_test" OR "release"
     if [ "${BUILD_TYPE}" = "public_test" ]; then

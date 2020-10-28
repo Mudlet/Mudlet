@@ -63,22 +63,22 @@ echo ""
 # # Note that the APPVEYOR_BUILD_FOLDER variable uses '\' (a single backslash)
 # # as the directory separator but that is not usable in commands (it needs doubling)
 # # or changing to forward slashes to work for them:
-# echo "Project build directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build)"
+# echo "Project build directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/build")"
 # echo "  now contains:"
-# /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
+# /usr/bin/ls -al /c/projects/mudlet/build
 # echo ""
-# echo "Project build sub-directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/release)"
+# echo "Project build sub-directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/build/release")"
 # echo "  now contains:"
-# /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
+# /usr/bin/ls -al /c/projects/mudlet/build/release
 
 # Will only get here if the build was successful
 # Copy the executable to a separate location
 
-echo "Creating packaging directory: $(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/package")"
-mkdir "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")"
+echo "Creating packaging directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package")"
+mkdir "/c/projects/mudlet/package"
 echo ""
 echo "Copying mudlet executable to it:"
-cp "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/build/release/mudlet.exe")" "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")"
+cp "/c/projects/mudlet/build/release/mudlet.exe" "/c/projects/mudlet/package"
 echo ""
 
 echo "   ... appveyor.build.sh shell script finished!"

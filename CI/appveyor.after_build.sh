@@ -13,10 +13,10 @@ if [ "${APPVEYOR_REPO_NAME}" != "Mudlet/Mudlet" ]; then
 fi
 
 # Source/setup some variables (including PATH):
-. "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh")"
+. "/c/projects/mudlet/CI/appveyor.set-build-info.sh"
 
-echo "Moving to packaging directory: $(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}/package")"
-cd "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package")" || exit 1
+echo "Moving to packaging directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package")"
+cd "/c/projects/mudlet/package" || exit 1
 echo "  it contains:"
 ls -l
 echo ""
@@ -88,9 +88,9 @@ fi
 echo ""
 echo "Copying discord-rpc library in..."
 if [ "${BUILD_BITNESS}" = "32" ]; then
-    cp -v -p "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll")"  .
+    cp -v -p "/c/projects/mudlet/3rdparty/discord/rpc/lib/discord-rpc32.dll"  .
 else
-    cp -v -p "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll")"  .
+    cp -v -p "/c/projects/mudlet/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
 fi
 echo ""
 
@@ -121,33 +121,33 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/src/mudlet-lua/./*")" "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/mudlet-lua/")"
+rsync -avR '/c/projects/mudlet/src/mudlet-lua/./**' /c/projects/mudlet/package/mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/3rdparty/lcf/./*")" "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/lcf/")"
+rsync -avR '/c/projects/mudlet/3rdparty/lcf/./**' /c/projects/mudlet/package/lcf/
 echo ""
 
 echo "Copying Lua translation files in..."
-mkdir -p "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/")"
-cp -v -p -t "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/package/translations/lua/translated/")" \
-    "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/translations/lua/translated/mudlet-lua_??_??.json")"
+mkdir -p /c/projects/mudlet/package/translations/lua/translated
+cp -v -p -t /c/projects/mudlet/package/translations/lua/translated \
+    /c/projects/mudlet/translations/lua/translated/mudlet-lua_??_??.json
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
-  "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/src/*.aff")" \
-  "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/src/*.dic")"
+    /c/projects/mudlet/src/*.aff \
+    /c/projects/mudlet/src/*.dic
 
 echo ""
 
 # For debugging purposes:
-# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
+# echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows "/c/projects/mudlet/build/package"):"
 # /usr/bin/ls -aRl
 # echo ""
 
 echo "   ... appveyor.after_build.sh shell script finished."
-echo "${APPVEYOR_BUILD_FOLDER}\package should contain everything needed to run Mudlet!"
+echo "$(/usr/bin/cygpath --windows "/c/projects/mudlet/package") should contain everything needed to run Mudlet!"
 echo ""

@@ -3,7 +3,7 @@
 echo "Running appveyor.install.sh shell script..."
 
 # Source/setup some variables (including PATH):
-. "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}/CI/appveyor.set-build-info.sh")"
+. "/c/projects/mudlet/CI/appveyor.set-build-info.sh"
 
 # The above will define ABORT_PT_BUILDS to be "true" if this is deduced to be
 # a "public_test" BUILD_TYPE - AND there has not been any change in the

@@ -23,9 +23,9 @@ fi
 
 VERSION=""
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
-    VERSION=$(/usr/bin/perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${APPVEYOR_BUILD_FOLDER}/CMakeLists.txt")
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "/c/projects/mudlet/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-    VERSION=$(/usr/bin/perl -lne 'print $1 if /^VERSION = (.+)/' < "${APPVEYOR_BUILD_FOLDER}/src/mudlet.pro")
+    VERSION=$(/usr/bin/perl -lne 'print $1 if /^VERSION = (.+)/' < "/c/projects/mudlet/src/mudlet.pro")
 fi
 
 MUDLET_VERSION_BUILD=""
@@ -67,7 +67,7 @@ if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
         fi
         export SUFFIX_FOR_NUGET="-ptb${DATE}"
         export LOADING_GIF_PATHFILE="/c/projects/installers/windows/splash-installing-ptb-2x.png"
-        export SETUP_ICON_PATHFILE="${APPVEYOR_BUILD_FOLDER}/src/icons/mudlet_ptb.ico"
+        export SETUP_ICON_PATHFILE="/c/projects/mudlet/src/icons/mudlet_ptb.ico"
     else
         # -n is test for non-zero length string - so building for a PR
         # Shorten the Commit SHA1 produced (so that it is only 8 hex digits) so that
@@ -112,7 +112,7 @@ else
     fi
     export SUFFIX_FOR_NUGET=""
     export LOADING_GIF_PATHFILE="/c/projects/installers/windows/splash-installing-2x.png"
-    export SETUP_ICON_PATHFILE="${APPVEYOR_BUILD_FOLDER}/src/icons/mudlet.ico"
+    export SETUP_ICON_PATHFILE="/c/projects/mudlet/src/icons/mudlet.ico"
 fi
 #MUDLET_VERSION_BUILD=-ptb20200930+fake1
 #DATE=20200930
