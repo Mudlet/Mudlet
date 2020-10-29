@@ -415,6 +415,9 @@ public:
     // the system
     bool mUsingMudletDictionaries;
 
+    // Options dialog when there's no active host
+    QSharedPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();

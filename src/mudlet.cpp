@@ -185,6 +185,7 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
+, mpDlgProfilePreferences(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -2391,26 +2392,30 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog(const QString& tab)
 {
     Host* pHost = getActiveHost();
-    if (!pHost) {
-        return;
+
+    auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
+
+    if (!pPrefs) {
+        pPrefs.reset(new dlgProfilePreferences(this, pHost));
+        if (pHost) {
+            pHost->mpDlgProfilePreferences = pPrefs;
+        } else {
+            mpDlgProfilePreferences = pPrefs;
+        }
+
+        connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
+        connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
-    // value will automatically return a nullptr if there is NO entry for this
-    // Host in the QMap
-    if (!pHost->mpDlgProfilePreferences) {
-        pHost->mpDlgProfilePreferences.reset(new dlgProfilePreferences(this, pHost));
-
-        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_data_protocol, &QWidget::hide);
-        connect(mpActionReconnect.data(), &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
-        connect(dactionReconnect, &QAction::triggered, pHost->mpDlgProfilePreferences->need_reconnect_for_specialoption, &QWidget::hide);
-        pHost->mpDlgProfilePreferences->setAttribute(Qt::WA_DeleteOnClose);
+    if (pHost) {
+        pPrefs->setStyleSheet(pHost->mProfileStyleSheet);
     }
-
-    pHost->mpDlgProfilePreferences->setStyleSheet(pHost->mProfileStyleSheet);
-    pHost->mpDlgProfilePreferences->setTab(tab);
-    pHost->mpDlgProfilePreferences->raise();
-    pHost->mpDlgProfilePreferences->show();
+    pPrefs->setTab(tab);
+    pPrefs->raise();
+    pPrefs->show();
 }
 
 void mudlet::slot_update_shortcuts()
