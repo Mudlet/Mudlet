@@ -2396,7 +2396,7 @@ void mudlet::show_options_dialog(const QString& tab)
     auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mpDlgProfilePreferences;
 
     if (!pPrefs) {
-        pPrefs.reset(new dlgProfilePreferences(this, pHost));
+        pPrefs = new dlgProfilePreferences(this, pHost);
         if (pHost) {
             pHost->mpDlgProfilePreferences = pPrefs;
         } else {
@@ -2407,6 +2407,7 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
+        pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
     if (pHost) {

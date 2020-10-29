@@ -602,7 +602,7 @@ public:
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
     QScopedPointer<dlgIRC> mpDlgIRC;
-    QSharedPointer<dlgProfilePreferences> mpDlgProfilePreferences;
+    QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<TToolBar*> mToolbarLayoutChanges;
 
