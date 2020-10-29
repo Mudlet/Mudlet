@@ -90,22 +90,7 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
         if (!attr.hasValue()) {
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
         } else {
-
-/*
- * Michael Weller: What is this? Why are hints forced to be all upper, even when
- * explicitly set by the Mud in mixed case?
- * And only when <send> is used in a custom element, but not when used directly?
- * Let the mud choose about its user interface.
- */
-#if 0
-            if (attr.isNamed("hint")) { // not needed according to the spec, but kept to avoid changes for the user interface
-                return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue().toUpper(), customTag));
-            } else {
-                return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
-            }
-#else
             return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
-#endif
         }
     };
 
