@@ -55,7 +55,7 @@ for LIB in ${NEEDED_LIBS} ; do
 done
 
 echo ""
-echo "Copying other known to be needed libraries in..."
+echo "Copying other, known to be needed, libraries in..."
 # libjasper-4 to libwebpdemux-2 are additional image format handlers that Qt can
 # use if they are present.
 # libsqlite3 and libyajl are needed by lua modules (luasql-sqlite3 and at Mudlet run time.
@@ -121,13 +121,13 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR '/c/projects/mudlet/src/mudlet-lua/./**' /c/projects/mudlet/package/mudlet-lua/
+rsync -avR /c/projects/mudlet/src/mudlet-lua/./* /c/projects/mudlet/package/mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR '/c/projects/mudlet/3rdparty/lcf/./**' /c/projects/mudlet/package/lcf/
+rsync -avR /c/projects/mudlet/3rdparty/lcf/./* /c/projects/mudlet/package/lcf/
 echo ""
 
 echo "Copying Lua translation files in..."

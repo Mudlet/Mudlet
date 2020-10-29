@@ -25,10 +25,10 @@ fi
 if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; then
     echo "=== Creating a (\"${BUILD_TYPE}\") snapshot build ==="
     echo ""
-    echo "Moving to package directory: $(/usr/bin/cygpath --windows "/c/projects/package") ..."
-    cd /c/projects/package || exit 1
+    echo "Moving to package directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package") ..."
+    cd /c/projects/mudlet/package || exit 1
 
-    mv /c/projects/package/mudlet.exe /c/projects/package/Mudlet.exe
+    mv ./mudlet.exe ./Mudlet.exe
     # Pending support for controllable debug or relWithDebInfo builds:
     # Separate out the debug information
     # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug Mudlet.exe Mudlet.exe.debug
@@ -66,21 +66,26 @@ else # BUILD_TYPE is "public_test" OR "release"
 
         # As Squirrel takes the Start menu name from the binary we need to
         # rename it - however we do not need to mark whether it is 32 or 64 bits
-        # here:
-        mv /c/projects/package/mudlet.exe "/c/projects/package/mudlet PTB.exe"
+        # here - the choice of having a space in the application name seems
+        # unwise but it is what was done in the previous (PowerShell) CI scripts:
+        mv /c/projects/mudlet/package/mudlet.exe "/c/projects/mudlet/package/mudlet PTB.exe"
 
         # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
+        # pushd /c/projects/mudlet/package
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug "Mudlet PTB.exe" "Mudlet PTB.exe.debug"
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --strip-debug "Mudlet PTB.exe"
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --add-gnu-debuglink="Mudlet PTB.exe.debug" "Mudlet PTB.exe"
+        # popd
     else
         echo "=== Creating a release build ==="
         # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
+        # pushd /c/projects/mudlet/package
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug Mudlet.exe Mudlet.exe.debug
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --strip-debug Mudlet.exe
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --add-gnu-debuglink=Mudlet.exe.debug Mudlet.exe
+        # popd
     fi
     echo ""
 
@@ -111,8 +116,8 @@ which nuget.exe
     mkdir -p /c/projects/package
     echo ""
 
-    echo "  Moving entire set of files wanted in installer to where Squirrel expects them"
-    mv /c/projects/package/* /c/projects/packaging/lib/Net45
+    echo "  Moving entire set of files (including subdirectories) wanted in installer to where Squirrel expects them"
+    mv /c/projects/mudlet/package/* /c/projects/packaging/lib/Net45
     echo ""
 
     NUSPEC_FILE="/c/projects/installers/windows/mudlet.nuspec"
