@@ -36,8 +36,8 @@ MUDLET_VERSION_BUILD=""
 # Fake stuff to emulate PTB
 export BUILD_TYPE="public_test"
 COMMIT=$(git rev-parse --short HEAD | cut -c 1-5)
-DATE="19700104"
-PTB_DATE="1970-01-04"
+DATE="19700105"
+PTB_DATE="1970-01-05"
 MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 
 #if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then

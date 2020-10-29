@@ -203,7 +203,7 @@ echo ""
     echo "  Using squirrel.windows to generate installer"
     # During debug testing (with a PR) secure variables are NOT available - so
     # we cannot sign anything whilst developing this script...
-    if [ -n ${signing_password} ] ;  then
+    if [ -n "${signing_password}" ] ;  then
         ./squirrel.windows/tools/Squirrel \
             --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
             --releaseDir="/c/projects/squirel_output" \
@@ -212,6 +212,8 @@ echo ""
             --setupIcon="$(/usr/bin/cygpath --windows "${SETUP_ICON_PATHFILE}")" \
             -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p ${signing_password} /fd sha256 /tr http://timestamp.digicert.com /td sha256"
     else
+        echo "Signing password not available, if this is a PR related build this is expected but it means that the installer cannot be signed."
+        appveyor AddMessage "Signing password not available, if this is a PR related build this is expected but it means that the installer cannot be signed." -Category Warning
         ./squirrel.windows/tools/Squirrel \
             --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
             --releaseDir="/c/projects/squirel_output" \
