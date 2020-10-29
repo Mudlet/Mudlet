@@ -2391,6 +2391,9 @@ void mudlet::show_action_dialog()
 void mudlet::show_options_dialog(const QString& tab)
 {
     Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
 
     // value will automatically return a nullptr if there is NO entry for this
     // Host in the QMap
