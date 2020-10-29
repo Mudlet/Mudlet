@@ -7,12 +7,12 @@ echo "Running appveyor.build.sh shell script..."
 
 echo ""
 echo "Project directory is: $(/usr/bin/cygpath --windows "${APPVEYOR_BUILD_FOLDER}")"
-cd "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}")" || appveyor AddMessage "ERROR: ${APPVEYOR_BUILD_FOLDER} directory not found! Build aborted." -Category Error; exit 1
+cd "$(/usr/bin/cygpath --unix "${APPVEYOR_BUILD_FOLDER}")" || (appveyor AddMessage "ERROR: ${APPVEYOR_BUILD_FOLDER} directory not found! Build aborted." -Category Error ; exit 1)
 # echo "  which contains:"
 # /usr/bin/ls -l
 echo "  creating './build' sub-directory and moving to it"
 /usr/bin/mkdir ./build
-cd ./build || appveyor AddMessage "ERROR: ${APPVEYOR_BUILD_FOLDER}/build directory not found! Build aborted." -Category Error; exit 1
+cd ./build || (appveyor AddMessage "ERROR: ${APPVEYOR_BUILD_FOLDER}/build directory not found! Build aborted." -Category Error ; exit 1)
 # echo "  it contains:"
 # /usr/bin/ls -l
 

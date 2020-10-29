@@ -26,7 +26,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     echo "=== Creating a (\"${BUILD_TYPE}\") snapshot build ==="
     echo ""
     echo "Moving to package directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package") ..."
-    cd /c/projects/mudlet/package || appveyor AddMessage "ERROR: /c/projects/mudlet/package directory not found! Build aborted." -Category Error; exit 1
+    cd /c/projects/mudlet/package || (appveyor AddMessage "ERROR: /c/projects/mudlet/package directory not found! Build aborted." -Category Error ; exit 1)
 
     mv ./mudlet.exe ./Mudlet.exe
     # Pending support for controllable debug or relWithDebInfo builds:
@@ -95,7 +95,7 @@ else # BUILD_TYPE is "public_test" OR "release"
     echo ""
 
     echo "  Moving to installer's Windows sub-directory: $(/usr/bin/cygpath --windows "/c/projects/installers/windows") ..."
-    cd /c/projects/installers/windows || appveyor AddMessage "ERROR: /c/projects/installers/windows directory not found! Build aborted." -Category Error; exit 1
+    cd /c/projects/installers/windows || (appveyor AddMessage "ERROR: /c/projects/installers/windows directory not found! Build aborted." -Category Error ; exit 1)
     echo ""
 
     # Install squirrel for Windows here, NuGet 5.1.0 is present as part of the
