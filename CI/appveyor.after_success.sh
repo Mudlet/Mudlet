@@ -26,7 +26,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
     echo "=== Creating a (\"${BUILD_TYPE}\") snapshot build ==="
     echo ""
     echo "Moving to package directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package") ..."
-    cd /c/projects/mudlet/package || exit 1
+    cd /c/projects/mudlet/package || appveyor AddMessage "ERROR: /c/projects/mudlet/package directory not found! Build aborted." -Category Error; exit 1
 
     mv ./mudlet.exe ./Mudlet.exe
     # Pending support for controllable debug or relWithDebInfo builds:
@@ -50,7 +50,7 @@ if [ "${BUILD_TYPE}" = "pull_request" ] || [ "${BUILD_TYPE}" = "development" ]; 
         wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows${PR_ID}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
             https://webhooks.gitter.im/e/cc99072d43b642c4673a
         echo ""
-        appveyor AddMessage "Deployed the output to ${DEPLOY_URL}" -Category Information
+        appveyor AddMessage "INFORMATION: Deployed the output to ${DEPLOY_URL}" -Category Information
         echo "=== Deployed the output to ${DEPLOY_URL} ==="
         echo ""
         echo "******************************************************"
@@ -95,7 +95,7 @@ else # BUILD_TYPE is "public_test" OR "release"
     echo ""
 
     echo "  Moving to installer's Windows sub-directory: $(/usr/bin/cygpath --windows "/c/projects/installers/windows") ..."
-    cd /c/projects/installers/windows || exit 1
+    cd /c/projects/installers/windows || appveyor AddMessage "ERROR: /c/projects/installers/windows directory not found! Build aborted." -Category Error; exit 1
     echo ""
 
     # Install squirrel for Windows here, NuGet 5.1.0 is present as part of the
@@ -175,7 +175,7 @@ echo "TEMP: ensuring we have modified the nuspec file:"
 appveyor PushArtifact "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -FileName "mudlet.nuspec"
 echo ""
 
-    echo "  Creating the package based on the nuspec file:"
+    echo "  Using nuget pack to create the package based on the nuspec file:"
     # As well as the files from the Mudlet build there will be 4 additional
     # files, two each: NuGet.Squirrel and Squirrel with types .dll & .pdb
     # i.e. library and debug symbols from the mudlet-installer.
@@ -195,12 +195,12 @@ echo ""
     # -OutputDirectory directory - which we will test for:
     echo "  Testing for NuGet package"
     if [ ! -f "/c/projects/package/${NUPKG_FILE}" ]; then
-        appveyor AddMessage "ERROR: /c/projects/package/${NUPKG_FILE} file not found - build aborted!" -Category Error
+        appveyor AddMessage "ERROR: /c/projects/package/${NUPKG_FILE} file not found! Build aborted." -Category Error
         exit 1
     fi
+    echo ""
 
-    # the output directory being the same one as where the ${NUPKG_FILE} is
-    # located!
+    echo "  Using squirrel.windows to generate installer"
     ./squirrel.windows/tools/Squirrel \
         --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
         --releaseDir="/c/projects/squirel_output" \
@@ -211,10 +211,9 @@ echo ""
     # We will want to rename the "/c/projects/squirel_output/Setup.exe" file
     # so that it has a unique name when uploaded to our distribution systems
     if [ ! -f /c/projects/squirel_output/Setup.exe ]; then
-        appveyor AddMessage "Squirrel failed to generate the installer! Build aborted." -Category Error
+        appveyor AddMessage "ERROR: Squirrel failed to generate the installer! Build aborted." -Category Error
         echo "Squirrel failed to generate the installer! Build aborted. Log file follows:"
         cat ./squirrel.windows/tools/SquirrelSetup.log
-        appveyor exit
         exit 1
     fi
 
@@ -222,14 +221,13 @@ echo ""
         # wget returns the URL that is used, which we need to capture to report it:
         echo "=== Uploading the public test build ==="
         # Needed for rename of Setup.exe to final installer file name:
-        PTB_DATE=$(date +'%Y-%m-%d')
         DEPLOY_URL=$(wget --method PUT --body-file="/c/projects/squirel_output/Setup.exe" "https://make.mudlet.org/snapshots/Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe" -O - -q)
         if [ -n "${DEPLOY_URL}" ]; then
             # This sends a notification message to Gitter!
             wget --post-data "message=Deployed Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe (${BUILD_BITNESS}-bit windows PTB for $(date +"%Y/%m/%d")) to [${DEPLOY_URL}](${DEPLOY_URL})" \
                 https://webhooks.gitter.im/e/cc99072d43b642c4673a
             echo ""
-            appveyor AddMessage "Deployed the output to ${DEPLOY_URL}" -Category Information
+            appveyor AddMessage "INFORMATION: Deployed the output to ${DEPLOY_URL}" -Category Information
             echo "=== Deployed the output to ${DEPLOY_URL} ==="
             echo ""
             echo "******************************************************"

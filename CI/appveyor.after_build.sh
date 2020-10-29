@@ -16,7 +16,7 @@ fi
 . "/c/projects/mudlet/CI/appveyor.set-build-info.sh"
 
 echo "Moving to packaging directory: $(/usr/bin/cygpath --windows "/c/projects/mudlet/package")"
-cd "/c/projects/mudlet/package" || exit 1
+cd "/c/projects/mudlet/package" || appveyor AddMessage "ERROR: /c/projects/mudlet/package directory not found! Build aborted." -Category Error; exit 1
 echo "  it contains:"
 ls -l
 echo ""
