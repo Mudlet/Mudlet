@@ -727,8 +727,8 @@ do
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
 
-  -- C function that gets overwritten.
-  registerAnonymousEventHandler("*", "dispatchEventToFunctions")
+  -- C functions that get overwritten.
+  local origRegisterAnonymousEventHandler = registerAnonymousEventHandler
 
   -- helper function to find an already existing string event handler
   -- This function may not the most performant one as it uses debug.getinfo,
@@ -799,6 +799,7 @@ do
     if not existinghandlers then
       existinghandlers = {}
       handlers[event] = existinghandlers
+      origRegisterAnonymousEventHandler(event, "dispatchEventToFunctions")
     end
     local newId = #existinghandlers + 1
     existinghandlers[newId] = func
@@ -840,12 +841,6 @@ do
   function dispatchEventToFunctions(event, ...)
     if handlers[event] then
       for _, func in pairs(handlers[event]) do
-        local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
-      end
-    end
-    if handlers["*"] then
-      for _, func in pairs(handlers["*"]) do
         local success, error = pcall(func, event, ...)
         if not success then showHandlerError(event, error) end
       end
