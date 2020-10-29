@@ -201,13 +201,24 @@ echo ""
     echo ""
 
     echo "  Using squirrel.windows to generate installer"
-    ./squirrel.windows/tools/Squirrel \
-        --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
-        --releaseDir="/c/projects/squirel_output" \
-        --no-msi \
-        --loadingGif="$(/usr/bin/cygpath --windows "${LOADING_GIF_PATHFILE}")" \
-        --setupIcon="$(/usr/bin/cygpath --windows "${SETUP_ICON_PATHFILE}")" \
-        -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p ${signing_password} /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+    # During debug testing (with a PR) secure variables are NOT available - so
+    # we cannot sign anything whilst developing this script...
+    if [ -n ${signing_password} ] ;  then
+        ./squirrel.windows/tools/Squirrel \
+            --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
+            --releaseDir="/c/projects/squirel_output" \
+            --no-msi \
+            --loadingGif="$(/usr/bin/cygpath --windows "${LOADING_GIF_PATHFILE}")" \
+            --setupIcon="$(/usr/bin/cygpath --windows "${SETUP_ICON_PATHFILE}")" \
+            -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p ${signing_password} /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+    else
+        ./squirrel.windows/tools/Squirrel \
+            --releasify="$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" \
+            --releaseDir="/c/projects/squirel_output" \
+            --no-msi \
+            --loadingGif="$(/usr/bin/cygpath --windows "${LOADING_GIF_PATHFILE}")" \
+            --setupIcon="$(/usr/bin/cygpath --windows "${SETUP_ICON_PATHFILE}")"
+    fi
     # We will want to rename the "/c/projects/squirel_output/Setup.exe" file
     # so that it has a unique name when uploaded to our distribution systems
     if [ ! -f /c/projects/squirel_output/Setup.exe ]; then

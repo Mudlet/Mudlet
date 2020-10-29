@@ -36,8 +36,8 @@ MUDLET_VERSION_BUILD=""
 # Fake stuff to emulate PTB
 export BUILD_TYPE="public_test"
 COMMIT=$(git rev-parse --short HEAD | cut -c 1-5)
-DATE="19700103"
-PTB_DATE="1970-01-03"
+DATE="19700104"
+PTB_DATE="1970-01-04"
 MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 
 #if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
@@ -70,9 +70,9 @@ MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 #        # (or any sort of braces) which is why the "64" is surrounded by '_'s
 #        # instead:
         if [ "${BUILD_BITNESS}" = "64" ]; then
-            export NUPKG_FILE="Mudlet_x64_-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
+            export NUPKG_FILE="Mudlet_64_-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
             export EXPORT_NUSPEC_FILE="mudlet64-ptb.nuspec"
-            export SQUIRREL_FULL_NUPKG_FILE="Mudlet_x64_-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
+            export SQUIRREL_FULL_NUPKG_FILE="Mudlet_64_-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
             export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-ptb${DATE}-full.nupkg"
         else
             export NUPKG_FILE="Mudlet-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
@@ -115,9 +115,9 @@ MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 #    # Build was initiated by pushing a tag (this should be the case for a
 #    # release build)
 #    if [ "${BUILD_BITNESS}" = "64" ]; then
-#        export NUPKG_FILE="Mudlet_x64_.${VERSION}.nupkg"
+#        export NUPKG_FILE="Mudlet_64_.${VERSION}.nupkg"
 #        export EXPORT_NUSPEC_FILE="mudlet64.nuspec"
-#        export SQUIRREL_FULL_NUPKG_FILE="Mudlet_x64_-${VERSION}-full.nupkg"
+#        export SQUIRREL_FULL_NUPKG_FILE="Mudlet_64_-${VERSION}-full.nupkg"
 #        export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-full.nupkg"
 #    else
 #        export NUPKG_FILE="Mudlet.${VERSION}.nupkg"
