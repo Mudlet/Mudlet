@@ -36,8 +36,8 @@ MUDLET_VERSION_BUILD=""
 # Fake stuff to emulate PTB
 export BUILD_TYPE="public_test"
 COMMIT=$(git rev-parse --short HEAD | cut -c 1-5)
-DATE="19700102"
-PTB_DATE="1970-01-02"
+DATE="19700103"
+PTB_DATE="1970-01-03"
 MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 
 #if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
@@ -80,7 +80,7 @@ MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
             export SQUIRREL_FULL_NUPKG_FILE="Mudlet-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
             export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudlet-${VERSION}-ptb${DATE}-full.nupkg"
         fi
-        export SUFFIX_FOR_NUGET="-ptb${DATE}"
+        export SUFFIX_FOR_NUGET="ptb${DATE}"
         export LOADING_GIF_PATHFILE=/c/projects/installers/windows/splash-installing-ptb-2x.png
         export SETUP_ICON_PATHFILE=/c/projects/mudlet/src/icons/mudlet_ptb.ico
 #    else

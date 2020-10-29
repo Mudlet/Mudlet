@@ -29,9 +29,9 @@ environment:
 # We are not currently using CMake for Windows builds but it might be needed in
 # the future - and we now need Q_OR_C_MAKE so as to pull the version number from
 # the right project file:
-  - BUILD_BITNESS: 32
-    Q_OR_C_MAKE: qmake
   - BUILD_BITNESS: 64
+    Q_OR_C_MAKE: qmake
+  - BUILD_BITNESS: 32
     Q_OR_C_MAKE: qmake
 
 install:

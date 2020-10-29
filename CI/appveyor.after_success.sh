@@ -195,7 +195,7 @@ echo ""
     # -OutputDirectory directory - which we will test for:
     echo "  Testing for NuGet package"
     if [ ! -f "/c/projects/package/${NUPKG_FILE}" ]; then
-        appveyor AddMessage "ERROR: /c/projects/package/${NUPKG_FILE} file not found! Build aborted." -Category Error
+        appveyor AddMessage "ERROR: $(cygpath --windows "/c/projects/package/${NUPKG_FILE}") file not found! Build aborted." -Category Error
         exit 1
     fi
     echo ""
