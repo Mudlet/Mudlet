@@ -76,6 +76,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpProgressDialog(Q_NULLPTR)
 , mpNetworkReply(Q_NULLPTR)
 , mExpectedFileSize(0)
+, mImportRunning(false)
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
