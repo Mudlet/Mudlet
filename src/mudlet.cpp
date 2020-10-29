@@ -2407,7 +2407,6 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_data_protocol, &QWidget::hide);
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
-        pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
     if (pHost) {
