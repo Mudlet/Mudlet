@@ -1,8 +1,7 @@
 name: Update Geyser docs
 
 on:
-  repository_dispatch:
-    types: update-geyser-docs
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * fri'
 

@@ -1,4 +1,5 @@
 name: Update texts for translators
+
 on:
   push:
     branches:
@@ -6,8 +7,8 @@ on:
 
   schedule:
     - cron: '0 0 * * fri'
-  repository_dispatch:
-    types: update-translations
+
+  workflow_dispatch:
 
 jobs:
   update-and-commit-text:
