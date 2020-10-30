@@ -1,5 +1,4 @@
 /build*
-/.vscode
 *.pro.user
 Makefile
 ui_*.h
@@ -9,6 +8,7 @@ qrc_*.cpp
 *.dmg
 *.app
 *.qm
+*.autosave
 mudlet
 
 # ignore macOS apps in general, but keep the Autoupdater from Sparkle

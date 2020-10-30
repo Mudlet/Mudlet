@@ -61,7 +61,7 @@ void TimerUnit::compileAll()
 {
     for (auto timer : mTimerRootNodeList) {
         if (timer->isActive()) {
-            timer->mNeedsToBeCompiled = true;
+            timer->compileAll();
         }
     }
 }

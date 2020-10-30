@@ -302,7 +302,7 @@
              <string>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</string>
+             <string>Enable MSP  (Mud Sound Protocol)</string>
             </property>
            </widget>
           </item>
@@ -496,6 +496,16 @@
            </widget>
           </item>
           <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_highlightHistory">
+            <property name="toolTip">
+             <string>Highlights your input line text when scrolling through your history for easy cancellation</string>
+            </property>
+            <property name="text">
+             <string>Highlight history</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
             <property name="toolTip">
              <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
@@ -505,7 +515,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
+          <item row="3" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
              <string/>
@@ -518,14 +528,14 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QLineEdit" name="command_separator_lineedit">
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
+          <item row="4" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
@@ -535,7 +545,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1" alignment="Qt::AlignLeft">
+          <item row="4" column="1" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -5178,6 +5188,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="checkBox_debugShowAllCodepointProblems">
+            <property name="text">
+             <string>Report all Codepoint problems immediately</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5275,8 +5295,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
   <tabstop>USE_UNIX_EOL</tabstop>
-  <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>auto_clear_input_line_checkbox</tabstop>
+  <tabstop>show_sent_text_checkbox</tabstop>
+  <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>checkBox_runAllKeyBindings</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
@@ -5394,6 +5415,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>
   <tabstop>checkBox_showIconsOnMenus</tabstop>
+  <tabstop>checkBox_debugShowAllCodepointProblems</tabstop>
   <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
   <tabstop>comboBox_store_passwords_in</tabstop>
   <tabstop>comboBox_customLoginText</tabstop>

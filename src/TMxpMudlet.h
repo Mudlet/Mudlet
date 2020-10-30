@@ -30,10 +30,11 @@
 #include "post_guard.h"
 
 class Host;
+class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral("%1%2").arg(QString::fromLatin1(APP_VERSION), QString::fromLatin1(APP_BUILD));
+    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
 
     Host* mpHost;
 
@@ -76,6 +77,9 @@ public:
     int setLink(const QStringList& links, const QStringList& hints) override;
 
     bool getLink(int id, QStringList** links, QStringList** hints) override;
+
+    void playMedia(TMediaData& mediaData) override;
+    void stopMedia(TMediaData& mediaData) override;
 
     bool isBold, isItalic, isUnderline;
 

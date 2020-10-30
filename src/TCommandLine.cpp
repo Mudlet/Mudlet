@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -33,9 +34,10 @@
 #include "pre_guard.h"
 #include <QKeyEvent>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mpHost(pHost)
 , mpKeyUnit(pHost->getKeyUnit())
@@ -49,6 +51,8 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
+, mType(type)
+, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -276,6 +280,7 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mCursorX = 0;
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
@@ -369,6 +374,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
                 historyDown(ke);
+                if (!mpHost->mHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -403,6 +411,9 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
                 historyUp(ke);
+                if (!mpHost->mHighlightHistory){
+                    moveCursor(QTextCursor::End);
+                }
                 ke->accept();
                 return true;
 
@@ -441,7 +452,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpHost->mScreenHeight);
+                mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -454,7 +465,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollDown(mpHost->mScreenHeight);
+                mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -568,10 +579,26 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
     QPlainTextEdit::focusOutEvent(event);
 }
 
+void TCommandLine::hideEvent(QHideEvent* event)
+{
+    if (hasFocus()) {
+        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+    }
+    QPlainTextEdit::hideEvent(event);
+}
+
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
+    // Workaround for SubCommandLines textCursor not visible in some situations
+    // SubCommandLines cannot autoresize
+    if (mType == SubCommandLine) {
+        if (lines <= 1) {
+            verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
+        }
+        return;
+    }
+    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -580,6 +607,7 @@ void TCommandLine::adjustHeight()
     }
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
+
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -771,7 +799,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
                 } else {
                     QAction* pA = nullptr;
-                    if (mpConsole->isUsingSharedDictionary()) {
+                    auto mainConsole = mpConsole->mpHost->mpConsole;
+                    if (mainConsole->isUsingSharedDictionary()) {
                         pA = new QAction(tr("no suggestions (shared)",
                                                  // Intentional comment
                                                  "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
@@ -845,9 +874,19 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionTyped.clear();
 
     QStringList _l = _t.split(QChar::LineFeed);
+
     for (int i = 0; i < _l.size(); i++) {
-        mpHost->send(_l[i]);
+        if (mType != MainCommandLine && mActionFunction) {
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+        } else {
+            mpHost->send(_l[i]);
+        }
+        // send command to your MiniConsole
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+            mpConsole->printCommand(_l[i]);
+        }
     }
+
     if (!toPlainText().isEmpty()) {
         mHistoryBuffer = 0;
         setPalette(mRegularPalette);
@@ -987,7 +1026,7 @@ void TCommandLine::historyDown(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         mHistoryBuffer--;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
@@ -1013,7 +1052,7 @@ void TCommandLine::historyUp(QKeyEvent* event)
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         if (toPlainText().size() != 0) {
             mHistoryBuffer++;
         }
@@ -1155,4 +1194,26 @@ void TCommandLine::clearMarksOnWholeLine()
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
+}
+
+void TCommandLine::setAction(const int func){
+    releaseFunc(mActionFunction, func);
+    mActionFunction = func;
+}
+
+void TCommandLine::resetAction()
+{
+    if (mActionFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mActionFunction);
+        mActionFunction = 0;
+    }
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TCommandLine::releaseFunc(const int existingFunction, const int newFunction)
+{
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
+    }
 }

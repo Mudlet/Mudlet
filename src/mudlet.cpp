@@ -34,6 +34,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
@@ -723,12 +724,15 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en"), tr("English")},
                                   {QStringLiteral("en_ag"), tr("English (Antigua/Barbuda)")},
                                   {QStringLiteral("en_au"), tr("English (Australia)")},
+                                  {QStringLiteral("en_au_large"), tr("English (Australia, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_bs"), tr("English (Bahamas)")},
                                   {QStringLiteral("en_bw"), tr("English (Botswana)")},
                                   {QStringLiteral("en_bz"), tr("English (Belize)")},
                                   {QStringLiteral("en_ca"), tr("English (Canada)")},
+                                  {QStringLiteral("en_ca_large"), tr("English (Canada, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_dk"), tr("English (Denmark)")},
                                   {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
+                                  {QStringLiteral("en_gb_large"), tr("English (United Kingdom, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
                                   {QStringLiteral("en_gh"), tr("English (Ghana)")},
                                   {QStringLiteral("en_hk"), tr("English (Hong Kong SAR China)")},
@@ -742,6 +746,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -1689,7 +1694,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mLogStatus = mAutolog;
-    auto pConsole = new TConsole(pH, TConsole::MainConsole);
+    auto pConsole = new TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -1987,11 +1992,58 @@ void mudlet::commitLayoutUpdates()
     while (itHostToolbarsList.hasNext()) {
         itHostToolbarsList.next();
         for (auto pToolBar : itHostToolbarsList.value()) {
-            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
-                pToolBar->setProperty("layoutChanged", QVariant(false));
+            // Under some circumstances there is NOT a
+            // pToolBar->property("layoutChanged") and examining that
+            // non-existant variant to see if it was true or false causes seg. faults!
+            if (Q_LIKELY(pToolBar)) {
+                if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
+                    qWarning().nospace().noquote() << "mudlet::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
+                } else if (pToolBar->property("layoutChanged").toBool()) {
+                    pToolBar->setProperty("layoutChanged", QVariant(false));
+                }
             }
         }
         itHostToolbarsList.remove();
+    }
+}
+
+bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -2284,7 +2336,7 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pC) {
-        pC->setConsoleBgColor(r, g, b);
+        pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
         QPalette mainPalette;
@@ -2326,7 +2378,7 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         // Set or reset all the specified attributes (but leave others unchanged)
-        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
+        pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (state ? attributes : TChar::None));
         pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
@@ -2356,6 +2408,7 @@ bool mudlet::clearWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
+        pC->mUpperPane->resetHScrollbar();
         pC->buffer.clear();
         pC->mUpperPane->update();
         return true;
@@ -2372,6 +2425,7 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->show();
@@ -2386,6 +2440,11 @@ bool mudlet::showWindow(Host* pHost, const QString& name)
         } else {
             return pHost->mpConsole->showWindow(name);
         }
+    }
+
+    if (pN) {
+        pN->show();
+        return true;
     }
 
     return false;
@@ -2414,6 +2473,8 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     // check labels first as they are shown/hidden more often
     if (pL) {
         pL->hide();
@@ -2425,6 +2486,11 @@ bool mudlet::hideWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
+    }
+
+    if (pN) {
+        pN->hide();
+        return true;
     }
 
     return false;
@@ -2439,25 +2505,35 @@ bool mudlet::resizeWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->resize(x1, y1);
         return true;
-    } else if (pC) {
-        if (pD) {
-            if (!pD->isFloating()) {
-                // Can't resize a docked window...?
-                return false;
-            } else {
-                pD->resize(x1, y1);
-                return true;
-            }
-        } else {
-            pC->resize(x1, y1);
-            return true;
-        }
-    } else {
-        return false;
     }
+
+    if (pC && !pD) {
+        // NOT a floatable/dockable "user window"
+        pC->resize(x1, y1);
+        return true;
+    }
+
+    if (pC && pD) {
+        if (!pD->isFloating()) {
+            // Undock a docked window
+            pD->setFloating(true);
+        }
+
+        pD->resize(x1, y1);
+        return true;
+    }
+
+    if (pN) {
+        pN->resize(x1, y1);
+        return true;
+    }
+
+    return false;
 }
 
 bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int y1)
@@ -2486,9 +2562,49 @@ bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisibl
         return false;
     }
 
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setScrollBarVisible(isVisible);
+        return true;
+    }
+
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setScrollBarVisible(isVisible);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool mudlet::setHorizontalScrollBar(Host* pHost, const QString& name, bool isEnabled)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setHorizontalScrollBar(isEnabled);
+        return true;
+    }
+
+   return false;
+}
+
+bool mudlet::setMiniConsoleCmdVisible(Host* pHost, const QString& name, bool isVisible)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setMiniConsoleCmdVisible(isVisible);
         return true;
     } else {
         return false;
@@ -2519,6 +2635,8 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+
     if (pL) {
         pL->move(x1, y1);
         return true;
@@ -2542,6 +2660,11 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
         return true;
     }
 
+    if (pN) {
+        pN->move(x1, y1);
+        return true;
+    }
+
     return false;
 }
 
@@ -2556,6 +2679,7 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
     auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
     auto pW = pHost->mpConsole->mpMainFrame;
     auto pM = pHost->mpConsole->mpMapper;
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
         return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
@@ -2579,6 +2703,13 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
         pC->mOldY = y1;
         if (show) {
             pC->show();
+        }
+        return {true, QString()};
+    } else if (pN) {
+        pN->setParent(pW);
+        pN->move(x1, y1);
+        if (show) {
+            pN->show();
         }
         return {true, QString()};
     } else if (pM && name.toLower() == QLatin1String("mapper")) {
@@ -2680,6 +2811,32 @@ bool mudlet::closeWindow(Host* pHost, const QString& name)
             pD->update();
         }
         return pHost->mpConsole->hideWindow(name);
+    }
+    return false;
+}
+
+bool mudlet::setCmdLineAction(Host* pHost, const QString& name, const int func)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->setAction(func);
+        return true;
+    }
+    return false;
+}
+
+bool mudlet::resetCmdLineAction(Host* pHost, const QString& name)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+    auto pN = pHost->mpConsole->mSubCommandLineMap.value(name);
+    if (pN) {
+        pN->resetAction();
+        return true;
     }
     return false;
 }
@@ -2954,18 +3111,20 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
+bool mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b, int a)
 {
     if (!pHost || !pHost->mpConsole) {
-        return;
+        return false;
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
-        pC->setBgColor(r, g, b);
+        pC->setBgColor(r, g, b, a);
         pC->mUpperPane->forceUpdate();
         pC->mLowerPane->forceUpdate();
+        return true;
     }
+    return false;
 }
 
 int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
@@ -4145,7 +4304,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -4608,7 +4767,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString entryInArchive(QString::fromUtf8(zs.name));
+            QString entryInArchive(zs.name);
             QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
@@ -4643,7 +4802,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         // No need to check return value as we've already done it first time
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString entryInArchive(QString::fromUtf8(zs.name));
+        QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
@@ -5166,7 +5325,7 @@ bool mudlet::loadReplay(Host* pHost, const QString& replayFileName, QString* pEr
         // to start a replay would mess up (QFile) ctelnet::replayFile for a
         // replay already in progess in the SAME profile.  Technically there
         // could be a very small chance of a race condition if a lua call of
-        // loadRawFile happens at the same time as a file was selected for a
+        // loadReplay happens at the same time as a file was selected for a
         // replay after the toolbar/menu command to do a reaply for the same
         // profile - but the window for this is likely to be a fraction of a
         // second...
@@ -5848,62 +6007,36 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
 
 QPair<bool, bool> mudlet::addWordToSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isAdded = false;
-        Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (!mWordSet_shared.contains(word)) {
-            mWordSet_shared.insert(word);
-            qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
-            isAdded = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isAdded);
+    bool isAdded = false;
+    Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (!mWordSet_shared.contains(word)) {
+        mWordSet_shared.insert(word);
+        qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
+        isAdded = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::addWordToSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isAdded);
 }
 
 QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
 {
-    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        // Got write lock within the timeout:
-        bool isRemoved = false;
-        Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
-        if (mWordSet_shared.remove(word)) {
-            qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
-            isRemoved = true;
-        }
-        mDictionaryReadWriteLock.unlock();
-        return qMakePair(true, isRemoved);
+    bool isRemoved = false;
+    Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
+    if (mWordSet_shared.remove(word)) {
+        qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
+        isRemoved = true;
     }
-
-    // Failed to get lock
-    qDebug() << "mudlet::removeWordFromSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
-    return qMakePair(false, false);
+    return qMakePair(true, isRemoved);
 }
 
 QSet<QString> mudlet::getWordSet()
 {
-    bool gotWordSet = false;
     QSet<QString> wordSet;
-    do {
-        if (mDictionaryReadWriteLock.tryLockForRead(100)) {
-            // Got read lock within the timeout:
-            wordSet = mWordSet_shared;
-            // Ensure we make a deep copy of it so the caller is not affected by
-            // other profiles' edits after we unlock.
-            wordSet.detach();
-            // Now we can unlock it:
-            mDictionaryReadWriteLock.unlock();
-            gotWordSet = true;
-        } else {
-            qDebug() << "mudlet::getWordSet() ALERT - failed to get a read lock to access mWordSet_shared, retrying...";
-        }
-    } while (!gotWordSet);
-
+    // Got read lock within the timeout:
+    wordSet = mWordSet_shared;
+    // Ensure we make a deep copy of it so the caller is not affected by
+    // other profiles' edits.
+    wordSet.detach();
+    // Now we can unlock it:
     return wordSet;
 }
 

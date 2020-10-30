@@ -117,7 +117,6 @@ void ScriptUnit::removeScriptRootNode(TScript* pT)
 
 TScript* ScriptUnit::getScript(int id)
 {
-    QMutexLocker locker(&mScriptUnitLock);
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
     } else {
@@ -170,8 +169,6 @@ void ScriptUnit::addScript(TScript* pT)
     if (!pT) {
         return;
     }
-
-    QMutexLocker locker(&mScriptUnitLock);
 
     if (!pT->getID()) {
         pT->setID(getNewID());

@@ -25,7 +25,6 @@
 
 #include "pre_guard.h"
 #include <QMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -46,7 +45,6 @@ public:
 
     std::list<TKey*> getKeyRootNodeList()
     {
-        QMutexLocker locker(&mKeyUnitLock);
         return mKeyRootNodeList;
     }
 
@@ -74,7 +72,6 @@ public:
 
     QMultiMap<QString, TKey*> mLookupTable;
     std::list<TKey*> mCleanupList;
-    QMutex mKeyUnitLock;
     int statsKeyTotal;
     int statsTempKeys;
     int statsActiveKeys;

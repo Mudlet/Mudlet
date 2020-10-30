@@ -150,7 +150,6 @@ void AliasUnit::removeAllTempAliases()
 
 TAlias* AliasUnit::getAlias(int id)
 {
-    QMutexLocker locker(&mAliasUnitLock);
     if (mAliasMap.find(id) != mAliasMap.end()) {
         return mAliasMap.value(id);
     } else {

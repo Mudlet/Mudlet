@@ -33,6 +33,7 @@
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TTextCodec.h"
@@ -77,6 +78,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mpHost(pH)
 , mpOutOfBandDataIncomingCodec()
 , outgoingDataCodec()
+, outgoingDataEncoder()
 , hostPort()
 , mWaitingForResponse()
 , mZstream()
@@ -93,6 +95,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
 , lastTimeOffset()
+, enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
@@ -111,7 +114,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = QStringLiteral("Mudlet %1").arg(QStringLiteral(APP_VERSION));
+    termType = QStringLiteral("Mudlet " APP_VERSION);
     if (QByteArray(APP_BUILD).trimmed().length()) {
         termType.append(QStringLiteral(APP_BUILD));
     }
@@ -1838,7 +1841,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                      * Once we comply with that we can be certain that Mud
                      * Server encoding will NOT be an issue!
                      */
-                    cmd += termType.toLatin1().data();
+                    cmd += termType.toUtf8().constData();
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
@@ -1884,7 +1887,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString var;
@@ -1958,7 +1961,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString packageMessage;
@@ -2089,7 +2092,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media").toLower())) {
+    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
@@ -2105,7 +2108,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     transcodedMsg.remove(QChar::LineFeed);
@@ -2127,7 +2130,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     // MSP specification: https://www.zuggsoft.com/zmud/msp.htm#MSP%20Specification
@@ -2231,6 +2234,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::purgeMediaCache()
+{
+    return mpHost->mpMedia->purgeMediaCache();
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

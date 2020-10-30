@@ -136,7 +136,7 @@ class TBuffer
 public:
     TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
-    bool insertInLine(QPoint& cursor, const QString& what, TChar& format);
+    bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
     void log(int, int);
@@ -172,7 +172,7 @@ public:
     void updateColors();
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
-    void paste(QPoint&, TBuffer);
+    void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
     static const QList<QByteArray> getEncodingNames();
@@ -312,7 +312,7 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     if (attributes & TChar::Echo) {
         presentAttributes << QLatin1String("Echo (0x100)");
     }
-    result.append(presentAttributes.join(", "));
+    result.append(presentAttributes.join(QLatin1String(", ")));
     result.append(QLatin1String(")"));
     debug.nospace() << result;
     return debug;

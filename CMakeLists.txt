@@ -102,16 +102,22 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                                           "Windows"
                                           "Darwin")
 
-include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS OPTION_VARIABLE
-                        USE_FONTS READABLE_NAME "fonts")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER OPTION_VARIABLE
-                        USE_3DMAPPER READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
+                        OPTION_VARIABLE USE_FONTS
+                        READABLE_NAME "fonts")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
+                        OPTION_VARIABLE USE_3DMAPPER
+                        READABLE_NAME "3D mapper")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
                         READABLE_NAME "own QKeychain (Qt5) library")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
+                        OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
+                        READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
+                        SUPPORTED_SYSTEMS "Windows")
 
 include(InitGitSubmodule)
 

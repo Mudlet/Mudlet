@@ -31,6 +31,7 @@
 #include "ScriptUnit.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
+#include "TMainConsole.h"
 #include "TriggerUnit.h"
 #include "XMLexport.h"
 #include "ctelnet.h"
@@ -58,6 +59,7 @@ class LuaInterface;
 class TMedia;
 class TRoom;
 class TConsole;
+class TMainConsole;
 class dlgNotepad;
 class TMap;
 
@@ -153,69 +155,70 @@ public:
     Q_DECLARE_FLAGS(DiscordOptionFlags, DiscordOptionFlag)
 
 
-    QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
-    void               setName(const QString& s);
-    QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
-    void               setUrl(const QString& s)         { QMutexLocker locker(& mLock); mUrl = s; }
-    QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
-    void               setUserDefinedName(const QString& s) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
-    int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
-    void               setPort(const int p)                 { QMutexLocker locker(& mLock); mPort = p; }
-    void               setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
-    QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
-    void               setLogin(const QString& s)       { QMutexLocker locker(& mLock); mLogin = s; }
-    QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
-    void               setPass(const QString& s)        { QMutexLocker locker(& mLock); mPass = s; }
-    int                getRetries()                     { QMutexLocker locker(& mLock); return mRetries;}
-    void               setRetries(const int c)          { QMutexLocker locker(& mLock); mRetries = c; }
-    int                getTimeout()                     { QMutexLocker locker(& mLock); return mTimeout; }
-    void               setTimeout(const int seconds)    { QMutexLocker locker(& mLock); mTimeout = seconds; }
-    bool               wideAmbiguousEAsianGlyphs() { QMutexLocker locker(& mLock); return mWideAmbigousWidthGlyphs; }
+    QString         getName()                        { return mHostName; }
+    QString         getCommandSeparator()            { return mCommandSeparator; }
+    void            setName(const QString& s);
+    QString         getUrl()                         { return mUrl; }
+    void            setUrl(const QString& s)         { mUrl = s; }
+    QString         getUserDefinedName()             { return mUserDefinedName; }
+    void            setUserDefinedName(const QString& s) { mUserDefinedName = s; }
+    int             getPort()                        { return mPort; }
+    void            setPort(const int p)                 { mPort = p; }
+    void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
+    QString &       getLogin()                       { return mLogin; }
+    void            setLogin(const QString& s)       { mLogin = s; }
+    QString &       getPass()                        { return mPass; }
+    void            setPass(const QString& s)        { mPass = s; }
+    int             getRetries()                     { return mRetries;}
+    void            setRetries(const int c)          { mRetries = c; }
+    int             getTimeout()                     { return mTimeout; }
+    void            setTimeout(const int seconds)    { mTimeout = seconds; }
+    bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
     // Uses PartiallyChecked to set the automatic mode, otherwise Checked/Unchecked means use wide/narrow ambiguous glyphs
-    void               setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
+    void            setWideAmbiguousEAsianGlyphs(Qt::CheckState state);
     // Is used to set preference dialog control directly:
-    Qt::CheckState     getWideAmbiguousEAsianGlyphsControlState() { QMutexLocker locker(& mLock);
-                                                                       return mAutoAmbigousWidthGlyphsSetting
-                                                                               ? Qt::PartiallyChecked
-                                                                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
-    void               setHaveColorSpaceId(const bool state) { QMutexLocker locker(& mLock); mSGRCodeHasColSpaceId = state; }
-    bool               getHaveColorSpaceId() { QMutexLocker locker(& mLock); return mSGRCodeHasColSpaceId; }
-    void               setMayRedefineColors(const bool state) { QMutexLocker locker(& mLock); mServerMayRedefineColors = state; }
-    bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
-    void               setDiscordApplicationID(const QString& s);
-    const QString&     getDiscordApplicationID();
-    void               setSpellDic(const QString&);
-    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
-    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
-    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
-    void               setCustomLoginId(const int value);
-    int                getCustomLoginId() { QMutexLocker locker(&mLock); return mCustomLoginId; }
+    Qt::CheckState  getWideAmbiguousEAsianGlyphsControlState() {
+                        return mAutoAmbigousWidthGlyphsSetting
+                               ? Qt::PartiallyChecked
+                               : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    void            setHaveColorSpaceId(const bool state) { mSGRCodeHasColSpaceId = state; }
+    bool            getHaveColorSpaceId() { return mSGRCodeHasColSpaceId; }
+    void            setMayRedefineColors(const bool state) { mServerMayRedefineColors = state; }
+    bool            getMayRedefineColors() { return mServerMayRedefineColors; }
+    void            setDiscordApplicationID(const QString& s);
+    const QString&  getDiscordApplicationID();
+    void            setSpellDic(const QString&);
+    const QString&  getSpellDic() { return mSpellDic; }
+    void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
+                        useDictionary = mEnableUserDictionary;
+                        useShared = mUseSharedDictionary; }
+    void            setCustomLoginId(const int value);
+    int             getCustomLoginId() { return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
     unsigned int assemblePath();
     bool checkForMappingScript();
+    bool checkForCustomSpeedwalk();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
-    TimerUnit* getTimerUnit() { return &mTimerUnit; }
-    AliasUnit* getAliasUnit() { return &mAliasUnit; }
-    ActionUnit* getActionUnit() { return &mActionUnit; }
-    KeyUnit* getKeyUnit() { return &mKeyUnit; }
-    ScriptUnit* getScriptUnit() { return &mScriptUnit; }
+    TimerUnit*   getTimerUnit()   { return &mTimerUnit; }
+    AliasUnit*   getAliasUnit()   { return &mAliasUnit; }
+    ActionUnit*  getActionUnit()  { return &mActionUnit; }
+    KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
+    ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
     void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
     {
-        QMutexLocker locker(&mLock);
         return mHostID;
     }
 
     void setHostID(int id)
     {
-        QMutexLocker locker(&mLock);
         mHostID = id;
     }
 
@@ -253,6 +256,7 @@ public:
     QPair<bool, QString> resetAndRestartStopWatch(const int);
 
     void startSpeedWalk();
+    void startSpeedWalk(int sourceRoom, int targetRoom);
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
@@ -327,18 +331,21 @@ public:
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    void setDebugShowAllProblemCodepoints(const bool);
+    bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
 
 
     cTelnet mTelnet;
-    QPointer<TConsole> mpConsole;
+    QPointer<TMainConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
 
     int commandLineMinimumHeight;
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    bool mHighlightHistory;
     // Set in constructor and used in (bool) TScript::setScript(const QString&)
     // to prevent compilation of the script that was being set therein, cleared
     // after the main TConsole for a new profile has been created during the
@@ -563,6 +570,9 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // To tell all TConsole's upper TTextEdit panes to report all Codepoint
+    // problems as they arrive as well as a summery upon destruction:
+    void signal_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_reloadModules();
@@ -600,7 +610,6 @@ private:
     bool mIsClosingDown;
 
     QString mLine;
-    QMutex mLock;
     QString mLogin;
     QString mPass;
 
@@ -693,6 +702,10 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+    // Whether the TTextEditor class should immediately report to debug output
+    // any dodgy codepoints that it has problems with - if false it only reports
+    // each codepoint the first time it encounters itL
+    bool mDebugShowAllProblemCodepoints;
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;

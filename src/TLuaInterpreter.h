@@ -29,7 +29,6 @@
 
 #include "pre_guard.h"
 #include <QEvent>
-#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -105,6 +104,8 @@ public:
     void loadGlobal();
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
+    int check_for_custom_speedwalk();
+    void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
@@ -113,6 +114,7 @@ public:
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
+    bool callCmdLineAction(const int func, QString);
     bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
@@ -125,7 +127,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, QString&);
+    int startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -251,6 +253,7 @@ public:
     static int searchRoom(lua_State*);
     static int resetProfile(lua_State*);
     static int createMapper(lua_State*);
+    static int createCommandLine(lua_State*);
     static int sendTelnetChannel102(lua_State* L);
     static int isPrompt(lua_State* L);
     static int feedTriggers(lua_State*);
@@ -361,6 +364,9 @@ public:
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int setCmdLineAction(lua_State*);
+    static int resetCmdLineAction(lua_State*);
+    static int setCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -372,6 +378,8 @@ public:
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
+    static int setConsoleBackgroundImage(lua_State*);
+    static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -380,7 +388,7 @@ public:
     static int getButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
-    static int loadRawFile(lua_State*);
+    static int loadReplay(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
@@ -414,6 +422,10 @@ public:
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
+    static int disableHorizontalScrollBar(lua_State*);
+    static int enableHorizontalScrollBar(lua_State*);
+    static int enableCommandLine(lua_State*);
+    static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State* L);
     static int disableClickthrough(lua_State* L);
     static int startLogging(lua_State* L);
@@ -437,6 +449,7 @@ public:
     static int killAlias(lua_State*);
     static int permBeginOfLineStringTrigger(lua_State*);
     static int setLabelStyleSheet(lua_State*);
+    static int setUserWindowStyleSheet(lua_State*);
     static int getTime(lua_State*);
     static int getEpoch(lua_State*);
     static int invokeFileDialog(lua_State*);
@@ -450,6 +463,7 @@ public:
     static int sendATCP(lua_State*);
     static int sendGMCP(lua_State*);
     static int receiveMSP(lua_State*);
+    static int purgeMediaCache(lua_State*);
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
@@ -563,6 +577,10 @@ public:
     static int unzipAsync(lua_State* L);
     static int setMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
+    static int getMapBackgroundColor(lua_State*);
+    static int setMapBackgroundColor(lua_State*);
+    static int getMapRoomExitsColor(lua_State*);
+    static int setMapRoomExitsColor(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -595,6 +613,7 @@ private:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    void insertNativeSeparatorsFunction(lua_State* L);
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
 

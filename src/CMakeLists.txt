@@ -30,7 +30,13 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  if(BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((BUILD matches "-dev.+") or (BUILD matches "-test.+"))
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -92,6 +98,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
@@ -102,10 +109,12 @@ set(mudlet_SRCS
     TMxpEntityTagHandler.cpp
     TMxpFontTagHandler.cpp
     TMxpLinkTagHandler.cpp
+    TMxpMusicTagHandler.cpp
     TMxpNodeBuilder.cpp
     TMxpMudlet.cpp
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
+    TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
     MxpTag.cpp
     TMxpTagHandler.cpp
@@ -220,6 +229,7 @@ set(mudlet_HDRS
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
+    TMainConsole.h
     TMap.h
     TMatchState.h
     TMedia.h
@@ -230,6 +240,8 @@ set(mudlet_HDRS
     TMxpEntityTagHandler.h
     TMxpFontTagHandler.h
     TMxpLinkTagHandler.h
+    TMxpMusicTagHandler.h
+    TMxpSoundTagHandler.h
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
     TMxpContext.h
@@ -357,8 +369,6 @@ target_compile_definitions(mudlet
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 if(USE_OWN_QT5KEYCHAIN)
-    # An extra definition is needed if we are using our own QtKeyChain to not
-    # export symbols from our self-built library:
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
@@ -410,6 +420,12 @@ endif()
 if(WIN32)
   target_link_libraries(mudlet ws2_32)
   set_target_properties(mudlet PROPERTIES WIN32_EXECUTABLE ON)
+  if(USE_MAIN_BUILD_SYSTEM)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_MAIN_BUILD_SYSTEM)
+  endif()
+  # The UNICODE and _UNICODE definitions are needed to make
+  # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
+  target_compile_definitions(mudlet PRIVATE UNICODE _UNICODE)
 endif()
 
 if(APPLE)

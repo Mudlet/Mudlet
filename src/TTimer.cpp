@@ -91,7 +91,6 @@ void TTimer::setName(const QString& name)
 
 void TTimer::setTime(QTime time)
 {
-    QMutexLocker locker(&mLock);
     // Stop the timer before doing anything else:
     mpQTimer->stop();
     mTime = time;
