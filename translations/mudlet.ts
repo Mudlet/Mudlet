@@ -7837,22 +7837,22 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="293"/>
-        <source>◀</source>
+        <source>⯇</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="333"/>
-        <source>▼</source>
+        <source>⯆</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="373"/>
-        <source>▲</source>
+        <source>⯅</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="413"/>
-        <source>►</source>
+        <source>⯈</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
