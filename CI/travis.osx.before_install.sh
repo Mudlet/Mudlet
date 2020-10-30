@@ -9,5 +9,4 @@ npm install -g appdmg
 echo "Successfully ran npm install."
 
 "1 Checking /Users/travis/.npm-global..."
-mkdir ~/.npm-global
 file /Users/travis/.npm-global
