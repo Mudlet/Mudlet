@@ -14840,7 +14840,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
             if (payloadList.size() != 2) {
-                return;
+                continue;
             }
 
             QString msspVAR = payloadList[0];
@@ -14867,6 +14867,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+            lua_settop (L, 1);
         }
 
         lua_pop(L, lua_gettop(L));
