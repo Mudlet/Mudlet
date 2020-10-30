@@ -15485,6 +15485,10 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
+            // Push modifiers()
+            lua_pushstring(L, QKeySequence(qME->modifiers()).toString().toUtf8().constData() );
+            lua_setfield(L, -2, QStringLiteral("modifiers").toUtf8().constData());
+
             error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
