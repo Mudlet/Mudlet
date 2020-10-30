@@ -1,8 +1,5 @@
 #!/bin/bash
 
-"2 Checking /Users/travis/.npm-global..."
-file /Users/travis/.npm-global
-
 set -e
 
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
