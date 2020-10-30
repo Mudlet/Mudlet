@@ -13,7 +13,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git -b fix-macos-packaging "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
