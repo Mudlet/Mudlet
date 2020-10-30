@@ -7,6 +7,3 @@ echo "Running npm install. PATH is $PATH"
 PATH=/usr/local/bin:$PATH
 npm install -g appdmg
 echo "Successfully ran npm install."
-
-"1 Checking /Users/travis/.npm-global..."
-file /Users/travis/.npm-global
