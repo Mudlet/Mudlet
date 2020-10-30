@@ -1422,117 +1422,117 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15219"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15240"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15241"/>
         <source>ERROR</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15231"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15221"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15232"/>
         <source>object</source>
         <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15231"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15221"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15232"/>
         <source>function</source>
         <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16801"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16802"/>
         <source>Some functions may not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16241"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16242"/>
         <source>No error message available from Lua</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16243"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16244"/>
         <source>Lua error: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16245"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16246"/>
         <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
         <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16259"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16260"/>
         <source>[  OK  ]  - Lua module %1 loaded.</source>
         <comment>%1 is the name (may specify which variant) of the module.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16788"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16789"/>
         <source>Probably will not be able to access Mudlet Lua code.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16806"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16807"/>
         <source>Database support will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16813"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16814"/>
         <source>utf8.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16819"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16820"/>
         <source>yajl.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17000"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17001"/>
         <source>No error message available from Lua.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17002"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17003"/>
         <source>Lua error: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17004"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17005"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17081"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17082"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17086"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17087"/>
         <source>%1 (isn&apos;t a file or symlink to a file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17095"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17096"/>
         <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17113"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17114"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17119"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17120"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17126"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17127"/>
         <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4364,145 +4364,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16850"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16851"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16852"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16853"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16855"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16856"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16857"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16858"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16859"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16860"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16861"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16862"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16863"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16864"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16865"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16866"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16867"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16868"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16869"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16870"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16871"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16872"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16873"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16874"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16875"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16876"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16877"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16878"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16879"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16880"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16882"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16883"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16884"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16885"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16886"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16887"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16888"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16889"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16890"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16891"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16892"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16893"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16894"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16895"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16896"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16897"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -7837,22 +7837,22 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="293"/>
-        <source>◀</source>
+        <source>⯇</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="333"/>
-        <source>▼</source>
+        <source>⯆</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="373"/>
-        <source>▲</source>
+        <source>⯅</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="413"/>
-        <source>►</source>
+        <source>⯈</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
