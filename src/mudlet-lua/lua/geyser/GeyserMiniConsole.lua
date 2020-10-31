@@ -224,13 +224,13 @@ end
 -- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
 function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
   self.imgPath = imgPath
-  return setConsoleBackgroundImage(self.name, imgPath, mode)
+  return setBackgroundImage(self.name, imgPath, mode)
 end
 
 --- resets the background image of this miniconsole
 function Geyser.MiniConsole:resetBackgroundImage()
   self.imgPath = nil
-  return resetConsoleBackgroundImage(self.name)
+  return resetBackgroundImage(self.name)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.

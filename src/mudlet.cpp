@@ -1986,46 +1986,6 @@ void mudlet::commitLayoutUpdates()
     }
 }
 
-bool mudlet::setWindowBackgroundImage(Host* pHost, const QString& name, const QString& imgPath, int mode)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->setConsoleBackgroundImage(imgPath, mode);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool mudlet::resetWindowBackgroundImage(Host *pHost, const QString &name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        return true;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        pC->resetConsoleBackgroundImage();
-        return true;
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& font)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2327,25 +2287,63 @@ bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, 
     return false;
 }
 
-bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& path)
+bool mudlet::setBackgroundImage(Host* pHost, const QString& name, QString& imgPath, int mode)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
     }
 
+    if (QDir::homePath().contains('\\')) {
+        imgPath.replace('/', R"(\)");
+    } else {
+        imgPath.replace('\\', "/");
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        if (QDir::homePath().contains('\\')) {
-            path.replace('/', R"(\)");
-        } else {
-            path.replace('\\', "/");
-        }
-        QPixmap bgPixmap(path);
+        QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
-    } else {
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
+    return false;
+}
+
+bool mudlet::resetBackgroundImage(Host *pHost, const QString &name)
+{
+    if (!pHost || !pHost->mpConsole) {
         return false;
     }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        pHost->mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clear();
+        return true;
+    }
+
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    return false;
 }
 
 bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state)

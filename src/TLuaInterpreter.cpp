@@ -1299,81 +1299,6 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
-int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
-{
-    QString windowName = QStringLiteral("main");
-    QString imgPath;
-    int mode = 1;
-    int counter = 1;
-    int n = lua_gettop(L);
-    if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-        counter++;
-    }
-
-    if (!lua_isstring(L, counter)) {
-        lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    imgPath = lua_tostring(L, counter);
-    counter++;
-
-    if (n > 2 || (counter == 2 && n > 1)) {
-        if (!lua_isnumber(L, counter)) {
-            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
-            return lua_error(L);
-        }
-        mode = lua_tonumber(L, counter);
-    }
-
-    if (mode < 1 || mode > 4) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setConsoleBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
-        return 2;
-    }
-
-    Host* host = &getHostFromLua(L);
-    if (mudlet::self()->setWindowBackgroundImage(host, windowName, imgPath, mode)) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
-        return 2;
-    }
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetConsoleBackgroundImage
-int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
-{
-    QString windowName = QStringLiteral("main");
-    int n = lua_gettop(L);
-    if (n > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "resetConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-    }
-
-    Host* host = &getHostFromLua(L);
-    if (mudlet::self()->resetWindowBackgroundImage(host, windowName)) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
-        return 2;
-    }
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineNumber
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
@@ -4807,21 +4732,74 @@ int TLuaInterpreter::startLogging(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundImage
 int TLuaInterpreter::setBackgroundImage(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setBackgroundImage: wrong argument type");
+    QString windowName = QStringLiteral("main");
+    QString imgPath;
+    int mode = 1;
+    int counter = 1;
+    int n = lua_gettop(L);
+    if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setBackgroundImage: bad argument #1 type (console or label name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+        counter++;
+    }
+
+    if (!lua_isstring(L, counter)) {
+        lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
         return lua_error(L);
     }
-    QString text = lua_tostring(L, 1);
+    imgPath = lua_tostring(L, counter);
+    counter++;
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setBackgroundImage: wrong argument type");
-        return lua_error(L);
+    if (n > 2 || (counter == 2 && n > 1)) {
+        if (!lua_isnumber(L, counter)) {
+            lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
+            return lua_error(L);
+        }
+        mode = lua_tonumber(L, counter);
     }
-    QString name = lua_tostring(L, 2);
 
-    Host& host = getHostFromLua(L);
-    mudlet::self()->setBackgroundImage(&host, text, name);
+    if (mode < 1 || mode > 4) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
+        return 2;
+    }
 
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->setBackgroundImage(host, windowName, imgPath, mode)) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, R"(console or label "%s" not found)", windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetBackgroundImage
+int TLuaInterpreter::resetBackgroundImage(lua_State* L)
+{
+    QString windowName = QStringLiteral("main");
+    int n = lua_gettop(L);
+    if (n > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "resetBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+    }
+
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->resetBackgroundImage(host, windowName)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
     return 0;
 }
 
@@ -16389,6 +16367,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resizeWindow", TLuaInterpreter::resizeWindow);
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
+    lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
     lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
     lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
@@ -16413,8 +16392,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
-    lua_register(pGlobalLua, "setConsoleBackgroundImage", TLuaInterpreter::setConsoleBackgroundImage);
-    lua_register(pGlobalLua, "resetConsoleBackgroundImage", TLuaInterpreter::resetConsoleBackgroundImage);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
     lua_register(pGlobalLua, "spawn", TLuaInterpreter::spawn);
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);
