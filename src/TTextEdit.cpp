@@ -1691,27 +1691,18 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    const int k = 3;
-    int deltaY = e->angleDelta().y() / (8 * 15);
-    int deltaX = e->angleDelta().x() / (8 * 15);
-    bool handled = false;
-    if (deltaY < 0) {
-        mpConsole->scrollDown(k);
-        handled = true;
-    } else if (deltaY > 0) {
+    int k = 3;
+    if (e->delta() < 0) {
+        mpConsole->scrollDown(abs(k));
+        e->accept();
+        return;
+    }
+    if (e->delta() > 0) {
         mpConsole->scrollUp(k);
-        handled = true;
+        e->accept();
+        return;
     }
-
-    if (deltaX < 0) {
-        scrollH(std::max(0, mCursorX - k));
-        handled = true;
-    } else if (deltaX > 0) {
-        scrollH(std::min(mMaxHRange, mCursorX + k));
-        handled = true;
-    }
-
-    e->setAccepted(handled);
+    e->ignore();
 }
 
 int TTextEdit::imageTopLine()
