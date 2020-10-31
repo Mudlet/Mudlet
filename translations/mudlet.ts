@@ -1417,122 +1417,122 @@ rooms:</source>
 <context>
     <name>TLuaInterpreter</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="12695"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="12673"/>
         <source>Playing %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/TLuaInterpreter.cpp" line="15198"/>
         <location filename="../src/TLuaInterpreter.cpp" line="15219"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15240"/>
         <source>ERROR</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15231"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15199"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15210"/>
         <source>object</source>
         <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15231"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15199"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15210"/>
         <source>function</source>
         <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16801"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16779"/>
         <source>Some functions may not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16241"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16220"/>
         <source>No error message available from Lua</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16243"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16222"/>
         <source>Lua error: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16245"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16224"/>
         <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
         <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16259"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16238"/>
         <source>[  OK  ]  - Lua module %1 loaded.</source>
         <comment>%1 is the name (may specify which variant) of the module.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16788"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16766"/>
         <source>Probably will not be able to access Mudlet Lua code.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16806"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16784"/>
         <source>Database support will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16813"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16791"/>
         <source>utf8.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16819"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16797"/>
         <source>yajl.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17000"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16978"/>
         <source>No error message available from Lua.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17002"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16980"/>
         <source>Lua error: %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17004"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16982"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17081"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17059"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17086"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17064"/>
         <source>%1 (isn&apos;t a file or symlink to a file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17095"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17073"/>
         <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17113"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17091"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17119"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17097"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="17126"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="17104"/>
         <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -4364,145 +4364,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16850"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16828"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16852"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16830"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16832"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16856"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16834"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16858"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16836"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16860"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16838"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16862"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16840"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16864"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16842"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16866"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16844"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16868"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16846"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16870"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16848"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16872"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16850"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16874"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16852"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16876"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16878"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16856"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16880"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16858"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16882"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16860"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16884"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16862"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16886"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16864"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16888"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16866"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16890"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16868"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16892"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16870"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16894"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16872"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16896"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16874"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -7837,22 +7837,22 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="293"/>
-        <source>◀</source>
+        <source>⯇</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="333"/>
-        <source>▼</source>
+        <source>⯆</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="373"/>
-        <source>▲</source>
+        <source>⯅</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/ui/mapper.ui" line="413"/>
-        <source>►</source>
+        <source>⯈</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -9399,13 +9399,13 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="437"/>
-        <location filename="../src/mudlet.cpp" line="5198"/>
+        <location filename="../src/mudlet.cpp" line="5196"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="438"/>
-        <location filename="../src/mudlet.cpp" line="5181"/>
+        <location filename="../src/mudlet.cpp" line="5179"/>
         <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
         <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
         <translation type="unfinished"></translation>
@@ -9636,7 +9636,7 @@ There is NO WARRANTY, to the extent permitted by law.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4230"/>
+        <location filename="../src/mudlet.cpp" line="4228"/>
         <source>Central Debug Console</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9739,85 +9739,85 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="1844"/>
-        <location filename="../src/mudlet.cpp" line="4610"/>
+        <location filename="../src/mudlet.cpp" line="4608"/>
         <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3897"/>
+        <location filename="../src/mudlet.cpp" line="3895"/>
         <source>Map - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3913"/>
+        <location filename="../src/mudlet.cpp" line="3911"/>
         <source>Pre-Map loading(3) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3923"/>
+        <location filename="../src/mudlet.cpp" line="3921"/>
         <source>Loading map(3) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3995"/>
+        <location filename="../src/mudlet.cpp" line="3993"/>
         <source>%1 - notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4099"/>
+        <location filename="../src/mudlet.cpp" line="4097"/>
         <source>Select Replay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4101"/>
+        <location filename="../src/mudlet.cpp" line="4099"/>
         <source>*.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4390"/>
+        <location filename="../src/mudlet.cpp" line="4388"/>
         <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4512"/>
+        <location filename="../src/mudlet.cpp" line="4510"/>
         <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4529"/>
+        <location filename="../src/mudlet.cpp" line="4527"/>
         <source>Faster</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4532"/>
+        <location filename="../src/mudlet.cpp" line="4530"/>
         <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4536"/>
+        <location filename="../src/mudlet.cpp" line="4534"/>
         <source>Slower</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4539"/>
+        <location filename="../src/mudlet.cpp" line="4537"/>
         <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4549"/>
-        <location filename="../src/mudlet.cpp" line="4618"/>
-        <location filename="../src/mudlet.cpp" line="4631"/>
+        <location filename="../src/mudlet.cpp" line="4547"/>
+        <location filename="../src/mudlet.cpp" line="4616"/>
+        <location filename="../src/mudlet.cpp" line="4629"/>
         <source>Speed: X%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4556"/>
-        <location filename="../src/mudlet.cpp" line="4573"/>
+        <location filename="../src/mudlet.cpp" line="4554"/>
+        <location filename="../src/mudlet.cpp" line="4571"/>
         <source>Time: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5192"/>
+        <location filename="../src/mudlet.cpp" line="5190"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation type="unfinished">
@@ -9825,7 +9825,7 @@ There is NO WARRANTY, to the extent permitted by law.
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5210"/>
+        <location filename="../src/mudlet.cpp" line="5208"/>
         <source>Review %n update(s)...</source>
         <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translation type="unfinished">
@@ -9833,7 +9833,7 @@ There is NO WARRANTY, to the extent permitted by law.
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="5215"/>
+        <location filename="../src/mudlet.cpp" line="5213"/>
         <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
         <translation type="unfinished">
@@ -9841,12 +9841,12 @@ There is NO WARRANTY, to the extent permitted by law.
         </translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5240"/>
+        <location filename="../src/mudlet.cpp" line="5238"/>
         <source>Update installed - restart to apply</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="5314"/>
+        <location filename="../src/mudlet.cpp" line="5312"/>
         <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
         <translation type="unfinished"></translation>
