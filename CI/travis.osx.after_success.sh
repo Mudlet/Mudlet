@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-# build
+
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
