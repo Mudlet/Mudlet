@@ -984,7 +984,7 @@ if rex then
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
-        [[(<[a-zA-Z0-9_,:]+>)]],
+        [[(</?[a-zA-Z0-9_,:]+>)]],
         rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
       },
       Ansi = {
@@ -1047,8 +1047,20 @@ if rex then
             -- pass it into the text stream then
             t[#t + 1] = ((fr or br) and color or c)
           elseif style == 'Color' then
-            if c == "<reset>" then
+            if c == "<reset>" or c == "<r>" then
               t[#t + 1] = "\27reset"
+            elseif c == "<b>" then
+              t[#t + 1] = "\27bold"
+            elseif c == "</b>" then
+              t[#t + 1] = "\27boldoff"
+            elseif c == "<i>" then
+              t[#t + 1] = "\27italics"
+            elseif c == "</i>" then
+              t[#t + 1] = "\27italicsoff"
+            elseif c == "<u>" then
+              t[#t + 1] = "\27underline"
+            elseif c == "</u>" then
+              t[#t + 1] = "\27underlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1147,6 +1159,18 @@ if rex then
           ba = ba or 255
           setBgColor(win, br, bg, bb, ba)
         end
+      elseif v == "\27bold" then
+        setBold(win, true)
+      elseif v == "\27boldoff" then
+        setBold(win, false)
+      elseif v == "\27italics" then
+        setItalics(win, true)
+      elseif v == "\27italicsoff" then
+        setItalics(win, false)
+      elseif v == "\27underline" then
+        setUnderline(win, true)
+      elseif v == "\27underlineoff" then
+        setUnderline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
