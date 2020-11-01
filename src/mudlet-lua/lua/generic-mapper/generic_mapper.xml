@@ -1269,13 +1269,26 @@ map.defaults = {
         shown = false,
     },
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
-    custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
+    custom_exits = {
+        eu = {"eastup", "westdown", 1, 0, 0},
+        ed = {"eastdown", "westup", 1, 0, 0},
+        su = {"southup", "northdown", 0, -1, 0},
+        sd = {"southdown", "northup", 0, -1, 0},
+        wu = {"westup", "eastdown", -1, 0, 0},
+        wd = {"westdown", "eastup", -1, 0, 0},
+        nu = {"northup", "southdown", 0, 1, 0},
+        nd = {"northdown", "southup", 0, 1, 0},
+    },  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
                         -- ex: { us = {"upsouth", "downnorth", 0, -1, 1}, dn = {"downnorth", "upsouth", 0, 1, -1} }
     use_translation = true,
     lang_dirs = {n = 'n', ne = 'ne', nw = 'nw', e = 'e', w = 'w', s = 's', se = 'se', sw = 'sw',
         u = 'u', d = 'd', ["in"] = 'in', out = 'out', north = 'north', northeast = 'northeast',
         east = 'east', west = 'west', south = 'south', southeast = 'southeast', southwest = 'southwest',
         northwest = 'northwest', up = 'up', down = 'down',
+        eu = 'eu', eastup = 'eastup', ed = 'ed', eastdown = 'eastdown',
+        su = 'su', southup = 'southup', sd = 'sd', southdown = 'southdown',
+        wu = 'wu', westup = 'westup', wd = 'wd', westdown = 'westdown',
+        nu = 'nu', northup = 'northup', nd = 'nd', northdown = 'northdown',
     },
     debug = false,
     download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
@@ -1284,6 +1297,38 @@ map.defaults = {
 local move_queue, lines = {}, {}
 local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
+
+local exitmap = {
+    n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
+    w = 'west',     s = 'south',        se = 'southeast',   sw = 'southwest',
+    u = 'up',       d = 'down',         ["in"] = 'in',      out = 'out',
+}
+
+local short = {}
+for k,v in pairs(exitmap) do
+    short[v] = k
+end
+
+local stubmap = {
+    north = 1,      northeast = 2,      northwest = 3,      east = 4,
+    west = 5,       south = 6,          southeast = 7,      southwest = 8,
+    up = 9,         down = 10,          ["in"] = 11,        out = 12,
+    [1] = "north",  [2] = "northeast",  [3] = "northwest",  [4] = "east",
+    [5] = "west",   [6] = "south",      [7] = "southeast",  [8] = "southwest",
+    [9] = "up",     [10] = "down",      [11] = "in",        [12] = "out",
+}
+
+local coordmap = {
+    [1] = {0,1,0},      [2] = {1,1,0},      [3] = {-1,1,0},     [4] = {1,0,0},
+    [5] = {-1,0,0},     [6] = {0,-1,0},     [7] = {1,-1,0},     [8] = {-1,-1,0},
+    [9] = {0,0,1},      [10] = {0,0,-1},    [11] = {0,0,0},     [12] = {0,0,0},
+}
+
+local reverse_dirs = {
+    north = "south", south = "north", west = "east", east = "west", up = "down",
+    down = "up", northwest = "southeast", northeast = "southwest", southwest = "northeast",
+    southeast = "northwest", ["in"] = "out", out = "in",
+}
 
 local function config()
     local defaults = map.defaults
@@ -1306,7 +1351,7 @@ local function config()
         exitmap[k] = v[1]
         reverse_dirs[v[1]] = v[2]
         short[v[1]] = k
-        local count = #coordmap
+        local count = #coordmap + 1
         coordmap[count] = {v[3],v[4],v[5]}
         stubmap[count] = v[1]
         stubmap[v[1]] = count
@@ -1351,37 +1396,9 @@ local function config()
     end
 end
 
-local exitmap = {
-    n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
-    w = 'west',     s = 'south',        se = 'southeast',   sw = 'southwest',
-    u = 'up',       d = 'down',         ["in"] = 'in',      out = 'out',
-}
-
-local short = {}
-for k,v in pairs(exitmap) do
-    short[v] = k
+function map.reconfig()
+    config()
 end
-
-local stubmap = {
-    north = 1,      northeast = 2,      northwest = 3,      east = 4,
-    west = 5,       south = 6,          southeast = 7,      southwest = 8,
-    up = 9,         down = 10,          ["in"] = 11,        out = 12,
-    [1] = "north",  [2] = "northeast",  [3] = "northwest",  [4] = "east",
-    [5] = "west",   [6] = "south",      [7] = "southeast",  [8] = "southwest",
-    [9] = "up",     [10] = "down",      [11] = "in",        [12] = "out",
-}
-
-local coordmap = {
-    [1] = {0,1,0},      [2] = {1,1,0},      [3] = {-1,1,0},     [4] = {1,0,0},
-    [5] = {-1,0,0},     [6] = {0,-1,0},     [7] = {1,-1,0},     [8] = {-1,-1,0},
-    [9] = {0,0,1},      [10] = {0,0,-1},    [11] = {0,0,0},     [12] = {0,0,0},
-}
-
-local reverse_dirs = {
-    north = "south", south = "north", west = "east", east = "west", up = "down",
-    down = "up", northwest = "southeast", northeast = "southwest", southwest = "northeast",
-    southeast = "northwest", ["in"] = "out", out = "in",
-}
 
 local wait_echo = {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
@@ -1487,7 +1504,7 @@ function map.setConfigs(key, val, sub_key)
         elseif key == "custom_exits" then
             if type(val) == "table" then
                 for k, v in pairs(val) do
-                    map.configs.custom_exit[k] = v
+                    map.configs.custom_exits[k] = v
                     map.echo(string.format("Custom Exit short direction %s, long direction %s",k,v[1]))
                     map.echo(string.format("    set to: x: %s, y: %s, z: %s, reverse: %s",v[3],v[4],v[5],v[2]))
                 end
@@ -1624,7 +1641,7 @@ local function find_room(name, area)
         local areas = getAreaTable() or {}
         for k,v in pairs(areas) do
             if string.lower(k) == string.lower(area) then
-                area = v
+                area = k
                 break
             end
         end
@@ -1671,6 +1688,8 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
         setExit(ID1,ID2,stubmap[dir1])
     else
         setRoomUserData(ID1,"exit " .. dir1,ID2)
+        addSpecialExit(ID1, ID2, dir1)
+        addCustomLine(ID1, ID2, dir1, "dash line", {255, 0, 0}, true)
     end
     if stubmap[dir1] &gt; 13 then
         -- check handling of custom exits here
@@ -1694,6 +1713,8 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
                 setExit(ID2,ID1,stubmap[dir2])
             else
                 setRoomUserData(ID2,"exit " .. dir2,ID1)
+                addSpecialExit(ID2, ID1, dir2)
+                addCustomLine(ID2, ID1, dir2, "dash line", {255, 0, 0}, true)
             end
             if stubmap[dir2] &gt; 13 then
                 -- check handling of custom exits here
@@ -1712,7 +1733,8 @@ local function check_room(roomID, name, exits)
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
     -- check handling of custom exits here
     for i = 13,#stubmap do
-        t_exits[stubmap[i]] = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i]))
+        local x = tonumber(getRoomUserData(roomID,"exit " .. stubmap[i]))
+        if (x) then t_exits[stubmap[i]] = x end
     end
     for k,v in ipairs(exits) do
         if short[v] and not table.contains(t_exits,v) then return false end
@@ -2065,6 +2087,10 @@ function map.find_path(roomName,areaName,return_tables)
         if found and (#dirs == 0 or #dirs &gt; #speedWalkDir) then
             dirs = speedWalkDir
             path = speedWalkPath
+        end
+        if not found then
+            speedWalkDir = dirs
+            speedWalkPath = path
         end
     end
     if return_tables then
@@ -2671,7 +2697,7 @@ local function grab_line()
             raiseEvent("onNewRoom")
         end
         print_wait_echoes()
-        map.echo("Prompt captured",true)
+        map.echo("Prompt captured from grab_line",true)
     end
     if find_prompt then
         for k,v in ipairs(map.configs.prompt_test_patterns) do
@@ -2736,7 +2762,14 @@ local function handle_exits(exits)
     end
 end
 
-local continue_walk, timerID
+-- 定制开门指令可能有多条，以;分隔
+local function sendArr(arr_dir)
+    for i=1, #arr_dir do
+        send(arr_dir[i])
+    end
+end
+
+local continue_walk, timerID, lastWalkDirArr
 continue_walk = function(new_room)
     if not walking then return end
     -- calculate wait time until next command, with randomness
@@ -2750,16 +2783,23 @@ continue_walk = function(new_room)
     end
     -- send command if we don't need to wait
     if not new_room then
-        send(table.remove(map.walkDirs,1))
+        lastWalkDirArr = table.remove(map.walkDirs,1):split(";")
+        sendArr(lastWalkDirArr)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
         end
-    end
+    -- end
     -- make tempTimer to send next command if necessary
-    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait &gt; 0)) then
+    elseif walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait &gt; 0)) then
         if timerID then killTimer(timerID) end
         timerID = tempTimer(wait, function() continue_walk() end)
+    end
+end
+
+function map.reWalkLastDir()
+    if lastWalkDirArr and type(lastWalkDirArr) == "table" and #lastWalkDirArr &gt; 0 then
+        sendArr(lastWalkDirArr)
     end
 end
 
@@ -2785,12 +2825,12 @@ function map.speedwalk(roomID, walkPath, walkDirs)
                 -- if locked, unlock door
                 if status == 3 then
                     table.insert(walkPath,k,id)
-                    table.insert(walkDirs,k,"unlock " .. (exitmap[dir] or dir))
+                    table.insert(walkDirs,k, getRoomUserData(id, "doorcmd."..dir..".unlock") or "unlock " .. (exitmap[dir] or dir))
                     k = k + 1
                 end
                 -- if closed, open door
                 table.insert(walkPath,k,id)
-                table.insert(walkDirs,k,"open " .. (exitmap[dir] or dir))
+                table.insert(walkDirs,k, getRoomUserData(id, "doorcmd."..dir..".open") or "open " .. (exitmap[dir] or dir))
                 k = k + 1
             end
         end
@@ -2807,9 +2847,10 @@ function map.speedwalk(roomID, walkPath, walkDirs)
         map.walkDirs = walkDirs
         continue_walk()
     else
-        for _,dir in ipairs(walkDirs) do
-            send(dir)
-        end
+        -- for _,dir in ipairs(walkDirs) do
+        --     send(dir)
+        -- end
+        speedwalktimer(walkDirs, 0.3, true)
         walking = false
     end
 end
