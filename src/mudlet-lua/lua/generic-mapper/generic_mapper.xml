@@ -1791,13 +1791,13 @@ local function create_room(name, exits, dir, coords)
                 end
             end
         end
+        setRoomCoordinates(newID,unpack(coords))
         if dir then
             connect_rooms(map.currentRoom, newID, dir)
         elseif find_portal or force_portal then
             addSpecialExit(map.currentRoom, newID, (find_portal or force_portal))
             setRoomUserData(newID,"portals",tostring(map.currentRoom)..":"..(find_portal or force_portal))
         end
-        setRoomCoordinates(newID,unpack(coords))
         local pos_rooms = getRoomsByPosition(map.currentArea,unpack(coords))
         if not (find_portal or force_portal) and map.configs.stretch_map and table.size(pos_rooms) &gt; 1 then
             set_room(newID)
