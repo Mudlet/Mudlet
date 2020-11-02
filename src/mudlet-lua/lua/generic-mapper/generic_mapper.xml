@@ -645,8 +645,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 11/07/2018
-local version = "2.0.16"
+-- 02/11/2020
+local version = "2.0.17"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1133,6 +1133,8 @@ map.help.config = [[
             the map to verify your position using the room name and exits
             seen following using the command. This may be true or false.
 
+        &lt;yellow&gt;look&lt;reset&gt; - Translate the "look" command in your language.
+            
         &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent,
             any lines stored from the game used to search for the room name
             are cleared. This may be true or false.
@@ -1278,6 +1280,7 @@ map.defaults = {
         northwest = 'northwest', up = 'up', down = 'down',
     },
     debug = false,
+    look = "look",
     download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
 }
 
@@ -1887,7 +1890,7 @@ local function move_map()
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == "look" and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+        elseif move == map.configs.look and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
@@ -1915,7 +1918,7 @@ local function capture_move_cmd(dir,priority)
     end
     dir = string.lower(dir)
     if dir == "/" then dir = "recall" end
-    if dir == "l" then dir = "look" end
+    if dir == string.sub(configs.look, 1, 1) then dir = configs.look end
     if configs.use_translation then
         dir = configs.translate[dir] or dir
     end
@@ -1939,7 +1942,7 @@ local function capture_move_cmd(dir,priority)
         else
             table.insert(move_queue,exitmap[dir] or dir)
         end
-    elseif configs.search_on_look and dir == "look" then
+    elseif configs.search_on_look and dir == configs.look then
         table.insert(move_queue, dir)
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
@@ -2966,7 +2969,7 @@ function map.eventHandler(event, ...)
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             map.find_prompt()
-            send("look", true)
+            send(map.configs.look, true)
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
