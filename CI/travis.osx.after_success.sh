@@ -10,7 +10,7 @@ fi
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
+  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
