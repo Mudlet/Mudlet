@@ -21,6 +21,7 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
+qt5_add_resources(RES_SOURCE_FILES ../translations/translated/qm.qrc)
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
