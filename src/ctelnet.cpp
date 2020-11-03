@@ -808,6 +808,8 @@ void cTelnet::sendTelnetOption(char type, char option)
 void cTelnet::replyFinished(QNetworkReply* reply)
 {
     mpProgressDialog->close();
+    packageDownloadReply->abort();
+    packageDownloadReply->deleteLater();
 
 
     QFile file(mServerPackage);
@@ -831,6 +833,11 @@ void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
 {
     mpProgressDialog->setRange(0, static_cast<int>(tot));
     mpProgressDialog->setValue(static_cast<int>(got));
+}
+
+void cTelnet::interfaceDownloadCancelled()
+{
+    mpProgressDialog->close();
 }
 
 // Helper to identify which protocol is being negotiated!
@@ -1627,9 +1634,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpHost->updateProxySettings(mpDownloader);
                 auto request = QNetworkRequest(QUrl(url));
                 mudlet::self()->setNetworkRequestDefaults(url, request);
-                QNetworkReply* reply = mpDownloader->get(request);
+                packageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
             }
             return;
@@ -1994,9 +2001,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->updateProxySettings(mpDownloader);
         auto request = QNetworkRequest(QUrl(url));
         mudlet::self()->setNetworkRequestDefaults(url, request);
-        QNetworkReply* reply = mpDownloader->get(request);
+        packageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"))) {

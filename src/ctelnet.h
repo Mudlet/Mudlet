@@ -282,6 +282,8 @@ private:
     QTimer* mpPostingTimer;
     bool mUSE_IRE_DRIVER_BUGFIX;
 
+    QNetworkReply* packageDownloadReply;
+
     int mCommands;
     bool mMCCP_version_1;
     bool mMCCP_version_2;
@@ -320,6 +322,7 @@ private:
     bool mConnectViaProxy;
 
 private slots:
+    void interfaceDownloadCancelled();
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
 #endif
