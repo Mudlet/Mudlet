@@ -1159,7 +1159,7 @@ map.help.config = [[
             'downnorth', 0, -1, 1}
 
         &lt;yellow&gt;custom_name_search&lt;reset&gt; - When this is set, instead of running the default
-            functon name_search, a global user-defined function called
+            function name_search, a user-defined function called
             'mudlet.custom_name_search' is used instead. This may be true or false.
             
         &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
