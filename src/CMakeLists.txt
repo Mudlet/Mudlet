@@ -21,7 +21,8 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
-qt5_add_resources(RES_SOURCE_FILES ../translations/translated/qm.qrc)
+configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
+
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
