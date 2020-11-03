@@ -107,20 +107,19 @@ function Geyser.MiniConsole:disableHorizontalScrollBar()
 end
 
 -- Start commandLine functions
+
 --- Enables the command-line for this window
--- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:enableCommandLine()
   enableCommandLine(self.name)
 end
 
 --- Disables the command-line for this window
--- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
 end
 
 --- Sets an action to be used when text is send in this commandline. When this
--- function is called by the event system, text the commandline sends will be 
+-- function is called by the event system, text the commandline sends will be
 -- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
 -- the setClickCallback events
 -- @param func The function to use.
