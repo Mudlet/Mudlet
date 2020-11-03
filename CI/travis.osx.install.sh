@@ -62,9 +62,3 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
-
-# Echo debug Luarocks path
-luarocks-5.1 path
-
-brew install tree
-tree /usr/local/opt/lua@5.1
