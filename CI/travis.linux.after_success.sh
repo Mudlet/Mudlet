@@ -139,6 +139,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
 
       cd "${TRAVIS_BUILD_DIR}"
       # generate and upload the tarball
+      chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
       scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
