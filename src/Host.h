@@ -368,7 +368,8 @@ public:
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-    bool setBackgroundImage(const QString& name, QString& path);
+    bool setBackgroundImage(const QString& name, QString& path, int mode);
+    bool resetBackgroundImage(const QString& name);
     void createMapper(bool loadDefaultMap);
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();

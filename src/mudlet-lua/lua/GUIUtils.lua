@@ -2221,8 +2221,8 @@ mudlet.BgImageMode ={
   ["style"]  = 4,
 }
 
-local setConsoleBackgroundImageLayer = setConsoleBackgroundImage
-function setConsoleBackgroundImage(...)
+local setConsoleBackgroundImageLayer = setBackgroundImage
+function setBackgroundImage(...)
   local mode = arg[arg.n]
   if type(mode) == "string" then
     mode = mudlet.BgImageMode[mode] or mode

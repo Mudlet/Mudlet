@@ -76,6 +76,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpProgressDialog(Q_NULLPTR)
 , mpNetworkReply(Q_NULLPTR)
 , mExpectedFileSize(0)
+, mImportRunning(false)
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
@@ -854,7 +855,7 @@ void TMap::initGraph()
 
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-9 << "seconds.";
+             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
 bool TMap::findPath(int from, int to)
@@ -961,7 +962,7 @@ bool TMap::findPath(int from, int to)
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
     } catch (found_goal) {
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         t.restart();
         if (!roomidToIndex.contains(to)) {
             qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
@@ -978,7 +979,7 @@ bool TMap::findPath(int from, int to)
         do {
             previousVertex = p[currentVertex];
             if (previousVertex == currentVertex) {
-                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
                 mPathList.clear();
                 mDirList.clear();
                 mWeightList.clear(); // Reset any partial results...
@@ -1016,11 +1017,11 @@ bool TMap::findPath(int from, int to)
             currentRoomId = previousRoomId;
         } while (currentVertex != start);
 
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         return true;
     }
 
-    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
     return false;
 }
 

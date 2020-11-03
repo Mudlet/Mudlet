@@ -362,6 +362,7 @@ public:
     static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
+    static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setCmdLineAction(lua_State*);
@@ -377,6 +378,7 @@ public:
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
+    static int setMiniConsoleFontSize(lua_State*);
     static int setConsoleBackgroundImage(lua_State*);
     static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);

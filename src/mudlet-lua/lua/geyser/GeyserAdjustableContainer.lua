@@ -462,6 +462,11 @@ end
 -- @param lockStyle the lockstyle used to lock the container, 
 -- the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
+-- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
+-- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
+-- full:        The container gets fully locked without any margin left for the right click menu.
+-- border:      Keeps the borders of the container visible while locked.
+
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 

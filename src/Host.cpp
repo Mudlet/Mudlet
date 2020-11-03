@@ -3432,25 +3432,57 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     return false;
 }
 
-bool Host::setBackgroundImage(const QString& name, QString& path)
+bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
 {
     if (!mpConsole) {
         return false;
     }
 
+    if (QDir::homePath().contains('\\')) {
+        imgPath.replace('/', R"(\)");
+    } else {
+        imgPath.replace('\\', "/");
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        if (QDir::homePath().contains('\\')) {
-            path.replace('/', R"(\)");
-        } else {
-            path.replace('\\', "/");
-        }
-        QPixmap bgPixmap(path);
+        QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
     } else {
         return false;
     }
+}
+
+bool Host::resetBackgroundImage(const QString &name)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        mpConsole->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    auto pL = mpConsole->mLabelMap.value(name);
+    if (pL) {
+        pL->clear();
+        return true;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->resetConsoleBackgroundImage();
+        return true;
+    }
+
+    return false;
 }
 
 // Needed to extract into a separate method from slot_mapper() so that we can
