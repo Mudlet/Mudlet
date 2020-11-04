@@ -2062,7 +2062,7 @@ void TConsole::appendBuffer()
     mLowerPane->showNewLines();
 }
 
-void TConsole::appendBuffer(TBuffer bufferSlice)
+void TConsole::appendBuffer(const TBuffer& bufferSlice)
 {
     buffer.appendBuffer(bufferSlice);
     mUpperPane->showNewLines();

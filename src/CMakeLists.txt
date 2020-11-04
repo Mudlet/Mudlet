@@ -21,6 +21,7 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
+configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
@@ -30,7 +31,13 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  if(BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((BUILD matches "-dev.+") or (BUILD matches "-test.+"))
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -337,6 +344,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
+target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(
   mudlet

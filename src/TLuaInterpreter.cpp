@@ -1299,81 +1299,6 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBackgroundImage
-int TLuaInterpreter::setConsoleBackgroundImage(lua_State* L)
-{
-    QString windowName = QStringLiteral("main");
-    QString imgPath;
-    int mode = 1;
-    int counter = 1;
-    int n = lua_gettop(L);
-    if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-        counter++;
-    }
-
-    if (!lua_isstring(L, counter)) {
-        lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    imgPath = lua_tostring(L, counter);
-    counter++;
-
-    if (n > 2 || (counter == 2 && n > 1)) {
-        if (!lua_isnumber(L, counter)) {
-            lua_pushfstring(L, "setConsoleBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
-            return lua_error(L);
-        }
-        mode = lua_tonumber(L, counter);
-    }
-
-    if (mode < 1 || mode > 4) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setConsoleBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
-        return 2;
-    }
-
-    Host* host = &getHostFromLua(L);
-    if (mudlet::self()->setWindowBackgroundImage(host, windowName, imgPath, mode)) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
-        return 2;
-    }
-    return 0;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetConsoleBackgroundImage
-int TLuaInterpreter::resetConsoleBackgroundImage(lua_State* L)
-{
-    QString windowName = QStringLiteral("main");
-    int n = lua_gettop(L);
-    if (n > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "resetConsoleBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
-    }
-
-    Host* host = &getHostFromLua(L);
-    if (mudlet::self()->resetWindowBackgroundImage(host, windowName)) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
-        return 2;
-    }
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineNumber
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
@@ -1411,17 +1336,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-        }
+        host.mpMap->update();
     }
     return 0;
 }
@@ -4817,21 +4732,74 @@ int TLuaInterpreter::startLogging(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundImage
 int TLuaInterpreter::setBackgroundImage(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setBackgroundImage: wrong argument type");
+    QString windowName = QStringLiteral("main");
+    QString imgPath;
+    int mode = 1;
+    int counter = 1;
+    int n = lua_gettop(L);
+    if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "setBackgroundImage: bad argument #1 type (console or label name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+        counter++;
+    }
+
+    if (!lua_isstring(L, counter)) {
+        lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
         return lua_error(L);
     }
-    QString text = lua_tostring(L, 1);
+    imgPath = lua_tostring(L, counter);
+    counter++;
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setBackgroundImage: wrong argument type");
-        return lua_error(L);
+    if (n > 2 || (counter == 2 && n > 1)) {
+        if (!lua_isnumber(L, counter)) {
+            lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
+            return lua_error(L);
+        }
+        mode = lua_tonumber(L, counter);
     }
-    QString name = lua_tostring(L, 2);
 
-    Host& host = getHostFromLua(L);
-    mudlet::self()->setBackgroundImage(&host, text, name);
+    if (mode < 1 || mode > 4) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "setBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
+        return 2;
+    }
 
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->setBackgroundImage(host, windowName, imgPath, mode)) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    lua_pushnil(L);
+    lua_pushfstring(L, R"(console or label "%s" not found)", windowName.toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetBackgroundImage
+int TLuaInterpreter::resetBackgroundImage(lua_State* L)
+{
+    QString windowName = QStringLiteral("main");
+    int n = lua_gettop(L);
+    if (n > 0) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "resetBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+    }
+
+    Host* host = &getHostFromLua(L);
+    if (mudlet::self()->resetBackgroundImage(host, windowName)) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
+        return 2;
+    }
     return 0;
 }
 
@@ -7425,7 +7393,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7471,7 +7439,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7518,7 +7486,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -7559,7 +7527,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 2)) {
+    } else if (!lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "tempTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
@@ -7677,7 +7645,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 4)) {
+    } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
@@ -7792,7 +7760,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, ++s)) {
+    } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -7837,7 +7805,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 4)) {
+    } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
@@ -7952,7 +7920,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #14 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 14)) {
+    } else if (!lua_isnoneornil(L, 14)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
         return lua_error(L);
     }
@@ -8197,7 +8165,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
             lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
             return 2;
         }
-    } else if (!lua_isnil(L, 3)) {
+    } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
@@ -14294,7 +14262,6 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         return false;
     }
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -14311,7 +14278,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
         logError(e, _n, _n2);
     }
 
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
     if (error == 0) {
         return true;
@@ -14334,7 +14301,6 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     }
 
     lua_State* L = pIndenterState.get();
-    int top = lua_gettop(L);
 
     if (!validLuaCode(code)) {
         return code;
@@ -14363,12 +14329,12 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
         QString objectName = "error in Lua code";
         QString functionName = "no debug data available";
         logError(e, objectName, functionName);
-        lua_settop(L, top);
+        lua_pop(L, lua_gettop(L));
         return code;
     }
 
     QString result = lua_tostring(L, 1);
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     return result;
 }
 
@@ -14376,7 +14342,6 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 bool TLuaInterpreter::compileScript(const QString& code)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
@@ -14393,7 +14358,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: code compiled without errors. OK\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
     if (error == 0) {
         return true;
@@ -14406,7 +14371,6 @@ bool TLuaInterpreter::compileScript(const QString& code)
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     int error = (luaL_loadbuffer(L, code.toUtf8().constData(),
                                  strlen(code.toUtf8().constData()),
@@ -14429,7 +14393,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "\nLUA: code compiled without errors. OK\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
     if (error == 0) {
         return true;
@@ -14443,10 +14407,9 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 bool TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
     return error == 0;
 }
@@ -14518,13 +14481,12 @@ void TLuaInterpreter::clearCaptureGroups()
     mMultiCaptureGroupPosList.clear();
 
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_newtable(L);
     lua_setglobal(L, "matches");
     lua_newtable(L);
     lua_setglobal(L, "multimatches");
 
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 }
 
 // No documentation available in wiki - internal function
@@ -14560,7 +14522,6 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 void
 TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
     lua_State *L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
         lua_newtable(L);
@@ -14595,7 +14556,7 @@ TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString
         lua_rawseti(L, -2, i + 1);
     }
 
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
 
     TEvent event{};
@@ -14673,9 +14634,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     QStringList tokenList = key.split(QLatin1Char('.'));
     if (!lua_checkstack(L, tokenList.size() + 5)) {
+        qCritical() << "ERROR: could not grow Lua stack by" << tokenList.size() + 5 << "elements, parsing GMCP/MSDP failed. Current stack size is" << lua_gettop(L);
         return;
     }
     int i = 0;
@@ -14838,14 +14799,13 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             host.mTelnet.mpComposer->show();
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseMSSP(const QString& string_data)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     // string_data is in the format of MSSP_VAR "PLAYERS" MSSP_VAL "52" MSSP_VAR "UPTIME" MSSP_VAL "1234567890"
     // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
@@ -14859,7 +14819,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
             if (payloadList.size() != 2) {
-                return;
+                continue;
             }
 
             QString msspVAR = payloadList[0];
@@ -14886,9 +14846,10 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+            lua_settop (L, 1);
         }
 
-        lua_settop(L, top);
+        lua_pop(L, lua_gettop(L));
     }
 }
 
@@ -15059,7 +15020,6 @@ void TLuaInterpreter::setMatches(lua_State* L)
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
@@ -15085,14 +15045,14 @@ bool TLuaInterpreter::call_luafunction(void* pT)
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
             }
         }
-        lua_settop(L, top);
+        lua_pop(L, lua_gettop(L));
+        //lua_settop(L, 0);
         if (error == 0) {
             return true;
         } else {
             return false;
         }
     } else {
-        lua_settop(L, top);
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
         std::string e = "Lua error:";
@@ -15108,7 +15068,6 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -15142,7 +15101,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK anonymous Lua function ran without errors\n" >> 0;
             }
         }
-        lua_settop(L, top);
+        lua_pop(L, lua_gettop(L));
         //lua_settop(L, 0);
         if (error == 0) {
             return std::make_pair(true, returnValue);
@@ -15165,7 +15124,6 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     setMatches(L);
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -15187,7 +15145,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK: script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 
     return (error);
 }
@@ -15196,7 +15154,6 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     bool returnValue = false;
 
     setMatches(L);
@@ -15225,7 +15182,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     if (error == 0) {
         return std::make_pair(true, returnValue);
     } else {
@@ -15321,7 +15278,6 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     if (!mMultiCaptureGroupList.empty()) {
         int k = 1;       // Lua indexes start with 1 as a general convention
@@ -15360,7 +15316,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     if (error == 0) {
         return true;
     } else {
@@ -15372,7 +15328,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     bool returnValue = false;
 
@@ -15418,7 +15373,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
             TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script " << mName << " (" << function << ") ran without errors\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     if (error == 0) {
         return std::make_pair(true, returnValue);
     } else {
@@ -15430,7 +15385,6 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     int error = 0;
     lua_pushstring(L, text.toUtf8().constData());
@@ -15448,7 +15402,7 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> 0;
         }
     }
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     return !error;
 }
 
@@ -15456,7 +15410,6 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     int error = 0;
     if (qE) {
@@ -15609,7 +15562,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         }
     }
 
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     return !error;
 }
 
@@ -15621,7 +15574,6 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
     if (error) {
@@ -15683,7 +15635,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
     return !error;
 }
 
@@ -16116,7 +16068,6 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
     lua_newtable(L);
     for (int i = 0; i < variableList.size(); i++) {
         lua_pushnumber(L, i + 1); // Lua indexes start with 1
@@ -16124,16 +16075,26 @@ void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& varia
         lua_settable(L, -3);
     }
     lua_setglobal(L, tableName.toUtf8().constData());
-    lua_settop(L, top);
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
 }
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_string(const QString& varName, const QString& varValue)
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     lua_pushstring(L, varValue.toUtf8().constData());
+    lua_setglobal(L, varName.toUtf8().constData());
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::set_lua_integer(const QString& varName, int varValue)
+{
+    lua_State* L = pGlobalLua;
+    int top = lua_gettop(L);
+
+    lua_pushnumber(L, varValue);
     lua_setglobal(L, varName.toUtf8().constData());
     lua_settop(L, top);
 }
@@ -16175,6 +16136,26 @@ int TLuaInterpreter::check_for_mappingscript()
         return 0;
     }
 
+    int r = lua_toboolean(L, -1);
+    lua_pop(L, 2);
+    return r;
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::check_for_custom_speedwalk()
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mudlet");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return 0;
+    }
+
+    lua_getfield(L, -1, "custom_speedwalk");
+    if (!lua_isboolean(L, -1)) {
+        lua_pop(L, 2);
+        return 0;
+    }
     int r = lua_toboolean(L, -1);
     lua_pop(L, 2);
     return r;
@@ -16387,6 +16368,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resizeWindow", TLuaInterpreter::resizeWindow);
     lua_register(pGlobalLua, "appendBuffer", TLuaInterpreter::appendBuffer);
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
+    lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
     lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
     lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
@@ -16411,8 +16393,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
-    lua_register(pGlobalLua, "setConsoleBackgroundImage", TLuaInterpreter::setConsoleBackgroundImage);
-    lua_register(pGlobalLua, "resetConsoleBackgroundImage", TLuaInterpreter::resetConsoleBackgroundImage);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
     lua_register(pGlobalLua, "spawn", TLuaInterpreter::spawn);
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);
@@ -16827,7 +16807,7 @@ void TLuaInterpreter::initLuaGlobals()
     tn = "channel102";
     set_lua_table(tn, args);
 
-    lua_settop(pGlobalLua, 0);  // initial setup
+    lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
 
     //FIXME make function call in destructor lua_close(L);
 }
@@ -16837,7 +16817,6 @@ void TLuaInterpreter::initLuaGlobals()
 void TLuaInterpreter::setupLanguageData()
 {
     lua_State* L = pGlobalLua;
-    int top = lua_gettop(L);
 
     // 'mudlet' global table
     lua_createtable(L, 0, 1);
@@ -16904,7 +16883,7 @@ void TLuaInterpreter::setupLanguageData()
 
     lua_setfield(L, -2, "translations");
     lua_setglobal(L, "mudlet");
-    lua_settop(L, top);
+    lua_pop(L, lua_gettop(L));
 }
 
 // No documentation available in wiki - internal function
@@ -17006,7 +16985,7 @@ void TLuaInterpreter::initIndenterGlobals()
         mpHost->postMessage(msg);
     }
 
-    lua_settop(pIndenterState.get(), 0); // initial setup
+    lua_pop(pIndenterState.get(), lua_gettop(pIndenterState.get()));
 }
 
 // No documentation available in wiki - internal function called AFTER

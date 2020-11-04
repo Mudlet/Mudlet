@@ -49,9 +49,6 @@
 #include <QMap>
 #include <QMediaPlayer>
 #include <QPointer>
-#include <QProxyStyle>
-#include <QQueue>
-#include <QReadWriteLock>
 #include <QSettings>
 #include <QShortcut>
 #include <QTextOption>
@@ -150,8 +147,6 @@ public:
     bool setWindowFont(Host*, const QString&, const QString&);
     QString getWindowFont(Host*, const QString&);
     bool setWindowFontSize(Host *, const QString &, int);
-    bool setWindowBackgroundImage(Host *, const QString&, const QString&, int);
-    bool resetWindowBackgroundImage(Host *, const QString&);
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     std::pair<bool, QString> openWindow(Host*, const QString&, bool loadLayout, bool autoDock, const QString &area);
@@ -171,7 +166,8 @@ public:
     bool clearWindow(Host*, const QString&);
     bool pasteWindow(Host* pHost, const QString& name);
     bool setBackgroundColor(Host*, const QString& name, int r, int g, int b, int alpha);
-    bool setBackgroundImage(Host*, const QString& name, QString& path);
+    bool setBackgroundImage(Host*, const QString&, QString &, int);
+    bool resetBackgroundImage(Host *, const QString&);
     bool setDisplayAttributes(Host* pHost, const QString& name, const TChar::AttributeFlags attributes, const bool state);
     bool setCmdLineAction(Host*, const QString&, const int);
     bool resetCmdLineAction(Host*, const QString&);
@@ -717,8 +713,6 @@ private:
     Hunhandle* mHunspell_sharedDictionary;
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
-    // Prevent problems when updating the dictionary:
-    QReadWriteLock mDictionaryReadWriteLock;
 
     QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
 

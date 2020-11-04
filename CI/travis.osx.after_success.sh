@@ -10,7 +10,7 @@ fi
 if [ "${DEPLOY}" = "deploy" ]; then
 
   # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
+  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
@@ -44,7 +44,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
-    bash make-installer.sh "${appBaseName}.app"
+    ./make-installer.sh "${appBaseName}.app"
 
     if [ ! -z "$CERT_PW" ]; then
       codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
@@ -81,9 +81,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      bash make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
     else
-      bash make-installer.sh -r "${VERSION}" "$app"
+      ./make-installer.sh -r "${VERSION}" "$app"
     fi
 
     if [ ! -z "$CERT_PW" ]; then

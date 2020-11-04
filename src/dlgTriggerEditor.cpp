@@ -3705,29 +3705,19 @@ void dlgTriggerEditor::addAction(bool isFolder)
         TAction* pParentAction = mpHost->getActionUnit()->getAction(parentID);
         if (pParentAction) {
             // insert new items as siblings unless the parent is a folder
-            if (!pParentAction->isFolder()) {
-                // handle root items
-                if (!pParentAction->getParent()) {
-                    goto ROOT_ACTION;
-                } else {
-                    // insert new item as sibling of the clicked item
-                    if (pParent->parent()) {
-                        pT = new TAction(pParentAction->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
-                        pParent->parent()->insertChild(0, pNewItem);
-                    }
-                }
-            } else {
+            if (pParentAction->isFolder()) {
                 pT = new TAction(pParentAction, mpHost);
                 pNewItem = new QTreeWidgetItem(pParent, nameL);
                 pParent->insertChild(0, pNewItem);
+            } else if (pParentAction->getParent() && pParent->parent()) {
+                pT = new TAction(pParentAction->getParent(), mpHost);
+                pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                pParent->parent()->insertChild(0, pNewItem);
             }
-        } else {
-            goto ROOT_ACTION;
         }
-    } else {
-    //insert a new root item
-    ROOT_ACTION:
+    }
+    // Otherwise: insert a new root item
+    if (!pT) {
         name = tr("New toolbar");
         pT = new TAction(name, mpHost);
         pT->setCommandButtonUp(cmdButtonUp);
@@ -3736,11 +3726,6 @@ void dlgTriggerEditor::addAction(bool isFolder)
         pNewItem = new QTreeWidgetItem(mpActionBaseItem, nl);
         treeWidget_actions->insertTopLevelItem(0, pNewItem);
     }
-
-    if (!pT) {
-        return;
-    }
-
 
     pT->setName(name);
     pT->setCommandButtonUp(cmdButtonUp);
