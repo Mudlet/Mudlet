@@ -1130,12 +1130,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mRoomIdHash.value(mProfileName);
     }
 
-    ofs << mapLabels.size(); //anzahl der areas
+    ofs << mapLabels.size(); //number of areas
     QMapIterator<int, QMap<int, TMapLabel>> itL1(mapLabels);
     while (itL1.hasNext()) {
         itL1.next();
         int i = itL1.key();
-        ofs << itL1.value().size(); //anzahl der labels pro area
+        ofs << itL1.value().size(); //number of labels per area
         ofs << itL1.key();          //area id
         QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
         while (itL2.hasNext()) {

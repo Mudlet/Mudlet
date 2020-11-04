@@ -2158,7 +2158,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
     mudlet::self()->activateProfile(mpHost);
     if (event->buttons() & Qt::LeftButton) {
         int x = event->x();
-        int y = height() - event->y(); //opengl ursprungspunkt liegt unten links
+        int y = height() - event->y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2188,7 +2188,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
         for (int i = 0; i < hits; i++) {
             mTarget = buff[i * 4 + 3];
-            //TODO: Mehrfachbelegungen
+            //TODO: multiple assignments
             //            unsigned int minZ = buff[i * 4 + 1];
             //            unsigned int maxZ = buff[i * 4 + 2];
         }
@@ -2228,7 +2228,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
 {
     if (mPanMode) {
         int x = event->x();
-        int y = height() - event->y(); //opengl ursprungspunkt liegt unten links
+        int y = height() - event->y(); // the opengl origin is at bottom left
         if ((mPanXStart - x) > 1) {
             shiftRight();
             mPanXStart = x;

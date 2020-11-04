@@ -269,7 +269,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-        return; //NOTE: das ist wichtig, damit ich keine floating point exception bekomme, wenn mScreenHeight==0, was hier der Fall wäre
+        return; //NOTE: otherwise mScreenHeight==0 would cause a floating point exception
     }
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows

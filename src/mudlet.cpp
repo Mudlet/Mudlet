@@ -3902,7 +3902,7 @@ void mudlet::createMapper(bool loadDefaultMap)
                                      pMap->mPlayerRoomOuterColor,
                                      pMap->mPlayerRoomInnerColor);
 
-    pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap);
     pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);
     pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
 

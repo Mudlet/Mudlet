@@ -2828,7 +2828,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             }
         MAIN_LOOP_END:;
             if (recvdGA) {
-                if (!mFORCE_GA_OFF) //FIXME: wird noch nicht richtig initialisiert
+                if (!mFORCE_GA_OFF) //FIXME: isn't initialized correctly
                 {
                     mGA_Driver = true;
                     if (mCommands > 0) {

@@ -2191,7 +2191,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;

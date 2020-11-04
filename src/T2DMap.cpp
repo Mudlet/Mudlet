@@ -1327,9 +1327,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     int playerAreaID = pPlayerRoom->getArea();
     if ((!__Pick && !mShiftMode) || mpMap->mNewMove) {
         mShiftMode = true;
-        // das ist nur hier von Interesse, weil es nur hier einen map editor
-        // gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich
-        // mit mNewRoom ein map update bei centerview()
+        // that's of interest only here because the map editor is here ->
+        // map might not be updated, thus I force a map update on centerview()
+        // with mNewRoom
         mpMap->mNewMove = false;
 
         if (!mpMap->mpRoomDB->getArea(playerAreaID)) {
@@ -2645,7 +2645,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                     // start it at the centre of the room
                                     olx = room->x;
                                     oly = room->y;
-                                    //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
+                                    //FIXME: use exit direction to calculate start of line
                                     lx = _pL[0].x();
                                     ly = _pL[0].y();
                                 } else {
