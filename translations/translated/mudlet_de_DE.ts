@@ -4211,7 +4211,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation>Wird falls vorhanden zusammen mit dem Charakternamen zur Identifizierung des Benutzers im Spiel verschickt.</translation>
+      <translation>Wird, falls vorhanden, zusammen mit dem Charakternamen zur Identifizierung des Benutzers im Spiel verschickt.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2488"/>
