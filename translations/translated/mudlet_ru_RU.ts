@@ -1600,7 +1600,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17119"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[ OK ] - Загружен Mudlet-lua API и Geyser Layout менеджер.</translation>
+      <translation>[  OK  ] - Загружен Mudlet-lua API и Geyser Layout менеджер.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17126"/>
