@@ -22,5 +22,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Lua dependencies
-RUN luarocks install luautf8 \
-    && luarocks install lua-yajl
+RUN luarocks install luautf8     \
+    && luarocks install lua-yajl \
+    && luarocks install busted
