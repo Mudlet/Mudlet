@@ -722,16 +722,15 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
     roomNameRectangle = roomRectangle.adjusted(-2000, realHeight, 2000, realHeight);
 
-    painter.save();
     if (showRoomName) {
-        if (realHeight > 2) {
-            painter.setFont(mapNameFont);
-            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
-        } else {
-            showRoomName = false;
-        }
+        showRoomName = !pRoom->name.isEmpty() && realHeight > 2 && getUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, false);
     }
-    painter.restore();
+    if (showRoomName) {
+        painter.save();
+        painter.setFont(mapNameFont);
+        roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
+        painter.restore();
+    }
 
     // We should be using the full area for testing for clicks even though
     // we only show a smaller one if the user has dialed down the room size
@@ -923,9 +922,6 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
     }
     // If there is a room name, draw it?
-    if (showRoomName) {
-        showRoomName = getUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, false);
-    }
     if (showRoomName) {
         painter.save();
 
