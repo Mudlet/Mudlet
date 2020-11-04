@@ -45,8 +45,9 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QToolBar>
 #include <QScrollBar>
+#include <QShortcut>
+#include <QToolBar>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;

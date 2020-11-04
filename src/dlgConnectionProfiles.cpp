@@ -1241,8 +1241,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
-    QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
-    if (loadedProfiles.contains(profile_name)) {
+    if (mudlet::self()->getHostManager().getHost(profile_name)) {
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -2322,7 +2321,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool preInstallPackages = false;
-    mudlet::self()->hideMudletsVariables(pHost);
+    pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
         preInstallPackages = true;
     } else {
