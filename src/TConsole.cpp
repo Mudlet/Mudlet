@@ -114,7 +114,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
         // Probably will not show up as this is used inside a QMainWindow widget
-        // which has it's own title and icon set.
+        // which has its own title and icon set.
         // mIsSubConsole was left false for this
         mWrapAt = 50;
         mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
@@ -2285,7 +2285,7 @@ void TConsole::dropEvent(QDropEvent* e)
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has it's tab selected in a
+    // Ensure that this profile is the one that has its tab selected in a
     // multi-view situation:
     mudlet::self()->activateProfile(mpHost);
 

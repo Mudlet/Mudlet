@@ -3388,7 +3388,7 @@ void T2DMap::slot_customLineRemovePoint()
     } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
-        // allow it's deletion if there is at least another one left.
+        // allow its deletion if there is at least another one left.
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
     }
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during

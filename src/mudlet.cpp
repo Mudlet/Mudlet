@@ -1590,7 +1590,7 @@ void mudlet::slot_tab_changed(int tabID)
         return;
     }
 
-    // Reset the tab back to "normal" to undo the effect of it having it's style
+    // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
     mpTabBar->setTabBold(tabID, false);
     mpTabBar->setTabItalic(tabID, false);
@@ -1690,7 +1690,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      * least on FreeBSD - causes the Text to be CHANGED from what is set (an
      * underscore is added to a suitably unique letter but that, being a text
      * accelerator is converted to an additional '&' in the text when it is
-     * read) - this messes up identifying the tab by it's name - so we now get
+     * read) - this messes up identifying the tab by its name - so we now get
      * around it by also storing the text in the tab's data - see:
      * + void qt_set_sequence_auto_mnemonic(bool) in 'QKeySequence' documentation
      * + "Detailed Description" in 'QShortCut' documentation
@@ -2077,7 +2077,7 @@ std::pair<bool, QString> mudlet::openWindow(Host* pHost, const QString& name, bo
         return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
     }
 
-    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    //Don't create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
         return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};

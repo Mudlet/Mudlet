@@ -221,7 +221,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
 
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        // Uh oh, the area doesn't seem to exist as a TArea instance, lets check
+        // Uh oh, the area doesn't seem to exist as a TArea instance, let's check
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
@@ -625,7 +625,7 @@ void TMap::initGraph()
         l.id = itRoom.key();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
-        // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        // Maps usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 

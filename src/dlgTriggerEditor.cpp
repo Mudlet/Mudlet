@@ -4656,7 +4656,7 @@ void dlgTriggerEditor::saveVar()
                 //we're trying to rename it/recast it
                 int change = 0;
                 if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
-                    //lets make sure the nametype works
+                    //let's make sure the nametype works
                     if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
                         uiNameType = LUA_TNUMBER;
                     } else {
@@ -4666,7 +4666,7 @@ void dlgTriggerEditor::saveVar()
                 }
                 variable->setNewName(newName, uiNameType);
                 if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
-                    //lets check again
+                    //let's check again
                     if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
@@ -4710,7 +4710,7 @@ void dlgTriggerEditor::saveVar()
             //we're trying to rename it/recast it
             int change = 0;
             if (newName != var->getName() || uiNameType != var->getKeyType()) {
-                //lets make sure the nametype works
+                //let's make sure the nametype works
                 if (uiNameType == LUA_TSTRING) {
                     //do nothing, we can always make key to string
                 } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
@@ -4722,7 +4722,7 @@ void dlgTriggerEditor::saveVar()
                 change = change | 0x1;
             }
             if (newValue != var->getValue() || uiValueType != var->getValueType()) {
-                //lets check again
+                //let's check again
                 if (uiValueType == LUA_TTABLE) {
                     newValue = "{}";
                 } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {

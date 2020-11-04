@@ -244,7 +244,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // This group of signal/slot connections handle updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
-    // new settings from it's one - there is a further connect(...) above which
+    // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
     // included in compliation:
     connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);

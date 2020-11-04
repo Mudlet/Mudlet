@@ -3514,7 +3514,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    //Don't create Userwindow if there is a Label with the same name already. It breaks the UserWindow
 
     if (auto [success, message] = mudlet::self()->openWindow(&host, name, loadLayout, autoDock, area.toLower()); !success) {
         lua_pushnil(L);
@@ -16210,7 +16210,7 @@ static void storeHostInLua(lua_State* L, Host* h);
 
 // No documentation available in wiki - internal helper funtion
 // On success will swap out any messages in the queue and replace them
-// with it's success message, on failure will just append...
+// with its success message, on failure will just append...
 bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QString& requirement, const QString& failureConsequence, const QString& description, const QString& luaModuleId)
 {
     int error = luaL_dostring(pGlobalLua, QStringLiteral("%1require \"%2\"")
@@ -17036,7 +17036,7 @@ void TLuaInterpreter::loadGlobal()
 
     // Although it is relatively easy to detect whether something is #define d
     // it is not so easy to detect what it contains at the preprocessor stage,
-    // so leave checking for it's contents to run-time - this one is the one
+    // so leave checking for its contents to run-time - this one is the one
     // for Linux/FreeBSD where the read-only shared Lua files go into the
     // /usr/share part of the file-system:
     if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
