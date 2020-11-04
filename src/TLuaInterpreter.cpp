@@ -14636,6 +14636,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     lua_State* L = pGlobalLua;
     QStringList tokenList = key.split(QLatin1Char('.'));
     if (!lua_checkstack(L, tokenList.size() + 5)) {
+        qCritical() << "ERROR: could not grow Lua stack by" << tokenList.size() + 5 << "elements, parsing GMCP/MSDP failed. Current stack size is" << lua_gettop(L);
         return;
     }
     int i = 0;
