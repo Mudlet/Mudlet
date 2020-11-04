@@ -874,7 +874,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.next();
             unsigned int newRoomId = 0;
             do {
-                ; // Noop - needed increment is done in test condition!
+                ; // No-op - needed increment is done in test condition!
             } while (validUsedRoomIds.contains(++newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash

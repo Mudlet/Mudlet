@@ -384,7 +384,7 @@ int TLuaInterpreter::Wait(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-// dirToString wiil now catch and validate pretty much any string that could
+// dirToString will now catch and validate pretty much any string that could
 // be a normal direction in a case insensitive manner and convert it to a
 // standard value (one of: "n", "ne", ..., "nw", "up", "down", "in" or
 // "out") but leave anything else as entered; OR convert a direction code as

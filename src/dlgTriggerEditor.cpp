@@ -8858,7 +8858,7 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     }
 }
 
-// Retrive the background-color or color setting from the previous method, the
+// Retrieve the background-color or color setting from the previous method, the
 // colors used can theoretically be:
 // * any strings of those from http://www.w3.org/TR/SVG/types.html#ColorKeywords
 // * #RGB (each of R, G, and B is a single hex digit) 3 Digits
