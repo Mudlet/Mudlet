@@ -31,6 +31,7 @@ jobs:
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
+      if: false()
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
