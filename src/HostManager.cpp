@@ -23,7 +23,6 @@
 
 #include "mudlet.h"
 
-
 bool HostManager::deleteHost(const QString& hostname)
 {
     // make sure this is really a new host
@@ -63,17 +62,6 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
 
     mHostPool.insert(hostname, pNewHost);
     return true;
-}
-
-QStringList HostManager::getHostList()
-{
-    QStringList strlist;
-    const QList<QString> hostList = mHostPool.keys(); // As this is a QMap the list will be sorted alphabetically
-    if (!hostList.isEmpty()) {
-        strlist << hostList;
-    }
-
-    return strlist;
 }
 
 int HostManager::getHostCount()
@@ -140,3 +128,34 @@ Host* HostManager::getHost(const QString& hostname)
     Host* pHost = mHostPool.value(hostname).data();
     return pHost;
 }
+
+HostManager::Iter::Iter(HostManager* manager, bool at_start)
+{
+    if (at_start) {
+        it = manager->mHostPool.begin();
+    } else {
+        it = manager->mHostPool.end();
+    }
+}
+
+bool HostManager::Iter::operator== (const Iter& other)
+{
+    return it == other.it;
+}
+
+bool HostManager::Iter::operator!= (const Iter& other)
+{
+    return it != other.it;
+}
+
+HostManager::Iter& HostManager::Iter::operator++()
+{
+    it++;
+    return *this;
+}
+
+QSharedPointer<Host> HostManager::Iter::operator*()
+{
+    return *it;
+}
+

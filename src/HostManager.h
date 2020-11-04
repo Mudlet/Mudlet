@@ -28,12 +28,11 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QString>
-#include <QStringList>
+#include <QSharedPointer>
 #include "post_guard.h"
 
 
 class TEvent;
-
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
 
 class HostManager
@@ -51,13 +50,13 @@ class HostManager
         HostMap::iterator it;
     };
 
+
 public:
     HostManager() = default; /* : mpActiveHost() - Not needed */
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     int getHostCount();
-    QStringList getHostList();
     bool deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
