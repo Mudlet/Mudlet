@@ -1,10 +1,6 @@
 name: Update texts for translators
 
 on:
-  push:
-    branches:
-      - 'release-**'
-
   schedule:
     - cron: '0 0 * * fri'
 

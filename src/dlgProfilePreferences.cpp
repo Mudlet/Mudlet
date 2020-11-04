@@ -1480,9 +1480,9 @@ void dlgProfilePreferences::resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
+    if (pHost->mpConsole) {
         pHost->mpConsole->resetConsoleBackgroundImage();
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+        pHost->mpConsole->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -1529,15 +1529,17 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
     auto color = QColorDialog::getColor(c, this);
     if (color.isValid()) {
         c = color;
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            mudlet::self()->mConsoleMap[pHost]->changeColors();
+
+        auto console = pHost->mpConsole;
+        if (console) {
+            console->changeColors();
             // update the display properly when color selections change.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            if (!mudlet::self()->mConsoleMap[pHost]->mUpperPane->mIsTailMode) {
+            console->mUpperPane->updateScreenView();
+            console->mUpperPane->forceUpdate();
+            if (console->mUpperPane->mIsTailMode) {
                 // The upper pane having mIsTailMode true means lower pane is hidden
-                mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
-                mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
+                console->mLowerPane->updateScreenView();
+                console->mLowerPane->forceUpdate();
             }
         }
 
@@ -1643,7 +1645,7 @@ void dlgProfilePreferences::setDisplayFont()
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
 #endif
 
-    auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
+    auto mainConsole = pHost->mpConsole;
     if (!mainConsole) {
         return;
     }
@@ -1672,8 +1674,8 @@ void dlgProfilePreferences::setCommandLineFont()
     bool ok;
     QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
     pHost->mCommandLineFont = font;
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
     }
 }
 
@@ -1960,7 +1962,7 @@ void dlgProfilePreferences::downloadMap()
     }
     if (!pHost->mpMap->mpMapper) {
         // CHECK: What happens if we are NOT the current profile anymore?
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     pHost->mpMap->downloadMap();
@@ -2121,18 +2123,10 @@ void dlgProfilePreferences::copyMap()
     }
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QList<Host*> activeHostsList{mudlet::self()->mConsoleMap.keys()};
-    QSet<Host*> activeHosts{activeHostsList.begin(), activeHostsList.end()};
-#else
-    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().toSet()};
-#endif
-    QMap<QString, Host*> activeOtherHostMap;
-    QSetIterator<Host*> itActiveHost(activeHosts);
-    while (itActiveHost.hasNext()) {
-        Host* pOtherHost = itActiveHost.next();
-        if (pOtherHost && (pOtherHost != pHost)) {
-            const auto otherHostName = pOtherHost->getName();
+    QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
+    for (auto pOtherHost : mudlet::self()->getHostManager()) {
+        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+            const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
                 toProfilesRoomIdMap.insert(otherHostName, pOtherHost->mpMap->mRoomIdHash.value(otherHostName, -1));
@@ -2378,6 +2372,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
+        auto console = pHost->mpConsole;
         if (dictList->isEnabled() && dictList->currentItem()) {
             pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
         }
@@ -2459,8 +2454,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
 
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            pMudlet->mConsoleMap[pHost]->changeColors();
+        if (console) {
+            console->changeColors();
         }
 
         QString lIgnore = doubleclick_ignore_lineedit->text();
@@ -2520,8 +2515,8 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pMudlet->mpIrcClientMap.contains(pHost)) {
-                pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+            if (pHost->mpDlgIRC) {
+                pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
         }
 
@@ -2540,18 +2535,18 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pMudlet->mpIrcClientMap.contains(pHost)) {
-            pMudlet->mpIrcClientMap[pHost]->ircRestart();
+        if (restartIrcClient && pHost->mpDlgIRC) {
+            pHost->mpDlgIRC->ircRestart();
         }
 
         setDisplayFont();
 
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            int x = pMudlet->mConsoleMap[pHost]->width();
-            int y = pMudlet->mConsoleMap[pHost]->height();
+        if (console) {
+            int x = console->width();
+            int y = console->height();
             QSize s = QSize(x, y);
             QResizeEvent event(s, s);
-            QApplication::sendEvent(pMudlet->mConsoleMap[pHost], &event);
+            QApplication::sendEvent(console, &event);
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
