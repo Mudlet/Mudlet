@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.9.1
+VERSION = 4.10.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -1385,7 +1385,7 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-    
+
     # Set the macOS application's icon
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
