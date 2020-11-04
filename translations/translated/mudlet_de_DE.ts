@@ -4201,7 +4201,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2456"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>Verbinde dieses Profil automatisch wieder zum Spiel, außer wenn du die Verbindung absichtlich getrennt hast.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
@@ -4211,7 +4211,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Wird, falls vorhanden, zusammen mit dem Charakternamen zur Identifizierung des Benutzers im Spiel verschickt.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2488"/>
@@ -4221,7 +4221,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2494"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>Diesem Profil erlauben, Mudlet&apos;s Discord &quot;Rich Presence&quot;  Funktionen zu verwenden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2600"/>
