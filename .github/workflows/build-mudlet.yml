@@ -67,6 +67,13 @@ jobs:
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
+    - name: (Qt 5.11) disable optional components
+      if: matrix.qt == '5.11.0'
+      run: |
+        echo "WITH_UPDATER=no" >> $GITHUB_ENV
+        echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+        echo "WITH_FONTS=no" >> $GITHUB_ENV
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v5
