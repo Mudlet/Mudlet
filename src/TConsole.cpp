@@ -283,7 +283,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setLayout(vLayoutLayer);
     layoutLayer->setMargin(0);
     layoutLayer->setSpacing(0);
-    layoutLayer->setMargin(0);
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
