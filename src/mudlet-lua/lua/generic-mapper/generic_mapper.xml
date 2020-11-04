@@ -2762,7 +2762,7 @@ local function handle_exits(exits)
     end
 end
 
--- 定制开门指令可能有多条，以;分隔
+-- There may be multiple custom opening instructions, separated by;
 local function sendArr(arr_dir)
     for i=1, #arr_dir do
         send(arr_dir[i])
