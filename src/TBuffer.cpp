@@ -449,7 +449,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
-                // arrangement should avoid looping around this loop whilst
+                // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;

@@ -960,7 +960,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         painter.restore();
     }
 
-    // Change these from const to static to tweak them whilst running in a debugger...!
+    // Change these from const to static to tweak them while running in a debugger...!
     const float allInsideTipOffsetFactor = 1 / 20.0f;
     const float upDownXOrYFactor = 1 / 3.1f;
     const float inOuterXFactor = 1 / 4.5f;
@@ -2826,7 +2826,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
             mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
             mMultiSelectionListWidget.clear();
-            // Do NOT sort whilst inserting items!
+            // Do NOT sort while inserting items!
             mMultiSelectionListWidget.setSortingEnabled(false);
             QSetIterator<int> itRoom = mMultiSelectionSet;
             mIsSelectionUsingNames = false;
@@ -4519,7 +4519,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
                 mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
                 mMultiSelectionListWidget.clear();
-                // Do NOT sort whilst inserting items!
+                // Do NOT sort while inserting items!
                 mMultiSelectionListWidget.setSortingEnabled(false);
                 QSetIterator<int> itRoom = mMultiSelectionSet;
                 mIsSelectionUsingNames = false;

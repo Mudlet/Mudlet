@@ -53,7 +53,7 @@ using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
-// and then reenables the colorizer function (and we "grey out" the color whilst
+// and then reenables the colorizer function (and we "grey out" the color while
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
@@ -8535,7 +8535,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     auto pD = new dlgColorTrigger(this, pT, false, tr("Select foreground trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
@@ -8599,7 +8599,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     auto pD = new dlgColorTrigger(this, pT, true, tr("Select background trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 

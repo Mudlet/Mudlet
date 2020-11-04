@@ -1934,7 +1934,7 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
         // Control character or not ASCII
         return QStringLiteral("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
     } else if (static_cast<quint8>(*byte) == 0x3C) {
-        // less-then - which is noticed by the Qt library code and taken as an
+        // '<' - which is noticed by the Qt library code and taken as an
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
         return QStringLiteral("&lt;");
