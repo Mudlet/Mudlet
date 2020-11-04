@@ -625,7 +625,8 @@ void TMap::initGraph()
         l.id = itRoom.key();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
-        // Maps usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        // This command maps usable TRooms (key) to index of entry in locations (for route finding).
+        // It loses invalid and unusable (i.e. locked) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
