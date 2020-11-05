@@ -586,7 +586,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation>Bereich:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+      <translation>Gebiet:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </translation>
     </message>
     <message>
@@ -1683,12 +1683,12 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMap.cpp" line="217"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation>RoomID=%1 ist nicht vorhanden, kann nicht die AreaID=%2 bei einem nicht existierenden Raum setzen!</translation>
+      <translation>Raum-ID=%1 ist nicht vorhanden, kann nicht die Gebiets-ID=%2 bei einem nicht existierenden Raum setzen!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="228"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation>AreaID=%2 ist nicht vorhanden, kann nicht die RoomID=%1 auf eine nicht existierende Region setzen!</translation>
+      <translation>Gebiets-ID=%2 ist nicht vorhanden, kann nicht die Raum-ID=%1 auf ein nicht existierendes Gebiet setzen!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
@@ -1879,7 +1879,7 @@ bitte warten...</translation>
       <location filename="../src/TMap.cpp" line="1516"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[INFO]  - Standardregion (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
+      <translation>[INFO]  - Standardgebiet (Reset) (für Räume, die nicht zu einem Gebiet zugewiesen wurden) wurde nicht gefunden, reservierte ID -1 ergänzt.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1600"/>
@@ -1925,7 +1925,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2103"/>
       <source>Area id: %1</source>
-      <translation>Regions-ID: %1</translation>
+      <translation>Gebiets-ID: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2112"/>
@@ -2163,12 +2163,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation>Keine Region erstellt! Angeforderte Regions-ID=%1. Hinweis: Regions-IDs müssen &gt; 0 sein</translation>
+      <translation>Kein Gebiet erstellt! Angeforderte Gebiets-ID=%1. Hinweis: Gebiets-IDs müssen &gt; 0 sein</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="274"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation>Warnung: Beim Einstellen der Region des Raums (ID: %1) gab es keinen aktuelle Region!</translation>
+      <translation>Warnung: Beim Einstellen des Gebiets für Raum (ID: %1) gab es kein aktuelles Gebiet!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="995"/>
@@ -2452,12 +2452,12 @@ Linie verbunden, die nicht wiederhergestellt werden konnte und verloren ist!</tr
     <message>
       <location filename="../src/TRoomDB.cpp" line="41"/>
       <source>Unnamed Area</source>
-      <translation>Unbekannte Region</translation>
+      <translation>Unbekanntes Gebiet</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="42"/>
       <source>Default Area</source>
-      <translation>Standard-Region</translation>
+      <translation>Standard-Gebiet</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="506"/>
@@ -2647,7 +2647,7 @@ Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1064"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[ INFO ]  - Dieser Raum behauptet, zu Gebiet ID: %1 zu gehören, aber dort war er unbekannt. Das Gebiet wird ihn zukünftig berücksichtigen.</translation>
+      <translation>[ INFO ]  - Dieser Raum behauptet, zu Gebiets-ID: %1 zu gehören, aber dort war er unbekannt. Das Gebiet wird ihn zukünftig berücksichtigen.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1070"/>
@@ -2778,7 +2778,7 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1299"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation>[ INFO ]  - Standardregionsname (Reset) (für Räume, die nicht zu einer Region zugewiesen wurden) wurde nicht gefunden. Ergänze &quot;%1&quot; gegen die reservierte ID -1.</translation>
+      <translation>[ INFO ]  - Standardgebietsname (Reset) (für Räume, die nicht zu einem Gebiet zugewiesen wurden) wurde nicht gefunden. Ergänze &quot;%1&quot; gegen die reservierte ID -1.</translation>
     </message>
   </context>
   <context>
@@ -3536,7 +3536,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
       <source>Parsing area data...</source>
-      <translation>Analysiere Regionsdaten...</translation>
+      <translation>Analysiere Gebietsdaten...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="354"/>
@@ -7933,7 +7933,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/main_window.ui" line="316"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Suchbereich und Schaltflächen am unteren Bildschirmrand ein- und ausblenden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="321"/>
@@ -12036,7 +12036,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation>In welchen Bereich willst du die Räume verschieben?</translation>
+      <translation>In welches Gebiet willst du die Räume verschieben?</translation>
     </message>
   </context>
   <context>
