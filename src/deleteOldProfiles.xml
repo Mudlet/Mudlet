@@ -6,13 +6,13 @@
     <AliasPackage>
         <Alias isActive="yes" isFolder="no">
             <name>delete old profiles</name>
-            <script>deleteOldProfiles(matches[3], matches[2]==&quot;maps&quot;)
+            <script>deleteOldProfiles(matches[3], matches[2])
 
 --Syntax examples: &quot;delete old profiles&quot;  -&gt; deletes profiles older than 31 days
 --					&quot;delete old maps 10&quot;	-&gt; deletes maps older than 10 days</script>
             <command></command>
             <packageName></packageName>
-            <regex>^delete old (profiles|maps)(?: (\d+))?$</regex>
+            <regex>^delete old (profiles|maps|modules)(?: (\d+))?$</regex>
         </Alias>
     </AliasPackage>
     <ActionPackage/>
@@ -22,7 +22,7 @@
             <packageName></packageName>
             <script>function deleteOldProfiles(keepdays_arg, delete_folder)
   --[[
-  Deletes old profiles/maps in the &quot;current&quot;/&quot;map&quot; folders of the Mudlet home directory.
+  Deletes old profiles/maps/modules in the &quot;current&quot;/&quot;map&quot;/&quot;moduleBackups&quot; folders of the Mudlet home directory.
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
   - One file for every month before that. Specifically: The first available file of every month prior to this.
@@ -31,7 +31,7 @@
 
   -- Ensure correct value is passed for second argument
   assert(type(delete_folder) == &quot;string&quot;, &quot;Wrong type for delete_folder; expected string, got &quot; .. type(delete_folder))
-  assert(table.contains({&quot;current&quot;, &quot;map&quot;, &quot;module&quot;}, delete_folder), &quot;delete_folder must be current, map or module&quot;)
+  assert(table.contains({&quot;profiles&quot;, &quot;maps&quot;, &quot;modules&quot;}, delete_folder), &quot;delete_folder must be profiles, maps or modules&quot;)
 
   local keepdays = tonumber(keepdays_arg) or 31
   local profile_table = {}
@@ -39,9 +39,14 @@
   local slash = (string.char(getMudletHomeDir():byte()) == &quot;/&quot;) and &quot;/&quot; or &quot;\\&quot;
   local delnum = 0
 
-  local dirpath = delete_folder == &quot;module&quot;
+  local to_folder = {
+    profiles = &quot;current&quot;,
+    maps = &quot;map&quot;,
+  }
+
+  local dirpath = delete_folder == &quot;modules&quot;
     and getMudletHomeDir()..slash..&quot;..&quot;..slash..&quot;..&quot;..slash..&quot;moduleBackups&quot;
-    or getMudletHomeDir()..slash..delete_folder
+    or getMudletHomeDir()..slash..to_folder[delete_folder]
 
   -- Traverse the profiles folder and create a table of files:
   for filename in lfs.dir(dirpath) do
@@ -56,13 +61,10 @@
   -- Sort the table according to last modification date from old to new:
   table.sort(profile_table, function (a,b) return a.last_mod &lt; b.last_mod end)
 
-  local word = delete_folder == &quot;current&quot; and &quot;profile&quot; or delete_folder
-
   echo(string.format(
-    &quot;\nDeleting old %s. Files newer than %d days and one %s for every month before that will be kept.&quot;,
-    delete_folder..&quot;s&quot;,
-    keepdays,
-    delete_folder
+    &quot;\nDeleting old %s. Files newer than %d days and one for every month before that will be kept.&quot;,
+    delete_folder,
+    keepdays
   ))
 
   for i, v in ipairs(profile_table) do
