@@ -34,6 +34,7 @@
         <file>icons/carrionfields.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/clessidra.jpg</file>
+        <file>icons/cleftofdimensions.png</file>
         <file>icons/configure.png</file>
         <file>icons/dash-dot-dot-line.png</file>
         <file>icons/dash-dot-line.png</file>
@@ -200,6 +201,5 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
-        <file>icons/cleftofdimensions.png</file>
     </qresource>
 </RCC>
