@@ -49,7 +49,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"})
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
+                 "Cleft of Dimensions"})
 {
     setupUi(this);
 
@@ -771,6 +772,9 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QLatin1String("carrionfields.net")) {
         return QLatin1String(
                 "Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore player-versus-player combat that has been running continuously, and 100% free, for over 25 years.\n\nChoose from among 21 races, 17 highly customizable classes, and several cabals and religions to suit your playstyle and the story you want to tell. Our massive, original world is full of secrets and envied limited objects that take skill to acquire and great care to keep.\n\nWe like to think of ourselves as the Dark Souls of MUDs, with a community that is supportive of new players - unforgiving though our world may be. Join us for a real challenge and real rewards: adrenalin-pumping battles, memorable quests run by our volunteer immortal staff, and stories that will stick with you for a lifetime.");
+    } else if (hostUrl == QLatin1String("cod.mudmagic.com")) {
+        return QLatin1String(
+                "Do you have a soft spot for an old SNES RPG? Are you a fan of retro gaming? The Cleft of Dimensions is an adventure-driven MUD with content inspired by a variety of classic video games. Do you want to jump on goombas? Maybe you'd rather immolate them with lava or bombard them with meteors. Then again, why fight when enslavement's an option? If that doesn't work out, you've got this motorcycle you could crash into them. The Cleft has 16 character classes, each with a distinctive playstyle.\n\nGameplay in the Cleft features exploration, puzzles, quests, and combat. At time of writing, the world contains 98 areas. Quests range from deciphering treasure maps and committing industrial espionage to seeking the blessings of the mana spirits or just going fishing. A remort system facilitates repeat playthroughs to find content you missed the first time around.\n\nThe Cleft opened in July 2000 and has been in active development ever since. We're always innovating. Recent features include Discord integration (https://discord.gg/cSqkpbu) and areas written with artificial intelligence. Check us out!");
     } else if (hostUrl == QLatin1String("godwars2.org")) {
         return QLatin1String(
                 "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to "
@@ -915,6 +919,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Carrion Fields")) {
             host_url = QStringLiteral("carrionfields.net");
         }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            host_url = QStringLiteral("cod.mudmagic.com");
+        }
         if (profile_name == QStringLiteral("3Scapes")) {
             host_url = QStringLiteral("3k.org");
         }
@@ -1017,6 +1024,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Carrion Fields")) {
             host_port = QStringLiteral("4449");
+            port_ssl_tsl->setChecked(false);
+        }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            host_port = QStringLiteral("4354");
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("3Scapes")) {
@@ -1148,6 +1159,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Carrion Fields")) {
             val = QStringLiteral("<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>");
+        }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            val = QStringLiteral("<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>");
         }
         if (profile_name == QStringLiteral("Aetolia")) {
             val = QStringLiteral("<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>");
@@ -1802,6 +1816,26 @@ void dlgConnectionProfiles::fillout_form()
             setCustomIcon(mudServer, pItem);
         }
         description = getDescription(QStringLiteral("carrionfields.net"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
+    mudServer = QStringLiteral("Cleft of Dimensions");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pItem = new QListWidgetItem();
+        pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
+        profiles_tree_widget->addItem(pItem);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/cleftofdimensions.png"));
+            pItem->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pItem);
+        }
+        description = getDescription(QStringLiteral("cod.mudmagic.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
