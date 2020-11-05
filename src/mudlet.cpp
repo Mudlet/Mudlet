@@ -1600,12 +1600,7 @@ void mudlet::slot_tab_changed(int tabID)
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         mpCurrentActiveHost->mpConsole->hide();
-        if (pHost) {
-            mpCurrentActiveHost = &*pHost;
-        } else {
-            mpCurrentActiveHost = nullptr;
-            return;
-        }
+        mpCurrentActiveHost = &*pHost;
     } else {
         mpCurrentActiveHost = nullptr;
         for (auto pH : mHostManager) {
