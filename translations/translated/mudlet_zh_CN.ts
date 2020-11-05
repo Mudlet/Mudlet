@@ -10644,7 +10644,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>在滚动浏览历史记录时，突出显示您的输入行文本，以便于取消。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
@@ -11729,17 +11729,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
       <source>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置当前房间的西南面房间的号码，将蓝色为有效号码，红色为无效号码。&lt;/p&gt;。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
       <source>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置当前房间南边的房间号，将蓝色为有效号，红色为无效号。&lt;/p&gt;。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
       <source>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置当前房间的东南面房间的号码，将蓝色为有效号码，红色为无效号码。&lt;/p&gt;。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
