@@ -453,7 +453,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
-    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_PurgeTimers);
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
 }
 
 Host::~Host()
@@ -1398,7 +1398,7 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 // When Mudlet is running in online mode, deleted timers are cleaned up in bulk
 // on every new line. When in offline mode, new lines don't come - so they are
 // cleaned up in bulk periodically.
-void Host::slot_PurgeTimers()
+void Host::slot_purgeTimers()
 {
     mTimerUnit.doCleanup();
 }

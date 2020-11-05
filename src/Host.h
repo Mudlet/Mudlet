@@ -620,7 +620,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
-    void slot_PurgeTimers();
+    void slot_purgeTimers();
 
 private:
     void installPackageFonts(const QString &packageName);
