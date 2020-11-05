@@ -1506,12 +1506,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17000"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Lua没有提供可用的错误信息。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17002"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Lua 错误: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="17004"/>
@@ -3348,7 +3348,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="375"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>触发错误：] %1 超出捕获组最大限制。
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1127"/>
@@ -4040,7 +4041,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>配置名称</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
@@ -4056,12 +4057,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2259"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>游戏服务器URL</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2262"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>服务器主机名或IP地址</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2269"/>
@@ -4071,7 +4072,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2297"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>游戏服务器端口</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
@@ -4081,12 +4082,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>通过安全协议进行连接</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2322"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>让Mudlet使用安全的SSL/TLS协议，而不是未加密的协议。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2328"/>
@@ -4126,7 +4127,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>角色名字</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
