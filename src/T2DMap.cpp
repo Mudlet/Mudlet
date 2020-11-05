@@ -962,7 +962,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         painter.restore();
     }
 
-    // Change these from const to static to tweak them whilst running in a debugger...!
+    // Change these from const to static to tweak them while running in a debugger...!
     const float allInsideTipOffsetFactor = 1 / 20.0f;
     const float upDownXOrYFactor = 1 / 3.1f;
     const float inOuterXFactor = 1 / 4.5f;
@@ -1329,9 +1329,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     int playerAreaID = pPlayerRoom->getArea();
     if ((!__Pick && !mShiftMode) || mpMap->mNewMove) {
         mShiftMode = true;
-        // das ist nur hier von Interesse, weil es nur hier einen map editor
-        // gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich
-        // mit mNewRoom ein map update bei centerview()
+        // that's of interest only here because the map editor is here ->
+        // map might not be updated, thus I force a map update on centerview()
+        // with mNewRoom
         mpMap->mNewMove = false;
 
         if (!mpMap->mpRoomDB->getArea(playerAreaID)) {
@@ -1410,7 +1410,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         mapNameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
 
-        double sizeAdjust = 0; // TODO add userdata setting to adjust this
+        double sizeAdjust = 0; // TODO: add userdata setting to adjust this
         mapNameFont.setPointSizeF(static_cast<qreal>(mRoomWidth) * rSize * pow(1.1, sizeAdjust) / 2.0);
         showRoomNames = (mapNameFont.pointSizeF() > 3.0);
     }
@@ -2647,7 +2647,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                     // start it at the centre of the room
                                     olx = room->x;
                                     oly = room->y;
-                                    //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
+                                    //FIXME: use exit direction to calculate start of line
                                     lx = _pL[0].x();
                                     ly = _pL[0].y();
                                 } else {
@@ -2828,7 +2828,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
             mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
             mMultiSelectionListWidget.clear();
-            // Do NOT sort whilst inserting items!
+            // Do NOT sort while inserting items!
             mMultiSelectionListWidget.setSortingEnabled(false);
             QSetIterator<int> itRoom = mMultiSelectionSet;
             mIsSelectionUsingNames = false;
@@ -3390,7 +3390,7 @@ void T2DMap::slot_customLineRemovePoint()
     } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
-        // allow it's deletion if there is at least another one left.
+        // allow its deletion if there is at least another one left.
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
     }
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
@@ -4521,7 +4521,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
                 mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
                 mMultiSelectionListWidget.clear();
-                // Do NOT sort whilst inserting items!
+                // Do NOT sort while inserting items!
                 mMultiSelectionListWidget.setSortingEnabled(false);
                 QSetIterator<int> itRoom = mMultiSelectionSet;
                 mIsSelectionUsingNames = false;

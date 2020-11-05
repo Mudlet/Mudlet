@@ -142,7 +142,7 @@ static void pcre_deleter(pcre* pointer)
     pcre_free(pointer);
 }
 
-//FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
+//FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 {
     regexList.replaceInStrings("\n", "");
@@ -169,7 +169,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     mTriggerContainsPerlRegex = false;
 
     if (propertyList.size() != regexList.size()) {
-        //FIXME: ronny hat das irgendwie geschafft
+        //FIXME: ronny managed to trigger this somehow
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
@@ -550,7 +550,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
 inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList)
 {
     if (regexNumber == 0) {
-        // wird automatisch auf #1 gesetzt
+        // automatically set to #1
         auto pCondition = new TMatchState(mRegexCodeList.size(), mConditionLineDelta);
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
@@ -1137,7 +1137,6 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 }
 
 
-// Die Musternummer wird ID im color-pattern lookup table
 // This NOW uses proper ANSI numbers
 // A TColorTable is a simple struct that stores four values, the two given ANSI
 // colors for foreground and background (proper ANSI indexes) and what they look

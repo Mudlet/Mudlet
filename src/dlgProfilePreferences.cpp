@@ -242,9 +242,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
-    // This group of signal/slot connections handle updating *this* instance of
+    // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
-    // new settings from it's one - there is a further connect(...) above which
+    // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
     // included in compliation:
     connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
@@ -530,7 +530,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     dictList->clear();
-    // Disable sorting whilst populating the widget:
+    // Disable sorting while populating the widget:
     dictList->setSortingEnabled(false);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
@@ -568,7 +568,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-    // whilst populating the widget, it reduces noise about:
+    // while populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
     dictList->blockSignals(true);
     if (entries.count()) {
@@ -2271,7 +2271,7 @@ void dlgProfilePreferences::copyMap()
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
 
-    // CHECK: Race condition? We might be changing this whilst other profile
+    // CHECK: Race condition? We might be changing this while other profile
     // are accessing it...
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
@@ -2617,7 +2617,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
             // the master values in the Host instance - but now we should write
-            // those - whilst we can get the first three (quint8) values
+            // those - while we can get the first three (quint8) values
             // directly from controls on this form/dialogue, the last two
             // (QColors) are easiest to retrieve from the TMap instance as the
             // colours are not directly stored here (as for some styles they
@@ -3158,7 +3158,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         return;
     }
 
-    // Must turn off sorting at least whilst inserting items...
+    // Must turn off sorting at least while inserting items...
     pTableWidget->setSortingEnabled(false);
     pTableWidget->setColumnCount(6);
     // This clears any previous contents:
