@@ -1631,7 +1631,7 @@ DISTFILES += \
     ../translations/translated/generate-translation-stats.lua \
     ../translations/translated/updateqm.pri \
     .clang-format \
-    CMakeLists.txt
+    CMakeLists.txt \
     icons/mudlet.ico \
     icons/mudlet.icns \
     icons/mudlet_dev.icns \
