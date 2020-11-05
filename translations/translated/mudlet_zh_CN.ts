@@ -1215,7 +1215,8 @@ rooms:</source>
       <location filename="../src/TAlias.cpp" line="192"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[别名错误:] %1 超出捕获组最大限制。
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="261"/>
@@ -4047,7 +4048,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>配置文件的唯一名称，但仅限于ascii字符的子集。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2237"/>
@@ -5129,17 +5130,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="128"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>将整个配置文件复制到新的配置文件中，并重命名新配置文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="132"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>复制配置文件设置</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="133"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>将设置和配置文件的某些其他部分复制到新配置文件中。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="197"/>
@@ -5154,17 +5155,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>点击加载但不连接选中的配置文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>点击以加载并连接选定的配置文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>在启用此按钮之前，需要具有有效的配置文件名称、游戏服务器地址和端口。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="270"/>
@@ -7279,7 +7280,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="542"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>错误：</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="681"/>
@@ -8079,12 +8080,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="699"/>
       <source>IDs</source>
-      <translation type="unfinished"/>
+      <translation>IDs</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="715"/>
       <source>Names</source>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="894"/>
@@ -8512,7 +8513,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="713"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英语(澳大利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
@@ -8523,7 +8524,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="718"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英语(澳大利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="719"/>
@@ -8539,7 +8540,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="721"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英语(英国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="722"/>
@@ -8611,7 +8612,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="735"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>英语(美国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="736"/>
@@ -9007,7 +9008,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
       <source>Dutch (Netherlands Antilles)</source>
-      <translation type="unfinished"/>
+      <translation>荷兰语(荷属安的列斯群岛)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="815"/>
@@ -9027,7 +9028,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="818"/>
       <source>Dutch (Suriname)</source>
-      <translation type="unfinished"/>
+      <translation>荷兰语 (苏里南)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="819"/>
@@ -10648,14 +10649,14 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>突出显示历史记录</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>这个字体不是等宽字体，在玩一些文字游戏时, 可能有文本不对齐的问题.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
@@ -11008,7 +11009,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2528"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>聊天</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4944"/>
@@ -11018,7 +11019,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4982"/>
       <source>Force CHARSET negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>强制关闭字符集协商</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5084"/>
@@ -11279,7 +11280,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="2722"/>
       <location filename="../src/ui/profile_preferences.ui" line="2738"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet 将仅在您使用此 Discord 用户名时显示 Rich Presence 信息（如果您有多个 Discord 帐户，则有用）。如果留空，则会在您登录的任何Discord账户中显示该信息。&lt;/p&gt;&lt;/notr</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2699"/>
@@ -11444,7 +11445,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5130"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation type="unfinished"/>
+      <translation>为计时器显示调试消息，不小于：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5136"/>
@@ -11455,7 +11456,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5177"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>立即报告所有Codepoint问题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5235"/>
@@ -11489,7 +11490,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>此出口路径时, 需设置一个非负值以覆盖缺省 (房间) 权重，设为 0 时指定为缺省值。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
@@ -11843,7 +11844,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>出口权重 (0=无覆盖)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -11883,7 +11884,8 @@ Weight</source>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>门
+无。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
