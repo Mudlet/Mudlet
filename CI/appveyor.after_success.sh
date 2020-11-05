@@ -72,20 +72,16 @@ else # BUILD_TYPE is "public_test" OR "release"
 
         # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
-        # pushd /c/projects/mudlet/package
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug "Mudlet PTB.exe" "Mudlet PTB.exe.debug"
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --strip-debug "Mudlet PTB.exe"
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --add-gnu-debuglink="Mudlet PTB.exe.debug" "Mudlet PTB.exe"
-        # popd
     else
         echo "=== Creating a release build ==="
         # Pending support for controllable debug or relWithDebInfo builds:
         # Separate out the debug information
-        # pushd /c/projects/mudlet/package
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --only-keep-debug Mudlet.exe Mudlet.exe.debug
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --strip-debug Mudlet.exe
         # ${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe --add-gnu-debuglink=Mudlet.exe.debug Mudlet.exe
-        # popd
     fi
     echo ""
 
@@ -309,10 +305,10 @@ appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/squirrel_output
         echo "===Logging in to DBLSQD server==="
         dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
-        if [ "${public_test_build}" == "true" ]; then
+        if [ "${BUILD_TYPE}" = "public_test" ]; then
             echo "=== Downloading release feed ==="
             DOWNLOADED_FEED=$(mktemp)
-            if [ "${BUILD_BITNESS}" == "64" ]; then
+            if [ "${BUILD_BITNESS}" = "64" ]; then
                 wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" --output-document="${DOWNLOADED_FEED}"
             else
                 wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" --output-document="${DOWNLOADED_FEED}"
@@ -320,10 +316,11 @@ appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/squirrel_output
             echo ""
 
             echo "=== Generating a changelog for PTB ==="
-            pushd /c/projects/mudlet/CI
             # This MUST be run from the "./CI" subdirectory of the source code to
             # access Mudlet's own Lua modules:
+            cd /c/projects/mudlet/CI || (appveyor AddMessage "ERROR: /c/projects/mudlet/CI directory not found! Build aborted." -Category Error ; exit 1)
             CHANGLELOG=$("${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1.exe" "/c/projects/mudlet/CI/generate-ptb-changelog.lua" --releasefile "${DOWNLOADED_FEED}")
+            cd /c/projects/installers/windows || (appveyor AddMessage "ERROR: /c/projects/installers/windows directory not found! Build aborted." -Category Error ; exit 1)
             echo "Changelog:
 ${CHANGLELOG}\
 --------------------------------------------------------------------------------"
@@ -334,14 +331,14 @@ ${CHANGLELOG}" -Category Information
             dblsqd release -a mudlet -c public-test-build -m "${CHANGLELOG}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
             echo "=== Registering PTB with Dblsqd ==="
-            if [ "${BUILD_BITNESS}" == "64" ]; then
+            if [ "${BUILD_BITNESS}" = "64" ]; then
                 dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86_64 "${DEPLOY_URL}"
             else
                 dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
             fi
         else
             echo "=== Registering release with Dblsqd ==="
-            if [ "${BUILD_BITNESS}" == "64" ]; then
+            if [ "${BUILD_BITNESS}" = "64" ]; then
                 dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach win:x86_64 "${DEPLOY_URL}"
             else
                 dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
