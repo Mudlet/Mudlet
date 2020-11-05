@@ -10639,7 +10639,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MSP (Mud 声音协议)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
