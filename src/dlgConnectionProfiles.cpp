@@ -391,7 +391,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
     writeProfileData(pItem->data(csmNameRole).toString(), QStringLiteral("autoreconnect"), QString::number(state));
 }
 
-// This gets called when the QCheckBox that it is connect-ed to gets it's
+// This gets called when the QCheckBox that it is connect-ed to gets its
 // checked state set programatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_update_discord_optin(int state)
 {
@@ -1107,7 +1107,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()
-    // will return 0 - which just happens to be Qt::Unchecked() but lets not
+    // will return 0 - which just happens to be Qt::Unchecked() but let's not
     // rely on that...
     val = readProfileData(profile_name, QStringLiteral("discordserveroptin"));
     if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
@@ -2621,7 +2621,7 @@ void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPasswor
     if (mpAction_revealPassword->isChecked()) {
         character_password_entry->setEchoMode(QLineEdit::Normal);
         // In practice I could not get the icon to change based upon supplying
-        // different QPixmaps for the QIcon for different states - so lets do it
+        // different QPixmaps for the QIcon for different states - so let's do it
         // directly:
         mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
         mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));

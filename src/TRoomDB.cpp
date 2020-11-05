@@ -210,7 +210,7 @@ bool TRoomDB::__removeRoom(int id)
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead whilst modifying the original
+        // copy and iterating through that instead while modifying the original
         while (i != _entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
@@ -874,7 +874,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.next();
             unsigned int newRoomId = 0;
             do {
-                ; // Noop - needed increment is done in test condition!
+                ; // No-op - needed increment is done in test condition!
             } while (validUsedRoomIds.contains(++newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash

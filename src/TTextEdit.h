@@ -179,7 +179,7 @@ private:
     // Set in constructor for run-time Qt versions less than 5.11 which only
     // supports up to Unicode 8.0:
     bool mUseOldUnicode8;
-    // How many "normal" width "characters" are each tab stop apart, whilst
+    // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will
     // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
     // in the past it was typically 8 and this is what we'll use at present:

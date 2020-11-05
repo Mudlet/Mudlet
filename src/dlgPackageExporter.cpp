@@ -510,7 +510,7 @@ void dlgPackageExporter::slot_export_package()
                 // If it fails to write out the new file 'archive' is left
                 // unchanged (and we can still access it to get the error
                 // details):
-                // Change the cursor to a system busy one whilst we are working:
+                // Change the cursor to a system busy one while we are working:
                 QApplication::setOverrideCursor(Qt::BusyCursor);
                 ze = zip_close(archive);
                 QApplication::restoreOverrideCursor();

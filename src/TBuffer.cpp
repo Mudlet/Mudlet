@@ -449,7 +449,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
-                // arrangement should avoid looping around this loop whilst
+                // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
@@ -2191,7 +2191,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -3591,7 +3591,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // As we are not in GB18030 mode treat it as if it is a 2 byte sequence
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
@@ -3741,7 +3741,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)

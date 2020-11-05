@@ -41,7 +41,7 @@ Discord::Discord(QObject* parent)
 , mLoaded{}
 // For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
-// N. B. for testing the following MUDs have registered:
+// NB: for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
 // "carinus" is "438335628942376960", has "server-icon" and "mudlet" icons
 // "wotmud"  is "464945517156106240", has "mudlet", "ajar_(red|green|yellow|blue|white|grey|brown)"
@@ -382,7 +382,7 @@ void Discord::UpdatePresence()
     }
 
     // Coverity thinks that pDiscordPresence could be a nullptr here, which
-    // would be bad {CID 1473922} so lets test for that and abort:
+    // would be bad {CID 1473922} so let's test for that and abort:
     if (!pDiscordPresence) {
         qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
         return;

@@ -1592,7 +1592,7 @@ void mudlet::slot_tab_changed(int tabID)
         return;
     }
 
-    // Reset the tab back to "normal" to undo the effect of it having it's style
+    // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
     mpTabBar->setTabBold(tabID, false);
     mpTabBar->setTabItalic(tabID, false);
@@ -1684,7 +1684,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      * least on FreeBSD - causes the Text to be CHANGED from what is set (an
      * underscore is added to a suitably unique letter but that, being a text
      * accelerator is converted to an additional '&' in the text when it is
-     * read) - this messes up identifying the tab by it's name - so we now get
+     * read) - this messes up identifying the tab by its name - so we now get
      * around it by also storing the text in the tab's data - see:
      * + void qt_set_sequence_auto_mnemonic(bool) in 'QKeySequence' documentation
      * + "Detailed Description" in 'QShortCut' documentation

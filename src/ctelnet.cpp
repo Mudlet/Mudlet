@@ -2312,7 +2312,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
                 }
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
-                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orangish
+                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
@@ -2335,14 +2335,14 @@ void cTelnet::postMessage(QString msg)
                 }
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
@@ -2828,7 +2828,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             }
         MAIN_LOOP_END:;
             if (recvdGA) {
-                if (!mFORCE_GA_OFF) //FIXME: wird noch nicht richtig initialisiert
+                if (!mFORCE_GA_OFF) //FIXME: isn't initialized correctly
                 {
                     mGA_Driver = true;
                     if (mCommands > 0) {

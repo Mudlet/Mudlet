@@ -361,7 +361,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
                     pTB = new TEasyButtonBar(rootAction, (*childActionIterator)->getName(), mpHost->mpConsole->mpTopToolBar);
                     mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
                     mEasyButtonBarList.emplace_back(pTB);
-                    (*childActionIterator)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
+                    (*childActionIterator)->mpEasyButtonBar = pTB; // needed for drag&drop
                 }
                 if ((*childActionIterator)->mOrientation == 1) {
                     pTB->setVerticalOrientation();
@@ -386,7 +386,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
             pTB = new TEasyButtonBar(rootAction, rootAction->getName(), mpHost->mpConsole->mpTopToolBar);
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
             mEasyButtonBarList.emplace_back(pTB);
-            rootAction->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
+            rootAction->mpEasyButtonBar = pTB; // needed for drag&drop
         }
         if (rootAction->mOrientation == 1) {
             pTB->setVerticalOrientation();

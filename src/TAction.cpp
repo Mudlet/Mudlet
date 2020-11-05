@@ -396,7 +396,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             action->fillMenu(pT, newMenu);
         }
 
-        // Menu is PARENT'S menu newAction, this line moved to be AFTER child builds it's own menu if it is a folder
+        // Menu is PARENT'S menu newAction, this line moved to be AFTER child builds its own menu if it is a folder
         menu->addAction(newAction);
     }
 }

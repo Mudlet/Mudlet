@@ -62,7 +62,7 @@ Updater::~Updater()
 }
 
 // start the update process and figure out what needs to be done.
-// If it's silent updates, do that right away, otherwise
+// If it's a silent update, do that right away, otherwise
 // setup manual updates to do our custom actions
 void Updater::checkUpdatesOnStart()
 {

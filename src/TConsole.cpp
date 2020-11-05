@@ -114,7 +114,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
         // Probably will not show up as this is used inside a QMainWindow widget
-        // which has it's own title and icon set.
+        // which has its own title and icon set.
         // mIsSubConsole was left false for this
         mWrapAt = 50;
         mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
@@ -275,16 +275,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     layer = new QWidget(mpMainDisplay);
     layer->setContentsMargins(0, 0, 0, 0);
-    layer->setContentsMargins(0, 0, 0, 0); //neu rc1
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
     layer->setLayout(vLayoutLayer);
-    layoutLayer->setMargin(0);  //neu rc1
-    layoutLayer->setSpacing(0); //neu rc1
-    layoutLayer->setMargin(0);  //neu rc1
+    layoutLayer->setMargin(0);
+    layoutLayer->setSpacing(0);
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
@@ -330,7 +328,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(splitter);
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
-    layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+    layoutLayer->setSpacing(1); // not closer, otherwise there could be performance problems when displaying
 
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
@@ -1105,8 +1103,8 @@ void TConsole::runTriggers(int line)
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
 
-    //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
-    //       ansonsten einfach löschen
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void TConsole::finalize()
@@ -2286,7 +2284,7 @@ void TConsole::dropEvent(QDropEvent* e)
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has it's tab selected in a
+    // Ensure that this profile is the one that has its tab selected in a
     // multi-view situation:
     mudlet::self()->activateProfile(mpHost);
 

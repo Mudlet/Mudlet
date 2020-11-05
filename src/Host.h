@@ -459,13 +459,13 @@ public:
     bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // the current log file and is set from
     // mIsNextLogFileInHtmlFormat at the point that a log is started.
     bool mIsCurrentLogFileInHtmlFormat;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // future logs file as set in the profile preferences. See
     // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;

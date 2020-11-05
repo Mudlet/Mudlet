@@ -2122,7 +2122,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             // changes already made in TBuffer::translateToPlainText a while ago:
             return QColor(r * 51, g * 51, b * 51);
         } else {
-            return QColor(); // Noop
+            return QColor(); // No-op
         }
     }
     // clang-format on

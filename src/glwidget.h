@@ -108,7 +108,7 @@ private:
     float xDist;
     float yDist;
     float zDist;
-    float dehnung;
+    float scale;
     int mShowTopLevels;
     int mShowBottomLevels;
 
