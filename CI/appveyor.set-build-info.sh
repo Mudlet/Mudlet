@@ -36,8 +36,8 @@ MUDLET_VERSION_BUILD=""
 # Fake stuff to emulate PTB
 export BUILD_TYPE="public_test"
 COMMIT=$(git rev-parse --short HEAD | cut -c 1-5)
-DATE="19700105"
-PTB_DATE="1970-01-05"
+DATE="19700106"
+PTB_DATE="1970-01-06"
 MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 
 #if [ "${APPVEYOR_REPO_TAG}" = "false" ]; then
@@ -72,13 +72,11 @@ MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
         if [ "${BUILD_BITNESS}" = "64" ]; then
             export NUPKG_FILE="Mudlet_64_-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
             export EXPORT_NUSPEC_FILE="mudlet64-ptb.nuspec"
-            export SQUIRREL_FULL_NUPKG_FILE="Mudlet_64_-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
-            export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-ptb${DATE}-full.nupkg"
+            export SQUIRREL_FULL_NUPKG_FILE="Mudlet_64_-PublicTestBuild.${VERSION}-ptb${DATE}-full.nupkg"
         else
             export NUPKG_FILE="Mudlet-PublicTestBuild.${VERSION}-ptb${DATE}.nupkg"
             export EXPORT_NUSPEC_FILE="mudlet-ptb.nuspec"
-            export SQUIRREL_FULL_NUPKG_FILE="Mudlet-PublicTestBuild-${VERSION}-ptb${DATE}-full.nupkg"
-            export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudlet-${VERSION}-ptb${DATE}-full.nupkg"
+            export SQUIRREL_FULL_NUPKG_FILE="Mudlet-PublicTestBuild.${VERSION}-ptb${DATE}-full.nupkg"
         fi
         export SUFFIX_FOR_NUGET="ptb${DATE}"
         export LOADING_GIF_PATHFILE=/c/projects/installers/windows/splash-installing-ptb-2x.png
@@ -118,12 +116,10 @@ MUDLET_VERSION_BUILD="-ptb-${PTB_DATE}-${COMMIT}"
 #        export NUPKG_FILE="Mudlet_64_.${VERSION}.nupkg"
 #        export EXPORT_NUSPEC_FILE="mudlet64.nuspec"
 #        export SQUIRREL_FULL_NUPKG_FILE="Mudlet_64_-${VERSION}-full.nupkg"
-#        export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudletx64-${VERSION}-full.nupkg"
 #    else
 #        export NUPKG_FILE="Mudlet.${VERSION}.nupkg"
 #        export EXPORT_NUSPEC_FILE="mudlet.nuspec"
 #        export SQUIRREL_FULL_NUPKG_FILE="Mudlet-${VERSION}-full.nupkg"
-#        export SQUIRREL_FULL_RENAMED_NUPKG_FILE="Mudlet-${VERSION}-full.nupkg"
 #    fi
 #    export SUFFIX_FOR_NUGET=""
 #    export LOADING_GIF_PATHFILE="/c/projects/installers/windows/splash-installing-2x.png"

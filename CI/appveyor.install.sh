@@ -118,6 +118,15 @@ echo ""
 echo "    luasql-sqlite3"
 "${ROCKCOMMAND}" ${ROCKOPTARGS} install luasql-sqlite3
 echo ""
+if [ "${BUILD_TYPE}" = "public_test" ]; then
+    # These two are needed for preperation of the PTB changelog
+    echo "    lunajson"
+    "${ROCKCOMMAND}" ${ROCKOPTARGS} install lunajson
+    echo ""
+    echo "    argparse"
+    "${ROCKCOMMAND}" ${ROCKOPTARGS} install argparse
+    echo ""
+fi
 echo "    ... luarocks installation done"
 echo ""
 echo "  ... appveyor.install.sh shell script finished!"

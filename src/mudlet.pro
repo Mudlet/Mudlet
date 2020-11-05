@@ -1551,8 +1551,8 @@ unix:!macx {
 
 
 DISTFILES += \
-    CMakeLists.txt \
-    .clang-format \
+    ../.appveyor.yml \
+    ../.crowdin.yml \
     ../.github/pr-labeler.yml \
     ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
@@ -1567,25 +1567,10 @@ DISTFILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.github/workflows/whitespace-linter.yml \
-    ../CMakeLists.txt \
-    ../cmake/FindHUNSPELL.cmake \
-    ../cmake/FindPCRE.cmake \
-    ../cmake/FindYAJL.cmake \
-    ../cmake/FindZIP.cmake \
-    ../cmake/FindPUGIXML.cmake \
+    ../.gitignore \
+    ../.gitmodules \
     ../.travis.yml \
-    ../CI/travis.after_success.sh \
-    ../CI/travis.before_install.sh \
-    ../CI/travis.install.sh \
-    ../CI/travis.linux.after_success.sh \
-    ../CI/travis.linux.before_install.sh \
-    ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.after_success.sh \
-    ../CI/travis.osx.before_install.sh \
-    ../CI/travis.osx.install.sh \
-    ../CI/travis.set-build-info.sh \
-    ../CI/travis.validate_deployment.sh \
-    ../.appveyor.yml \
+    ../CI/auto-add-ssh-key.sh \
     ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.after_success.sh \
@@ -1597,14 +1582,32 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.set-build-info.sh \
     ../CI/appveyor.validate_deployment.ps1 \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/generate-ptb-changelog.lua \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/mudlet-deploy-key-windows.pem \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.after_success.sh \
+    ../CI/travis.before_install.sh \
+    ../CI/travis.compile.sh \
+    ../CI/travis.install.sh \
+    ../CI/travis.linux.after_success.sh \
+    ../CI/travis.linux.before_install.sh \
+    ../CI/travis.linux.install.sh \
+    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.before_install.sh \
+    ../CI/travis.osx.install.sh \
+    ../CI/travis.set-build-info.sh \
+    ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
+    ../cmake/FindHUNSPELL.cmake \
+    ../cmake/FindPCRE.cmake \
+    ../cmake/FindYAJL.cmake \
+    ../cmake/FindZIP.cmake \
+    ../cmake/FindPUGIXML.cmake \
+    ../CMakeLists.txt \
+    ../COMMITMENT \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
@@ -1626,13 +1629,6 @@ DISTFILES += \
     ../translations/lua/translated/mudlet-lua_zh_TW.json \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
-    ../COMMITMENT \
-    ../.crowdin.yml \
-    ../.gitignore \
-    ../.gitmodules \
     ../translations/translated/updateqm.pri \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
-    ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    .clang-format \
+    CMakeLists.txt

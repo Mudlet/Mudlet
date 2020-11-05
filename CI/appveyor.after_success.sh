@@ -169,11 +169,11 @@ which nuget.exe
     fi
     echo ""
 
-echo "TEMP: ensuring we have modified the nuspec file:"
 /usr/bin/diff -w "${NUSPEC_FILE}.orig" "${NUSPEC_FILE}"
 # And temporarily retain it for post mortems:
-appveyor PushArtifact "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -FileName "mudlet.nuspec"
-echo ""
+# This file does not currently get renamed within CI environment but if it is
+# downloaded for analysis we need it to be named according to what it refers to:
+appveyor PushArtifact "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -FileName "${EXPORT_NUSPEC_FILE}"
 
     echo "  Using nuget pack to create the package based on the nuspec file:"
     # As well as the files from the Mudlet build there will be 4 additional
@@ -186,9 +186,6 @@ echo ""
     else
         nuget pack "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -NonInteractive -NoPackageAnalysis -Version "${VERSION}"                               -BasePath "/c/projects/packaging" -OutputDirectory "/c/projects/package"
     fi
-    # For a nuspec file "Mudlet.nuspec", with -Version "4.9.2" and suffix
-    # "ptb20201020" this will produce a nupkg file:
-    # "Mudlet.4.9.2-ptb20201020.nupkg"
     echo ""
 
     # After running the above a new ".nupkg" file will be in the
@@ -199,6 +196,9 @@ echo ""
         exit 1
     fi
     echo ""
+# The file that should be fed into squirrel.windows:
+appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" -FileName "${NUPKG_FILE}"
+
 
     echo "  Using squirrel.windows to generate installer"
     # During debug testing (with a PR) secure variables are NOT available - so
@@ -234,46 +234,131 @@ echo ""
         # wget returns the URL that is used, which we need to capture to report it:
         echo "=== Uploading the public test build ==="
         # Needed for rename of Setup.exe to final installer file name:
-        DEPLOY_URL=$(wget --method PUT --body-file="/c/projects/squirel_output/Setup.exe" "https://make.mudlet.org/snapshots/Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe" -O - -q)
-        if [ -n "${DEPLOY_URL}" ]; then
-            # This sends a notification message to Gitter!
-            wget --post-data "message=Deployed Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe (${BUILD_BITNESS}-bit windows PTB for $(date +"%Y/%m/%d")) to [${DEPLOY_URL}](${DEPLOY_URL})" \
-                https://webhooks.gitter.im/e/cc99072d43b642c4673a
-            echo ""
-            appveyor AddMessage "INFORMATION: Deployed the output to ${DEPLOY_URL}" -Category Information
-            echo "=== Deployed the output to ${DEPLOY_URL} ==="
-            echo ""
-            echo "******************************************************"
-        fi
-    else
-        echo "=== Registering Mudlet SSH keys for release upload ==="
-        # /usr/bin/openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in /c/projects/mudlet/CI/mudlet-deploy-key.enc -out /tmp/mudlet-deploy-key -d
-        eval "$(ssh-agent -s)"
-        chmod 600 /tmp/mudlet-deploy-key
-        ssh-add /tmp/mudlet-deploy-key
+        if [ -z "${DEPLOY_KEY_PASS}" ]; then
+            # NORMAL TECHNIQUE (NOT SECURE) FOR UPLOADING PTB TO MUDLET SERVER
+            DEPLOY_URL=$(wget --method PUT --body-file="/c/projects/squirel_output/Setup.exe" "https://make.mudlet.org/snapshots/Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe" -O - -q)
+            appveyor AddMessage "INFORMATION: Attempted to upload ${DEPLOY_URL} insecurely via wget to mudlet.org" -Category Information
 
+        else
+            # TEMPORARY method to develop scp alternative for use with release
+            # but can only be done in nonPR builds as it requires a secure
+            # variable that is not available then - will be tested by a cronjob
+            # run on development AFTER the PR that adds this is merged.
+            # Afterward a further PR must switch to using this all the time
+            # or revert it BEFORE THE NEXT RELEASE IS RELEASED.
+            echo "=== Registering Mudlet SSH keys for ptb upload ==="
+            eval "$(ssh-agent -s)"
+            # Add the (password protected) private key in CI/mudlet-deploy-key.pem
+            if [ "${DISPLAY}" = "" ]; then
+                # Non-interactive, fake things so ssh-ask uses an sshaskpass tool
+                DISPLAY=1 SSH_ASKPASS_REQUIRE="force" SSH_ASKPASS=/c/projects/mudlet/CI/auto-add-ssh-key.sh /usr/bin/ssh-add /c/projects/mudlet/CI/mudlet-deploy-key.pem < /dev/null
+            else
+                # Interactive, but force ssh-ask to use an sshaskpass substitute
+                SSH_ASKPASS_REQUIRE="force" SSH_ASKPASS=/c/projects/mudlet/CI/auto-add-ssh-key.sh /usr/bin/ssh-add /c/projects/mudlet/CI/mudlet-deploy-key.pem < /dev/null
+            fi
+            appveyor AddMessage "INFORMATION: Attempted to upload ${DEPLOY_URL} securely via scp to mudlet.org" -Category Information
+        fi
+
+        DEPLOY_URL="Mudlet-${VERSION}-ptb-${PTB_DATE}-${COMMIT}-windows-${BUILD_BITNESS}.exe"
+        /usr/bin/scp -o StrictHostKeyChecking=no "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:https://make.mudlet.org/snapshots/${DEPLOY_URL}"
+
+        # This sends the notification message to Gitter!
+        wget --post-data "message=Deployed ${DEPLOY_URL} (${BUILD_BITNESS}-bit windows PTB for $(date +"%Y/%m/%d")) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+            https://webhooks.gitter.im/e/cc99072d43b642c4673a
+        echo ""
+        appveyor AddMessage "INFORMATION: Deployed the output to ${DEPLOY_URL}" -Category Information
+        echo "=== Deployed the output to ${DEPLOY_URL} ==="
+        echo ""
+        echo "******************************************************"
+    else
+        # A release build
+        echo "=== Registering Mudlet SSH keys for release upload ==="
+        eval "$(ssh-agent -s)"
+        # Add the (password protected) private key in CI/mudlet-deploy-key.pem
+        if [ "${DISPLAY}" = "" ]; then
+            # Non-interactive, fake things so ssh-ask uses an sshaskpass tool
+            DISPLAY=1 SSH_ASKPASS_REQUIRE="force" SSH_ASKPASS=/c/projects/mudlet/CI/auto-add-ssh-key.sh /usr/bin/ssh-add /c/projects/mudlet/CI/mudlet-deploy-key.pem < /dev/null
+        else
+            # Interactive, but force ssh-ask to use an sshaskpass substitute
+            SSH_ASKPASS_REQUIRE="force" SSH_ASKPASS=/c/projects/mudlet/CI/auto-add-ssh-key.sh /usr/bin/ssh-add /c/projects/mudlet/CI/mudlet-deploy-key.pem < /dev/null
+        fi
+
+        echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
         DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-x${BUILD_BITNESS}-installer.exe"
-        /usr/bin/scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "/c/projects/squirel_output/Setup.exe" "keneanung@mudlet.org:${DEPLOY_PATH}"
+        /usr/bin/scp -o StrictHostKeyChecking=no "/c/projects/squirel_output/Setup.exe" "keneanung@mudlet.org:${DEPLOY_PATH}"
+        appveyor AddMessage "INFORMATION: uploaded ${DEPLOY_URL} securely via scp to mudlet.org" -Category Information
     fi
+
 # temporarily retain built files for post-mortems
 # Log from squirrel.windows
-appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/installers/windows/tools/Squirrel-Releasify.log")" -FileName "Squirrel-Releasify.log"
-
-# This file does not currently get renamed within CI environment but if it is
-# downloaded for analysis we need it to be named according to what it refers to:
-appveyor PushArtifact "$(/usr/bin/cygpath --windows "${NUSPEC_FILE}")" -FileName "${EXPORT_NUSPEC_FILE}"
-
-# The file that should be fed into squirrel.windows:
-appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/package/${NUPKG_FILE}")" -FileName "${NUPKG_FILE}"
+appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/installers/windows/squirrel.windows/tools/Squirrel-Releasify.log")" -FileName "Squirrel-Releasify.log"
 
 # The "-full.nupkg" file that comes out of squirrel.windows that is supposed to
 # be used when an update from a prior version cannot be used - we now suppress
 # the generation of the other (much smaller) "-delta.nupkg" file that would be
 # the combined differences from the previous version:
 # /c/projects/squirrel_output/Mudlet_x64_-PublicTestBuild-4.9.2-ptb20201020-full.nupkg
-appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/squirrel_output/${SQUIRREL_FULL_NUPKG_FILE}")" -FileName "${SQUIRREL_FULL_RENAMED_NUPKG_FILE}"
+appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/squirrel_output/${SQUIRREL_FULL_NUPKG_FILE}")" -FileName "${SQUIRREL_FULL_NUPKG_FILE}"
 
-fi
+    # During debug testing (with a PR) secure variables are NOT available - so
+    # we cannot access DBLSQD whilst developing this script...
+    if [ -n "${DBLSQD_USER}" ];  then
+        # Process to push release to DBLSQD
+        npm install -g dblsqd-cli
+
+        echo "===Logging in to DBLSQD server==="
+        dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+
+        if [ "${public_test_build}" == "true" ]; then
+            echo "=== Downloading release feed ==="
+            DOWNLOADED_FEED=$(mktemp)
+            if [ "${BUILD_BITNESS}" == "64" ]; then
+                wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" --output-document="${DOWNLOADED_FEED}"
+            else
+                wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" --output-document="${DOWNLOADED_FEED}"
+            fi
+            echo ""
+
+            echo "=== Generating a changelog for PTB ==="
+            pushd /c/projects/mudlet/CI
+            # This MUST be run from the "./CI" subdirectory of the source code to
+            # access Mudlet's own Lua modules:
+            CHANGLELOG=$("${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1.exe" "/c/projects/mudlet/CI/generate-ptb-changelog.lua" --releasefile "${DOWNLOADED_FEED}")
+            echo "Changelog:
+${CHANGLELOG}\
+--------------------------------------------------------------------------------"
+            appveyor AddMessage "CHANGLELOG contents:\
+${CHANGLELOG}" -Category Information
+
+            echo "=== Creating PTB in Dblsqd ==="
+            dblsqd release -a mudlet -c public-test-build -m "${CHANGLELOG}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
+
+            echo "=== Registering PTB with Dblsqd ==="
+            if [ "${BUILD_BITNESS}" == "64" ]; then
+                dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86_64 "${DEPLOY_URL}"
+            else
+                dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+            fi
+        else
+            echo "=== Registering release with Dblsqd ==="
+            if [ "${BUILD_BITNESS}" == "64" ]; then
+                dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach win:x86_64 "${DEPLOY_URL}"
+            else
+                dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+            fi
+        fi
+
+        # This sends a notification message to Gitter - back quotes are used by
+        # it to show the enclosed text in a special format!
+        wget --post-data "message=Deployed Mudlet \`${VERSION}${MUDLET_VERSION_BUILD}\` (${BUILD_BITNESS}-bit windows${PR_ID}) to [${DEPLOY_URL}](${DEPLOY_URL})" \
+            https://webhooks.gitter.im/e/cc99072d43b642c4673a
+        echo ""
+        appveyor AddMessage "INFORMATION: Deployed the output to ${DEPLOY_URL}" -Category Information
+        echo "=== Deployed the output to ${DEPLOY_URL} ==="
+        echo ""
+        echo "******************************************************"
+        fi
+    fi
 
 echo ""
 echo "=== Finished building a ${BUILD_BITNESS} bit Mudlet ${VERSION}${MUDLET_VERSION_BUILD} ==="
