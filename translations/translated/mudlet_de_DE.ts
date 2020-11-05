@@ -1693,7 +1693,7 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[ INFO ]  - UMWANDLUNG: herkömmliche Markierung, Bereichskennung:%1 labelID:%2.</translation>
+      <translation>[ INFO ]  - UMWANDLUNG: herkömmliche Markierung, Gebiets-ID:%1 Markierungs-ID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="475"/>
@@ -1703,7 +1703,7 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMap.cpp" line="480"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>[ WARNUNG ] - UMWANDLUNG: Kann herkömmliche Markierung nicht umwandeln im Bereich mit ID: %1, Markierung ID ist: %2.</translation>
+      <translation>[ WARNUNG ] - UMWANDLUNG: Kann herkömmliche Markierung nicht umwandeln im Gebiet mit ID: %1, Markierung-ID ist: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="483"/>
@@ -1920,7 +1920,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2101"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation>Bereichs-ID: %1 &quot;%2&quot;</translation>
+      <translation>Gebiets-ID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2103"/>
@@ -2462,17 +2462,17 @@ Linie verbunden, die nicht wiederhergestellt werden konnte und verloren ist!</tr
     <message>
       <location filename="../src/TRoomDB.cpp" line="506"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation>Bereich mit ID=%1 existiert bereits!</translation>
+      <translation>Gebiet mit ID=%1 existiert bereits!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation>Ein unbenannter Bereich ist nicht (mehr) zulässig!</translation>
+      <translation>Ein unbenanntes Gebiet ist nicht (mehr) zulässig!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="529"/>
       <source>An area called %1 already exists!</source>
-      <translation>Ein Bereich namens %1 existiert bereits!</translation>
+      <translation>Ein Gebiet namens %1 existiert bereits!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="614"/>
@@ -2494,12 +2494,12 @@ Arbeitsspeicher frei?</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="690"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation>[ ACHTUNG ] - Bereich mit ID: %1 erwartet, aber nicht gefunden, wird erstellt.</translation>
+      <translation>[ ACHTUNG ] - Gebiet mit ID: %1 erwartet, aber nicht gefunden, wird erstellt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="693"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation>[ ACHTUNG ] - Bereich mit dieser ID erwartet, aber nicht gefunden, wird erstellt.</translation>
+      <translation>[ ACHTUNG ] - Gebiet mit dieser ID erwartet, aber nicht gefunden, wird erstellt.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="722"/>
@@ -2508,11 +2508,11 @@ Arbeitsspeicher frei?</translation>
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+        <numerusform>[ ACHTUNG ] - Fehlendes Gebiet in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Gebiet
  sein sollten...</numerusform>
-        <numerusform>[ ACHTUNG ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+        <numerusform>[ ACHTUNG ] - %n fehlende Gebiete in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Gebieten
  sein sollten...</numerusform>
       </translation>
     </message>
@@ -2523,11 +2523,11 @@ Arbeitsspeicher frei?</translation>
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+        <numerusform>[ ACHTUNG ] - Fehlendes Gebiet in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesem Gebiet
  sein sollten...</numerusform>
-        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+        <numerusform>[ ACHTUNG ] - %n fehlende Gebiete in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Gebieten
  sein sollten...</numerusform>
       </translation>
     </message>
@@ -2537,9 +2537,9 @@ Arbeitsspeicher frei?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ]  - Der fehlende Bereich heißt nun:
+        <numerusform>[ INFO ]  - Das fehlende Gebiet heißt nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
-        <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
+        <numerusform>[ INFO ] - Die fehlenden Gebiete heißen nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
       </translation>
     </message>
@@ -2547,16 +2547,16 @@ Arbeitsspeicher frei?</translation>
       <location filename="../src/TRoomDB.cpp" line="773"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ ACHTUNG ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Gebiets-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
-Bestimme neue IDs, die statt dessen genutzt werden können...</translation>
+Bestimme nun neue IDs, die statt dessen genutzt werden können...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation>[ ACHTUNG ] - Defekte Bereichs-IDs in der Karte gefunden (Anzahl: %1) 
+      <translation>[ ACHTUNG ] - Defekte Gebiets-IDs in der Karte gefunden (Anzahl: %1) 
 (Defekte IDs sind kleiner als +1 und auch nicht die reservierte ID -1)
-Achte auf weitere Nachrichten zu jedem betroffenen Bereich...</translation>
+Achte auf weitere Nachrichten zu jedem betroffenen Gebiet...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="785"/>
