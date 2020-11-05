@@ -2562,24 +2562,24 @@ Achte auf weitere Nachrichten zu jedem betroffenen Gebiet...</translation>
       <location filename="../src/TRoomDB.cpp" line="785"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ]  - Die neuen Bereichs-ID lauten:
+      <translation>[ INFO ]  - Die neuen Gebiets-IDs lauten:
 Alt ==&gt; Neu</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="803"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ INFO ]  - Der Bereich mit dieser defekten ID trägt nun: %1.</translation>
+      <translation>[ INFO ]  - Das Gebiet mit dieser defekten ID trägt nun: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="804"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Der Bereich mit der defekten ID: %1 wurde neu nummeriert.</translation>
+      <translation>[ INFO ]  - Das Gebiet mit der defekten ID: %1 wurde neu nummeriert.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="847"/>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - Nummerierung der Bereichs ist zufriedenstellend.</translation>
+      <translation>[ INFO ]  - Nummerierung des Gebiets ist zufriedenstellend.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="858"/>
@@ -2647,7 +2647,7 @@ Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1064"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[ INFO ]  - Dieser Raum behauptet, zu Bereich ID: %1 zu gehören, aber dort war er unbekannt. Der Bereich wird ihn zukünftig berücksichtigen.</translation>
+      <translation>[ INFO ]  - Dieser Raum behauptet, zu Gebiet ID: %1 zu gehören, aber dort war er unbekannt. Das Gebiet wird ihn zukünftig berücksichtigen.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1070"/>
@@ -2655,20 +2655,20 @@ Dies ist eine Anomalie, aber wurde problemlos aufgeräumt.</translation>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation>[ INFO ]  - Im Bereich ID: %1 fehlten %2 Räume, 
+      <translation>[ INFO ]  - In Gebiets-ID: %1 fehlten %2 Räume, 
 die eigentlich anwesend sein sollten, nämlich:
 %3
-Sie wurden dem Bereich hinzugefügt.</translation>
+Sie wurden dem Gebiet hinzugefügt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1078"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation>[ INFO ]  - In diesem Bereich fehlten %1 Räume, die eigentlich anwesend sein sollten, nämlich: %2. Sie wurden hinzugefügt.</translation>
+      <translation>[ INFO ]  - In diesem Gebiet fehlten %1 Räume, die eigentlich anwesend sein sollten, nämlich: %2. Sie wurden hinzugefügt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1103"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation>[ INFO ]  - Dieser Raum wurde von Bereich ID: %1 reklamiert, aber gehört nicht dorthin. Der Bereich wird ihn zukünftig nicht mehr berücksichtigen.</translation>
+      <translation>[ INFO ]  - Dieser Raum wurde von Gebiets-ID: %1 reklamiert, aber gehört nicht dorthin. Das Gebiet wird ihn zukünftig nicht mehr berücksichtigen.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1109"/>
@@ -2676,20 +2676,20 @@ Sie wurden dem Bereich hinzugefügt.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation>[ INFO ]  - Im Bereich ID: %1 gab es %2 Räume 
+      <translation>[ INFO ]  - Im Gebiets-ID: %1 gab es %2 Räume 
 mehr als eigentlich anwesend sein sollten, nämlich:
 %3
-Sie wurden aus dem Bereich entfernt.</translation>
+Sie wurden aus dem Gebiet entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1117"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation>[ INFO ]  - In diesem Bereich gab es %1 Räume mehr als eigentlich anwesend sein sollten, nämlich: %2. Sie wurden entfernt.</translation>
+      <translation>[ INFO ]  - In diesem Gebiet gab es %1 Räume mehr als eigentlich anwesend sein sollten, nämlich: %2. Sie wurden entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1216"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation>Es wurde erkannt, dass Suffixe in der Form &quot;_###&quot; bereits verwendet wurden. Diese wurden zur Einfachheit der Umbenennung entfernt und eventuell geändert. Wenn eine zugewiesene Nummer auf diese Weise wichtig ist, kann sie zurückgeändert werden. Dazu muss zuerst der Bereich umbenannt werden, dem das gewünschte Suffix zugewiesen wurde.&lt;/p&gt;</translation>
+      <translation>Es wurde erkannt, dass Suffixe in der Form &quot;_###&quot; bereits verwendet wurden. Diese wurden zur Einfachheit der Umbenennung entfernt und eventuell geändert. Wenn eine zugewiesene Nummer auf diese Weise wichtig ist, kann sie zurück geändert werden. Dazu muss zuerst das Gebiet umbenannt werden, dem das gewünschte Suffix zugewiesen wurde.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1220"/>
@@ -2708,12 +2708,12 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1230"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation>[ INFO ]  - Bereichsnamen geändert, um Duplikate und Unbenannte zu vermeiden. Alter Name: &quot;%1&quot;, neuer Name: &quot;%2&quot;.</translation>
+      <translation>[ INFO ]  - Gebietsnamen geändert, um Duplikate und Unbenannte zu vermeiden. Alter Name: &quot;%1&quot;, neuer Name: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1239"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation>[ ACHTUNG ] - Leere und doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
+      <translation>[ ACHTUNG ] - Leere und doppelte Gebietsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1240"/>
@@ -2736,7 +2736,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1256"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation>[ ACHTUNG ] - Doppelte Bereichsnamen in der Kartendatei entdeckt!</translation>
+      <translation>[ ACHTUNG ] - Doppelte Gebietsnamen in der Kartendatei entdeckt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1257"/>
@@ -2757,7 +2757,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1272"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation>[ ACHTUNG ] - Ein unbenannter Bereich wurde in der Kartendatei festgestellt!</translation>
+      <translation>[ ACHTUNG ] - Ein unbenanntes Gebiet wurde in der Kartendatei festgestellt!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1275"/>
@@ -8109,7 +8109,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/ui/mapper.ui" line="537"/>
       <source>Area:</source>
-      <translation>Bereich:</translation>
+      <translation>Gebiet:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="606"/>
@@ -10997,7 +10997,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1997"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Das Standard-Gebiet (Gebiets-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese ins richtige Gebiet platziert werden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2049"/>
@@ -11240,7 +11240,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2000"/>
       <source>Show the default area in map area selection</source>
-      <translation>Den Standard-Bereich in der Auswahl der Kartenbereiche anzeigen</translation>
+      <translation>Das Standard-Gebiet in der Auswahl der Kartengebiete anzeigen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2020"/>
