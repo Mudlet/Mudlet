@@ -11709,7 +11709,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;这是本房间的房间编号--不能在此更改!</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
@@ -11719,7 +11719,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置当前房间东边的房间号，将蓝色为有效号，红色为无效号。&lt;/p&gt;。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
@@ -12152,7 +12152,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="476"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;触发时播放声音文件。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="521"/>
@@ -12233,7 +12233,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="569"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;单击以删除为该触发器设置的声音文件. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="623"/>
