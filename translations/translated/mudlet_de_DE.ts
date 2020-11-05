@@ -1274,7 +1274,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation>roomID=%1 ist nicht vorhanden, kann nicht die Eigenschaften von einem nicht existierenden Raum ändern!</translation>
+      <translation>Raum-ID=%1 ist nicht vorhanden, kann nicht die Eigenschaften von einem nicht existierenden Raum ändern!</translation>
     </message>
   </context>
   <context>
@@ -1915,7 +1915,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2095"/>
       <source>Area issues</source>
-      <translation>Aspekte zur Region</translation>
+      <translation>Aspekte zum Gebiet</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2101"/>
@@ -3551,7 +3551,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/XMLimport.cpp" line="366"/>
       <source>Assigning rooms to their areas...</source>
-      <translation>Weise die Räume ihren Regionen zu...</translation>
+      <translation>Weise die Räume ihren Gebieten zu...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="521"/>
