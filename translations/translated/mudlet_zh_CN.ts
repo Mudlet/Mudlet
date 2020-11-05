@@ -4132,37 +4132,37 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>如果提供密码的话，将会发送密码以识别游戏中的用户。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>自动打开配置文件</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>当Mudlet运行时，自动启动此配置文件。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2453"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>自动重连</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2456"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>自动重新连接此配置文件，除非用户断开与游戏服务器的连接。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>密码</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>如果提供用户名的话，将会发送至游戏中。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2488"/>
@@ -4172,7 +4172,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2494"/>
       <source>Allow this profile to use Mudlet&apos;s Discord &quot;Rich Presence&quot;  features</source>
-      <translation type="unfinished"/>
+      <translation>允许该配置文件使用Mudlet的 Discord Rich Presence  功能。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2600"/>
@@ -5073,7 +5073,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="269"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>游戏名称: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1242"/>
@@ -5124,7 +5124,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="127"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>复制配置文件</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="128"/>
