@@ -884,13 +884,13 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2980"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>Bereich</translation>
+      <translation>Gebiet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2981"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>Bereichsnummer des Raumes festlegen</translation>
+      <translation>Gebietsnummer des Raumes festlegen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2984"/>
