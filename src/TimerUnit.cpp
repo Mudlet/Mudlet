@@ -362,6 +362,7 @@ int TimerUnit::getNewID()
 void TimerUnit::doCleanup()
 {
     QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
+    qDebug() << QTime::currentTime().toString() << "deleting" << mCleanupSet.size() << "timers";
     while (itTimer.hasNext()) {
         auto pTimer = itTimer.next();
         // It is important to take the item OUT of the set before you delete
