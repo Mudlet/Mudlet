@@ -25,7 +25,7 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-# was QT_BASE_DIR: C:\Qt\5.13.2\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
+# was QT_BASE_DIR: C:\Qt\5.12.9\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
 # We are not currently using CMake for Windows builds but it might be needed in
 # the future - and we now need Q_OR_C_MAKE so as to pull the version number from
 # the right project file:

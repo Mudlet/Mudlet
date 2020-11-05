@@ -107,20 +107,19 @@ function Geyser.MiniConsole:disableHorizontalScrollBar()
 end
 
 -- Start commandLine functions
+
 --- Enables the command-line for this window
--- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:enableCommandLine()
   enableCommandLine(self.name)
 end
 
 --- Disables the command-line for this window
--- @param isVisible boolean to set visibility.
 function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
 end
 
 --- Sets an action to be used when text is send in this commandline. When this
--- function is called by the event system, text the commandline sends will be 
+-- function is called by the event system, text the commandline sends will be
 -- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
 -- the setClickCallback events
 -- @param func The function to use.
@@ -224,13 +223,13 @@ end
 -- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
 function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
   self.imgPath = imgPath
-  return setConsoleBackgroundImage(self.name, imgPath, mode)
+  return setBackgroundImage(self.name, imgPath, mode)
 end
 
 --- resets the background image of this miniconsole
 function Geyser.MiniConsole:resetBackgroundImage()
   self.imgPath = nil
-  return resetConsoleBackgroundImage(self.name)
+  return resetBackgroundImage(self.name)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.

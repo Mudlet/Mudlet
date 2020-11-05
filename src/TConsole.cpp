@@ -114,7 +114,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
         // Probably will not show up as this is used inside a QMainWindow widget
-        // which has it's own title and icon set.
+        // which has its own title and icon set.
         // mIsSubConsole was left false for this
         mWrapAt = 50;
         mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
@@ -275,16 +275,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     layer = new QWidget(mpMainDisplay);
     layer->setContentsMargins(0, 0, 0, 0);
-    layer->setContentsMargins(0, 0, 0, 0); //neu rc1
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
     layer->setLayout(vLayoutLayer);
-    layoutLayer->setMargin(0);  //neu rc1
-    layoutLayer->setSpacing(0); //neu rc1
-    layoutLayer->setMargin(0);  //neu rc1
+    layoutLayer->setMargin(0);
+    layoutLayer->setSpacing(0);
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
@@ -330,7 +328,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(splitter);
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
-    layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+    layoutLayer->setSpacing(1); // not closer, otherwise there could be performance problems when displaying
 
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
@@ -583,7 +581,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
         mDisplayFontSize = mDisplayFont.pointSize();
-        refreshMiniConsole();
+        refreshView();
     }
 
     if (mType & (MainConsole | UserWindow)) {
@@ -1105,8 +1103,8 @@ void TConsole::runTriggers(int line)
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
 
-    //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
-    //       ansonsten einfach löschen
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void TConsole::finalize()
@@ -1385,7 +1383,7 @@ bool TConsole::loadMap(const QString& location)
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1444,7 +1442,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
         // No map or mapper currently loaded/present - so try and create mapper
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
@@ -1668,11 +1666,11 @@ void TConsole::luaWrapLine(int line)
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
-bool TConsole::setMiniConsoleFontSize(int size)
+bool TConsole::setFontSize(int size)
 {
     mDisplayFontSize = size;
 
-    refreshMiniConsole();
+    refreshView();
     return true;
 }
 
@@ -1713,7 +1711,7 @@ bool TConsole::resetConsoleBackgroundImage()
     return true;
 }
 
-void TConsole::setMiniConsoleCmdVisible(bool isVisible)
+void TConsole::setCmdVisible(bool isVisible)
 {
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
@@ -1736,7 +1734,7 @@ void TConsole::setMiniConsoleCmdVisible(bool isVisible)
     resizeConsole();
 }
 
-void TConsole::refreshMiniConsole() const
+void TConsole::refreshView() const
 {
     mUpperPane->mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     mUpperPane->setFont(mUpperPane->mDisplayFont);
@@ -1748,11 +1746,11 @@ void TConsole::refreshMiniConsole() const
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setMiniConsoleFont(const QString& font)
+bool TConsole::setFont(const QString& font)
 {
     mDisplayFontName = font;
 
-    refreshMiniConsole();
+    refreshView();
     return true;
 }
 
@@ -2286,7 +2284,7 @@ void TConsole::dropEvent(QDropEvent* e)
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has it's tab selected in a
+    // Ensure that this profile is the one that has its tab selected in a
     // multi-view situation:
     mudlet::self()->activateProfile(mpHost);
 

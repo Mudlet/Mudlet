@@ -362,6 +362,7 @@ public:
     static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
+    static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setCmdLineAction(lua_State*);
