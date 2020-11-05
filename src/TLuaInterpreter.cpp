@@ -12499,7 +12499,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
-    QString name = CMDLINE_NAME(L, 1);
+    QString name {CMDLINE_NAME(L, 1)};
     auto pN = COMMANDLINE(L, name);
     QString curText = pN->toPlainText();
     lua_pushstring(L, curText.toUtf8().constData());
@@ -12781,7 +12781,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
 int TLuaInterpreter::clearCmdLine(lua_State* L)
 {
-    QString name = CMDLINE_NAME(L, 1);
+    QString name {CMDLINE_NAME(L, 1)};
     auto pN = COMMANDLINE(L, name);
     pN->clear();
     return 0;
@@ -17103,7 +17103,7 @@ Host& getHostFromLua(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnCount
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
-    QString windowName = WINDOW_NAME(L, 1);
+    QString windowName {WINDOW_NAME(L, 1)};
 
     int columns;
     auto console = CONSOLE(L, windowName);
@@ -17115,7 +17115,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRowCount
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
-    QString windowName = WINDOW_NAME(L, 1);
+    QString windowName {WINDOW_NAME(L, 1)};
 
     int rows;
     auto console = CONSOLE(L, windowName);
@@ -17187,7 +17187,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
-    QString windowName = WINDOW_NAME(L, 1);
+    QString windowName {WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
 
@@ -17198,7 +17198,7 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableClickthrough
 int TLuaInterpreter::disableClickthrough(lua_State* L)
 {
-    QString windowName = WINDOW_NAME(L, 1);
+    QString windowName {WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
 
