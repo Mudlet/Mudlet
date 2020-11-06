@@ -85,12 +85,12 @@ please wait...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3521"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Pre-Map loading(3) report</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3531"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Loading map(3) at %1 report</translation>
     </message>
   </context>
   <context>
