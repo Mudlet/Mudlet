@@ -85,12 +85,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3521"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte geladen wird(3)</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3531"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(3) bei %1</translation>
     </message>
   </context>
   <context>
