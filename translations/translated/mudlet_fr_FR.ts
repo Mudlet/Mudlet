@@ -1499,7 +1499,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16424"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Aucun message d'erreur disponible depuis Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
