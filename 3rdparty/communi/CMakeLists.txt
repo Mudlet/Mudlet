@@ -69,25 +69,29 @@ set(SRCS
 set(HDRS
   include/IrcCore/irccommand_p.h
   include/IrcCore/ircconnection_p.h
+  include/IrcCore/irccore_p.h
   include/IrcCore/ircdebug_p.h
   include/IrcCore/ircmessage_p.h
   include/IrcCore/ircmessagecomposer_p.h
   include/IrcCore/ircmessagedecoder_p.h
   include/IrcCore/ircnetwork_p.h
-  include/IrcModel/ircuser_p.h
   include/IrcModel/ircbuffer_p.h
-  include/IrcModel/ircchannel_p.h
-  include/IrcModel/ircusermodel_p.h
   include/IrcModel/ircbuffermodel_p.h
-  include/IrcUtil/irctoken_p.h
-  include/IrcUtil/irclagtimer_p.h
-  include/IrcUtil/irccommandqueue_p.h
+  include/IrcModel/ircchannel_p.h
+  include/IrcModel/ircuser_p.h
+  include/IrcModel/ircusermodel_p.h
   include/IrcUtil/irccommandparser_p.h
+  include/IrcUtil/irccommandqueue_p.h
+  include/IrcUtil/irclagtimer_p.h
+  include/IrcUtil/irctoken_p.h
 )
 set(MOC_HDRS
   include/IrcCore/irc.h
+  include/IrcCore/irccore.h
   include/IrcCore/irccommand.h
   include/IrcCore/ircconnection.h
+  include/IrcCore/ircfilter.h
+  include/IrcCore/ircglobal.h
   include/IrcCore/ircmessage.h
   include/IrcCore/ircnetwork.h
   include/IrcCore/ircprotocol.h
@@ -107,9 +111,6 @@ set(MOC_HDRS
 )
 set(PUB_HDRS
   ${MOC_HDRS}
-  include/IrcCore/irccore.h
-  include/IrcCore/ircfilter.h
-  include/IrcCore/ircglobal.h
   include/IrcCore/Irc
   include/IrcCore/IrcCommand
   include/IrcCore/IrcCommandFilter
