@@ -1563,6 +1563,46 @@ end</script>
 						</regexCodePropertyList>
 					</Trigger>
 				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Aero Whisper</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2], matches[4])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Whispering a request to the omnipresent winds, you sense that (\w+) is at (.+), in (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+    				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Soulmark Scry</name>
+					<script>mmp.locateAndEcho(matches[3], matches[2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Questing for the mark placed upon h(?:is|er) soul, you determine that (\w+) can be found at (.+)\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
 			</TriggerGroup>
 			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Aetolia</name>
@@ -5350,7 +5390,7 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "20.10.1"
+local newversion = "20.11.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -8886,7 +8926,7 @@ function mmp.findAreaID(areaname, exact)
   local list = getAreaTable()
 
   -- iterate over the list of areas, matching them with substring match.
-  -- if we get match a single area, then return its ID, otherwise return
+  -- if we get match a single area, then return it's ID, otherwise return
   -- 'false' and a message that there are than one are matches
   local returnid, fullareaname, multipleareas = nil, nil, {}
   for area, id in pairs(list) do
