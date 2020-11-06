@@ -1504,7 +1504,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Lua 錯誤：%1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16428"/>
@@ -4006,7 +4006,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>配置名称</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
@@ -4092,7 +4092,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>角色名字</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4122,7 +4122,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>密码</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
