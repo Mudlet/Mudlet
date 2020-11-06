@@ -90,7 +90,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/Host.cpp" line="3531"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(3) no relatório %1</translation>
     </message>
   </context>
   <context>
@@ -1506,7 +1506,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16424"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhuma mensagem de erro disponível do Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
