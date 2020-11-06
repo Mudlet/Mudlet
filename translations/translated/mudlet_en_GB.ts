@@ -7988,22 +7988,22 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="293"/>
       <source>⯇</source>
-      <translation type="unfinished"/>
+      <translation>⯇</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="333"/>
       <source>⯆</source>
-      <translation type="unfinished"/>
+      <translation>⯆</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="373"/>
       <source>⯅</source>
-      <translation type="unfinished"/>
+      <translation>⯅</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="413"/>
       <source>⯈</source>
-      <translation type="unfinished"/>
+      <translation>⯈</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="459"/>
@@ -10596,7 +10596,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="345"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey colour, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress, it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
