@@ -1515,12 +1515,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16424"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhuma mensagem de erro disponível do Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Erro de Lua: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16428"/>
@@ -4005,7 +4005,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>Nome do personagem</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4035,7 +4035,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>Senha</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
