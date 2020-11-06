@@ -2,6 +2,7 @@
 # Communi                                                                  #
 #                                                                          #
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
+#    Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -47,7 +48,6 @@ set(SRCS
   src/core/ircmessagedecoder_none.cpp
   src/core/ircnetwork.cpp
   src/core/ircprotocol.cpp
-  src/3rdparty/mozilla/rdf_utils.c
   src/model/ircbuffer.cpp
   src/model/ircbuffermodel.cpp
   src/model/ircchannel.cpp
@@ -63,6 +63,9 @@ set(SRCS
   src/util/irctoken.cpp
   src/util/ircutil.cpp
 )
+# We are not using uchardet so do not want to include this file
+# src/core/ircmessagedecoder_uchardet.cpp
+
 set(HDRS
   include/IrcCore/irccommand_p.h
   include/IrcCore/ircconnection_p.h
