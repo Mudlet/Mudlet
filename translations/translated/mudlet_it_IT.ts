@@ -8086,22 +8086,22 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
     <message>
       <location filename="../src/ui/mapper.ui" line="293"/>
       <source>⯇</source>
-      <translation type="unfinished"/>
+      <translation>⯇</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="333"/>
       <source>⯆</source>
-      <translation type="unfinished"/>
+      <translation>⯆</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="373"/>
       <source>⯅</source>
-      <translation type="unfinished"/>
+      <translation>⯅</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="413"/>
       <source>⯈</source>
-      <translation type="unfinished"/>
+      <translation>⯈</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="459"/>
