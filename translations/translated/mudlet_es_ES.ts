@@ -1504,7 +1504,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16424"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>No hay mensaje de error disponible de Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
@@ -3914,7 +3914,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Nombre de perfil</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
@@ -4000,7 +4000,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>Nombre del personaje</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4030,7 +4030,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>Contraseña</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
