@@ -81,12 +81,12 @@ please wait...</source>
     <message>
       <location filename="../src/Host.cpp" line="3521"/>
       <source>Pre-Map loading(3) report</source>
-      <translation type="unfinished"/>
+      <translation>Wstępne ładowanie mapy(3) raport</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3531"/>
       <source>Loading map(3) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (3) w raporcie %1</translation>
     </message>
   </context>
   <context>
@@ -1503,7 +1503,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16424"/>
       <source>No error message available from Lua.</source>
-      <translation type="unfinished"/>
+      <translation>Brak komunikatu o błędzie z Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16426"/>
@@ -4027,7 +4027,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2224"/>
       <source>Profile name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa profilu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2227"/>
@@ -4113,7 +4113,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2415"/>
       <source>Character name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa postaci</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2418"/>
@@ -4143,7 +4143,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2472"/>
       <source>Password</source>
-      <translation type="unfinished"/>
+      <translation>Hasło</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
