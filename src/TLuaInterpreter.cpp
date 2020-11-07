@@ -12850,7 +12850,7 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mpDlgIRC) {
         // create a new irc client if one isn't ready.
-        pHost->mpDlgIRC.reset(new dlgIRC(pHost));
+        pHost->mpDlgIRC = new dlgIRC(pHost);
         pHost->mpDlgIRC->raise();
         pHost->mpDlgIRC->show();
     }

@@ -121,7 +121,7 @@ dlgIRC::~dlgIRC()
     }
 
     if (mpHost->mpDlgIRC) {
-        mpHost->mpDlgIRC.reset(nullptr);
+        mpHost->mpDlgIRC = nullptr;
     }
 }
 

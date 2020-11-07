@@ -2576,7 +2576,7 @@ void mudlet::slot_irc()
     }
 
     if (!pHost->mpDlgIRC) {
-        pHost->mpDlgIRC.reset(new dlgIRC(pHost));
+        pHost->mpDlgIRC = new dlgIRC(pHost);
     }
     pHost->mpDlgIRC->raise();
     pHost->mpDlgIRC->show();
