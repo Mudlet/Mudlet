@@ -1703,12 +1703,17 @@ do
     text = text or ""
 
     if keepcolor then
+      local fr,fg,fb,br,bg,bb;
       if not windowname then
-        setBgColor(getBgColor())
-        setFgColor(getFgColor())
+        br,bg,bb = getBgColor()
+        fr,fg,fb = getFgColor()
+        setBgColor(br,bg,bb)
+        setFgColor(fr,fg,fb)
       else
-        setBgColor(windowname, getBgColor(windowname))
-        setFgColor(windowname, getFgColor(windowname))
+        br,bg,bb = getBgColor(windowname)
+        fr,fg,fb = getFgColor(windowname)
+        setBgColor(windowname, br,bg,bb)
+        setFgColor(windowname, fr,fg,fb)
       end
     end
 
