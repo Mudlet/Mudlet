@@ -2877,7 +2877,7 @@ void Host::close()
     if (mpDlgIRC) {
         mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
         mpDlgIRC->deleteLater();
-        mpDlgIRC.reset(nullptr);
+        mpDlgIRC = nullptr;
     }
     if (mpConsole) {
         mpConsole->close();
