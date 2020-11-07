@@ -1508,7 +1508,8 @@ void cTelnet::processTelnetCommand(const std::string& command)
                             break;
                         }
 
-                        if (characterSet.startsWith("ISO") &&  // Accept "ISO####-#" variant of "ISO ####-#"
+                        if (!characterSet.startsWith("ISO ") &&
+                            characterSet.startsWith("ISO") &&  // Accept "ISO####-#" variant of "ISO ####-#"
                             mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(3)))) {
                             acceptedCharacterSet = characterSet;
                             break;
@@ -1526,7 +1527,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                         setEncoding(QByteArray("ASCII"), true); // Force variants of ASCII to ASCII
                     } else if (acceptedCharacterSet.startsWith("ISO-")) {
                         setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(4)), true); // Align with TEncodingTable::csmEncodings
-                    } else if (acceptedCharacterSet.startsWith("ISO")) {
+                    } else if (acceptedCharacterSet.startsWith("ISO") && !acceptedCharacterSet.startsWith("ISO ")) {
                         setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(3)), true); // Align with TEncodingTable::csmEncodings
                     } else {
                         setEncoding(acceptedCharacterSet, true);
