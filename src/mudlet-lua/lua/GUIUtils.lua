@@ -781,28 +781,28 @@ local rgbToHsv = function(r, g, b)
   local max, min = math.max(r, g, b), math.min(r, g, b)
   local h, s, v
   v = max
-  
+
   local d = max - min
-  if max == 0 then 
-    s = 0 
-  else 
-    s = d / max 
+  if max == 0 then
+    s = 0
+  else
+    s = d / max
   end
-  
+
   if max == min then
     h = 0 -- achromatic
   else
     if max == r then
       h = (g - b) / d
       if g < b then h = h + 6 end
-    elseif max == g then 
+    elseif max == g then
       h = (b - r) / d + 2
-    elseif max == b then 
+    elseif max == b then
       h = (r - g) / d + 4
     end
     h = h / 6
   end
-  
+
   return h, s, v
 end
 
@@ -811,12 +811,12 @@ end
 local step = function(r,g,b)
   local lum = math.sqrt( .241 * r + .691 * g + .068 * b )
   local reps = 8
-  
+
   local h, s, v = rgbToHsv(r,g,b)
-  
+
   local h2 = math.floor(h * reps)
   local v2 = math.floor(v * reps)
-  if h2 % 2 == 1 then 
+  if h2 % 2 == 1 then
     v2 = reps - v2
     lum = reps - lum
   end
@@ -859,7 +859,7 @@ function showColors(...)
       sort = val
     end
   end
-  
+
   local colors = {}
   for k, v in pairs(color_table) do
     local color = {}
@@ -870,11 +870,11 @@ function showColors(...)
       table.insert(colors,color)
     end
   end
-  
-  if sort then 
+
+  if sort then
     table.sort(colors, sortColorsByName)
   else
-    table.sort(colors,sortColorsByHue) 
+    table.sort(colors,sortColorsByHue)
   end
   local i = 1
   for _, k in ipairs(colors) do
@@ -976,15 +976,15 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})?(?:,[0-9a-fA-F]{6,})?)|(\|r|#r)]],
+        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})(?:,[0-9a-fA-F]{6,})?)|(?:\||#)(/?[biru])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|(<r>)]],
+        [[(<[0-9,:]+>)|<(/?[biru])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
-        [[(<[a-zA-Z0-9_,:]+>)]],
+        [[(</?[a-zA-Z0-9_,:]+>)]],
         rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
       },
       Ansi = {
@@ -1010,8 +1010,20 @@ if rex then
         if s then
           t[#t + 1] = s
         end
-        if r then
+        if r == 'r' then
           t[#t + 1] = "\27reset"
+        elseif r == "b" then
+          t[#t + 1] = "\27bold"
+        elseif r == "/b" then
+          t[#t + 1] = "\27boldoff"
+        elseif r == "i" then
+          t[#t + 1] = "\27italics"
+        elseif r == "/i" then
+          t[#t + 1] = "\27italicsoff"
+        elseif r == "u" then
+          t[#t + 1] = "\27underline"
+        elseif r == "/u" then
+          t[#t + 1] = "\27underlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1047,8 +1059,20 @@ if rex then
             -- pass it into the text stream then
             t[#t + 1] = ((fr or br) and color or c)
           elseif style == 'Color' then
-            if c == "<reset>" then
+            if c == "<reset>" or c == "<r>" then
               t[#t + 1] = "\27reset"
+            elseif c == "<b>" then
+              t[#t + 1] = "\27bold"
+            elseif c == "</b>" then
+              t[#t + 1] = "\27boldoff"
+            elseif c == "<i>" then
+              t[#t + 1] = "\27italics"
+            elseif c == "</i>" then
+              t[#t + 1] = "\27italicsoff"
+            elseif c == "<u>" then
+              t[#t + 1] = "\27underline"
+            elseif c == "</u>" then
+              t[#t + 1] = "\27underlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1090,7 +1114,7 @@ if rex then
     local out, reset
     local args = { ... }
     local n = #args
-    
+
     if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -1115,7 +1139,7 @@ if rex then
       else
         error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
       end
-      
+
     else
       if args[1] and args[2] and args[1] ~= "main" then
         win, str = args[1], args[2]
@@ -1126,13 +1150,13 @@ if rex then
       end
     end
     win = win or "main"
-    
+
     out = function(...)
       _G[func](...)
     end
-    
+
     local t = _Echos.Process(str, style)
-    
+
     deselect(win)
     resetFormat(win)
     if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
@@ -1147,6 +1171,18 @@ if rex then
           ba = ba or 255
           setBgColor(win, br, bg, bb, ba)
         end
+      elseif v == "\27bold" then
+        setBold(win, true)
+      elseif v == "\27boldoff" then
+        setBold(win, false)
+      elseif v == "\27italics" then
+        setItalics(win, true)
+      elseif v == "\27italicsoff" then
+        setItalics(win, false)
+      elseif v == "\27underline" then
+        setUnderline(win, true)
+      elseif v == "\27underlineoff" then
+        setUnderline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1275,7 +1311,7 @@ if rex then
   function cechoLink(...)
     xEcho("Color", "echoLink", ...)
   end
-	
+
   --- Inserts a link with embedded color name information at the current position
   ---
   --- @usage cinsertLink([window, ] string, command, hint)
@@ -1335,7 +1371,7 @@ if rex then
   function hechoPopup(...)
     xEcho("Hex", "echoPopup", ...)
   end
-	
+
   --- Echos a popup with embedded color name information.
   ---
   --- @usage cinsertPopup([window, ] string, {commands}, {hints})
@@ -2069,7 +2105,7 @@ function resizeMapWidget(width, height)
   openMapWidget(-1, -1, width, height)
 end
 
--- 
+--
 -- functions to manipulate room label display and offsets
 --
 -- get offset of room's label (x,y)
@@ -2080,7 +2116,7 @@ function getRoomNameOffset(room)
   local d = getRoomUserData(room, "room.ui_nameOffset")
   if d == nil or d == "" then return 0,0 end
   local split = {}
-  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end 
+  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end
   if #split == 1 then return 0,split[1] end
   if #split >= 2 then return split[1],split[2] end
   return 0,0
@@ -2112,7 +2148,7 @@ function setRoomNameVisible(room, flag)
   setRoomUserData(room, "room.ui_showName", flag and "1" or "0")
 end
 
---wrapper for createButton 
+--wrapper for createButton
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
 
@@ -2149,7 +2185,7 @@ local function copy2color(name,win,str,inst)
       r,g,b = getFgColor()
       rb,gb,bb = getBgColor()
     end
-    
+
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
       result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
@@ -2254,16 +2290,16 @@ local function setActionCallback(callbackFunc, name, func, ...)
   end
   assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
   if nr > 1 then
-    return callbackFunc(name, 
-    function(event) 
-      if not event then 
-        arg.n = nr - 1 
-      end 
-      arg[nr] = event 
-      func(unpack_w_nil(arg)) 
+    return callbackFunc(name,
+    function(event)
+      if not event then
+        arg.n = nr - 1
+      end
+      arg[nr] = event
+      func(unpack_w_nil(arg))
     end )
-  end 
-  callbackFunc(name, func) 
+  end
+  callbackFunc(name, func)
 end
 
 local setLC = setLC or setLabelClickCallback
