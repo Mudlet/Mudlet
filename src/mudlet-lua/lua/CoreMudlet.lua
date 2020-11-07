@@ -267,13 +267,13 @@ if false then
 
 
 
-  --- Get the RGB values of the first character of the current selection.
+  --- Get the RGB values of the first character of the current selection, and the number of following characters with this color.
   ---
   --- @param windowName optional
   ---
   --- @usage Getting RGB component.
   ---   <pre>
-  ---   r,g,b = getBgColor(windowName)
+  ---   r,g,b,n = getBgColor(windowName)
   ---   </pre>
   ---
   --- @see getFgColor
@@ -311,19 +311,19 @@ if false then
 
 
   --- This function returns the RGB values of the color of the first character of the current selection
-  --- on mini console (window) windowName.
+  --- on mini console (window) windowName, and the number of following characters with this color.
   ---
   --- @param windowName optional - if windowName is omitted Mudlet will use the main screen.
   ---
   --- @usage
   ---   <pre>
-  ---   r,g,b = getFgColor(windowName)
+  ---   r,g,b,n = getFgColor(windowName)
   ---   </pre>
   --- @usage
   ---   <pre>
-  ---   local r,g,b
+  ---   local r,g,b,n
   ---   selectString("troll", 1)
-  ---   r,g,b = getFgColor()
+  ---   r,g,b,n = getFgColor()
   ---   if r == 255 and g == 0 and b == 0 then
   ---       echo("HELP! troll is written in red letters, the monster is aggressive!\n")
   ---   end
