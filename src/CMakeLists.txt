@@ -375,8 +375,7 @@ if(USE_OWN_QT5KEYCHAIN)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
-# WORKS: target_compile_definitions(communi PUBLIC IRC_STATIC)
-target_compile_definitions(communi PRIVATE IRC_STATIC)
+target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries(
   mudlet

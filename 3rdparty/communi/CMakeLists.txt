@@ -179,13 +179,13 @@ set_property(SOURCE src/model/ircchannel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircchannel.cpp)
 set_property(SOURCE src/model/ircbuffer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
-set_property(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
-set_property(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
 set_property(SOURCE src/model/ircuser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
-set_property(SOURCE src/model/ircusermodel.cpp 
+set_property(SOURCE src/model/ircusermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
 set_property(SOURCE src/util/irccompleter.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)
