@@ -242,9 +242,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_menuBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowMenuBar);
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
 
-    // This group of signal/slot connections handle updating *this* instance of
+    // This group of signal/slot connections handles updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
-    // new settings from it's one - there is a further connect(...) above which
+    // new settings from this one - there is a further connect(...) above which
     // is also involved but it is conditional on having the updater code being
     // included in compliation:
     connect(pMudlet, &mudlet::signal_enableFulScreenModeChanged, this, &dlgProfilePreferences::slot_changeEnableFullScreenMode);
@@ -530,7 +530,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
     dictList->clear();
-    // Disable sorting whilst populating the widget:
+    // Disable sorting while populating the widget:
     dictList->setSortingEnabled(false);
     checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
@@ -568,7 +568,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-    // whilst populating the widget, it reduces noise about:
+    // while populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
     dictList->blockSignals(true);
     if (entries.count()) {
@@ -1482,9 +1482,9 @@ void dlgProfilePreferences::resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
+    if (pHost->mpConsole) {
         pHost->mpConsole->resetConsoleBackgroundImage();
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+        pHost->mpConsole->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -1531,15 +1531,17 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
     auto color = QColorDialog::getColor(c, this);
     if (color.isValid()) {
         c = color;
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            mudlet::self()->mConsoleMap[pHost]->changeColors();
+
+        auto console = pHost->mpConsole;
+        if (console) {
+            console->changeColors();
             // update the display properly when color selections change.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            if (!mudlet::self()->mConsoleMap[pHost]->mUpperPane->mIsTailMode) {
+            console->mUpperPane->updateScreenView();
+            console->mUpperPane->forceUpdate();
+            if (console->mUpperPane->mIsTailMode) {
                 // The upper pane having mIsTailMode true means lower pane is hidden
-                mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
-                mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
+                console->mLowerPane->updateScreenView();
+                console->mLowerPane->forceUpdate();
             }
         }
 
@@ -1645,7 +1647,7 @@ void dlgProfilePreferences::setDisplayFont()
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
 #endif
 
-    auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
+    auto mainConsole = pHost->mpConsole;
     if (!mainConsole) {
         return;
     }
@@ -1674,8 +1676,8 @@ void dlgProfilePreferences::setCommandLineFont()
     bool ok;
     QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
     pHost->mCommandLineFont = font;
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
     }
 }
 
@@ -1962,7 +1964,7 @@ void dlgProfilePreferences::downloadMap()
     }
     if (!pHost->mpMap->mpMapper) {
         // CHECK: What happens if we are NOT the current profile anymore?
-        mudlet::self()->createMapper(false);
+        pHost->createMapper(false);
     }
 
     pHost->mpMap->downloadMap();
@@ -2123,18 +2125,10 @@ void dlgProfilePreferences::copyMap()
     }
 
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QList<Host*> activeHostsList{mudlet::self()->mConsoleMap.keys()};
-    QSet<Host*> activeHosts{activeHostsList.begin(), activeHostsList.end()};
-#else
-    QSet<Host*> activeHosts{mudlet::self()->mConsoleMap.keys().toSet()};
-#endif
-    QMap<QString, Host*> activeOtherHostMap;
-    QSetIterator<Host*> itActiveHost(activeHosts);
-    while (itActiveHost.hasNext()) {
-        Host* pOtherHost = itActiveHost.next();
-        if (pOtherHost && (pOtherHost != pHost)) {
-            const auto otherHostName = pOtherHost->getName();
+    QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
+    for (auto pOtherHost : mudlet::self()->getHostManager()) {
+        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+            const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
                 toProfilesRoomIdMap.insert(otherHostName, pOtherHost->mpMap->mRoomIdHash.value(otherHostName, -1));
@@ -2279,7 +2273,7 @@ void dlgProfilePreferences::copyMap()
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
     QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
 
-    // CHECK: Race condition? We might be changing this whilst other profile
+    // CHECK: Race condition? We might be changing this while other profile
     // are accessing it...
     mudlet::self()->setShowMapAuditErrors(savedOldAuditErrorsToConsoleEnabledSetting);
 }
@@ -2380,6 +2374,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
+        auto console = pHost->mpConsole;
         if (dictList->isEnabled() && dictList->currentItem()) {
             pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
         }
@@ -2461,8 +2456,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
 
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            pMudlet->mConsoleMap[pHost]->changeColors();
+        if (console) {
+            console->changeColors();
         }
 
         QString lIgnore = doubleclick_ignore_lineedit->text();
@@ -2522,8 +2517,8 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pMudlet->mpIrcClientMap.contains(pHost)) {
-                pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
+            if (pHost->mpDlgIRC) {
+                pHost->mpDlgIRC->connection->setNickName(newIrcNick);
             }
         }
 
@@ -2542,18 +2537,18 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pMudlet->mpIrcClientMap.contains(pHost)) {
-            pMudlet->mpIrcClientMap[pHost]->ircRestart();
+        if (restartIrcClient && pHost->mpDlgIRC) {
+            pHost->mpDlgIRC->ircRestart();
         }
 
         setDisplayFont();
 
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            int x = pMudlet->mConsoleMap[pHost]->width();
-            int y = pMudlet->mConsoleMap[pHost]->height();
+        if (console) {
+            int x = console->width();
+            int y = console->height();
             QSize s = QSize(x, y);
             QResizeEvent event(s, s);
-            QApplication::sendEvent(pMudlet->mConsoleMap[pHost], &event);
+            QApplication::sendEvent(console, &event);
         }
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
@@ -2624,7 +2619,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
             // the master values in the Host instance - but now we should write
-            // those - whilst we can get the first three (quint8) values
+            // those - while we can get the first three (quint8) values
             // directly from controls on this form/dialogue, the last two
             // (QColors) are easiest to retrieve from the TMap instance as the
             // colours are not directly stored here (as for some styles they
@@ -3165,7 +3160,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         return;
     }
 
-    // Must turn off sorting at least whilst inserting items...
+    // Must turn off sorting at least while inserting items...
     pTableWidget->setSortingEnabled(false);
     pTableWidget->setColumnCount(6);
     // This clears any previous contents:

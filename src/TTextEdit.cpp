@@ -269,7 +269,7 @@ void TTextEdit::updateScreenView()
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
-        return; //NOTE: das ist wichtig, damit ich keine floating point exception bekomme, wenn mScreenHeight==0, was hier der Fall wäre
+        return; //NOTE: otherwise mScreenHeight==0 would cause a floating point exception
     }
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows
@@ -1691,27 +1691,18 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    const int k = 3;
-    int deltaY = e->angleDelta().y() / (8 * 15);
-    int deltaX = e->angleDelta().x() / (8 * 15);
-    bool handled = false;
-    if (deltaY < 0) {
-        mpConsole->scrollDown(k);
-        handled = true;
-    } else if (deltaY > 0) {
+    int k = 3;
+    if (e->delta() < 0) {
+        mpConsole->scrollDown(abs(k));
+        e->accept();
+        return;
+    }
+    if (e->delta() > 0) {
         mpConsole->scrollUp(k);
-        handled = true;
+        e->accept();
+        return;
     }
-
-    if (deltaX < 0) {
-        scrollH(std::max(0, mCursorX - k));
-        handled = true;
-    } else if (deltaX > 0) {
-        scrollH(std::min(mMaxHRange, mCursorX + k));
-        handled = true;
-    }
-
-    e->setAccepted(handled);
+    e->ignore();
 }
 
 int TTextEdit::imageTopLine()
@@ -1943,7 +1934,7 @@ inline QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
         // Control character or not ASCII
         return QStringLiteral("\\%1").arg(static_cast<quint8>(*byte), 3, 10, QLatin1Char('0'));
     } else if (static_cast<quint8>(*byte) == 0x3C) {
-        // less-then - which is noticed by the Qt library code and taken as an
+        // '<' - which is noticed by the Qt library code and taken as an
         // HTML/Rich-text formatting opening tag and has to be converted to
         // "&lt;":
         return QStringLiteral("&lt;");
