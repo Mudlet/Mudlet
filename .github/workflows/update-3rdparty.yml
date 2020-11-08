@@ -257,9 +257,10 @@ jobs:
           commit-message: (autocommit) Updated lcf submodule to latest upstream 5.1 branch
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-whidecharwidth-source:
+  update-widecharwidth-source:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
+    if: github.repository == 'Mudlet/Mudlet' && false
     steps:
       - uses: actions/checkout@v2
         with:
