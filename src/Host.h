@@ -602,7 +602,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
-    QScopedPointer<dlgIRC> mpDlgIRC;
+    QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<TToolBar*> mToolbarLayoutChanges;
@@ -620,6 +620,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
+    void slot_purgeTimers();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -753,6 +754,8 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    QTimer purgeTimer;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
