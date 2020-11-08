@@ -1495,7 +1495,22 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     for (int i = 1; i < characterSetList.size(); ++i) {
                         QByteArray characterSet = characterSetList.at(i).toUpper();
 
-                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))) {
+                        if (mAcceptableEncodings.contains(characterSet) ||
+                            mAcceptableEncodings.contains(("M_" + characterSet)) ||
+                            characterSet.contains(QByteArray("ASCII"))) { // Accept variants of ASCII
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+
+                        if (characterSet.startsWith("ISO-") &&  // Accept "ISO-####-#" variant of "ISO ####-#"
+                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(4)))) {
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+
+                        if (!characterSet.startsWith("ISO ") &&
+                            characterSet.startsWith("ISO") &&  // Accept "ISO####-#" variant of "ISO ####-#"
+                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(3)))) {
                             acceptedCharacterSet = characterSet;
                             break;
                         }
@@ -1508,7 +1523,15 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += OPT_CHARSET;
 
                 if (!acceptedCharacterSet.isEmpty()) {
-                    setEncoding(acceptedCharacterSet, true);
+                    if (acceptedCharacterSet.contains(QByteArray("ASCII"))) {
+                        setEncoding(QByteArray("ASCII"), true); // Force variants of ASCII to ASCII
+                    } else if (acceptedCharacterSet.startsWith("ISO-")) {
+                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(4)), true); // Align with TEncodingTable::csmEncodings
+                    } else if (acceptedCharacterSet.startsWith("ISO") && !acceptedCharacterSet.startsWith("ISO ")) {
+                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(3)), true); // Align with TEncodingTable::csmEncodings
+                    } else {
+                        setEncoding(acceptedCharacterSet, true);
+                    }
 
                     output += CHARSET_ACCEPTED;
                     output += payload[1]; // Separator
