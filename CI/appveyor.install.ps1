@@ -1,3 +1,8 @@
+if ("$Env:BUILD_PROCESS" -eq "Replacement") {
+  # Bail out if this build is supposed to use the shiny MSYS2 based 64-Bit one
+  exit 0
+}
+
 # Exit the script whenever an error in a cmdlet occurs
 $global:ErrorActionPreference = "Stop"
 

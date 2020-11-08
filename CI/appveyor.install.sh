@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ -z "${BUILD_PROCESS}" ]; then
+    echo "BUILD_PROCESS not set - it should be \"Original\" or \"Replacement\" and needs to be the second one to run this script!"
+    exit 1
+fi
+
+if [ ! "${BUILD_PROCESS}" = "Replacement" ]; then
+    # Silently skip this script for the Original PowerShell based (32-Bit only) build system
+    exit 0
+fi
+
 echo "Running appveyor.install.sh shell script..."
 
 # Source/setup some variables (including PATH):

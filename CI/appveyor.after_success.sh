@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ ! "${BUILD_PROCESS}" = "Replacement" ]; then
+    # Silently skip this script for the Original PowerShell based (32-Bit only) build system
+    exit 0
+fi
+
 echo "Running appveyor.after_success.sh shell script..."
 echo ""
 

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ ! "${BUILD_PROCESS}" = "Replacement" ]; then
+    # Silently skip this script for the Original PowerShell based (32-Bit only) build system
+    exit 0
+fi
+
 # This assembles all the files we need into a package sub-directory
 
 echo "Running appveyor.after_build.sh shell script..."

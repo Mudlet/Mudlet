@@ -1,3 +1,8 @@
+if ("$Env:BUILD_PROCESS" -eq "Replacement") {
+  # Bail out if this build is supposed to use the shiny MSYS2 based 64-Bit one
+  exit 0
+}
+
 if ($Env:APPVEYOR_REPO_TAG -ne "true") {
   echo "Not a release build - skipping release validation."
   exit 0

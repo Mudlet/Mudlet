@@ -2,6 +2,7 @@ version: 1.0.{build}
 branches:
   only:
   - development    # build the default branch
+  - 64Bit_windows  # temporarily build this branch used to develope 64 Bit CI builds
   - /^release-.+/  # build release branches
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 
@@ -29,23 +30,32 @@ environment:
 # We are not currently using CMake for Windows builds but it might be needed in
 # the future - and we now need Q_OR_C_MAKE so as to pull the version number from
 # the right project file:
-  - BUILD_BITNESS: 64
+  - BUILD_PROCESS: Original
+    QT_BASE_DIR: C:\Qt\5.12.9\mingw73_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
+  - BUILD_PROCESS: Replacement
+    BUILD_BITNESS: 64
     Q_OR_C_MAKE: qmake
-  - BUILD_BITNESS: 32
-    Q_OR_C_MAKE: qmake
+#  - BUILD_PROCESS: Replacement
+#    BUILD_BITNESS: 32
+#    Q_OR_C_MAKE: qmake
 
 install:
-#- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-#- powershell ".\appveyor.install.ps1"
+# We try both systems but each one will detect what BUILD_PROCESS is and exit
+# early if not selected - we need to do it like that as there is NOT an "if"
+# within Appveyor's YAML interpreter
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.install.ps1"
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
 
 build_script:
-#- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-#- powershell ".\appveyor.build.ps1"
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.build.ps1"
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
-#on_failure:
-#- cd C:\src
-#- bash -l -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+
+on_failure:
+- cd C:\src
+- bash -l -c "if [ ! \"${BUILD_PROCESS}\" = \"Replacement\" ]; then curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log ; fi"
 
 # on successful build we may need to use the after_build stage in order to have
 # the produced files be made available as a "artifact" - at present it makes
@@ -56,8 +66,9 @@ after_build:
 on_success:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
 
+# The approach of having two build systems may break down here...
 cache:
-#  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
+- '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 - C:\msys64\var\cache\pacman\pkg
 
 notifications:
