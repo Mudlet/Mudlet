@@ -2633,7 +2633,6 @@ void Host::setCompactInputLine(const bool state)
 void Host::setCustomLoginId(const int value)
 {
     if (value >= 0 && value < mudlet::mCustomLoginTexts.count()) {
-        QMutexLocker locker(&mLock);
         mCustomLoginId = value;
     }
 }
