@@ -12786,6 +12786,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
 int TLuaInterpreter::clearCmdLine(lua_State* L)
 {
+    int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
