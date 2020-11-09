@@ -299,18 +299,13 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
-                mAutoCompletionCount = -1;
                 mLastCompletion.clear();
-                mTabCompletionTyped.clear();
                 mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
                 if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
                     mHistoryBuffer = -1;
                 } else {
                     mHistoryBuffer = 0;
                 }
-                adjustHeight();
                 ke->accept();
                 return true;
 
@@ -330,18 +325,13 @@ bool TCommandLine::event(QEvent* event)
                 // Do the "normal" return key action if no or just the keypad
                 // modifier is present:
                 enterCommand(ke);
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
                 mLastCompletion.clear();
-                mTabCompletionTyped.clear();
                 mUserKeptOnTyping = false;
                 if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
                     mHistoryBuffer = -1;
                 } else {
                     mHistoryBuffer = 0;
                 }
-                adjustHeight();
                 ke->accept();
                 return true;
 
