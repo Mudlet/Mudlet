@@ -1594,18 +1594,10 @@ std::list<int> TConsole::getFgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).foreground()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
@@ -1629,18 +1621,10 @@ std::list<int> TConsole::getBgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).background()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
