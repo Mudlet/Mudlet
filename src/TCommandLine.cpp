@@ -373,7 +373,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                historyMove(false);
+                historyMove(MOVE_DOWN);
                 if (!mpHost->mHighlightHistory){
                     moveCursor(QTextCursor::End);
                 }
@@ -410,7 +410,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
-                historyMove(true);
+                historyMove(MOVE_UP);
                 if (!mpHost->mHighlightHistory){
                     moveCursor(QTextCursor::End);
                 }
@@ -1023,12 +1023,12 @@ void TCommandLine::handleAutoCompletion()
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
-void TCommandLine::historyMove(bool moveUp)
+void TCommandLine::historyMove(MoveDirection direction)
 {
     if (mHistoryList.empty()) {
         return;
     }
-    int shift = moveUp ? 1 : -1;
+    int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         if (toPlainText().size() != 0) {
             mHistoryBuffer += shift;
