@@ -157,7 +157,8 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
     ({                                                                                         \
         const QString name = (_name);                                                          \
         auto console = getHostFromLua(_L).mpConsole;                                           \
-        auto cmdLine = console->mSubCommandLineMap.value(name);                                \
+        auto cmdLine = isMain(name) ? &*console->mpCommandLine                                 \
+                                    : console->mSubCommandLineMap.value(name);                 \
         if (!cmdLine) {                                                                        \
             lua_pushnil(L);                                                                    \
             lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());                  \
