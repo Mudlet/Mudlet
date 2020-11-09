@@ -21,7 +21,7 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'            
+            qt: '5.14.1'
           - os: ubuntu-latest
             buildname: 'ubuntu / qt 5.11'
             triplet: x64-linux
