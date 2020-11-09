@@ -74,8 +74,7 @@ private:
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);
-    void historyUp(QKeyEvent*);
-    void historyDown(QKeyEvent*);
+    void historyMove(bool);
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
