@@ -299,13 +299,6 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
-                mLastCompletion.clear();
-                mUserKeptOnTyping = false;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
                 ke->accept();
                 return true;
 
@@ -325,13 +318,6 @@ bool TCommandLine::event(QEvent* event)
                 // Do the "normal" return key action if no or just the keypad
                 // modifier is present:
                 enterCommand(ke);
-                mLastCompletion.clear();
-                mUserKeptOnTyping = false;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
                 ke->accept();
                 return true;
 
@@ -862,6 +848,8 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
+    mLastCompletion.clear();
+    mUserKeptOnTyping = false;
 
     QStringList _l = _t.split(QChar::LineFeed);
 
@@ -885,8 +873,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         mHistoryList.push_front(toPlainText());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
+        mHistoryBuffer = -1;
         clear();
     } else {
+        mHistoryBuffer = 0;
         selectAll();
     }
     adjustHeight();
