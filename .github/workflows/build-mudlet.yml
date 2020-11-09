@@ -13,17 +13,22 @@ jobs:
           # - os: windows-latest
           #   triplet: x64-windows
           - os: ubuntu-latest
-            buildname: 'ubuntu'
+            buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.1'
           - os: ubuntu-latest
-            buildname: 'ubuntu / Qt 5.11'
+            buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
+            qt: '5.14.1'
+          - os: ubuntu-latest
+            buildname: 'ubuntu / qt 5.11'
+            triplet: x64-linux
+            compiler: gcc_64
             qt: '5.11.0'
           - os: macos-latest
-            buildname: 'macos / C++ tests'
+            buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.1'
