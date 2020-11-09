@@ -1,7 +1,6 @@
 name: Build Mudlet
 on:
   - pull_request
-  - push
 
 jobs:
   compile-mudlet:
@@ -10,7 +9,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
         include:
           # - os: windows-latest
           #   triplet: x64-windows
@@ -18,28 +16,32 @@ jobs:
             buildname: 'ubuntu'
             triplet: x64-linux
             compiler: gcc_64
+            qt: '5.14.1'
+          - os: ubuntu-latest
+            buildname: 'ubuntu / Qt 5.11'
+            triplet: x64-linux
+            compiler: clang_64
+            qt: '5.11.0'
           - os: macos-latest
             buildname: 'macos / C++ tests'
             triplet: x64-osx
             compiler: clang_64
-    env:
-      qt: "5.14.1"
+            qt: '5.14.1'
 
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
+      if: matrix.qt != '5.11.0'
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{env.qt}}
-        key: ${{runner.os}}-qt-${{env.qt}}
-        restore-keys: |
-          ${{runner.os}}-qt-
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       if: steps.cache-qt.outputs.cache-hit != 'true'
       with:
-        version: ${{env.qt}}
+        version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
@@ -64,6 +66,13 @@ jobs:
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
+    - name: (Qt 5.11) disable optional components
+      if: matrix.qt == '5.11.0'
+      run: |
+        echo "WITH_UPDATER=no" >> $GITHUB_ENV
+        echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+        echo "WITH_FONTS=no" >> $GITHUB_ENV
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v5
@@ -81,7 +90,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
+        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/${{matrix.compiler}}/
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
