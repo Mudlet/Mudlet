@@ -47,6 +47,7 @@ public:
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
+    TBuffer mClipboard;
 
     void resetMainConsole();
 

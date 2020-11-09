@@ -111,60 +111,65 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
-        int pos = (_pos);                                                                      \
-        const char *res;                                                                       \
-        if ((lua_gettop(_L) < pos) || lua_isnil(_L, pos)) {                                    \
-            res = "";                                                                          \
-        } else if (!lua_isstring(_L, pos)) {                                                   \
-            lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos, luaL_typename(_L, pos));   \
+        int pos_ = (_pos);                                                                     \
+        const char *res_;                                                                      \
+        if ((lua_gettop(_L) < pos_) || lua_isnil(_L, pos_)) {                                  \
+            res_ = "";                                                                         \
+        } else if (!lua_isstring(_L, pos_)) {                                                  \
+            lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(_L, pos_)); \
             return lua_error(_L);                                                              \
         } else {                                                                               \
-            res = lua_tostring(_L, pos);                                                       \
+            res_ = lua_tostring(_L, pos_);                                                     \
         }                                                                                      \
-        res;                                                                                   \
+        res_;                                                                                  \
     })
 
 #define CMDLINE_NAME(_L, _pos)                                                                 \
     ({                                                                                         \
-        int pos = (_pos);                                                                      \
-        if (!lua_isstring(_L, pos)) {                                                          \
-            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos, luaL_typename(_L, pos));  \
+        int pos_ = (_pos);                                                                     \
+        if (!lua_isstring(_L, pos_)) {                                                         \
+            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(_L, pos_));\
             return lua_error(_L);                                                              \
         }                                                                                      \
-        lua_tostring(_L, pos);                                                                 \
+        lua_tostring(_L, pos_);                                                                \
     })
     
 #define CONSOLE_NIL(_L, _name)                                                                 \
     ({                                                                                         \
-        auto name = (_name);                                                                   \
-        auto console = getHostFromLua(_L).findConsole(name);                                   \
-        console;                                                                               \
+        auto name_ = (_name);                                                                  \
+        auto console_ = getHostFromLua(_L).findConsole(name_);                                 \
+        console_;                                                                              \
     })
 
 #define CONSOLE(_L, _name)                                                                     \
     ({                                                                                         \
-        auto name = (_name);                                                                   \
-        auto console = getHostFromLua(_L).findConsole(name);                                   \
-        if (!console) {                                                                        \
+        auto name_ = (_name);                                                                  \
+        auto console_ = getHostFromLua(_L).findConsole(name_);                                 \
+        if (!console_) {                                                                       \
             lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_window_value, name.toUtf8().constData());                   \
+            lua_pushfstring(L, bad_window_value, name_.toUtf8().constData());                  \
             return 2;                                                                          \
         }                                                                                      \
-        console;                                                                               \
+        console_;                                                                              \
     })
 
 #define COMMANDLINE(_L, _name)                                                                 \
     ({                                                                                         \
-        const QString name = (_name);                                                          \
-        auto console = getHostFromLua(_L).mpConsole;                                           \
-        auto cmdLine = console->mSubCommandLineMap.value(name);                                \
-        if (!cmdLine) {                                                                        \
+        const QString name_ = (_name);                                                         \
+        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
+                                    : console_->mSubCommandLineMap.value(name_);               \
+        if (!cmdLine_) {                                                                       \
             lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());                  \
+            lua_pushfstring(L, bad_cmdline_value, name_.toUtf8().constData());                 \
             return 2;                                                                          \
         }                                                                                      \
-        cmdLine;                                                                               \
+        cmdLine_;                                                                              \
     })
+
+// variable names within these macros have trailing underscores because in
+// at least one case, masking an existing variable with the new one confused
+// GCC, leading to a crash.
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
@@ -12781,7 +12786,11 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLine
 int TLuaInterpreter::clearCmdLine(lua_State* L)
 {
-    QString name {CMDLINE_NAME(L, 1)};
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
     auto pN = COMMANDLINE(L, name);
     pN->clear();
     return 0;
