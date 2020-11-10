@@ -93,7 +93,7 @@ jobs:
 
         # Install dependencies not available on machine
         InstallLibzip
-        InstallZlib
+        # InstallZlib
       shell: powershell
 
     - name: (Linux Clang) change compiler
