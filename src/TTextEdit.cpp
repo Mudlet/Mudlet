@@ -826,6 +826,12 @@ void TTextEdit::highlightSelection()
     update(mSelectedRegion.boundingRect());
     update(newRegion);
     mSelectedRegion = newRegion;
+
+    QClipboard* clipboard = QApplication::clipboard();
+    if (clipboard->supportsSelection()) {
+        // X11 has a second clipboard that's updated on any selection
+        clipboard->setText(getSelectedText(), QClipboard::Selection);
+    }
 }
 
 void TTextEdit::unHighlight()
