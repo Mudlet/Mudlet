@@ -31,6 +31,7 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
+            qt: '5.14.1'
           - os: windows-latest
             buildname: 'windows'
             triplet: x64-mingw-dynamic
