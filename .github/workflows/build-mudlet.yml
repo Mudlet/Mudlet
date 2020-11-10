@@ -66,7 +66,7 @@ jobs:
         brew install pkg-config libzzip libzip ccache
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
-        echo "CCACHE_DIR=/tmp/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
     - name: (Linux) Install apt dependencies
       if: runner.os == 'Linux'
@@ -74,9 +74,9 @@ jobs:
         # Installing packages might fail as the github image becomes outdated
         sudo apt update
         # These aren't available or don't work well in vcpkg
-        sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5 
- 
-        echo "CCACHE_DIR=/tmp/ccache" >> $GITHUB_ENV
+        sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
@@ -94,7 +94,7 @@ jobs:
     - name: (Linux/macOS) restore ccache
       uses: actions/cache@v2
       with:
-        path: /tmp/ccache
+        path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
       if: matrix.os != 'windows-latest'
