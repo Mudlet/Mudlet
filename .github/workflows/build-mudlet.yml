@@ -101,6 +101,8 @@ jobs:
         # Install dependencies not available on machine
         InstallZlib
         InstallLibzip
+
+        tree $env:MINGW_BASE_DIR /f
       shell: powershell
 
     - name: (Linux Clang) change compiler
