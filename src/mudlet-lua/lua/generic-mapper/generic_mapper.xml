@@ -645,8 +645,8 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
--- 11/07/2018
-local version = "2.0.16"
+-- 02/11/2020
+local version = "2.0.17"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1132,7 +1132,7 @@ map.help.config = [[
         &lt;yellow&gt;search_on_look&lt;reset&gt; - When this is set, using the "look" command causes
             the map to verify your position using the room name and exits
             seen following using the command. This may be true or false.
-
+            
         &lt;yellow&gt;clear_lines_on_send&lt;reset&gt; - When this is set, any time a command is sent,
             any lines stored from the game used to search for the room name
             are cleared. This may be true or false.
@@ -1159,8 +1159,8 @@ map.help.config = [[
             'downnorth', 0, -1, 1}
 
         &lt;yellow&gt;use_translation&lt;reset&gt; - When this is set, the lang_dirs table is used to
-            translate movement commands in some other language into the
-            English used by the script. This may be true or false.
+            translate movement and status commands in some other language
+            into the English used by the script. This may be true or false.
 
         &lt;yellow&gt;debug&lt;reset&gt; - When this is set, the script will start in debug mode. This
             may be true or false.
@@ -1204,6 +1204,7 @@ map.help.translate = [[
         for commands entered to move around, or listed exits the game shows when
         you enter a room. Available directions: north, south, east, west,
         northwest, northeast, southwest, southeast, up, down, in, and out.
+        Also you can customize special commands sent to mud like 'look'.
 ]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
@@ -1275,7 +1276,7 @@ map.defaults = {
     lang_dirs = {n = 'n', ne = 'ne', nw = 'nw', e = 'e', w = 'w', s = 's', se = 'se', sw = 'sw',
         u = 'u', d = 'd', ["in"] = 'in', out = 'out', north = 'north', northeast = 'northeast',
         east = 'east', west = 'west', south = 'south', southeast = 'southeast', southwest = 'southwest',
-        northwest = 'northwest', up = 'up', down = 'down',
+        northwest = 'northwest', up = 'up', down = 'down', l = 'l', look = 'look',
     },
     debug = false,
     download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
@@ -1355,6 +1356,7 @@ local exitmap = {
     n = 'north',    ne = 'northeast',   nw = 'northwest',   e = 'east',
     w = 'west',     s = 'south',        se = 'southeast',   sw = 'southwest',
     u = 'up',       d = 'down',         ["in"] = 'in',      out = 'out',
+    l = 'look'
 }
 
 local short = {}
@@ -1468,13 +1470,13 @@ function map.setConfigs(key, val, sub_key)
                 if #long_dir &lt; #short_dir then long_dir, short_dir = short_dir, long_dir end
                 map.configs.lang_dirs[sub_key] = long_dir
                 map.configs.lang_dirs[short[sub_key]] = short_dir
-                map.echo(string.format("Direction %s, abbreviated as %s, now interpreted as %s.", long_dir, short_dir, sub_key))
+                map.echo(string.format("Direction/command %s, abbreviated as %s, now interpreted as %s.", long_dir, short_dir, sub_key))
                 map.configs.translate = {}
                 for k, v in pairs(map.configs.lang_dirs) do
                     map.configs.translate[v] = k
                 end
             else
-                map.echo("Invalid direction.", false, true)
+                map.echo("Invalid direction/command.", false, true)
             end
         elseif key == "prompt_test_patterns" then
             if not table.contains(map.configs.prompt_test_patterns) then
@@ -1887,7 +1889,7 @@ local function move_map()
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == "look" and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+        elseif move == map.configs.lang_dirs['look'] and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
@@ -1915,7 +1917,7 @@ local function capture_move_cmd(dir,priority)
     end
     dir = string.lower(dir)
     if dir == "/" then dir = "recall" end
-    if dir == "l" then dir = "look" end
+    if dir == configs.lang_dirs['l'] then dir = configs.lang_dirs['look'] end
     if configs.use_translation then
         dir = configs.translate[dir] or dir
     end
@@ -1939,7 +1941,7 @@ local function capture_move_cmd(dir,priority)
         else
             table.insert(move_queue,exitmap[dir] or dir)
         end
-    elseif configs.search_on_look and dir == "look" then
+    elseif configs.search_on_look and dir == configs.lang_dirs['look'] then
         table.insert(move_queue, dir)
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
@@ -2966,7 +2968,7 @@ function map.eventHandler(event, ...)
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             map.find_prompt()
-            send("look", true)
+            send(map.configs.lang_dirs['look'], true)
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
