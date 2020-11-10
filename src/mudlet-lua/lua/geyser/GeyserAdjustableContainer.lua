@@ -111,10 +111,10 @@ function Adjustable.Container:onClick(label, event)
             label:showMenuLabel("attLabel") 
         end
 
-        if table.index_of(self.rCLabel.nestedLabels, self.customItemsLabel) and not self.customItemsLabel.nestedLabels then
+        if not self.customItemsLabel.nestedLabels then
             label:hideMenuLabel("customItemsLabel")
         else
-            label:showMenuLabel("customItemsLabel") 
+            label:showMenuLabel("customItemsLabel")
         end
     end
     label:onRightClick(event)
@@ -383,7 +383,7 @@ function Adjustable.Container:resizeBorder()
     local winw, winh = getMainWindowSize()
     self.timer_active = self.timer_active or true
     -- Check if Window resize already happened.
-    -- If that is not checked this creates an infinite loop and chrashes because setBorder also causes a resize event
+    -- If that is not checked this creates an infinite loop and crashes because setBorder also causes a resize event
     if (winw ~= self.old_w_value or winh ~= self.old_h_value) and self.timer_active then
         self.timer_active = false
         tempTimer(0.2, function() self:adjustBorder() self:adjustConnectedContainers() end)
@@ -462,6 +462,11 @@ end
 -- @param lockStyle the lockstyle used to lock the container, 
 -- the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
+-- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
+-- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
+-- full:        The container gets fully locked without any margin left for the right click menu.
+-- border:      Keeps the borders of the container visible while locked.
+
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
@@ -612,6 +617,7 @@ function Adjustable.Container:onEnterAtt()
         self.att[i]:setClickCallback("Adjustable.Container.attachToBorder", self, attm[i])
         self.attLabel.nestedLabels[#self.attLabel.nestedLabels+1] = self.att[i]
     end
+    doNestShow(self.attLabel)
 end
 
 -- internal function to create the Minimize/Close and the right click Menu Labels
@@ -708,6 +714,7 @@ function Adjustable.Container:save(slot, dir)
     dir = dir or self.defaultDir
     local saveDir = string.format("%s%s.lua", dir, self.name)
     local mainTable = {}
+    mainTable.slot = {}
     local mytable = {}
 
     -- check if there are already saved settings and if so load them to the mainTable
@@ -716,7 +723,7 @@ function Adjustable.Container:save(slot, dir)
     end
 
     if slot then
-        mainTable[slot] = mytable
+        mainTable.slot[slot] = mytable
     else
         mytable = mainTable
     end
@@ -748,19 +755,25 @@ end
 -- @see Adjustable.Container:save
 function Adjustable.Container:load(slot, dir)
     local mytable = {}
+    mytable.slot = {}
     assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.load: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
     assert(dir == nil or type(dir) == "string" , "Adjustable.Container.load: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
     dir = dir or self.defaultDir
     local loadDir = string.format("%s%s.lua", dir, self.name)
-    if io.exists(loadDir) then
-        table.load(loadDir, mytable)
-    else
-        return "Adjustable.Container.load: Couldn't load settings from " .. loadDir
+    if not (io.exists(loadDir)) then
+        return string.format("Adjustable.Container.load: Couldn't load settings from %s", loadDir)
+    end
+
+    local ok = pcall(table.load, loadDir, mytable)
+    if not ok then
+        self:deleteSaveFile()
+        debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
+        return false
     end
 
     -- if slot settings not found load default settings
     if slot then
-        mytable = mytable[slot] or mytable
+        mytable = mytable.slot[slot] or mytable
     end
 
     mytable.windowname = mytable.windowname or "main"
@@ -999,6 +1012,7 @@ end
 --@param cons.buttonstyle close and minimize buttons style
 --@param[opt=false] cons.minimized  minimized at creation?
 --@param[opt=false] cons.locked  locked at creation?
+--@param[opt=false] cons.attached  attached to a border at creation? possible borders are ("top", "bottom", "left", "right")
 --@param cons.lockLabel.txt  text of the "lock" menu item
 --@param cons.minLabel.txt  text of the "min/restore" menu item
 --@param cons.saveLabel.txt  text of the "save" menu item
@@ -1076,7 +1090,6 @@ function Adjustable.Container:new(cons,container)
     me.minimizeLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.attLabel:setOnEnter("Adjustable.Container.onEnterAtt", me)
     me.goInside = true
-    me:adjustBorder()
     me.titleTxtColor = me.titleTxtColor or "green"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
     me.titleText = "&nbsp;&nbsp; "..me.titleText
@@ -1097,6 +1110,8 @@ function Adjustable.Container:new(cons,container)
         if Adjustable.Container.all[me.name].auto_hidden then
             me:hide(true)
         end
+        -- detach if setting at creation changed
+        Adjustable.Container.all[me.name]:detach()
     end
 
     if me.minimized then
@@ -1105,6 +1120,12 @@ function Adjustable.Container:new(cons,container)
 
     if me.locked then
         me:lockContainer()
+    end
+
+    if me.attached then
+        local attached = me.attached
+        me.attached = nil
+        me:attachToBorder(attached)
     end
 
     -- hide/show on creation
@@ -1127,6 +1148,7 @@ function Adjustable.Container:new(cons,container)
     end
 
     Adjustable.Container.all[me.name] = me
+    me:adjustBorder()
     return me
 end
 

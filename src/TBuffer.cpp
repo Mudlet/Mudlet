@@ -449,7 +449,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
-                // arrangement should avoid looping around this loop whilst
+                // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
@@ -2089,8 +2089,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
                         // changed by this method:
-                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-                            mudlet::self()->mConsoleMap[pHost]->changeColors();
+                        if (pHost->mpConsole) {
+                            pHost->mpConsole->changeColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -2148,8 +2148,8 @@ void TBuffer::resetColors()
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
     // decodeOSC(...) method:
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"
@@ -2191,7 +2191,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2387,7 +2387,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
 // This was called "insert" but that is commonly used for built in methods and
 // it makes it harder to pick out usages of this specific method:
-bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
+bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 {
     if (text.isEmpty()) {
         return false;
@@ -2430,11 +2430,20 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
         x = 0;
     }
-
+    int oldLinkId{}, id{};
     for (int total = P2.x(); x < total; ++x) {
+        int linkId = buffer.at(y).at(x).linkIndex();
+        if (linkId && (linkId != oldLinkId)) {
+            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId));
+            oldLinkId = linkId;
+        }
+
+        if (!linkId) {
+            id = 0;
+        }
         // This is rather inefficient as s is only ever one QChar long
         QString s(lineBuffer.at(y).at(x));
-        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags);
+        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
     }
     return slice;
 }
@@ -2449,7 +2458,7 @@ TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 }
 
 // This only copies the first line of chunk's contents:
-void TBuffer::paste(QPoint& P, TBuffer chunk)
+void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
     bool needAppend = false;
     bool hasAppended = false;
@@ -2474,7 +2483,7 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
         // This is rather inefficient as s is only ever one QChar long
         QPoint P_current(cx, y);
         if ((y < getLastLineNumber()) && (!needAppend)) {
-            TChar& format = chunk.buffer.at(0).at(cx);
+            const TChar& format = chunk.buffer.at(0).at(cx);
             QString s = QString(chunk.lineBuffer.at(0).at(cx));
             insertInLine(P_current, s, format);
         } else {
@@ -2496,9 +2505,18 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     if (chunk.buffer.empty()) {
         return;
     }
+    int oldLinkId{}, id{};
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
+        int linkId = chunk.buffer.at(0).at(cx).linkIndex();
+        if (linkId && (oldLinkId != linkId)) {
+            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId));
+            oldLinkId = linkId;
+        }
+        if (!linkId) {
+            id = 0;
+        }
         QString s(chunk.lineBuffer.at(0).at(cx));
-        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
+        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags, id);
     }
 
     append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
@@ -3507,7 +3525,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             for (size_t i = 0; i < utf8SequenceLength; ++i) {
                 debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
             }
-            qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+            qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
             if (isToUseReplacementMark) {
                 mMudLine.append(QChar::ReplacementCharacter);
@@ -3573,7 +3591,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // As we are not in GB18030 mode treat it as if it is a 2 byte sequence
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
@@ -3723,7 +3741,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)
@@ -3950,7 +3968,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         for (size_t i = 0; i < gbSequenceLength; ++i) {
             debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Sequence bytes are: " << debugMsg.toLatin1().constData();
+        qDebug().nospace() << "    Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
@@ -4075,7 +4093,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         for (size_t i = 0; i < big5SequenceLength; ++i) {
             debugMsg.append(QStringLiteral("<%1>").arg(static_cast<quint8>(bufferData.at(pos + i)), 2, 16, QChar('0')));
         }
-        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg.toLatin1().constData();
+        qDebug().nospace() << "    Invalid.  Sequence bytes are: " << debugMsg;
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);

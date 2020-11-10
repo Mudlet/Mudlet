@@ -45,15 +45,16 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QToolBar>
 #include <QScrollBar>
+#include <QShortcut>
+#include <QToolBar>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
-// and then reenables the colorizer function (and we "grey out" the color whilst
+// and then reenables the colorizer function (and we "grey out" the color while
 // it is disabled):
 static const char* cButtonBaseColor = "baseColor";
 
@@ -86,6 +87,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 //, mpAction_searchRegExp(nullptr)
 , mCleanResetQueued(false)
 , mSavingAs(false)
+, mIsGrabKey(false)
 , mAutosaveInterval{}
 , mTriggerEditorSplitterState{}
 , mAliasEditorSplitterState{}
@@ -3704,29 +3706,19 @@ void dlgTriggerEditor::addAction(bool isFolder)
         TAction* pParentAction = mpHost->getActionUnit()->getAction(parentID);
         if (pParentAction) {
             // insert new items as siblings unless the parent is a folder
-            if (!pParentAction->isFolder()) {
-                // handle root items
-                if (!pParentAction->getParent()) {
-                    goto ROOT_ACTION;
-                } else {
-                    // insert new item as sibling of the clicked item
-                    if (pParent->parent()) {
-                        pT = new TAction(pParentAction->getParent(), mpHost);
-                        pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
-                        pParent->parent()->insertChild(0, pNewItem);
-                    }
-                }
-            } else {
+            if (pParentAction->isFolder()) {
                 pT = new TAction(pParentAction, mpHost);
                 pNewItem = new QTreeWidgetItem(pParent, nameL);
                 pParent->insertChild(0, pNewItem);
+            } else if (pParentAction->getParent() && pParent->parent()) {
+                pT = new TAction(pParentAction->getParent(), mpHost);
+                pNewItem = new QTreeWidgetItem(pParent->parent(), nameL);
+                pParent->parent()->insertChild(0, pNewItem);
             }
-        } else {
-            goto ROOT_ACTION;
         }
-    } else {
-    //insert a new root item
-    ROOT_ACTION:
+    }
+    // Otherwise: insert a new root item
+    if (!pT) {
         name = tr("New toolbar");
         pT = new TAction(name, mpHost);
         pT->setCommandButtonUp(cmdButtonUp);
@@ -3735,11 +3727,6 @@ void dlgTriggerEditor::addAction(bool isFolder)
         pNewItem = new QTreeWidgetItem(mpActionBaseItem, nl);
         treeWidget_actions->insertTopLevelItem(0, pNewItem);
     }
-
-    if (!pT) {
-        return;
-    }
-
 
     pT->setName(name);
     pT->setCommandButtonUp(cmdButtonUp);
@@ -4670,7 +4657,7 @@ void dlgTriggerEditor::saveVar()
                 //we're trying to rename it/recast it
                 int change = 0;
                 if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
-                    //lets make sure the nametype works
+                    //let's make sure the nametype works
                     if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
                         uiNameType = LUA_TNUMBER;
                     } else {
@@ -4680,7 +4667,7 @@ void dlgTriggerEditor::saveVar()
                 }
                 variable->setNewName(newName, uiNameType);
                 if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
-                    //lets check again
+                    //let's check again
                     if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
@@ -4724,7 +4711,7 @@ void dlgTriggerEditor::saveVar()
             //we're trying to rename it/recast it
             int change = 0;
             if (newName != var->getName() || uiNameType != var->getKeyType()) {
-                //lets make sure the nametype works
+                //let's make sure the nametype works
                 if (uiNameType == LUA_TSTRING) {
                     //do nothing, we can always make key to string
                 } else if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
@@ -4736,7 +4723,7 @@ void dlgTriggerEditor::saveVar()
                 change = change | 0x1;
             }
             if (newValue != var->getValue() || uiValueType != var->getValueType()) {
-                //lets check again
+                //let's check again
                 if (uiValueType == LUA_TTABLE) {
                     newValue = "{}";
                 } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
@@ -8549,7 +8536,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
     auto pD = new dlgColorTrigger(this, pT, false, tr("Select foreground trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
@@ -8613,7 +8600,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     auto pD = new dlgColorTrigger(this, pT, true, tr("Select background trigger color for item %1").arg(QString::number(pPatternItem->mRow+1)));
     pD->setModal(true);
     // This sounds a bit iffy - prevent access to other application windows
-    // whilst we get a colour setting:
+    // while we get a colour setting:
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
@@ -8872,7 +8859,7 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     }
 }
 
-// Retrive the background-color or color setting from the previous method, the
+// Retrieve the background-color or color setting from the previous method, the
 // colors used can theoretically be:
 // * any strings of those from http://www.w3.org/TR/SVG/types.html#ColorKeywords
 // * #RGB (each of R, G, and B is a single hex digit) 3 Digits

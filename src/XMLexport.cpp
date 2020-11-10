@@ -371,6 +371,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     // that can be expressed solely with the Latin1 character encoding so that
     // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
+    host.append_attribute("HighlightHistory") = pHost->mHighlightHistory ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
@@ -444,11 +445,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     QColor outerColor;
     QColor innerColor;
     pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
-    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
-    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
-    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
-    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toUtf8().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toUtf8().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toUtf8().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toUtf8().constData();
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
@@ -457,7 +458,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         ignore = ignore.append(it.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
-    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toLatin1().constData();
+    host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
+    host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
@@ -559,13 +561,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             if (pStopWatch->persistent()) {
                 auto stopwatch = stopwatches.append_child("stopwatch");
                 // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
-                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toUtf8().constData();
                 if (pStopWatch->running()) {
                     stopwatch.append_attribute("running") = "yes";
-                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 } else {
                     stopwatch.append_attribute("running") = "no";
-                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toUtf8().constData();
                 }
                 stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
             }

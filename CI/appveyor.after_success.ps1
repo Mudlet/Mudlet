@@ -15,8 +15,6 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 } else {
   $Script:Commit = git rev-parse --short HEAD
 }
-# ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
-$Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
@@ -33,9 +31,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 } else {
   if ($Script:PublicTestBuild) {
 
-    $commitDate = Get-Date -date $(git show -s --format=%cs)
-    $yesterdaysDate = $(Get-Date).AddDays(-1).Date
-    if ($commitDate -lt $yesterdaysDate) {
+    $COMMIT_DATE = Get-Date -date $(git show -s --format="%cs")
+    $YESTERDAY_DATE = $(Get-Date).AddDays(-1).Date
+    if ($COMMIT_DATE -lt $YESTERDAY_DATE) {
       Write-Output "=== No new commits, aborting public test build generation ==="
       exit 0
     }
@@ -43,9 +41,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
+    $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    $Script:VersionAndSha = "$Env:VERSION"
   }
 
   Write-Output "=== Cloning installer project ==="
@@ -70,30 +71,39 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
+  # the last change (and the only one in the else branch) can be removed when we
+  # can arrange for the old value "mudlet_main_512x512_6XS_icon.ico" to be
+  # replaced in the mudlet/installer repository:
   if ($Script:PublicTestBuild) {
     # allow public test builds to be installed side by side with the release builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
+    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>') | Set-Content "$Script:NuSpec"
+    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>') | Set-Content "$Script:NuSpec"
+  } else {
+    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet.ico</iconUrl>') | Set-Content "$Script:NuSpec"
   }
   nuget pack "$Script:NuSpec" -Version "$Script:VersionAndSha" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
-    $TestBuildString = "-PublicTestBuild"
+    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet-PublicTestBuild.$Script:VersionAndSha.nupkg"
   } else {
-    $TestBuildString = ""
+    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet.$Script:VersionAndSha.nupkg"
   }
 
-  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
   }
 
   # fails silently if the nupkg file is not found
-  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-
+  if ($Script:PublicTestBuild) {
+    .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-ptb-2x.png --no-msi --setupIcon $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet_ptb.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+  } else {
+    .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png     --no-msi --setupIcon $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet.ico     -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+  }
   Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="

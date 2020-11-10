@@ -76,6 +76,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpProgressDialog(Q_NULLPTR)
 , mpNetworkReply(Q_NULLPTR)
 , mExpectedFileSize(0)
+, mImportRunning(false)
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
@@ -220,7 +221,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
 
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        // Uh oh, the area doesn't seem to exist as a TArea instance, lets check
+        // Uh oh, the area doesn't seem to exist as a TArea instance, let's check
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
@@ -624,7 +625,8 @@ void TMap::initGraph()
         l.id = itRoom.key();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
-        // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        // This command maps usable TRooms (key) to index of entry in locations (for route finding).
+        // It loses invalid and unusable (i.e. locked) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
@@ -854,7 +856,7 @@ void TMap::initGraph()
 
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-9 << "seconds.";
+             << "other NOT useable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
 
 bool TMap::findPath(int from, int to)
@@ -961,7 +963,7 @@ bool TMap::findPath(int from, int to)
     try {
         astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
     } catch (found_goal) {
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         t.restart();
         if (!roomidToIndex.contains(to)) {
             qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
@@ -978,7 +980,7 @@ bool TMap::findPath(int from, int to)
         do {
             previousVertex = p[currentVertex];
             if (previousVertex == currentVertex) {
-                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
                 mPathList.clear();
                 mDirList.clear();
                 mWeightList.clear(); // Reset any partial results...
@@ -1016,11 +1018,11 @@ bool TMap::findPath(int from, int to)
             currentRoomId = previousRoomId;
         } while (currentVertex != start);
 
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         return true;
     }
 
-    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-9 << "seconds.";
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
     return false;
 }
 
@@ -1129,12 +1131,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mRoomIdHash.value(mProfileName);
     }
 
-    ofs << mapLabels.size(); //anzahl der areas
+    ofs << mapLabels.size(); //number of areas
     QMapIterator<int, QMap<int, TMapLabel>> itL1(mapLabels);
     while (itL1.hasNext()) {
         itL1.next();
         int i = itL1.key();
-        ofs << itL1.value().size(); //anzahl der labels pro area
+        ofs << itL1.value().size(); //number of labels per area
         ofs << itL1.key();          //area id
         QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
         while (itL2.hasNext()) {
@@ -1451,7 +1453,6 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                                                                           |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
                                                                           |QFont::PreferNoShaping
                                                                           ));
-
         if (mVersion >= 14) {
             int areaSize;
             ifs >> areaSize;
@@ -1934,7 +1935,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
 
-    QRectF drawRect = QRectF(0, 0, width * zoom, height * zoom);
+    QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
     QPixmap pix = QPixmap(drawRect.size().toSize());
     pix.fill(Qt::transparent);
@@ -2162,17 +2163,17 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
-    if (!mXmlImportMutex.tryLock(0)) {
+    if (mImportRunning) {
         QString warnMsg = QStringLiteral("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
                                          "requested or is being imported from a local file - wait for that\n"
                                          "operation to complete (if it cannot be canceled) before retrying!");
         postMessage(warnMsg);
         return;
     }
+    mImportRunning = true;
+    // MUST clear this flag when done under ALL circumstances
 
-    // We have the mutex locked - MUST unlock it when done under ALL circumstances
     QUrl url;
-
     if (remoteUrl.isEmpty()) {
         if (!getMmpMapLocation().isEmpty()) {
             url = QUrl::fromUserInput(getMmpMapLocation());
@@ -2190,7 +2191,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                         "\"%2\".")
                                  .arg(url.toString(), url.errorString());
         postMessage(errMsg);
-        mXmlImportMutex.unlock();
+        mImportRunning = false;
         return;
     }
 
@@ -2204,7 +2205,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                             "and there is enough space. The download operation has failed.")
                                     .arg(toProfileDirPathString);
         pHost->postMessage(errMsg);
-        mXmlImportMutex.unlock();
+        mImportRunning = false;
         return;
     }
 
@@ -2260,7 +2261,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 // error message to the console
 bool TMap::importMap(QFile& file, QString* errMsg)
 {
-    if (!mXmlImportMutex.tryLock(0)) {
+    if (mImportRunning) {
         if (errMsg) {
             *errMsg = tr("loadMap: unable to perform request, a map is already being downloaded or\n"
                          "imported at user request.");
@@ -2272,12 +2273,11 @@ bool TMap::importMap(QFile& file, QString* errMsg)
         }
         return false;
     }
-    // We have the mutex and MUST unlock it when we are done
+    mImportRunning = true;
+    // MUST clear this flag when done under ALL circumstances
 
     bool result = readXmlMapFile(file, errMsg);
-
-    // Finally release the lock on the XMLimporter
-    mXmlImportMutex.unlock();
+    mImportRunning = false;
 
     return result;
 }
@@ -2395,9 +2395,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
         mLocalMapFileName.clear();
         mExpectedFileSize = 0;
-
-        // We have finished with the XMLimporter so must release the lock on it
-        mXmlImportMutex.unlock();
+        // We have finished with the XMLimporter so must clear the flag
+        mImportRunning = false;
     };
 
 
@@ -2544,3 +2543,37 @@ QString TMap::getMmpMapLocation() const
 {
     return mMmpMapLocation;
 }
+
+bool TMap::getRoomNamesPresent()
+{
+    return mUserData.contains(ROOM_UI_SHOWNAME);
+}
+
+bool TMap::getRoomNamesShown()
+{
+    return getUserDataBool(mUserData, ROOM_UI_SHOWNAME, false);
+}
+
+void TMap::setRoomNamesShown(bool shown)
+{
+    setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
+}
+
+void TMap::update()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (mpM) {
+        mpM->update();
+    }
+#endif
+    if (mpMapper) {
+        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
+        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
+
+        if (mpMapper->mp2dMap) {
+            mpMapper->mp2dMap->mNewMoveAction = true;
+            mpMapper->mp2dMap->update();
+        }
+    }
+}
+

@@ -100,14 +100,14 @@ int TForkedProcess::sendMessage(lua_State* L)
     const char* toWrite = lua_tolstring(L, 1, &stringLength);
     if (!toWrite) {
         lua_pushstring(L, "Unable to get data to send.");
-        lua_error(L);
+        return lua_error(L);
     }
     size_t writedBytes = 0;
     while (stringLength > writedBytes) {
         int res = (*forkedProcess)->write(toWrite + writedBytes, stringLength - writedBytes);
         if (res == -1) {
             lua_pushstring(L, "Unable to send data to process.");
-            lua_error(L);
+            return lua_error(L);
         }
         writedBytes += res;
     }
@@ -153,17 +153,17 @@ int TForkedProcess::startProcess(TLuaInterpreter* interpreter, lua_State* L)
     int userDataIndex = lua_gettop(L);
     if (lua_getmetatable(L, userDataIndex) != 0) {
         lua_pushstring(L, "Error: new user data should not have any metatable.");
-        lua_error(L);
-    } else {
-        if (luaL_newmetatable(L, "qPointerGCMetatable") == 1) {
-            // First time one call this method. One must register the garbage collection method.
-            int tableIndex = lua_gettop(L);
-            lua_pushstring(L, "__gc");
-            lua_pushcfunction(L, qPointerGC);
-            lua_settable(L, tableIndex);
-        }
-        lua_setmetatable(L, userDataIndex);
+        return lua_error(L);
     }
+    if (luaL_newmetatable(L, "qPointerGCMetatable") == 1) {
+        // First time one call this method. One must register the garbage collection method.
+        int tableIndex = lua_gettop(L);
+        lua_pushstring(L, "__gc");
+        lua_pushcfunction(L, qPointerGC);
+        lua_settable(L, tableIndex);
+    }
+    lua_setmetatable(L, userDataIndex);
+
     *luaMemory = new QPointer<TForkedProcess>(process);
 
     // One must return a table with the following function:

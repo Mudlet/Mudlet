@@ -21,6 +21,7 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
+configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
@@ -30,7 +31,13 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  if(APP_BUILD MATCHES "^-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD MATCHES "^-dev.+") OR (APP_BUILD MATCHES "^-test.+"))
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -70,6 +77,7 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mudlet.cpp
+    MxpTag.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -92,6 +100,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
@@ -109,7 +118,6 @@ set(mudlet_SRCS
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
-    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
@@ -196,6 +204,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mudlet.h
+    MxpTag.h
     post_guard.h
     pre_guard.h
     ScriptUnit.h
@@ -222,6 +231,7 @@ set(mudlet_HDRS
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
+    TMainConsole.h
     TMap.h
     TMatchState.h
     TMedia.h
@@ -242,7 +252,6 @@ set(mudlet_HDRS
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
-    MxpTag.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -335,6 +344,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
+target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(
   mudlet

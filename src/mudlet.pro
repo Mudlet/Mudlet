@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.9.1
+VERSION = 4.10.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -563,6 +563,7 @@ SOURCES += \
     TLabel.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TMainConsole.cpp \
     TMap.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
@@ -667,6 +668,7 @@ HEADERS += \
     TLabel.h \
     TLinkStore.h \
     TLuaInterpreter.h \
+    TMainConsole.h \
     TMap.h \
     TMatchState.h \
     TMedia.h \
@@ -1383,12 +1385,12 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-    
+
     # Set the macOS application's icon
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
     } else {
-        contains(BUILD, "-dev.+") {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             ICON = icons/mudlet_dev.icns
         } else {
             ICON = icons/mudlet.icns
@@ -1433,14 +1435,15 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon
+    # set the Windows binary icon, a proper .ico file will contains several
+    # images/layers in specific formats and is used in MORE than one way!
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             RC_ICONS = icons/mudlet_dev.ico
         } else {
-            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+            RC_ICONS = icons/mudlet.ico
         }
     }
 
@@ -1545,8 +1548,6 @@ unix:!macx {
 
 
 DISTFILES += \
-    CMakeLists.txt \
-    .clang-format \
     ../.github/pr-labeler.yml \
     ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
@@ -1583,12 +1584,6 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
@@ -1604,4 +1599,18 @@ DISTFILES += \
     ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    ../CI/travis.compile.sh \
+    .clang-format \
+    CMakeLists.txt \
+    icons/mudlet.ico \
+    icons/mudlet.icns \
+    icons/mudlet_dev.icns \
+    icons/mudlet_dev.ico \
+    icons/mudlet_ptb.icns \
+    icons/mudlet_ptb.ico \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua

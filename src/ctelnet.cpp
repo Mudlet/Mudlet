@@ -33,6 +33,7 @@
 #include "TBuffer.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TTextCodec.h"
@@ -76,6 +77,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mpHost(pH)
 , mpOutOfBandDataIncomingCodec()
 , outgoingDataCodec()
+, outgoingDataEncoder()
 , hostPort()
 , mWaitingForResponse()
 , mZstream()
@@ -92,6 +94,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
 , lastTimeOffset()
+, enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
@@ -289,7 +292,11 @@ QSslCertificate cTelnet::getPeerCertificate()
 
 QList<QSslError> cTelnet::getSslErrors()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    return socket.sslHandshakeErrors();
+#else
     return socket.sslErrors();
+#endif
 }
 #endif
 
@@ -1492,7 +1499,22 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     for (int i = 1; i < characterSetList.size(); ++i) {
                         QByteArray characterSet = characterSetList.at(i).toUpper();
 
-                        if (mAcceptableEncodings.contains(characterSet) || mAcceptableEncodings.contains(("M_" + characterSet))) {
+                        if (mAcceptableEncodings.contains(characterSet) ||
+                            mAcceptableEncodings.contains(("M_" + characterSet)) ||
+                            characterSet.contains(QByteArray("ASCII"))) { // Accept variants of ASCII
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+
+                        if (characterSet.startsWith("ISO-") &&  // Accept "ISO-####-#" variant of "ISO ####-#"
+                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(4)))) {
+                            acceptedCharacterSet = characterSet;
+                            break;
+                        }
+
+                        if (!characterSet.startsWith("ISO ") &&
+                            characterSet.startsWith("ISO") &&  // Accept "ISO####-#" variant of "ISO ####-#"
+                            mAcceptableEncodings.contains(QByteArray("ISO " + characterSet.mid(3)))) {
                             acceptedCharacterSet = characterSet;
                             break;
                         }
@@ -1505,7 +1527,15 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += OPT_CHARSET;
 
                 if (!acceptedCharacterSet.isEmpty()) {
-                    setEncoding(acceptedCharacterSet, true);
+                    if (acceptedCharacterSet.contains(QByteArray("ASCII"))) {
+                        setEncoding(QByteArray("ASCII"), true); // Force variants of ASCII to ASCII
+                    } else if (acceptedCharacterSet.startsWith("ISO-")) {
+                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(4)), true); // Align with TEncodingTable::csmEncodings
+                    } else if (acceptedCharacterSet.startsWith("ISO") && !acceptedCharacterSet.startsWith("ISO ")) {
+                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(3)), true); // Align with TEncodingTable::csmEncodings
+                    } else {
+                        setEncoding(acceptedCharacterSet, true);
+                    }
 
                     output += CHARSET_ACCEPTED;
                     output += payload[1]; // Separator
@@ -1760,7 +1790,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                      * Once we comply with that we can be certain that Mud
                      * Server encoding will NOT be an issue!
                      */
-                    cmd += termType.toLatin1().data();
+                    cmd += termType.toUtf8().constData();
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
@@ -1806,7 +1836,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString var;
@@ -1880,7 +1910,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     QString packageMessage;
@@ -2027,7 +2057,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     transcodedMsg.remove(QChar::LineFeed);
@@ -2049,7 +2079,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
     } else {
         // Message is in ASCII (though this can handle Utf-8):
-        transcodedMsg = QString::fromUtf8(msg);
+        transcodedMsg = msg;
     }
 
     // MSP specification: https://www.zuggsoft.com/zmud/msp.htm#MSP%20Specification
@@ -2309,7 +2339,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
                 }
             } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
-                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orangish
+                mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
@@ -2332,14 +2362,14 @@ void cTelnet::postMessage(QString msg)
                 }
             } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
-                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
                     temp.replace('\t', QLatin1String("        "));
                     body[_i] = temp.rightJustified(temp.length() + prefixLength);
                 }
                 if (!body.empty()) {
-                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orangish
+                    mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 }
             } else {                                                                                        // Unrecognised but still in a "[ something ] -  message..." format
                 mpHost->mpConsole->print(prefix, QColor(190, 50, 50), mpHost->mBgColor);                    // Foreground red, background bright grey
@@ -2825,7 +2855,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             }
         MAIN_LOOP_END:;
             if (recvdGA) {
-                if (!mFORCE_GA_OFF) //FIXME: wird noch nicht richtig initialisiert
+                if (!mFORCE_GA_OFF) //FIXME: isn't initialized correctly
                 {
                     mGA_Driver = true;
                     if (mCommands > 0) {

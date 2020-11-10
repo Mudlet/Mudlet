@@ -49,7 +49,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"})
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
+                 "Cleft of Dimensions"})
 {
     setupUi(this);
 
@@ -391,7 +392,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
     writeProfileData(pItem->data(csmNameRole).toString(), QStringLiteral("autoreconnect"), QString::number(state));
 }
 
-// This gets called when the QCheckBox that it is connect-ed to gets it's
+// This gets called when the QCheckBox that it is connect-ed to gets its
 // checked state set programatically AS WELL as when the user clicks on it:
 void dlgConnectionProfiles::slot_update_discord_optin(int state)
 {
@@ -771,6 +772,9 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QLatin1String("carrionfields.net")) {
         return QLatin1String(
                 "Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore player-versus-player combat that has been running continuously, and 100% free, for over 25 years.\n\nChoose from among 21 races, 17 highly customizable classes, and several cabals and religions to suit your playstyle and the story you want to tell. Our massive, original world is full of secrets and envied limited objects that take skill to acquire and great care to keep.\n\nWe like to think of ourselves as the Dark Souls of MUDs, with a community that is supportive of new players - unforgiving though our world may be. Join us for a real challenge and real rewards: adrenalin-pumping battles, memorable quests run by our volunteer immortal staff, and stories that will stick with you for a lifetime.");
+    } else if (hostUrl == QLatin1String("cod.mudmagic.com")) {
+        return QLatin1String(
+                "Do you have a soft spot for an old SNES RPG? Are you a fan of retro gaming? The Cleft of Dimensions is an adventure-driven MUD with content inspired by a variety of classic video games. Do you want to jump on goombas? Maybe you'd rather immolate them with lava or bombard them with meteors. Then again, why fight when enslavement's an option? If that doesn't work out, you've got this motorcycle you could crash into them. The Cleft has 16 character classes, each with a distinctive playstyle.\n\nGameplay in the Cleft features exploration, puzzles, quests, and combat. At time of writing, the world contains 98 areas. Quests range from deciphering treasure maps and committing industrial espionage to seeking the blessings of the mana spirits or just going fishing. A remort system facilitates repeat playthroughs to find content you missed the first time around.\n\nThe Cleft opened in July 2000 and has been in active development ever since. We're always innovating. Recent features include Discord integration (https://discord.gg/cSqkpbu) and areas written with artificial intelligence. Check us out!");
     } else if (hostUrl == QLatin1String("godwars2.org")) {
         return QLatin1String(
                 "God Wars II is a fast and furious combat mud, designed to test player skill in terms of pre-battle preparation and on-the-spot reflexes, as well as the ability to adapt quickly to "
@@ -915,6 +919,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Carrion Fields")) {
             host_url = QStringLiteral("carrionfields.net");
         }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            host_url = QStringLiteral("cod.mudmagic.com");
+        }
         if (profile_name == QStringLiteral("3Scapes")) {
             host_url = QStringLiteral("3k.org");
         }
@@ -1019,6 +1026,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             host_port = QStringLiteral("4449");
             port_ssl_tsl->setChecked(false);
         }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            host_port = QStringLiteral("4354");
+            port_ssl_tsl->setChecked(false);
+        }
         if (profile_name == QStringLiteral("3Scapes")) {
             //host_url = QStringLiteral("3k.org");
             host_port = QStringLiteral("3200");
@@ -1107,7 +1118,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()
-    // will return 0 - which just happens to be Qt::Unchecked() but lets not
+    // will return 0 - which just happens to be Qt::Unchecked() but let's not
     // rely on that...
     val = readProfileData(profile_name, QStringLiteral("discordserveroptin"));
     if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
@@ -1148,6 +1159,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Carrion Fields")) {
             val = QStringLiteral("<center><a href='http://www.carrionfields.net'>www.carrionfields.net</a></center>");
+        }
+        if (profile_name == QStringLiteral("Cleft of Dimensions")) {
+            val = QStringLiteral("<center><a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a></center>");
         }
         if (profile_name == QStringLiteral("Aetolia")) {
             val = QStringLiteral("<center><a href='http://www.aetolia.com/'>http://www.aetolia.com</a></center>");
@@ -1241,8 +1255,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
-    QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
-    if (loadedProfiles.contains(profile_name)) {
+    if (mudlet::self()->getHostManager().getHost(profile_name)) {
         profile_name_entry->setReadOnly(true);
         host_name_entry->setReadOnly(true);
         port_entry->setReadOnly(true);
@@ -1808,6 +1821,26 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Cleft of Dimensions");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pItem = new QListWidgetItem();
+        pItem->setData(csmNameRole, mudServer);
+        pItem->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(mudServer));
+        pItem->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
+
+        profiles_tree_widget->addItem(pItem);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/cleftofdimensions.png"));
+            pItem->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pItem);
+        }
+        description = getDescription(QStringLiteral("cod.mudmagic.com"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
 
 #if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
@@ -2322,7 +2355,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool preInstallPackages = false;
-    mudlet::self()->hideMudletsVariables(pHost);
+    pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
         preInstallPackages = true;
     } else {
@@ -2371,7 +2404,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")).toLatin1(), false);
+        pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
@@ -2622,7 +2655,7 @@ void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPasswor
     if (mpAction_revealPassword->isChecked()) {
         character_password_entry->setEchoMode(QLineEdit::Normal);
         // In practice I could not get the icon to change based upon supplying
-        // different QPixmaps for the QIcon for different states - so lets do it
+        // different QPixmaps for the QIcon for different states - so let's do it
         // directly:
         mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
         mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));

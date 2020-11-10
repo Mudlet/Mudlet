@@ -1,9 +1,7 @@
 name: Update autocompletion in Mudlet
 
 on:
-  repository_dispatch:
-    types: update-autocompletion
-
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * fri'
 

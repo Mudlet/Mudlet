@@ -627,7 +627,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
  * reduced by the margin (0-40) as a percentage). This margin is defaulted to
  * 10%.
  */
-bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin )
+bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin, qreal minFontSize )
 {
     QFont _font = font;
 
@@ -639,28 +639,28 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
         return false;
     }
 
-    qreal fontSize = font.pointSizeF();
+    qreal fontSize = qMax(minFontSize, font.pointSizeF());  // protect against too-small initial value
     QRectF testRect(boundaryRect.width() * (100 - percentageMargin) / 200.0,
                     boundaryRect.height() * (100 - percentageMargin) / 200.0,
                     boundaryRect.width() * (100 - percentageMargin) / 100.0,
                     boundaryRect.height() * (100 - percentageMargin) / 100.);
-    // Increase the test font by one, then check to see that it does NOT fit
+
+    // Increase the test font (using somewhat-large steps) until it does not fit any more
     QRectF neededRect;
     QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
     QPainter _painter(&_pixmap);
     do {
-        fontSize = fontSize + 1.0;
+        fontSize *= 1.2;
         _font.setPointSizeF(fontSize);
         _painter.setFont(_font);
 
         neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
     } while (testRect.contains(neededRect));
 
-    // Now decrease until it does
+    // Now decrease (using smaller steps) until it fits again
     bool isSizeTooSmall = false;
-    static qreal minFontSize = 7.0;
     do {
-        fontSize = fontSize - 1.0;
+        fontSize /= 1.05;
         _font.setPointSizeF(fontSize);
         if (fontSize < minFontSize) {
             isSizeTooSmall = true;
@@ -680,12 +680,15 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 }
 
 // Helper that refactors out code to start a speedwalk:
-void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
+void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
 {
     mTarget = speedWalkTargetRoomId;
     if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
         mpMap->mTargetID = speedWalkTargetRoomId;
-        if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
+
+        if (mpHost->checkForCustomSpeedwalk()) {
+            mpHost->startSpeedWalk(speedWalkStartRoomId, speedWalkTargetRoomId);
+        } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
             mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
@@ -701,16 +704,34 @@ void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWal
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
     QRectF roomRectangle;
+    QRectF roomNameRectangle;
+    double realHeight;
     if (isGridMode) {
+        realHeight = mRoomHeight;
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
     } else {
-        roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
+        // this dance is necessary to put the name just below the room rect, later
+        realHeight = mRoomHeight * rSize;
+        roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - realHeight / 2.0, mRoomWidth * rSize, realHeight);
     }
+
+    roomNameRectangle = roomRectangle.adjusted(-2000, realHeight, 2000, realHeight);
+
+    if (showRoomName) {
+        showRoomName = !pRoom->name.isEmpty() && realHeight > 2 && getUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, false);
+    }
+    if (showRoomName) {
+        painter.save();
+        painter.setFont(mapNameFont);
+        roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::TextSingleLine|Qt::AlignTop|Qt::AlignCenter, pRoom->name);
+        painter.restore();
+    }
+
     // We should be using the full area for testing for clicks even though
     // we only show a smaller one if the user has dialed down the room size
     // on NON-grid mode areas:
@@ -798,7 +819,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
-            initiateSpeeWalk(speedWalkStartRoomId, currentRoomId);
+            initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
         }
 
     } else {
@@ -900,8 +921,48 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
         }
 
     }
+    // If there is a room name, draw it?
+    if (showRoomName) {
+        painter.save();
 
-    // Change these from const to static to tweak them whilst running in a debugger...!
+        QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
+        if (!namePosData.isEmpty()) {
+            QPointF nameOffset {0, 0};
+            QStringList posXY = namePosData.split(" ");
+            bool ok1, ok2;
+            double posX, posY;
+
+            switch (posXY.count()) {
+                case 1:
+                // one value: treat as Y offset
+                posY = posXY[0].toDouble(&ok1);
+                if (ok1) {
+                    nameOffset.setY(posY);
+                }
+                break;
+                case 2:
+                posX = posXY[0].toDouble(&ok1);
+                posY = posXY[1].toDouble(&ok2);
+                if (ok1 && ok2) {
+                    nameOffset.setX(posX);
+                    nameOffset.setY(posY);
+                }
+                break;
+            }
+            roomNameRectangle.adjust(mRoomWidth * nameOffset.x(),
+                                    mRoomHeight * nameOffset.y(),
+                                    mRoomWidth * nameOffset.x(),
+                                    mRoomHeight * nameOffset.y());
+        }
+        auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
+                                    ? Qt::black : Qt::white);
+        painter.setPen(QPen(roomNameColor));
+        painter.setFont(mapNameFont);
+        painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
+        painter.restore();
+    }
+
+    // Change these from const to static to tweak them while running in a debugger...!
     const float allInsideTipOffsetFactor = 1 / 20.0f;
     const float upDownXOrYFactor = 1 / 3.1f;
     const float inOuterXFactor = 1 / 4.5f;
@@ -1168,7 +1229,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
                 painter.drawPath(myPath);
 
                 mPick = false;
-                initiateSpeeWalk(speedWalkStartRoomId, it.key());
+                initiateSpeedWalk(speedWalkStartRoomId, it.key());
             }
         }
     }
@@ -1227,6 +1288,22 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mMapSymbolFont.setOverline(false);
     mMapSymbolFont.setStrikeOut(false);
 
+    // the room name's font defaults to the symbol's
+    // but may be overridden
+    auto mapNameFont = mpMap->mMapSymbolFont;
+    QString fontName = mpMap->mUserData.value(ROOM_UI_NAMEFONT);
+    if (!fontName.isEmpty()) {
+        QFont font;
+        if (font.fromString(fontName)) {
+            mapNameFont = font;
+        }
+    }
+    mapNameFont.setBold(false);
+    mapNameFont.setItalic(false);
+    mapNameFont.setUnderline(false);
+    mapNameFont.setOverline(false);
+    mapNameFont.setStrikeOut(false);
+
     QList<int> exitList;
     QList<int> oneWayExits;
     int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
@@ -1252,9 +1329,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     int playerAreaID = pPlayerRoom->getArea();
     if ((!__Pick && !mShiftMode) || mpMap->mNewMove) {
         mShiftMode = true;
-        // das ist nur hier von Interesse, weil es nur hier einen map editor
-        // gibt -> map wird unter Umstaenden nicht geupdated, deshalb force ich
-        // mit mNewRoom ein map update bei centerview()
+        // that's of interest only here because the map editor is here ->
+        // map might not be updated, thus I force a map update on centerview()
+        // with mNewRoom
         mpMap->mNewMove = false;
 
         if (!mpMap->mpRoomDB->getArea(playerAreaID)) {
@@ -1289,6 +1366,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - ox));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - oy));
     QFont roomVNumFont = mpMap->mMapSymbolFont;
+
     bool isFontBigEnoughToShowRoomVnum = false;
     if (mShowRoomID) {
         /*
@@ -1321,6 +1399,20 @@ void T2DMap::paintEvent(QPaintEvent* e)
         roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
 
         isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
+    }
+
+    bool showRoomNames = mpMap->getRoomNamesShown() && !playerArea->gridMode;
+    if (showRoomNames) {
+        /*
+         * Like above, except that we use the room height as the font size.
+         */
+        mapNameFont.setBold(true);
+
+        mapNameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
+
+        double sizeAdjust = 0; // TODO: add userdata setting to adjust this
+        mapNameFont.setPointSizeF(static_cast<qreal>(mRoomWidth) * rSize * pow(1.1, sizeAdjust) / 2.0);
+        showRoomNames = (mapNameFont.pointSizeF() > 3.0);
     }
 
     TArea* pArea = playerArea;
@@ -1420,12 +1512,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, __Pick);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -2555,7 +2647,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                     // start it at the centre of the room
                                     olx = room->x;
                                     oly = room->y;
-                                    //FIXME: exit richtung beachten, um den Linienanfangspunkt zu berechnen
+                                    //FIXME: use exit direction to calculate start of line
                                     lx = _pL[0].x();
                                     ly = _pL[0].y();
                                 } else {
@@ -2736,7 +2828,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
             mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
             mMultiSelectionListWidget.clear();
-            // Do NOT sort whilst inserting items!
+            // Do NOT sort while inserting items!
             mMultiSelectionListWidget.setSortingEnabled(false);
             QSetIterator<int> itRoom = mMultiSelectionSet;
             mIsSelectionUsingNames = false;
@@ -3298,7 +3390,7 @@ void T2DMap::slot_customLineRemovePoint()
     } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
-        // allow it's deletion if there is at least another one left.
+        // allow its deletion if there is at least another one left.
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
     }
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
@@ -3864,7 +3956,7 @@ void T2DMap::slot_spread()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
@@ -3872,8 +3964,8 @@ void T2DMap::slot_spread()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    int dx = pR_centerRoom->x * (1 - spread);
-    int dy = pR_centerRoom->y * (1 - spread);
+    int dx = pR_centerRoom->x;
+    int dy = pR_centerRoom->y;
     QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -3881,10 +3973,8 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        pMovingR->x *= spread;
-        pMovingR->y *= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
+        pMovingR->x = (pMovingR->x - dx) * spread + dx;
+        pMovingR->y = (pMovingR->y - dy) * spread + dy;
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
         while (itCustomLine.hasNext()) {
@@ -3892,8 +3982,8 @@ void T2DMap::slot_spread()
             QList<QPointF> customLinePoints = itCustomLine.value();
             for (auto& customLinePoint : customLinePoints) {
                 QPointF movingPoint = customLinePoint;
-                customLinePoint.setX(static_cast<float>(movingPoint.x() * spread + dx));
-                customLinePoint.setY(static_cast<float>(movingPoint.y() * spread + dy));
+                customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -3926,7 +4016,7 @@ void T2DMap::slot_shrink()
                                          "factor of:"),
                                       5,          // Initial value
                                       1,          // Minimum value
-                                      2147483647, // Maximum value
+                                      1000,       // Maximum value
                                       1,          // Step
                                       &isOk);
     if (spread == 1 || !isOk) {
@@ -3934,8 +4024,8 @@ void T2DMap::slot_shrink()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    int dx = pR_centerRoom->x * (1 - 1 / spread);
-    int dy = pR_centerRoom->y * (1 - 1 / spread);
+    int dx = pR_centerRoom->x;
+    int dy = pR_centerRoom->y;
 
     QSetIterator<int> itSelectionRoom(mMultiSelectionSet);
     while (itSelectionRoom.hasNext()) {
@@ -3943,10 +4033,8 @@ void T2DMap::slot_shrink()
         if (!pMovingR) {
             continue;
         }
-        pMovingR->x /= spread;
-        pMovingR->y /= spread;
-        pMovingR->x += dx;
-        pMovingR->y += dy;
+        pMovingR->x = (pMovingR->x - dx) / spread + dx;
+        pMovingR->y = (pMovingR->y - dy) / spread + dy;
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
         while (itCustomLine.hasNext()) {
@@ -3954,8 +4042,8 @@ void T2DMap::slot_shrink()
             QList<QPointF> customLinePoints = itCustomLine.value();
             for (auto& customLinePoint : customLinePoints) {
                 QPointF movingPoint = customLinePoint;
-                customLinePoint.setX(static_cast<float>(movingPoint.x() / spread + dx));
-                customLinePoint.setY(static_cast<float>(movingPoint.y() / spread + dy));
+                customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) / spread + dx));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) / spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -4433,7 +4521,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
                 mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
                 mMultiSelectionListWidget.clear();
-                // Do NOT sort whilst inserting items!
+                // Do NOT sort while inserting items!
                 mMultiSelectionListWidget.setSortingEnabled(false);
                 QSetIterator<int> itRoom = mMultiSelectionSet;
                 mIsSelectionUsingNames = false;
@@ -4492,8 +4580,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             return;
         }
 
-        int dx = qRound((event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0) + 1.0) - room->x;
-        int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy - 1.0) - room->y;
+        int dx = qRound((event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0)) - room->x;
+        int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy) - room->y;
         QSetIterator<int> itRoom = mMultiSelectionSet;
         while (itRoom.hasNext()) {
             room = mpMap->mpRoomDB->getRoom(itRoom.next());
