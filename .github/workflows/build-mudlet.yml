@@ -91,9 +91,9 @@ jobs:
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
 
         # Install dependencies not available on machine
-        InstallLibzip
-        set-psdebug -trace 1
         InstallZlib
+        set-psdebug -trace 1
+        InstallLibzip
       shell: powershell
 
     - name: (Linux Clang) change compiler
