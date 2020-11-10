@@ -92,7 +92,7 @@ jobs:
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
 
         # Install dependencies not available on machine
-        InstallLibzip
+        # InstallLibzip
         # InstallZlib
       shell: powershell
 
