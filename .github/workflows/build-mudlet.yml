@@ -64,7 +64,7 @@ jobs:
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache
-        
+
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=/tmp/ccache" >> $GITHUB_ENV
 
@@ -75,7 +75,7 @@ jobs:
         sudo apt update
         # These aren't available or don't work well in vcpkg
         sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5 
-        
+ 
         echo "CCACHE_DIR=/tmp/ccache" >> $GITHUB_ENV
 
     - name: (Linux Clang) change compiler
