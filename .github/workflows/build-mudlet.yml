@@ -87,22 +87,26 @@ jobs:
         # Setup pre-installed Boost to be used
         echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
 
+        # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        echo "WORKING_BASE_DIR has been set to $env:WORKING_BASE_DIR"
-        . ${{github.workspace}}\CI\appveyor.functions.ps1
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
+
+        . ${{github.workspace}}\CI\appveyor.functions.ps1
+
         # Libzip install complains when \bin is missing
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
+
         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
         $NoShPath = filterPathForSh
 
-        # Install dependencies not available on machine
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
         ls $env:MINGW_BASE_DIR
+
+        tree /f $env:MINGW_BASE_DIR
       shell: powershell
 
     - name: (Linux Clang) change compiler
