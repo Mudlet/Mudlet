@@ -110,9 +110,7 @@ jobs:
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
-        ls $env:MINGW_BASE_DIR
-
-        tree $env:MINGW_BASE_DIR
+        echo "ZIP_DIR=$env:MINGW_BASE_DIR\include" >> $GITHUB_ENV
       shell: powershell
 
     - name: (Linux Clang) change compiler
