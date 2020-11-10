@@ -98,7 +98,7 @@ void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPositi
     }
 
     mTimerMap.insert(pT->getID(), pT);
-    // kein lookup table eintrag siehe addTimer()
+    // no lookup table entry - see addTimer()
 }
 
 void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
