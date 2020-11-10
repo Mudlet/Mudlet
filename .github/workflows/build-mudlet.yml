@@ -74,11 +74,17 @@ jobs:
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
+    # Linux Clang still uses the gcc_64 folder in Qt, so generate the compile string specially for it
+    - name: Generate Cmake arguments
+      run: |
+        echo "CMAKE_ARGS=--target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/${{matrix.compiler}}/" >> $GITHUB_ENV
+
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
          echo "CXX=clang++" >> $GITHUB_ENV
          echo "CC=clang" >> $GITHUB_ENV
+         echo "CMAKE_ARGS=--target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/gcc_64/" >> $GITHUB_ENV
 
     - name: (Qt 5.11) disable optional components
       if: matrix.qt == '5.11.0'
@@ -104,7 +110,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/gcc_64/
+        cmakeAppendedArgs: ${{env.CMAKE_ARGS}}
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
