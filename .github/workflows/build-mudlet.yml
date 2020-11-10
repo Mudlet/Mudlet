@@ -99,10 +99,10 @@ jobs:
         $NoShPath = filterPathForSh
 
         # Install dependencies not available on machine
-        InstallZlib
-        InstallLibzip
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
 
-        tree $env:MINGW_BASE_DIR /f
+        ls $env:MINGW_BASE_DIR
       shell: powershell
 
     - name: (Linux Clang) change compiler
