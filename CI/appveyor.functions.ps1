@@ -329,6 +329,7 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
+  echo "PATH FIXED TO $Env:Path"
   DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
   echo "Showing $workingBaseDir"
   ls "$workingBaseDir"
