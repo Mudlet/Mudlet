@@ -836,8 +836,6 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    normaliseSelection();
-
     // clang-format off
     for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
          y < endY;
