@@ -106,7 +106,8 @@ jobs:
 
         ls $env:MINGW_BASE_DIR
 
-        tree /f $env:MINGW_BASE_DIR
+        Install-Module Tree
+        Get-ChildItemTree $env:MINGW_BASE_DIR
       shell: powershell
 
     - name: (Linux Clang) change compiler
