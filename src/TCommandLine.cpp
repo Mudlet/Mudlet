@@ -350,9 +350,6 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
                 historyMove(MOVE_DOWN);
-                if (!mpHost->mHighlightHistory){
-                    moveCursor(QTextCursor::End);
-                }
                 ke->accept();
                 return true;
 
@@ -387,9 +384,6 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
                 historyMove(MOVE_UP);
-                if (!mpHost->mHighlightHistory){
-                    moveCursor(QTextCursor::End);
-                }
                 ke->accept();
                 return true;
 
@@ -1020,7 +1014,11 @@ void TCommandLine::historyMove(MoveDirection direction)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
+        if (mpHost->mHighlightHistory) {
+            selectAll();
+        } else {
+            moveCursor(QTextCursor::End);
+        }
         adjustHeight();
     } else {
         mAutoCompletionCount += shift;
