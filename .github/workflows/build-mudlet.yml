@@ -47,7 +47,6 @@ jobs:
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
-      if: steps.cache-qt.outputs.cache-hit != 'true'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
@@ -104,7 +103,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/gcc_64/
+        cmakeAppendedArgs: '--target test -G Ninja'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
