@@ -86,7 +86,7 @@ jobs:
         echo "WORKING_BASE_DIR has been set to $env:WORKING_BASE_DIR"
         . ${{github.workspace}}\CI\appveyor.functions.ps1
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
-        set-psdebug -trace 2
+        set-psdebug -trace 1
         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
