@@ -41,6 +41,11 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
+    enum MoveDirection {
+        MOVE_UP,
+        MOVE_DOWN
+    };
+
 public:
     enum CommandLineTypeFlag {
         UnknownType = 0x0,     // Should not be encountered but left as a trap value
@@ -74,8 +79,7 @@ private:
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);
-    void historyUp(QKeyEvent*);
-    void historyDown(QKeyEvent*);
+    void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
