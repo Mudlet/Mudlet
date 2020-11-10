@@ -373,7 +373,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                historyDown(ke);
+                historyMove(MOVE_DOWN);
                 if (!mpHost->mHighlightHistory){
                     moveCursor(QTextCursor::End);
                 }
@@ -410,7 +410,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
-                historyUp(ke);
+                historyMove(MOVE_UP);
                 if (!mpHost->mHighlightHistory){
                     moveCursor(QTextCursor::End);
                 }
@@ -1019,42 +1019,19 @@ void TCommandLine::handleAutoCompletion()
     mAutoCompletionCount = -1;
 }
 
-// cursor down: cycles chronologically through the command history.
-
-void TCommandLine::historyDown(QKeyEvent* event)
-{
-    if (mHistoryList.empty()) {
-        return;
-    }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
-        mHistoryBuffer--;
-        if (mHistoryBuffer >= mHistoryList.size()) {
-            mHistoryBuffer = mHistoryList.size() - 1;
-        }
-        if (mHistoryBuffer < 0) {
-            mHistoryBuffer = 0;
-        }
-        setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
-        adjustHeight();
-    } else {
-        mAutoCompletionCount--;
-        handleAutoCompletion();
-    }
-}
-
-// cursor up: turns on autocompletion mode and cycles through all possible matches
+// cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
-void TCommandLine::historyUp(QKeyEvent* event)
+void TCommandLine::historyMove(MoveDirection direction)
 {
     if (mHistoryList.empty()) {
         return;
     }
+    int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
         if (toPlainText().size() != 0) {
-            mHistoryBuffer++;
+            mHistoryBuffer += shift;
         }
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
@@ -1066,7 +1043,7 @@ void TCommandLine::historyUp(QKeyEvent* event)
         selectAll();
         adjustHeight();
     } else {
-        mAutoCompletionCount++;
+        mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
 }
