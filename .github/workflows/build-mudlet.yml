@@ -81,6 +81,12 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
+    - name: install tree
+      uses: crazy-max/ghaction-chocolatey@v1
+      if: runner.os == 'Windows'
+      with:
+        args: install tree
+
     - name: (Windows) Install zip dependencies
       if: runner.os == 'Windows'
       run: |
@@ -106,7 +112,6 @@ jobs:
 
         ls $env:MINGW_BASE_DIR
 
-        choco install tree
         Get-ChildItemTree $env:MINGW_BASE_DIR
       shell: powershell
 
