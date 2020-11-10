@@ -58,6 +58,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 , mpHunspellCodec_system(nullptr)
 , mLogFileName(QString(""))
 , mLogToLogFile(false)
+, mClipboard(pH)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -485,7 +486,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
 
-        pC->setMiniConsoleFontSize(12);
+        pC->setFontSize(12);
         pC->show();
 
         return pC;

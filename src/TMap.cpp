@@ -221,7 +221,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
 
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        // Uh oh, the area doesn't seem to exist as a TArea instance, lets check
+        // Uh oh, the area doesn't seem to exist as a TArea instance, let's check
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
@@ -625,7 +625,8 @@ void TMap::initGraph()
         l.id = itRoom.key();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
-        // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        // This command maps usable TRooms (key) to index of entry in locations (for route finding).
+        // It loses invalid and unusable (i.e. locked) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
@@ -1130,12 +1131,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mRoomIdHash.value(mProfileName);
     }
 
-    ofs << mapLabels.size(); //anzahl der areas
+    ofs << mapLabels.size(); //number of areas
     QMapIterator<int, QMap<int, TMapLabel>> itL1(mapLabels);
     while (itL1.hasNext()) {
         itL1.next();
         int i = itL1.key();
-        ofs << itL1.value().size(); //anzahl der labels pro area
+        ofs << itL1.value().size(); //number of labels per area
         ofs << itL1.key();          //area id
         QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
         while (itL2.hasNext()) {

@@ -248,7 +248,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
         // So try and make it
         mpRoomDB->addArea(areaID);
         pA = mpRoomDB->getArea(areaID);
-        if (!pA) { // Oh, dear THAT didn't work
+        if (!pA) { // Oh dear, THAT didn't work
             QString error = qApp->translate("TRoom", "No area created!  Requested area ID=%1. Note: Area IDs must be > 0").arg(areaID);
             mpRoomDB->mpMap->logError(error);
             return false;

@@ -93,7 +93,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.10.0
+VERSION = 4.10.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -1548,8 +1548,6 @@ unix:!macx {
 
 
 DISTFILES += \
-    CMakeLists.txt \
-    .clang-format \
     ../.github/pr-labeler.yml \
     ../.github/CODEOWNERS.md \
     ../.github/CODE_OF_CONDUCT.md \
@@ -1586,12 +1584,6 @@ DISTFILES += \
     ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
-    mudlet-lua/lua/ldoc.css \
-    mudlet-lua/genDoc.sh \
-    mudlet-lua/tests/README.md \
-    mudlet-lua/tests/DB.lua \
-    mudlet-lua/tests/GUIUtils.lua \
-    mudlet-lua/tests/Other.lua \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
@@ -1607,4 +1599,18 @@ DISTFILES += \
     ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/qt-silent-install.qs \
-    ../CI/travis.compile.sh
+    ../CI/travis.compile.sh \
+    .clang-format \
+    CMakeLists.txt \
+    icons/mudlet.ico \
+    icons/mudlet.icns \
+    icons/mudlet_dev.icns \
+    icons/mudlet_dev.ico \
+    icons/mudlet_ptb.icns \
+    icons/mudlet_ptb.ico \
+    mudlet-lua/lua/ldoc.css \
+    mudlet-lua/genDoc.sh \
+    mudlet-lua/tests/README.md \
+    mudlet-lua/tests/DB.lua \
+    mudlet-lua/tests/GUIUtils.lua \
+    mudlet-lua/tests/Other.lua
