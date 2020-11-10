@@ -75,9 +75,13 @@ jobs:
         sudo apt update
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
-    - name: (Windows) Install boost dependency
+
+    - name: (Windows) Install zip dependencies
       if: runner.os == 'Windows'
       run: |
+        # Setup pre-installed Boost to be used
+        echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
+
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         echo "WORKING_BASE_DIR has been set to $env:WORKING_BASE_DIR"
         . ${{github.workspace}}\CI\appveyor.functions.ps1
@@ -86,7 +90,8 @@ jobs:
         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
-        InstallBoost "${{github.workspace}}"
+
+        # Install dependencies not available on machine
         InstallLibzip
         InstallZlib
       shell: powershell
