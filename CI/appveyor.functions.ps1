@@ -74,9 +74,6 @@ function script:exec {
   if($parameter.Length -eq 0) {
     $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   } else {
-    echo "Checking 7z exists, PATH is $env:PATH..."
-    7z
-    echo "Running $cmd with parameter $parameter"
     $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
@@ -117,7 +114,6 @@ function DownloadFile([string] $url, [string] $outputFile, [bool] $bigDownload =
     $stepText = "$stepText, this is a huge download and may take a while"
   }
   Step $stepText
-  echo "Downloading into $workingBaseDir\$outputFile"
   (New-Object System.Net.WebClient).DownloadFile($url, "$workingBaseDir\$outputFile") >> "$logFile" 2>&1
 }
 
@@ -315,7 +311,6 @@ function InstallSqlite() {
 
 function InstallZlib() {
   DownloadFile "http://zlib.net/zlib-1.2.11.tar.gz" "zlib-1.2.11.tar.gz"
-  ls "$workingBaseDir"
   ExtractTar "$workingBaseDir\zlib-1.2.11.tar.gz" "$workingBaseDir\zlib"
   Set-Location "$workingBaseDir\zlib\zlib-1.2.11"
   RunMake "win32/Makefile.gcc"
@@ -329,16 +324,11 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  echo "PATH FIXED TO $Env:Path"
   DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
-  echo "Showing $workingBaseDir"
-  ls "$workingBaseDir"
-  echo "Get-ItemProperty $workingBaseDir\libzip.tar.gz"
   Get-ItemProperty "$workingBaseDir\libzip.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
   Set-Location "$workingBaseDir\libzip\libzip-1.5.2"
   if (!(Test-Path -Path "build" -PathType Container)) {
-    Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build

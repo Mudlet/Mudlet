@@ -100,7 +100,6 @@ jobs:
 
         # Install dependencies not available on machine
         InstallZlib
-        set-psdebug -trace 1
         InstallLibzip
       shell: powershell
 
