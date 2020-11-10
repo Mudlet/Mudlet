@@ -38,6 +38,7 @@ jobs:
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
+      # 5.11 cache restoration goes awry
       if: matrix.qt != '5.11.0'
       id: cache-qt
       with:
@@ -73,6 +74,12 @@ jobs:
         # These aren't available or don't work well in vcpkg
         sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
+    - name: (Linux Clang) change compiler
+      if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
+      run: |
+         echo "CXX=clang++" >> $GITHUB_ENV
+         echo "CC=clang" >> $GITHUB_ENV
+
     - name: (Qt 5.11) disable optional components
       if: matrix.qt == '5.11.0'
       run: |
@@ -97,7 +104,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/${{matrix.compiler}}/
+        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/gcc_64/
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
