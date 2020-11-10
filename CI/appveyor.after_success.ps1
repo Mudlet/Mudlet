@@ -71,39 +71,31 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
-  # the last change (and the only one in the else branch) can be removed when we
-  # can arrange for the old value "mudlet_main_512x512_6XS_icon.ico" to be
-  # replaced in the mudlet/installer repository:
   if ($Script:PublicTestBuild) {
     # allow public test builds to be installed side by side with the release builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
-    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>') | Set-Content "$Script:NuSpec"
-    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_ptb.ico</iconUrl>') | Set-Content "$Script:NuSpec"
-  } else {
-    (Get-Content "$Script:NuSpec").replace('<iconUrl>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet_main_512x512_6XS_icon.ico</iconUrl>', '<title>https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/icons/mudlet.ico</iconUrl>') | Set-Content "$Script:NuSpec"
   }
   nuget pack "$Script:NuSpec" -Version "$Script:VersionAndSha" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($Script:PublicTestBuild) {
-    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet-PublicTestBuild.$Script:VersionAndSha.nupkg"
+    $TestBuildString = "-PublicTestBuild"
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet_ptb.ico"
   } else {
-    $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet.$Script:VersionAndSha.nupkg"
+    $TestBuildString = ""
+    $InstallerIconFile = "${Env:APPVEYOR_BUILD_FOLDER}\src\icons\mudlet.ico"
   }
 
+  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
   }
 
   # fails silently if the nupkg file is not found
-  if ($Script:PublicTestBuild) {
-    .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-ptb-2x.png --no-msi --setupIcon $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet_ptb.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-  } else {
-    .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png     --no-msi --setupIcon $Env:APPVEYOR_BUILD_FOLDER\src\icons\mudlet.ico     -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
-  }
+  .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
   Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="
