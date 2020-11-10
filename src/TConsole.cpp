@@ -1150,6 +1150,11 @@ void TConsole::finalize()
 void TConsole::scrollDown(int lines)
 {
     mUpperPane->scrollDown(lines);
+    if (!mUpperPane->mIsTailMode &&
+        (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
+        mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
+        mUpperPane->scrollDown(100);                             // needs another scroll to force mIsTailMode
+    }
     if (mUpperPane->mIsTailMode) {
         mLowerPane->mCursorY = buffer.lineBuffer.size();
         mLowerPane->hide();
@@ -1162,11 +1167,15 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
+    bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
+    if (lowerAppears) {
+        QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+    }
     mUpperPane->scrollUp(lines);
 }
 
