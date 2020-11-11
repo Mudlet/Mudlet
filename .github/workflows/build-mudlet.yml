@@ -84,6 +84,9 @@ jobs:
     - name: (Windows) Install zip dependencies
       if: runner.os == 'Windows'
       run: |
+        # Use pre-installed Boost
+        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
+
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
