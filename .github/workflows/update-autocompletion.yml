@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: leafo/gh-actions-lua@v5
+    - uses: leafo/gh-actions-lua@v7
       with:
         luaVersion: "5.1.5"
     - uses: actions/setup-node@v1.1.0
