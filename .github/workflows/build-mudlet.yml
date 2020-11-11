@@ -81,16 +81,10 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-    - name: install tree
-      uses: crazy-max/ghaction-chocolatey@v1
-      if: runner.os == 'Windows'
-      with:
-        args: install tree
-
     - name: (Windows) Install zip dependencies
       if: runner.os == 'Windows'
       run: |
-        # Setup pre-installed Boost to be used
+        # Use pre-installed Boost
         echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
 
         # Install dependencies not available on machine
