@@ -8031,22 +8031,22 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/mapper.ui" line="293"/>
       <source>⯇</source>
-      <translation type="unfinished"/>
+      <translation>⯇</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="333"/>
       <source>⯆</source>
-      <translation type="unfinished"/>
+      <translation>⯆</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="373"/>
       <source>⯅</source>
-      <translation type="unfinished"/>
+      <translation>⯅</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="413"/>
       <source>⯈</source>
-      <translation type="unfinished"/>
+      <translation>⯈</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="459"/>
@@ -8557,7 +8557,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="727"/>
       <source>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</source>
       <comment>This dictionary prefers the British &apos;ise&apos; form over the American &apos;ize&apos; one.</comment>
-      <translation type="unfinished"/>
+      <translation>英语（英国）——使用&apos;ise&apos;而非&apos;ize&apos;。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="728"/>
@@ -9974,7 +9974,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3066"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;以较短的时间间隔重放每一步。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3070"/>
@@ -9984,7 +9984,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3073"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;以较长的时间间隔重放每一步。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3083"/>
@@ -10003,7 +10003,9 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="3726"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;关于Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n 已经可以进行更新！&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3744"/>
@@ -10209,7 +10211,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="201"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;For some encodings on some Operating Systems Mudlet itself has to provide the codec needed; if that is the case for this Mudlet then there will be a &lt;tt&gt;m &lt;/tt&gt; prefixed applied to those encoding names (so if they have errors the blame can be applied correctly!)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;若你正在游玩非英语游戏，本应出现正常文本的地方出现了�，或是像&lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt;之类的特殊字符，你应该尝试将文本编码切换成UTF-8或你的游戏推荐的编码。&lt;/p&gt;&lt;p&gt;在某些操作系统上，Mudlet不得不使用自带的编码解码器。在这种情况下，对应的编码名称前将有&lt;tt&gt;m &lt;/tt&gt;的前缀。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="302"/>
