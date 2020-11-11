@@ -1,101 +1,38 @@
-# Locate PCRE library
-# This module exports the following targets
+# Copyright (C) 2007-2009 LuaDist.
+# Created by Peter Kapec <kapecp@gmail.com>
+# Redistribution and use of this file is allowed according to the terms of the MIT license.
+# For details see the COPYRIGHT file distributed with LuaDist.
+#	Note:
+#		Searching headers and libraries is very simple and is NOT as powerful as scripts
+#		distributed with CMake, because LuaDist defines directories to search for.
+#		Everyone is encouraged to contact the author with improvements. Maybe this file
+#		becomes part of CMake distribution sometimes.
+
+# - Find pcre
+# Find the native PCRE headers and libraries.
 #
-# PCRE::PCRE
-#
-# This module defines
-#  PCRE_FOUND, if false, do not try to link to PCRE
-#  PCRE_LIBRARIES
-#  PCRE_INCLUDE_DIR, where to find pcre.h
+# PCRE_INCLUDE_DIRS	- where to find pcre.h, etc.
+# PCRE_LIBRARIES	- List of libraries when using pcre.
+# PCRE_FOUND	- True if pcre found.
 
-find_package(PkgConfig)
+# Look for the header file.
+FIND_PATH(PCRE_INCLUDE_DIR NAMES pcreposix.h)
 
-pkg_search_module(PC_PCRE pcre libpcre)
+# Look for the library.
+FIND_LIBRARY(PCRE_LIBRARY NAMES pcre)
+FIND_LIBRARY(PCRE_POSIX_LIBRARY NAMES pcreposix)
 
-find_path(
-  PCRE_INCLUDE_DIR pcre.h
-  HINTS ${PCRE_DIR} $ENV{PCRE_DIR} ${PC_PCRE_INCLUDE_DIRS}
-  PATH_SUFFIXES include/pcre include
-  PATHS ~/Library/Frameworks
-        /Library/Frameworks
-        /usr/local
-        /usr
-        /sw # Fink
-        /opt/local # DarwinPorts
-        /opt/csw # Blastwave
-        /opt)
+# Handle the QUIETLY and REQUIRED arguments and set PCRE_FOUND to TRUE if all listed variables are TRUE.
+INCLUDE(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(PCRE DEFAULT_MSG PCRE_LIBRARY PCRE_POSIX_LIBRARY PCRE_INCLUDE_DIR)
 
-find_library(
-  PCRE_LIBRARY_RELEASE
-  NAMES pcre
-  HINTS ${PCRE_DIR} $ENV{PCRE_DIR} ${PC_PCRE_LIBRARY_DIRS}
-        ${PC_PCRE_LIBRARY_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS ~/Library/Frameworks
-        /Library/Frameworks
-        /usr/local
-        /usr
-        /sw
-        /opt/local
-        /opt/csw
-        /opt)
+# Copy the results to the output variables.
+IF(PCRE_FOUND)
+	SET(PCRE_LIBRARIES ${PCRE_LIBRARY} ${PCRE_POSIX_LIBRARY})
+	SET(PCRE_INCLUDE_DIRS ${PCRE_INCLUDE_DIR})
+ELSE(PCRE_FOUND)
+	SET(PCRE_LIBRARIES)
+	SET(PCRE_INCLUDE_DIRS)
+ENDIF(PCRE_FOUND)
 
-find_library(
-  PCRE_LIBRARY_DEBUG
-  NAMES pcred
-  HINTS ${PCRE_DIR} $ENV{PCRE_DIR} ${PC_PCRE_LIBRARY_DIRS}
-        ${PC_PCRE_LIBRARY_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS ~/Library/Frameworks
-        /Library/Frameworks
-        /usr/local
-        /usr
-        /sw
-        /opt/local
-        /opt/csw
-        /opt)
-
-if(PCRE_LIBRARY_DEBUG AND PCRE_LIBRARY_RELEASE)
-  set(PCRE_LIBRARY optimized ${PCRE_LIBRARY_RELEASE} debug
-                   ${PCRE_LIBRARY_DEBUG})
-elseif(PCRE_LIBRARY_RELEASE)
-  set(PCRE_LIBRARY ${PCRE_LIBRARY_RELEASE})
-elseif(PCRE_LIBRARY_DEBUG)
-  set(PCRE_LIBRARY ${PCRE_LIBRARY_DEBUG})
-endif()
-
-if(PC_PCRE_pcre_FOUND)
-  set(PCRE_VERSION ${PC_PCRE_pcre_VERSION})
-elseif(PC_PCRE_libpcre_FOUND)
-  set(PCRE_VERSION ${PC_PCRE_libpcre_VERSION})
-else()
-  set(PCRE_VERSION ${PC_PCRE_VERSION})
-endif()
-
-include(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set PCRE_FOUND to TRUE if all
-# listed variables are TRUE
-find_package_handle_standard_args(PCRE REQUIRED_VARS PCRE_LIBRARY
-                                  PCRE_INCLUDE_DIR VERSION_VAR PCRE_VERSION)
-
-mark_as_advanced(PCRE_INCLUDE_DIR PCRE_LIBRARY PCRE_LIBRARY_RELEASE
-                 PCRE_LIBRARY_DEBUG)
-
-get_filename_component(PCRE_FILENAME ${PCRE_LIBRARY} NAME)
-string(FIND ${PCRE_FILENAME} .a PCRE_STATIC)
-
-if(PCRE_FOUND AND NOT TARGET PCRE::PCRE)
-  if(PCRE_STATIC EQUAL -1)
-    add_library(PCRE::PCRE SHARED IMPORTED)
-    set_target_properties(
-      PCRE::PCRE PROPERTIES IMPORTED_LOCATION "${PCRE_LIBRARY}"
-                            INTERFACE_INCLUDE_DIRECTORIES "${PCRE_INCLUDE_DIR}")
-  else()
-    add_library(PCRE::PCRE STATIC IMPORTED)
-    set_target_properties(
-      PCRE::PCRE
-      PROPERTIES INTERFACE_COMPILE_DEFINITIONS PCRE_STATIC IMPORTED_LOCATION
-                                                           "${PCRE_LIBRARY}"
-                 INTERFACE_INCLUDE_DIRECTORIES "${PCRE_INCLUDE_DIR}")
-  endif()
-endif()
+MARK_AS_ADVANCED(PCRE_INCLUDE_DIRS PCRE_LIBRARIES)
