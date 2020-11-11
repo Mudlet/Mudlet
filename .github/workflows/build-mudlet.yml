@@ -144,7 +144,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--trace-expand --target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}'
+        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
