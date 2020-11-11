@@ -62,7 +62,7 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: (macOS) Install homebrew dependencies
+    - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
@@ -71,7 +71,7 @@ jobs:
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-    - name: (Linux) Install apt dependencies
+    - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
         # Installing packages might fail as the github image becomes outdated
@@ -81,7 +81,7 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-    - name: (Windows) Install zip dependencies
+    - name: (Windows) Install non-vcpkg dependencies
       if: runner.os == 'Windows'
       run: |
         # Use pre-installed Boost
