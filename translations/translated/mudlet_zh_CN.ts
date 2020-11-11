@@ -4089,7 +4089,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2300"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>端口需要和服务器名称一起用于连接到游戏服务器。如果未指定端口号，则使用&quot;Telnet&quot;连接的默认值23。安全连接可能需要另外的端口号。</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2319"/>
@@ -5182,7 +5182,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="271"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <comment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</comment>
-      <translation type="unfinished"/>
+      <translation>选择要玩的mud游戏，双击它来进行连接并开始游玩。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="510"/>
