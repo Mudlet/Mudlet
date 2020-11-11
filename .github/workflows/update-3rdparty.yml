@@ -15,7 +15,7 @@ jobs:
           ref: development
 
       - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v1.0.0
+        uses: carlosperate/download-file-action@v1.0.3
         with:
           file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
           file-name: mudlet-mapper.xml
