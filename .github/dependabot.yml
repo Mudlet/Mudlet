@@ -3,8 +3,11 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    ignore:
+      # ignore vcpkg as it is updated often, and this goes off commits, not releases
+      - dependency-name: "3rdparty/vcpkg"
