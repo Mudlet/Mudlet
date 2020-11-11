@@ -91,12 +91,12 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         # Setup pre-installed Boost to be used
-        echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
+        echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
 
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
-        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $GITHUB_ENV
+        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
 
         . ${{github.workspace}}\CI\appveyor.functions.ps1
 
