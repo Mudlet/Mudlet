@@ -47,7 +47,6 @@ jobs:
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
-      if: steps.cache-qt.outputs.cache-hit != 'true'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
@@ -64,7 +63,10 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip
+        brew install pkg-config libzzip libzip ccache
+
+        echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
     - name: (Linux) Install apt dependencies
       if: runner.os == 'Linux'
@@ -72,7 +74,9 @@ jobs:
         # Installing packages might fail as the github image becomes outdated
         sudo apt update
         # These aren't available or don't work well in vcpkg
-        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev
+        sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
@@ -86,6 +90,14 @@ jobs:
         echo "WITH_UPDATER=no" >> $GITHUB_ENV
         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
         echo "WITH_FONTS=no" >> $GITHUB_ENV
+
+    - name: (Linux/macOS) restore ccache
+      uses: actions/cache@v2
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
+      if: matrix.os != 'windows-latest'
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
@@ -104,7 +116,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{matrix.qt}}/gcc_64/
+        cmakeAppendedArgs: '--target test -G Ninja'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
