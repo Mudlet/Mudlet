@@ -96,6 +96,7 @@ jobs:
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
+        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $GITHUB_ENV
 
         . ${{github.workspace}}\CI\appveyor.functions.ps1
 
@@ -151,7 +152,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--target test -G Ninja'
+        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
