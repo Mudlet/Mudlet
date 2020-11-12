@@ -167,3 +167,7 @@ jobs:
           echo "Standard output log: "
           cat $env:WORKING_BASE_DIR\stdout.log
         }
+        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
+          echo "CMakeOutput.log: "
+          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
+        }
