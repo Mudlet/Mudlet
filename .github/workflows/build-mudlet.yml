@@ -122,8 +122,8 @@ jobs:
          echo "CXX=clang++" >> $GITHUB_ENV
          echo "CC=clang" >> $GITHUB_ENV
 
-    - name: (Qt 5.11) disable optional components
-      if: matrix.qt == '5.11.0'
+    - name: (Qt 5.11 & Windows) disable optional components
+      if: matrix.qt == '5.11.0' || runner.os == 'Windows'
       run: |
         echo "WITH_UPDATER=no" >> $GITHUB_ENV
         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
@@ -144,7 +144,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}} -DVCPKG_APPLOCAL_DEPS=OFF'
+        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}} -DVCPKG_APPLOCAL_DEPS=OFF -D'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
