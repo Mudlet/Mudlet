@@ -11654,7 +11654,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Erstelle einen Ausgang in diese Richtung mit unbekanntem Ziel. Kann gleichzeitig keinen Ausgang mit tatsächlicher RaumID haben.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Erstelle in diese Richtung einen Abzweig mit unbekanntem Ziel. Kann nicht gleichzeitig einen Ausgang mit echter RaumID haben.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
