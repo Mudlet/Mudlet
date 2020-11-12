@@ -35,7 +35,7 @@ jobs:
           - os: windows-latest
             buildname: 'windows'
             triplet: x64-mingw-dynamic
-            compiler: win64_mingw73
+            compiler: win64_mingw81
             qt: '5.14.1'
 
     steps:
@@ -148,7 +148,7 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}} -DVCPKG_APPLOCAL_DEPS=OFF'
+        cmakeAppendedArgs: '--trace-expand --target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}} -DVCPKG_APPLOCAL_DEPS=OFF'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
