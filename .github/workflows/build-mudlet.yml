@@ -128,11 +128,6 @@ jobs:
         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    # - name: (Windows) disable updater, doens't work with vcpkg/mingw-64
-    #   if: runner.os == 'Windows'
-    #   shell: powershell
-    #   run: 'echo "WITH_UPDATER=no" >> $env:GITHUB_ENV'
-
     - name: (Linux/macOS) restore ccache
       uses: actions/cache@v2
       with:
