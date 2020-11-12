@@ -31,7 +31,7 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # APP_BUILD does not seem to be available?
+  # Neither BUILD nor APP_BUILD does not seem to be available?
 
   # if(APP_BUILD matches "-ptb.+")
   #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
