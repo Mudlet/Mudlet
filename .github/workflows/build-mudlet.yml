@@ -149,6 +149,11 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
 
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{runner.os}}-build-directory
+        path: '${{runner.workspace}}/b/ninja' # or path/to/artifact
+
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
