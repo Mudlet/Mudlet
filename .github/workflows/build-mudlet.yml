@@ -143,23 +143,27 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--target test -G Ninja -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}} -DVCPKG_APPLOCAL_DEPS=OFF'
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: (windows) Show non-vcpkg intall logs
+    - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
-          echo "Standard error log: "
+          echo "Standard error log from non-vcpkg dependencies: "
           cat $env:WORKING_BASE_DIR\stderr.log
         }
         if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
-          echo "Standard output log: "
+          echo "Standard output log from non-vcpkg dependencies: "
           cat $env:WORKING_BASE_DIR\stdout.log
         }
         if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
