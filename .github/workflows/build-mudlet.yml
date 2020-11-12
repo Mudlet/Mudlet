@@ -122,12 +122,17 @@ jobs:
          echo "CXX=clang++" >> $GITHUB_ENV
          echo "CC=clang" >> $GITHUB_ENV
 
-    - name: (Qt 5.11 & Windows) disable optional components
-      if: matrix.qt == '5.11.0' || runner.os == 'Windows'
+    - name: (Qt 5.11) disable optional components
+      if: matrix.qt == '5.11.0'
       run: |
         echo "WITH_UPDATER=no" >> $GITHUB_ENV
         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
         echo "WITH_FONTS=no" >> $GITHUB_ENV
+
+    - name: (Windows) disable updater
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: 'echo "WITH_UPDATER=no" >> $env:GITHUB_ENV'
 
     - name: (Linux/macOS) restore ccache
       uses: actions/cache@v2
