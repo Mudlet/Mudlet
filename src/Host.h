@@ -459,13 +459,13 @@ public:
     bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // the current log file and is set from
     // mIsNextLogFileInHtmlFormat at the point that a log is started.
     bool mIsCurrentLogFileInHtmlFormat;
 
     // To cover the corner case of the user changing the mode
-    // whilst a log is being written, this stores the mode of
+    // while a log is being written, this stores the mode of
     // future logs file as set in the profile preferences. See
     // also mIsCurrentLogFileInHtmlFormat.
     bool mIsNextLogFileInHtmlFormat;
@@ -602,7 +602,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
-    QScopedPointer<dlgIRC> mpDlgIRC;
+    QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<TToolBar*> mToolbarLayoutChanges;
@@ -620,6 +620,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
+    void slot_purgeTimers();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -753,6 +754,8 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    QTimer purgeTimer;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

@@ -204,7 +204,6 @@ public:
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;
-    TBuffer mClipboard;
     QColor mCommandBgColor;
     QColor mCommandFgColor;
 

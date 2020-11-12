@@ -46,7 +46,6 @@
 #include "dlgIRC.h"
 #include "mudlet.h"
 
-
 #include "pre_guard.h"
 #include <chrono>
 #include <QDialog>
@@ -55,6 +54,8 @@
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+
+using namespace std::chrono;
 
 stopWatch::stopWatch()
 : mIsInitialised(false)
@@ -449,6 +450,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
     }
+
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
 }
 
 Host::~Host()
@@ -1390,6 +1395,14 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTimerUnit.doCleanup();
 }
 
+// When Mudlet is running in online mode, deleted timers are cleaned up in bulk
+// on every new line. When in offline mode, new lines don't come - so they are
+// cleaned up in bulk periodically.
+void Host::slot_purgeTimers()
+{
+    mTimerUnit.doCleanup();
+}
+
 void Host::registerEventHandler(const QString& name, TScript* pScript)
 {
     if (mEventHandlerMap.contains(name)) {
@@ -2122,7 +2135,7 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
             // changes already made in TBuffer::translateToPlainText a while ago:
             return QColor(r * 51, g * 51, b * 51);
         } else {
-            return QColor(); // Noop
+            return QColor(); // No-op
         }
     }
     // clang-format on
@@ -2864,7 +2877,7 @@ void Host::close()
     if (mpDlgIRC) {
         mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
         mpDlgIRC->deleteLater();
-        mpDlgIRC.reset(nullptr);
+        mpDlgIRC = nullptr;
     }
     if (mpConsole) {
         mpConsole->close();

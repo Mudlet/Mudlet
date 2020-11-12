@@ -63,7 +63,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mBgColor(QColor(Qt::black))
 , mBgImageMode(0)
 , mBgImagePath()
-, mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")
@@ -114,7 +113,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
         // Probably will not show up as this is used inside a QMainWindow widget
-        // which has it's own title and icon set.
+        // which has its own title and icon set.
         // mIsSubConsole was left false for this
         mWrapAt = 50;
         mStandardFormat.setTextFormat(mFgColor, mBgColor, TChar::None);
@@ -275,16 +274,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     layer = new QWidget(mpMainDisplay);
     layer->setContentsMargins(0, 0, 0, 0);
-    layer->setContentsMargins(0, 0, 0, 0); //neu rc1
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
     layer->setLayout(vLayoutLayer);
-    layoutLayer->setMargin(0);  //neu rc1
-    layoutLayer->setSpacing(0); //neu rc1
-    layoutLayer->setMargin(0);  //neu rc1
+    layoutLayer->setMargin(0);
+    layoutLayer->setSpacing(0);
 
     mpScrollBar->setFixedWidth(15);
     mpHScrollBar->setFixedHeight(15);
@@ -330,7 +327,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->addWidget(splitter);
     layoutLayer->addWidget(mpScrollBar);
     layoutLayer->setContentsMargins(0, 0, 0, 0);
-    layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
+    layoutLayer->setSpacing(1); // not closer, otherwise there could be performance problems when displaying
 
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
@@ -1105,8 +1102,8 @@ void TConsole::runTriggers(int line)
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
 
-    //FIXME: neu schreiben: wenn lines oberhalb der aktuellen zeile gelöscht wurden->redraw clean slice
-    //       ansonsten einfach löschen
+    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
+    //       otherwise just delete
 }
 
 void TConsole::finalize()
@@ -1596,18 +1593,10 @@ std::list<int> TConsole::getFgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).foreground()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
@@ -1631,18 +1620,10 @@ std::list<int> TConsole::getBgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).background()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
@@ -2034,16 +2015,16 @@ void TConsole::copy()
 
 void TConsole::cut()
 {
-    mClipboard = buffer.cut(P_begin, P_end);
+    mpHost->mpConsole->mClipboard = buffer.cut(P_begin, P_end);
 }
 
 void TConsole::paste()
 {
     if (buffer.size() - 1 > mUserCursor.y()) {
-        buffer.paste(mUserCursor, mClipboard);
+        buffer.paste(mUserCursor, mpHost->mpConsole->mClipboard);
         mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y());
     } else {
-        buffer.appendBuffer(mClipboard);
+        buffer.appendBuffer(mpHost->mpConsole->mClipboard);
     }
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
@@ -2051,13 +2032,13 @@ void TConsole::paste()
 
 void TConsole::pasteWindow(TBuffer bufferSlice)
 {
-    mClipboard = bufferSlice;
+    mpHost->mpConsole->mClipboard = bufferSlice;
     paste();
 }
 
 void TConsole::appendBuffer()
 {
-    buffer.appendBuffer(mClipboard);
+    buffer.appendBuffer(mpHost->mpConsole->mClipboard);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 }
@@ -2286,7 +2267,7 @@ void TConsole::dropEvent(QDropEvent* e)
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has it's tab selected in a
+    // Ensure that this profile is the one that has its tab selected in a
     // multi-view situation:
     mudlet::self()->activateProfile(mpHost);
 
