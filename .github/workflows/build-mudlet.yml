@@ -123,11 +123,10 @@ jobs:
     - name: Install Lua dependencies for translations
       run: |
         luarocks install --local luautf8
-        luarocks install --local lua-yajl
 
-        # YAJL_PATH="$(pkg-config --variable=libdir yajl)"
-        # echo "Setting search path to $YAJL_PATH"
-        # luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
+        YAJL_PATH="$(pkg-config --variable=libdir yajl)"
+        echo "Setting search path to $YAJL_PATH"
+        luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
