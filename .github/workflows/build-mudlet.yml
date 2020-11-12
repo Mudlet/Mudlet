@@ -110,7 +110,7 @@ jobs:
       if: matrix.os != 'windows-latest'
 
     - name: Install Lua
-      uses: leafo/gh-actions-lua@v5
+      uses: leafo/gh-actions-lua@v7
       with:
         luaVersion: "5.1.5"
 
