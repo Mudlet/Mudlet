@@ -156,9 +156,15 @@ jobs:
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        echo "Standard error log: "
-        cat $env:WORKING_BASE_DIR\stderr.log
-        echo "Standard output log: "
-        cat $env:WORKING_BASE_DIR\stdout.log
-        echo "Angle log: "
-        cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\angle\install-x64-mingw-dynamic-dbg-out.log"
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
+          echo "Standard error log: "
+          cat $env:WORKING_BASE_DIR\stderr.log
+        }
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
+          echo "Standard output log: "
+          cat $env:WORKING_BASE_DIR\stdout.log
+        }
+        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\angle\install-x64-mingw-dynamic-dbg-out.log") {
+          echo "Angle log: "
+          cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\angle\install-x64-mingw-dynamic-dbg-out.log"
+        }
