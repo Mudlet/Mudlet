@@ -32,7 +32,7 @@ jobs:
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.1'
-          - os: windows-latest
+          - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
