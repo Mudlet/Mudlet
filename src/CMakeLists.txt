@@ -31,13 +31,15 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  if(BUILD matches "-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((BUILD matches "-dev.+") or (BUILD matches "-test.+"))
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
+  # Neither BUILD nor APP_BUILD does not seem to be available?
+
+  # if(APP_BUILD matches "-ptb.+")
+  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  # else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  endif()
+  # endif()
 endif()
 
 set(mudlet_SRCS
