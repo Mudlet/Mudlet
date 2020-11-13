@@ -117,6 +117,8 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: '--target test -G Ninja'
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
