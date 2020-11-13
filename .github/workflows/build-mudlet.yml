@@ -136,6 +136,11 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
       if: matrix.os != 'windows-latest'
 
+    - name: (Windows) Set build info
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: '${{github.workspace}}\CI\validate_deployment.ps1'
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
