@@ -35,7 +35,7 @@ jobs:
           - os: windows-latest
             buildname: 'windows'
             triplet: x64-mingw-dynamic
-            compiler: win64_mingw81
+            # compiler: flag not used in windows pipeline
             qt: '5.14.1'
 
     steps:
