@@ -12,8 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: windows-latest
-          #   triplet: x64-windows
           - os: ubuntu-latest
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
@@ -33,6 +31,11 @@ jobs:
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
+            qt: '5.14.1'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
             qt: '5.14.1'
 
     steps:
@@ -69,7 +72,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    - name: (macOS) Install homebrew dependencies
+    - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
@@ -78,7 +81,7 @@ jobs:
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
-    - name: (Linux) Install apt dependencies
+    - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
         # Installing packages might fail as the github image becomes outdated
@@ -87,6 +90,30 @@ jobs:
         sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+    - name: (Windows) Install non-vcpkg dependencies
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        # Use pre-installed Boost
+        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
+
+        # Install dependencies not available on machine
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
+        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
+        . ${{github.workspace}}\CI\appveyor.functions.ps1
+
+        # Libzip install complains when \bin is missing
+        New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
+
+        SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
+        $NoShPath = filterPathForSh
+
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
@@ -116,9 +143,30 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: '--target test -G Ninja'
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: (windows) Show relevant logs logs
+      if: failure() && runner.os == 'Windows'
+      run: |
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
+          echo "Standard error log from non-vcpkg dependencies: "
+          cat $env:WORKING_BASE_DIR\stderr.log
+        }
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
+          echo "Standard output log from non-vcpkg dependencies: "
+          cat $env:WORKING_BASE_DIR\stdout.log
+        }
+        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
+          echo "CMakeOutput.log: "
+          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
+        }
