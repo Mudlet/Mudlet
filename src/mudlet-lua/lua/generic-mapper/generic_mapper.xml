@@ -645,6 +645,7 @@ end</script>
 			<name>Map Script</name>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
+-- the script self-updates, changing this value will bring an update to all installations
 -- 12/11/2020
 local version = "2.0.19"
 
