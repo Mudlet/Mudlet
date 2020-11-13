@@ -20,7 +20,7 @@
     "cechoLink": "cechoLink([windowName], text, command, hint, true)",
     "cechoPopup": "cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])",
     "centerview": "centerview (roomID)",
-    "cfeedTriggers": "cfeedTriggers(str)",
+    "cfeedTriggers": "cfeedTriggers(text)",
     "cinsertLink": "cinsertLink([windowName], text, command, hint, true)",
     "cinsertPopup": "cinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])",
     "cinsertText": "cinsertText([window], text)",
