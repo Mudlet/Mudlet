@@ -1942,7 +1942,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                         if (pE && pE->getArea() != mAreaID) {
                             QRectF rectExitAreaName(0, 0, 250, 30);
                             QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pE->getArea());
-                            rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(15, 10, 15, 10);
+                            rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(8, 2, 8, 2);
 
                             QPointF _p = polyLinePoints.last(), p2 = polyLinePoints.at(polyLinePoints.size() - 2);
                             if (abs(_p.x() - p2.x()) < 4 && _p.y() > p2.y()) {    // getSouth
@@ -2110,7 +2110,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             } else {
                 QRectF rectExitAreaName(0, 0, 250, 30);
                 QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pE->getArea());
-                rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(15, 10, 15, 10);
+                rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(8, 2, 8, 2);
 
                 __pen = painter.pen();
                 QPoint _p;
@@ -2122,35 +2122,35 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 if (room->getSouth() == rID) {
                     _line = QLine(p2.x(), p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x(), p2.y() + mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() / 2, _line.p1().y());
                 } else if (room->getNorth() == rID) {
                     _line = QLine(p2.x(), p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x(), p2.y() - mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y() - rectExitAreaName.height());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() / 2, _line.p1().y() - rectExitAreaName.height());
                 } else if (room->getWest() == rID) {
                     _line = QLine(p2.x() - mRoomWidth, p2.y(), p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y());
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width(), _p.y() - rectExitAreaName.height() / 2);
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width(), _line.p1().y() - rectExitAreaName.height() / 2);
                 } else if (room->getEast() == rID) {
                     _line = QLine(p2.x() + mRoomWidth, p2.y(), p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y());
-                    rectExitAreaName.moveTo(_p.x(), _p.y() - rectExitAreaName.height() / 2);
+                    rectExitAreaName.moveTo(_line.p1().x(), _line.p1().y() - rectExitAreaName.height() / 2);
                 } else if (room->getNorthwest() == rID) {
                     _line = QLine(p2.x() - mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y() - rectExitAreaName.height());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() * 0.75, _line.p1().y() - rectExitAreaName.height());
                 } else if (room->getNortheast() == rID) {
                     _line = QLine(p2.x() + mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y() - rectExitAreaName.height());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() * 0.25, _line.p1().y() - rectExitAreaName.height());
                 } else if (room->getSoutheast() == rID) {
                     _line = QLine(p2.x() + mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() * 0.25, _line.p1().y());
                 } else if (room->getSouthwest() == rID) {
                     _line = QLine(p2.x() - mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
-                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y());
+                    rectExitAreaName.moveTo(_line.p1().x() - rectExitAreaName.width() * 0.75, _line.p1().y());
                 }
                 painter.drawLine(_line);
                 mAreaExitsList[k] = _p;
