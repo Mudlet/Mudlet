@@ -157,6 +157,13 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
 
+    - name: (Windows) package Mudlet
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: '${{github.workspace}}\CI\appveyor.after_success.ps1'
+          # cd "$Env:APPVEYOR_BUILD_FOLDER"
+          # .\CI\appveyor.after_success.ps1
+
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
