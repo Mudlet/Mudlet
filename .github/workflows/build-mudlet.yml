@@ -160,9 +160,9 @@ jobs:
     - name: (Windows) package Mudlet
       if: runner.os == 'Windows'
       shell: pwsh
-      run: '${{github.workspace}}\CI\appveyor.after_success.ps1'
+      run: '${{github.workspace}}\CI\after_success.ps1'
           # cd "$Env:APPVEYOR_BUILD_FOLDER"
-          # .\CI\appveyor.after_success.ps1
+          # .\CI\after_success.ps1
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'

@@ -23,4 +23,4 @@ if("$LastExitCode" -ne "0"){
 
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
-.\CI\appveyor.after_success.ps1
+.\CI\after_success.ps1

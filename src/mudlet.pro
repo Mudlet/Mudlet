@@ -1581,7 +1581,7 @@ DISTFILES += \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.osx.after_success.sh \
     ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
+    ../CI/after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
