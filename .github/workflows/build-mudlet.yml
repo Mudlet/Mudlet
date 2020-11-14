@@ -142,6 +142,7 @@ jobs:
       run: |
         ${{github.workspace}}\CI\validate_deployment.ps1
         ${{github.workspace}}\CI\set-build-info.ps1
+        $PSVersionTable.PSVersion
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
