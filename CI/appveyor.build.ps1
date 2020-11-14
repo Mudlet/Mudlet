@@ -5,7 +5,7 @@ SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 SetLuarocksPath "C:\src\verbose_output.log"
 
-. CI\appveyor.set-build-info.ps1
+. CI\set-build-info.ps1
 . CI\validate_deployment.ps1
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src"

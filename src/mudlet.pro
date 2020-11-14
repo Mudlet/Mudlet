@@ -1583,7 +1583,7 @@ DISTFILES += \
     ../.appveyor.yml \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
+    ../CI/set-build-info.ps1 \
     ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
