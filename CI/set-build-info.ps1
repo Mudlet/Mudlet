@@ -1,6 +1,6 @@
-$Script:Build_Folder = (Test-Path Env:APPVEYOR_BUILD_FOLDER) ? $Env:APPVEYOR_BUILD_FOLDER : $Env:GITHUB_WORKSPACE
+$Script:BuildFolder = (Test-Path Env:APPVEYOR_BUILD_FOLDER) ? $Env:APPVEYOR_BUILD_FOLDER : $Env:GITHUB_WORKSPACE
 
-Set-Location $Script:Build_Folder
+Set-Location $Script:BuildFolder
 
 if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not $env:GITHUB_REF.StartsWith("refs/tags/")) {
   # The only scheduled builds are public test builds
@@ -35,7 +35,7 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not $env:GITHUB_REF.StartsWith("refs
 # not all systems we deal with allow uppercase ascii characters
 $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
 
-$VersionLine = Select-String -Pattern "Version =" $Script:Build_Folder/src/mudlet.pro
+$VersionLine = Select-String -Pattern "Version =" $Script:BuildFolder/src/mudlet.pro
 $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
