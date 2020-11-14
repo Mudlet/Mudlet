@@ -1,10 +1,13 @@
-if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
+if ((Test-Path Env:APPVEYOR -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") -or
+    (Test-Path Env:GITHUB_REPOSITORY -and $Env:GITHUB_REPOSITORY -ne "Mudlet/Mudlet")) {
   exit 0
 }
 
-cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
+$Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$env:GITHUB_WORKSPACE\b\ninja" };
+
+Set-Location "$Script:BuildFolder\src\release"
 windeployqt.exe --release mudlet.exe
-. "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
+. "$Script:BuildFolder\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
 
@@ -18,7 +21,7 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
-  Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+  Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -40,12 +43,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
     # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
     $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
   } else {
     Write-Output "=== Creating a release build ==="
-    Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
+    Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
     $Script:VersionAndSha = "$Env:VERSION"
   }
 
@@ -67,7 +70,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   Write-Output "=== Moving things to where Squirel expects them ==="
   # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
-  Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
+  Move-Item $Script:BuildFolder\src\release\* $SQUIRRELWINBIN
 
   $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
@@ -97,9 +100,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   # fails silently if the nupkg file is not found
   .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
-  Remove-Item -Recurse -Force $Env:APPVEYOR_BUILD_FOLDER\src\release\*
+  Remove-Item -Recurse -Force $Script:BuildFolder\src\release\*
   Write-Output "=== Copying installer over for appveyor ==="
-  Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
+  Move-Item C:\projects\squirreloutput\* $Script:BuildFolder\src\release
 
   if (-not (Test-Path -Path "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -PathType Leaf)) {
     Write-Output "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
@@ -133,7 +136,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
       Protocol = [WinSCP.Protocol]::Scp
       HostName = "mudlet.org"
       UserName = "keneanung"
-      SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+      SshPrivateKeyPath = "$Script:BuildFolder\CI\mudlet-deploy-key-windows.ppk"
       SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
     }
     $session = New-Object WinSCP.Session
@@ -157,8 +160,8 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    pushd "$Env:APPVEYOR_BUILD_FOLDER\CI\"
-    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
+    pushd "$Script:BuildFolder\CI\"
+    $Script:Changelog = lua "$Script:BuildFolder\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
     popd
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
