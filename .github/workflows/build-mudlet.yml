@@ -172,7 +172,7 @@ jobs:
     - uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: ${{runner.os}}-build-directory
+        name: ${{runner.os}}-${{matrix.compiler}}-build-directory
         path: '${{runner.workspace}}/b/ninja' # or path/to/artifact
 
     - name: (windows) Show relevant logs
