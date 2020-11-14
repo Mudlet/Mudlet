@@ -1,4 +1,3 @@
-# $Script:Build_Folder = If (Test-Path Env:APPVEYOR_BUILD_FOLDER) { $Env:APPVEYOR_BUILD_FOLDER } Else { $Env:GITHUB_WORKSPACE };
 $Script:Build_Folder = (Test-Path Env:APPVEYOR_BUILD_FOLDER) ? $Env:APPVEYOR_BUILD_FOLDER : $Env:GITHUB_WORKSPACE
 
 Set-Location $Script:Build_Folder
@@ -15,7 +14,8 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not $env:GITHUB_REF.StartsWith("refs
     $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
   }  elseif ($Env:GITHUB_EVENT_NAME -eq "pull_request") {
     $Script:Commit = git rev-parse --short $Env:GITHUB_SHA
-    $Script:PR_NUMBER = $Env:GITHUB_REF.Substring("refs/pull/".Length).Trim()
+    $Script:Pr_Pattern_Number = [regex]'refs/pull/(.+?)/'
+    $Script:PR_NUMBER = ($Script:Pr_Pattern_Number.Matches($Env:GITHUB_REF) | ForEach-Object { $_.groups[1].value })
     $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Script:PR_NUMBER-$Commit"
   } else {
     $Script:Commit = git rev-parse --short HEAD
