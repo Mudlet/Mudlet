@@ -1,3 +1,5 @@
+Set-StrictMode -Off
+
 $Script:BuildFolder = If (Test-Path Env:APPVEYOR_BUILD_FOLDER) { $Env:APPVEYOR_BUILD_FOLDER } Else { $Env:GITHUB_WORKSPACE };
 
 Set-Location $Script:BuildFolder
