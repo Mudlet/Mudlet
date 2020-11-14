@@ -138,7 +138,7 @@ jobs:
 
     - name: (Windows) Set build info
       if: runner.os == 'Windows'
-      shell: pwsh
+      shell: powershell
       run: |
         ${{github.workspace}}\CI\validate_deployment.ps1
         ${{github.workspace}}\CI\set-build-info.ps1
