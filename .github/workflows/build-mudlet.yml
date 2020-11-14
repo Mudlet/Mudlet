@@ -169,6 +169,12 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: ${{runner.os}}-build-directory
+        path: '${{runner.workspace}}/b/ninja' # or path/to/artifact
+
     - name: (windows) Show relevant logs
       if: failure() && runner.os == 'Windows'
       run: |
