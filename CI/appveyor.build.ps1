@@ -5,7 +5,6 @@ SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 SetLuarocksPath "C:\src\verbose_output.log"
 
-$PSVersionTable.PSVersion
 . CI\set-build-info.ps1
 . CI\validate_deployment.ps1
 
