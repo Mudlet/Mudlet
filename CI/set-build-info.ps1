@@ -4,7 +4,7 @@ $Script:BuildFolder = If (Test-Path Env:APPVEYOR_BUILD_FOLDER) { $Env:APPVEYOR_B
 
 Set-Location $Script:BuildFolder
 
-if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not (Test-Path Env:GITHUB_REF - and $Env:GITHUB_REF.StartsWith("refs/tags/"))) {
+if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) {
   # The only scheduled builds are public test builds
   if ($Env:APPVEYOR_SCHEDULED_BUILD -eq "True" -or $Env:GITHUB_EVENT_NAME -eq "schedule") {
     $Env:MUDLET_VERSION_BUILD = "-ptb"
