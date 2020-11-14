@@ -1,4 +1,4 @@
-$Script:Build_Folder = $Env:APPVEYOR_BUILD_FOLDER ? $Env:APPVEYOR_BUILD_FOLDER : $Env:GITHUB_WORKSPACE
+$Script:Build_Folder = If (Test-Path Env:APPVEYOR_BUILD_FOLDER) { $Env:APPVEYOR_BUILD_FOLDER } Else { $Env:GITHUB_WORKSPACE };
 
 Set-Location $Script:Build_Folder
 
