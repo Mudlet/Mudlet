@@ -1,4 +1,4 @@
-if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not (Test-Path Env:GITHUB_REF -and $Env:GITHUB_REF.StartsWith("refs/tags/")) {
+if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) {
   echo "Not a release build - skipping release validation."
   exit 0
 }
