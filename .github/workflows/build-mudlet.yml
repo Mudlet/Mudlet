@@ -169,7 +169,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: (windows) Show relevant logs logs
+    - name: (windows) Show relevant logs
       if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
