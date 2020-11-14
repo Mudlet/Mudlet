@@ -27,7 +27,7 @@ install:
 
 build_script:
 - pwsh: cd "$Env:APPVEYOR_BUILD_FOLDER\CI"
-- pwsh: ".\appveyor.build.ps1"
+- pwsh: "./appveyor.build.ps1"
 
 on_failure:
 - cd C:\src
