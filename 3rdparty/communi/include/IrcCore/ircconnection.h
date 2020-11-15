@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -65,6 +65,7 @@ class IRC_CORE_EXPORT IrcConnection : public QObject
     Q_PROPERTY(bool connected READ isConnected NOTIFY statusChanged)
     Q_PROPERTY(bool enabled READ isEnabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(int reconnectDelay READ reconnectDelay WRITE setReconnectDelay NOTIFY reconnectDelayChanged)
+    Q_PROPERTY(int connectionCount READ connectionCount NOTIFY connectionCountChanged)
     Q_PROPERTY(QAbstractSocket* socket READ socket WRITE setSocket)
     Q_PROPERTY(bool secure READ isSecure WRITE setSecure NOTIFY secureChanged)
     Q_PROPERTY(bool secureSupported READ isSecureSupported)
@@ -76,11 +77,11 @@ class IRC_CORE_EXPORT IrcConnection : public QObject
     Q_ENUMS(Status)
 
 public:
-    explicit IrcConnection(QObject* parent = 0);
-    explicit IrcConnection(const QString& host, QObject* parent = 0);
-    virtual ~IrcConnection();
+    explicit IrcConnection(QObject* parent = nullptr);
+    explicit IrcConnection(const QString& host, QObject* parent = nullptr);
+    ~IrcConnection() override;
 
-    Q_INVOKABLE IrcConnection* clone(QObject *parent = 0) const;
+    Q_INVOKABLE IrcConnection* clone(QObject *parent = nullptr) const;
 
     QString host() const;
     void setHost(const QString& host);
@@ -133,6 +134,8 @@ public:
 
     int reconnectDelay() const;
     void setReconnectDelay(int seconds);
+
+    int connectionCount() const;
 
     QAbstractSocket* socket() const;
     void setSocket(QAbstractSocket* socket);
@@ -225,6 +228,7 @@ Q_SIGNALS:
     void displayNameChanged(const QString& name);
     void userDataChanged(const QVariantMap& data);
     void reconnectDelayChanged(int seconds);
+    void connectionCountChanged(int count);
     void enabledChanged(bool enabled);
     void secureChanged(bool secure);
     void saslMechanismChanged(const QString& mechanism);

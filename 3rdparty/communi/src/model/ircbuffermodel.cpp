@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -40,6 +40,7 @@
 #include <qdatastream.h>
 #include <qvariant.h>
 #include <qtimer.h>
+#include <algorithm>
 
 IRC_BEGIN_NAMESPACE
 
@@ -126,10 +127,19 @@ private:
     Irc::SortMethod method;
 };
 
-IrcBufferModelPrivate::IrcBufferModelPrivate() : q_ptr(0), role(Irc::TitleRole),
-    sortMethod(Irc::SortByHand), sortOrder(Qt::AscendingOrder),
-    bufferProto(0), channelProto(0), persistent(false), joinDelay(0),
-    monitorEnabled(false), monitorPending(false)
+static QHash<int, QByteArray> irc_buffer_model_roles()
+{
+    QHash<int, QByteArray> roles;
+    roles[Qt::DisplayRole] = "display";
+    roles[Irc::BufferRole] = "buffer";
+    roles[Irc::ChannelRole] = "channel";
+    roles[Irc::NameRole] = "name";
+    roles[Irc::PrefixRole] = "prefix";
+    roles[Irc::TitleRole] = "title";
+    return roles;
+}
+
+IrcBufferModelPrivate::IrcBufferModelPrivate()
 {
 }
 
@@ -171,7 +181,7 @@ bool IrcBufferModelPrivate::messageFilter(IrcMessage* msg)
 
         case IrcMessage::Notice:
             if (IrcNoticeMessage* no = static_cast<IrcNoticeMessage*>(msg))
-                processed = !no->isReply() && processMessage(no->isPrivate() ? no->nick() : no->target(), no);
+                processed = !no->isReply() && processMessage(no->isPrivate() ? no->nick() : no->target(), no, no->host() != QLatin1String("services."));
             break;
 
         case IrcMessage::Mode:
@@ -229,7 +239,7 @@ bool IrcBufferModelPrivate::commandFilter(IrcCommand* cmd)
 IrcBuffer* IrcBufferModelPrivate::createBufferHelper(const QString& title)
 {
     Q_Q(IrcBufferModel);
-    IrcBuffer* buffer = 0;
+    IrcBuffer* buffer = nullptr;
     const QMetaObject* metaObject = q->metaObject();
     int idx = metaObject->indexOfMethod("createBuffer(QVariant)");
     if (idx != -1) {
@@ -250,7 +260,7 @@ IrcBuffer* IrcBufferModelPrivate::createBufferHelper(const QString& title)
 IrcChannel* IrcBufferModelPrivate::createChannelHelper(const QString& title)
 {
     Q_Q(IrcBufferModel);
-    IrcChannel* channel = 0;
+    IrcChannel* channel = nullptr;
     const QMetaObject* metaObject = q->metaObject();
     int idx = metaObject->indexOfMethod("createChannel(QVariant)");
     if (idx != -1) {
@@ -315,9 +325,9 @@ void IrcBufferModelPrivate::insertBuffer(int index, IrcBuffer* buffer, bool noti
         if (sortMethod != Irc::SortByHand) {
             QList<IrcBuffer*>::iterator it;
             if (sortOrder == Qt::AscendingOrder)
-                it = qUpperBound(bufferList.begin(), bufferList.end(), buffer, IrcBufferLessThan(q, sortMethod));
+                it = std::upper_bound(bufferList.begin(), bufferList.end(), buffer, IrcBufferLessThan(q, sortMethod));
             else
-                it = qUpperBound(bufferList.begin(), bufferList.end(), buffer, IrcBufferGreaterThan(q, sortMethod));
+                it = std::upper_bound(bufferList.begin(), bufferList.end(), buffer, IrcBufferGreaterThan(q, sortMethod));
             index = it - bufferList.begin();
         } else if (index == -1) {
             index = bufferList.count();
@@ -510,6 +520,10 @@ void IrcBufferModelPrivate::_irc_bufferDestroyed(IrcBuffer* buffer)
     removeBuffer(buffer);
 }
 
+static bool sortIrcChannels_withKeysFirst(IrcChannel *ch1, IrcChannel *ch2) {
+    return ch1->key().length() > ch2->key().length();
+}
+
 void IrcBufferModelPrivate::_irc_restoreBuffers()
 {
     Q_Q(IrcBufferModel);
@@ -541,25 +555,83 @@ void IrcBufferModelPrivate::_irc_restoreBuffers()
             }
         }
 
-        QStringList chans, keys;
-        foreach (IrcBuffer* buffer, bufferList) {
-            IrcChannel* channel = buffer->toChannel();
-            if (channel && !channel->isActive()) {
-                IrcChannelPrivate* p = IrcChannelPrivate::get(channel);
-                if (p->enabled) {
-                    chans += channel->title();
-                    keys += channel->key();
-                    p->enabled = true;
-                }
-            }
-            if (chans.length() == 3) {
-                connection->sendCommand(IrcCommand::createJoin(chans, keys));
-                chans.clear();
-                keys.clear();
+        // Join multiple channels:
+        //
+        // * A single IRC command may be 512 bytes long, including the <CR><LF> at the end.
+        //   Therefore, we must collect as many channels as many channels as possible into
+        //   a single command, but without exceeding the 512 bytes.
+        //   NOTES:
+        //       - Previously, communi tried to join all channels in a single command,
+        //         which didn't work because it exceeded the 512 bytes
+        //       - Then, it joined 3 channels at a time
+        //
+        // * We should also group channels with keys separately from channels without keys,
+        //   because the JOIN command doesn't work when channels without keys preceed the
+        //   channels with keys.
+        //   Works:
+        //       JOIN #ch1,#ch2             --- neither #ch1 nor #ch2 have keys
+        //       JOIN #ch1,#ch2 key1,key2   --- both #ch1 and #ch2 have keys
+        //       JOIN #ch1,#ch2 key1        --- #ch1 has key, #ch2 doesn't
+        //   Doesn't work:
+        //       JOIN #ch1,#ch2 ,key2       --- #ch1 doesn't have a key, #ch2 does
+        //                                      (NOTE: this is what communi used to do)
+        //
+
+        // Get channels from buffers
+        QList<IrcChannel*> filteredChannels;
+
+        foreach (IrcBuffer* buf, bufferList) {
+            IrcChannel *channel = buf->toChannel();
+            if (channel && !channel->isActive() && IrcChannelPrivate::get(channel)->enabled) {
+                filteredChannels.append(channel);
             }
         }
-        if (!chans.isEmpty())
-            connection->sendCommand(IrcCommand::createJoin(chans, keys));
+
+        // Sort channels with keys first
+        std::sort(filteredChannels.begin(), filteredChannels.end(), sortIrcChannels_withKeysFirst);
+
+        if (filteredChannels.size()) {
+
+            // Length of "JOIN  \r\n"
+            const int joinCommandMinLength = 8;
+            const int maxIrcCommandBytes = 512;
+            int joinCommandLength = joinCommandMinLength;
+
+            QStringList chans, keys;
+            foreach (IrcChannel *channel, filteredChannels) {
+                int additonalLength = channel->title().length() + channel->key().length();
+                // Command needs a comma between channels
+                if (chans.length())
+                    additonalLength++;
+                // Command needs a comma between keys
+                if (keys.length() && channel->key().length())
+                    additonalLength++;
+
+                if ((joinCommandLength + additonalLength) > maxIrcCommandBytes) {
+                    // If the command size would exceed the maximum, send a command with the channels collected so far
+                    connection->sendCommand(IrcCommand::createJoin(chans, keys));
+
+                    chans.clear();
+                    keys.clear();
+                    joinCommandLength = joinCommandMinLength;
+                }
+
+                // Add channel to list
+                chans += channel->title();
+
+                // Only add key to list if there is a key,
+                // otherwise not needed, because channels with keys are sorted before channels without keys
+                if (channel->key().length())
+                    keys += channel->key();
+
+                joinCommandLength = additonalLength;
+            }
+
+            if (!chans.isEmpty()) {
+                connection->sendCommand(IrcCommand::createJoin(chans, keys));
+            }
+
+        }
     }
 }
 
@@ -585,6 +657,10 @@ IrcBufferModel::IrcBufferModel(QObject* parent)
     setBufferPrototype(new IrcBuffer(this));
     setChannelPrototype(new IrcChannel(this));
     setConnection(qobject_cast<IrcConnection*>(parent));
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    setRoleNames(irc_buffer_model_roles());
+#endif
 }
 
 /*!
@@ -646,7 +722,7 @@ void IrcBufferModel::setConnection(IrcConnection* connection)
 IrcNetwork* IrcBufferModel::network() const
 {
     Q_D(const IrcBufferModel);
-    return d->connection ? d->connection->network() : 0;
+    return d->connection ? d->connection->network() : nullptr;
 }
 
 /*!
@@ -856,7 +932,7 @@ QModelIndex IrcBufferModel::index(IrcBuffer* buffer) const
 IrcBuffer* IrcBufferModel::buffer(const QModelIndex& index) const
 {
     if (!hasIndex(index.row(), index.column()))
-        return 0;
+        return nullptr;
 
     return static_cast<IrcBuffer*>(index.internalPointer());
 }
@@ -1001,9 +1077,9 @@ void IrcBufferModel::sort(Irc::SortMethod method, Qt::SortOrder order)
         persistentBuffers += static_cast<IrcBuffer*>(index.internalPointer());
 
     if (order == Qt::AscendingOrder)
-        qSort(d->bufferList.begin(), d->bufferList.end(), IrcBufferLessThan(this, method));
+        std::sort(d->bufferList.begin(), d->bufferList.end(), IrcBufferLessThan(this, method));
     else
-        qSort(d->bufferList.begin(), d->bufferList.end(), IrcBufferGreaterThan(this, method));
+        std::sort(d->bufferList.begin(), d->bufferList.end(), IrcBufferGreaterThan(this, method));
 
     QModelIndexList newPersistentIndexes;
     foreach (IrcBuffer* buffer, persistentBuffers)
@@ -1109,17 +1185,12 @@ bool IrcBufferModel::lessThan(IrcBuffer* one, IrcBuffer* another, Irc::SortMetho
 
     1) The type depends on \ref displayRole.
  */
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 QHash<int, QByteArray> IrcBufferModel::roleNames() const
 {
-    QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[Irc::BufferRole] = "buffer";
-    roles[Irc::ChannelRole] = "channel";
-    roles[Irc::NameRole] = "name";
-    roles[Irc::PrefixRole] = "prefix";
-    roles[Irc::TitleRole] = "title";
-    return roles;
+    return irc_buffer_model_roles();
 }
+#endif
 
 /*!
     Returns the number of buffers.

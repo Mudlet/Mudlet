@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -46,8 +46,8 @@ template <class T>
 class IrcExplicitValue
 {
 public:
-    IrcExplicitValue() : exp(false), null(true) { }
-    IrcExplicitValue(const T& value) : v(value), exp(false), null(false) { }
+    IrcExplicitValue()  { }
+    IrcExplicitValue(const T& value) : v(value),  null(false) { }
 
     bool isNull() const { return null; }
     bool isExplicit() const { return exp; }
@@ -59,8 +59,8 @@ public:
 
 private:
     T v;
-    bool exp;
-    bool null;
+    bool exp = false;
+    bool null = true;
 };
 
 class IrcMessageData
@@ -109,11 +109,11 @@ public:
     static QString decode(const QByteArray& data, const QByteArray& encoding);
     static bool parsePrefix(const QString& prefix, QString* nick, QString* ident, QString* host);
 
-    IrcConnection* connection;
-    IrcMessage::Type type;
+    IrcConnection* connection = nullptr;
+    IrcMessage::Type type = IrcMessage::Unknown;
     QDateTime timeStamp;
     QByteArray encoding;
-    mutable int flags;
+    mutable int flags = -1;
     IrcMessageData data;
     QList<IrcMessage*> batch;
 

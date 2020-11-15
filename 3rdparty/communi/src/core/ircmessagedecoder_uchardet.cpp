@@ -26,39 +26,31 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef IRCCOMMANDQUEUE_P_H
-#define IRCCOMMANDQUEUE_P_H
-
-#include "irccommandqueue.h"
-#include "ircfilter.h"
-#include <QPointer>
-#include <QQueue>
-#include <QTimer>
+#include "ircmessagedecoder_p.h"
+#include <uchardet/uchardet.h>
 
 IRC_BEGIN_NAMESPACE
 
-class IrcCommandQueuePrivate : public QObject,  public IrcCommandFilter
+#ifndef IRC_DOXYGEN
+#define UCD(x) reinterpret_cast<uchardet_t>(x)
+
+void IrcMessageDecoder::initialize()
 {
-    Q_OBJECT
-    Q_INTERFACES(IrcCommandFilter)
-    Q_DECLARE_PUBLIC(IrcCommandQueue)
+    d.detector = uchardet_new();
+}
 
-public:
-    IrcCommandQueuePrivate();
+void IrcMessageDecoder::uninitialize()
+{
+    uchardet_delete(UCD(d.detector));
+}
 
-    bool commandFilter(IrcCommand* cmd) override;
-
-    void _irc_updateTimer();
-    void _irc_sendBatch(bool force = false);
-
-    IrcCommandQueue* q_ptr = nullptr;
-    IrcConnection* connection = nullptr;
-    QTimer timer;
-    int batch;
-    int interval;
-    QQueue<QPointer<IrcCommand> > commands;
-};
+QByteArray IrcMessageDecoder::codecForData(const QByteArray &data) const
+{
+    uchardet_reset(UCD(d.detector));
+    uchardet_handle_data(UCD(d.detector), data.constData(), data.length());
+    uchardet_data_end(UCD(d.detector));
+    return uchardet_get_charset(UCD(d.detector));
+}
+#endif // IRC_DOXYGEN
 
 IRC_END_NAMESPACE
-
-#endif // IRCCOMMANDQUEUE_P_H

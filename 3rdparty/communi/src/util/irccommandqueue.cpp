@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -55,8 +55,7 @@ static const int DEFAULT_INTERVAL = 2;
  */
 
 #ifndef IRC_DOXYGEN
-IrcCommandQueuePrivate::IrcCommandQueuePrivate() : q_ptr(0),
-    connection(0), batch(DEFAULT_BATCH), interval(DEFAULT_INTERVAL)
+IrcCommandQueuePrivate::IrcCommandQueuePrivate() :  batch(DEFAULT_BATCH), interval(DEFAULT_INTERVAL)
 {
 }
 

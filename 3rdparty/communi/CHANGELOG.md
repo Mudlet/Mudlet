@@ -1,5 +1,30 @@
-3.5.0
------
+## [3.6.0] - 2020-10-29
+- General
+  - Fixed deprecation warnings up until Qt 5.15
+  - Removed MPL-licensed (BSD-incompatible) code
+    - A copy of uchardet-0.0.1, since MPL is not BSD-compatible.
+      The system libuchardet is used via pkg-config (configure -uchardet).
+    - Mozilla's MPL-rdf_utils.c - QTextCodec is used instead.
+  - Improved uchardet & ICU selection and auto-detection.
+  - Modernized the codebase to use nullptr, override, and default member init
+  - Minor build system fixes
+  - Added -(no)make qml configure option
+- IrcCore
+  - Added IrcConnection::connectionCount to count established connections
+  - Fixed UTF-8 handling in IrcMessageDecoder::decode()
+  - Fixed IrcProtocol to allow spaces in the PASS command
+- IrcModel
+  - IMPORTANT BEHAVIOR CHANGES
+    - IrcBufferModel has been changed to deliver notice messages to
+      the target buffer, and create the buffer if it does not exist.
+  - Fixed IrcBufferModel to sort channels with keys before channels without
+    keys, and group as many channels into a single join command as possible.
+- IrcUtil
+  - Fixed IrcTextFormat to exclude semi-colons while percent encoding URLs
+  - Fixed IrcTextFormat to retain HTML entities
+  - Fixed IrcLagTimer to count unanswered pings towards the lag
+
+## [3.5.0] - 2016-11-18
 - General
   - Added support for debug levels and filters
 - IrcCore
@@ -21,8 +46,7 @@
   - Added IrcMessage::setFlag()
   - Added IrcWhoisMessage::awayReason
 
-3.4.0
------
+## [3.4.0] - 2015-07-19
 - IrcCore
   - Added IrcConnection::clone()
   - Added IrcCommand::createMonitor()
@@ -42,8 +66,7 @@
 - IrcUtil
   - Added IrcCommandQueue
 
-3.3.0
------
+## [3.3.0] - 2014-12-29
 - IrcCore
   - Added IrcConnection::nickNames
   - Added IrcConnection::servers
@@ -69,8 +92,7 @@
   - Added IrcBufferModel::joinDelay
   - Added IrcUserModel::titles
 
-3.2.0
------
+## [3.2.0] - 2014-08-09
 - General
   - Relicensed to BSD
 - Build system
@@ -100,8 +122,7 @@
   - Added IrcTextFormat::html
   - Added IrcTextFormat::urls
 
-3.1.1/3.0.3
------------
+## [3.1.1] - 2014-05-17
 - General
   - Fixed configure script's default imports and qml directories
   - Added missing namespace macros to the QML plugins
@@ -110,8 +131,7 @@
 - IrcModel
   - Fixed IrcChannel::isChannel() for namespaced builds
 
-3.1.0
------
+## [3.1.0] - 2014-03-08
 - General
   - IrcUtil now depends on IrcModel
 - IrcCore
@@ -143,8 +163,16 @@
 - Examples
   - Made the QtQuick example remember connection settings (requires Qt 5.2)
 
-3.0.2
------
+## [3.0.3] - 2014-05-17
+- General
+  - Fixed configure script's default imports and qml directories
+  - Added missing namespace macros to the QML plugins
+- IrcCore
+  - Added missing enums to Irc::registerMetaTypes()
+- IrcModel
+  - Fixed IrcChannel::isChannel() for namespaced builds
+
+## [3.0.2] - 2014-02-02
 - General
   - Added missing QML plugin type info files
 - IrcCore
@@ -156,8 +184,7 @@
 - IrcUtil
   - Fixed IrcTextFormat::toHtml() to not percent encode comma in URLs
 
-3.0.1
------
+## [3.0.1] - 2013-11-12
 - IrcCore
   - Fixed IrcConnection::open() to bail out when already active
   - Fixed IrcModeMessage::kind() for modes with arguments
@@ -171,8 +198,7 @@
   - Added missing export macro to IrcPalette
   - Fixed IrcTextFormat::toHtml() to percent encode special characters in URLs
 
-3.0.0
------
+## [3.0.0] - 2013-10-20
 - General
   - Modularized: IrcCore, IrcModel & IrcUtil
   - Added namespace support
@@ -232,8 +258,7 @@
   - Added a Qt Quick based GUI client example
   - Added a bot example written in QML
 
-2.2.0
------
+## [2.2.0] - 2013-08-12
 - Implemented SASL support (http://freenode.net/sasl)
 - Introduced IrcBufferModel, IrcUserModel and IrcCommandParser
 - Added new IrcSession convenience signals
@@ -253,15 +278,13 @@
   https://github.com/communi/libcommuni/wiki/Submodule
 - Overall documentation improvements
 
-2.1.1
------
+## [2.1.1] - 2013-06-02
 - Add missing docs for IrcMessage::Motd/Names enum values
 - Enable using communi as a static lib & git submodule
 - Fixed a memory leak in IrcProtocol
 - Other cosmetic docs & build system cleanups and improvements
 
-2.1.0
------
+## [2.1.0] - 2013-05-19
 - Introduced IrcMessageFilter and IrcLagTimer
 - Added IrcSessionInfo::availableCapabilities() and activeCapabilities()
 - Added QDebug stream operators for IrcSender
@@ -272,15 +295,13 @@
 - Made IrcSession::sendCommand() only delete parentless commands
 - Fixes and improvements to the congigure script
 
-2.0.1
------
+## [2.0.1] - 2013-04-26
 - Fixed IrcMessage::toData()
 - Fixed identify-msg capability handling
 - Fixed ICU linking on 64-bit Windows
 - Fixed IrcSession::close() to abort connecting
 
-2.0.0
------
+## [2.0.0] - 2013-03-08
 - Focus on easy deployment
   - Removed all plugins
   - Better support for static builds and including(src.pri)
@@ -312,14 +333,12 @@
     - IrcMessage::fromString()
       - use IrcMessage::fromData/Command/Parameters() instead
 
-1.2.2
------
+## [1.2.2] - 2013-01-05
 - Qt 5.0.0 final specific build fixes
 - Fixed CTCP reply handling
 - Fixed SSL connections
 
-1.2.1
------
+## [1.2.1] - 2012-12-03
 - Fixed #24: IrcSessionPrivate::_q_error() is too verbose
 - Fixed #25: IrcSessionPrivate::processLine() should not respond to
   CTCP requests
@@ -327,8 +346,7 @@
 - Made the default fallback encoding ISO-8859-1
 - Fixed a performance bottleneck in IrcDecoder::setEncoding()
 
-1.2.0
------
+## [1.2.0] - 2012-10-06
 - Qt 5 support
 - Implemented support for IRC capabilities as specified at
   http://www.leeh.co.uk/draft-mitchell-irc-capabilities-02.html
@@ -354,16 +372,14 @@
   - Added IrcCommand::Capability and IrcCommand::createCapability()
 - Facelifted the desktop example
 
-1.1.2
------
+## [1.1.2] - 2012-09-05
 - Docs:
   - Fixed IrcMessage::Private enum value to appear
 - Examples:
   - Fixed settings to be remembered
   - Fixed a performance issue in channel message nick highlighting
 
-1.1.1
------
+## [1.1.1] - 2012-08-13
 - Various build system fixes and improvements
   - Fixed shadow builds
   - Configure: improved qmake(-qt4) detection & added error handling
@@ -372,8 +388,7 @@
   - Added a 'no_rpath' qmake config
 - Examples: fixed message formatting clash with nick names & URLs
 
-1.1.0
------
+## [1.1.0] - 2012-08-06
 - Introduced a configure script
 - Added a Symbian (QML) example
 - Significantly revised the desktop example
@@ -392,8 +407,7 @@
   - Added QByteArray IrcCommand::encoding [property]
   - Added bool IrcSession::sendData(const QByteArray& data)
 
-1.0.0
------
+## [1.0.0] - 2011-11-11
 - Renamed Communi (was LibIrcClient-Qt)
 - Underwent a major rewrite
   - Split the monolithic IrcSession class
@@ -408,8 +422,7 @@
   changes and received messages to the debug output
 - Added desktop (QWidgets) & MeeGo (QML) examples
 
-0.5.0
------
+## [0.5.0] - 2010-11-05
 - Irc::Session API additions:
   - addBuffer() and buffers() for buffer management
   - welcomed() signal, emitted when 001 is received
@@ -425,8 +438,7 @@
     on Qt's installation style)
   - Set INSTALL_NAME correctly
 
-0.4.1
------
+## [0.4.1] - 2010-07-02
 - Added support for static builds (qmake -config static)
 - Fixed qmake project messages output only once
 - Fixed MOC_DIR in release mode
@@ -435,8 +447,7 @@
   directed to the same buffer
 - Fixed CTCP requests not to create a new buffer
 
-0.4.0
------
+## [0.4.0] - 2010-05-08
 - Introduced Irc::Buffer - the concept of server/channel/query specific buffers
 - Deprecated buffer-specific functionality in Irc::Session
 - Fixed tabs not to cause underlined text
@@ -444,15 +455,13 @@
 - Added Irc::Rfc::toString()
 - Fixed euIRC connection problems
 
-0.3.2
------
+## [0.3.2] - 2009-08-30
 - Fixed problems with "unknown" messages
 - Fixed Irc::Session::connectSlotsByName() not to try to establish
   a connection when the parameter types don't match
 - Code improvements
 
-0.3.1
------
+## [0.3.1] - 2009-04-10
 - Fixed compilation on Mac
 - Fixed Irc::Session::connected() and disconnected() to be emitted correctly
 - Fixed Irc::Session::connectSlotsByName() not to establish multiple
@@ -464,8 +473,7 @@
 - Added a workaround for older Qt versions that don't have the
   QT_FORWARD_DECLARE_CLASS() macro defined
 
-0.3.0
------
+## [0.3.0] - 2009-02-06
 - Added SSL support
 - Quality & compatibility
   - no_keywords
@@ -473,14 +481,11 @@
   - QT_NO_CAST_TO_ASCII
 - Bug fixes & code improvements
 
-0.2.0
------
+## [0.2.0] - 2009-01-12
 - The first fully Qt-based version
 
-0.1.1
------
+## [0.1.1] - 2008-12-17
 - Added support for optional encoding detection with ICU
 
-0.1.0
------
+## [0.1.0] - 2008-11-15
 - The first internal release

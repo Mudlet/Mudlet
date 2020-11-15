@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -36,6 +36,7 @@
 #include "ircmessage.h"
 #include "ircdebug_p.h"
 #include "ircfilter.h"
+#include "irccore_p.h"
 #include "irc.h"
 #include <QLocale>
 #include <QRegExp>
@@ -248,21 +249,11 @@ IRC_BEGIN_NAMESPACE
 
 #ifndef IRC_DOXYGEN
 IrcConnectionPrivate::IrcConnectionPrivate() :
-    q_ptr(0),
     encoding("ISO-8859-15"),
-    network(0),
-    protocol(0),
-    socket(0),
     host(),
-    port(6667),
-    currentServer(-1),
     userName(),
     nickName(),
-    realName(),
-    enabled(true),
-    status(IrcConnection::Inactive),
-    pendingOpen(false),
-    closed(false)
+    realName()
 {
 }
 
@@ -316,7 +307,11 @@ void IrcConnectionPrivate::_irc_sslErrors()
 #ifndef QT_NO_SSL
     QSslSocket* ssl = qobject_cast<QSslSocket*>(socket);
     if (ssl) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        foreach (const QSslError& error, ssl->sslHandshakeErrors())
+#else
         foreach (const QSslError& error, ssl->sslErrors())
+#endif
             errors += error.errorString();
     }
 #endif
@@ -368,7 +363,7 @@ void IrcConnectionPrivate::_irc_filterDestroyed(QObject* filter)
 
 static bool parseServer(const QString& server, QString* host, int* port, bool* ssl)
 {
-    QStringList p = server.split(QRegExp("[: ]"), QString::SkipEmptyParts);
+    QStringList p = server.split(QRegExp("[: ]"), Qt::SkipEmptyParts);
     *host = p.value(0);
     *ssl = p.value(1).startsWith(QLatin1Char('+'));
     bool ok = false;
@@ -395,6 +390,7 @@ void IrcConnectionPrivate::open()
             q->setSecure(s);
         }
         socket->connectToHost(host, port);
+        setConnectionCount(connectionCount + 1);
     }
 }
 
@@ -404,6 +400,15 @@ void IrcConnectionPrivate::reconnect()
         pendingOpen = false;
         reconnecter.start();
         setStatus(IrcConnection::Waiting);
+    }
+}
+
+void IrcConnectionPrivate::setConnectionCount(int count)
+{
+    Q_Q(IrcConnection);
+    if (connectionCount != count) {
+        connectionCount = count;
+        emit q->connectionCountChanged(count);
     }
 }
 
@@ -560,7 +565,7 @@ bool IrcConnectionPrivate::receiveMessage(IrcMessage* msg)
 IrcCommand* IrcConnectionPrivate::createCtcpReply(IrcPrivateMessage* request)
 {
     Q_Q(IrcConnection);
-    IrcCommand* reply = 0;
+    IrcCommand* reply = nullptr;
     const QMetaObject* metaObject = q->metaObject();
     int idx = metaObject->indexOfMethod("createCtcpReply(QVariant)");
     if (idx != -1) {
@@ -797,7 +802,7 @@ QString IrcConnection::userName() const
 void IrcConnection::setUserName(const QString& name)
 {
     Q_D(IrcConnection);
-    QString user = name.split(" ", QString::SkipEmptyParts).value(0).trimmed();
+    QString user = name.split(" ", Qt::SkipEmptyParts).value(0).trimmed();
     if (d->userName != user) {
         if (isActive())
             qWarning("IrcConnection::setUserName() has no effect until re-connect");
@@ -827,7 +832,7 @@ QString IrcConnection::nickName() const
 void IrcConnection::setNickName(const QString& name)
 {
     Q_D(IrcConnection);
-    QString nick = name.split(" ", QString::SkipEmptyParts).value(0).trimmed();
+    QString nick = name.split(" ", Qt::SkipEmptyParts).value(0).trimmed();
     if (d->nickName != nick) {
         if (isActive())
             sendCommand(IrcCommand::createNick(nick));
@@ -1107,6 +1112,21 @@ void IrcConnection::setReconnectDelay(int seconds)
 }
 
 /*!
+    \property int IrcConnection::connectionCount
+    This property holds the amount of times a connection was established.
+
+    The default value is \c 0 (no connections where established).
+
+    \par Access functions:
+    \li int <b>connectionCount</b>() const
+ */
+int IrcConnection::connectionCount() const
+{
+    Q_D(const IrcConnection);
+    return d->connectionCount;
+}
+
+/*!
     This property holds the socket. The default value is an instance of QTcpSocket.
 
     The previously set socket is deleted if its parent is \c this.
@@ -1377,6 +1397,7 @@ void IrcConnection::close()
         if (d->socket->state() == QAbstractSocket::UnconnectedState)
             d->setStatus(Closed);
         d->reconnecter.stop();
+        d->setConnectionCount(0);
     }
 }
 
@@ -1460,8 +1481,10 @@ bool IrcConnection::sendData(const QByteArray& data)
             else
                 ircDebug(this, IrcDebug::Write) << data;
             if (!d->closed && data.length() >= 4) {
-                if (cmd.startsWith("QUIT") && (data.length() == 4 || QChar(data.at(4)).isSpace()))
+                if (cmd.startsWith("QUIT") && (data.length() == 4 || QChar(data.at(4)).isSpace())) {
                     d->closed = true;
+                    d->setConnectionCount(0);
+                }
             }
             return d->protocol->write(data);
         } else {
@@ -1657,7 +1680,7 @@ IrcCommand* IrcConnection::createCtcpReply(IrcPrivateMessage* request) const
 {
     Q_D(const IrcConnection);
     QString reply;
-    QString type = request->content().split(" ", QString::SkipEmptyParts).value(0).toUpper();
+    QString type = request->content().split(" ", Qt::SkipEmptyParts).value(0).toUpper();
     if (d->ctcpReplies.contains(type))
         reply = type + QLatin1String(" ") + d->ctcpReplies.value(type).toString();
     else if (type == "PING")
@@ -1672,7 +1695,7 @@ IrcCommand* IrcConnection::createCtcpReply(IrcPrivateMessage* request) const
         reply = QLatin1String("CLIENTINFO PING SOURCE TIME VERSION");
     if (!reply.isEmpty())
         return IrcCommand::createCtcpReply(request->nick(), reply);
-    return 0;
+    return nullptr;
 }
 
 /*!

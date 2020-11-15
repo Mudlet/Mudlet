@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -33,6 +33,7 @@
 #include "ircchannel_p.h"
 #include "ircuser.h"
 #include <qpointer.h>
+#include <algorithm>
 
 IRC_BEGIN_NAMESPACE
 
@@ -107,8 +108,19 @@ private:
     Irc::SortMethod method;
 };
 
-IrcUserModelPrivate::IrcUserModelPrivate() : q_ptr(0), role(Irc::TitleRole),
-    sortMethod(Irc::SortByHand), sortOrder(Qt::AscendingOrder)
+static QHash<int, QByteArray> irc_user_model_roles()
+{
+    QHash<int, QByteArray> roles;
+    roles[Qt::DisplayRole] = "display";
+    roles[Irc::UserRole] = "user";
+    roles[Irc::NameRole] = "name";
+    roles[Irc::PrefixRole] = "prefix";
+    roles[Irc::ModeRole] = "mode";
+    roles[Irc::TitleRole] = "title";
+    return roles;
+}
+
+IrcUserModelPrivate::IrcUserModelPrivate()
 {
 }
 
@@ -125,9 +137,9 @@ void IrcUserModelPrivate::insertUser(int index, IrcUser* user, bool notify)
     if (sortMethod != Irc::SortByHand) {
         QList<IrcUser*>::iterator it;
         if (sortOrder == Qt::AscendingOrder)
-            it = qUpperBound(userList.begin(), userList.end(), user, IrcUserLessThan(q, sortMethod));
+            it = std::upper_bound(userList.begin(), userList.end(), user, IrcUserLessThan(q, sortMethod));
         else
-            it = qUpperBound(userList.begin(), userList.end(), user, IrcUserGreaterThan(q, sortMethod));
+            it = std::upper_bound(userList.begin(), userList.end(), user, IrcUserGreaterThan(q, sortMethod));
         index = it - userList.begin();
     }
     if (notify)
@@ -179,9 +191,9 @@ void IrcUserModelPrivate::setUsers(const QList<IrcUser*>& users, bool reset)
     userList = users;
     if (sortMethod != Irc::SortByHand) {
         if (sortOrder == Qt::AscendingOrder)
-            qSort(userList.begin(), userList.end(), IrcUserLessThan(q, sortMethod));
+            std::sort(userList.begin(), userList.end(), IrcUserLessThan(q, sortMethod));
         else
-            qSort(userList.begin(), userList.end(), IrcUserGreaterThan(q, sortMethod));
+            std::sort(userList.begin(), userList.end(), IrcUserGreaterThan(q, sortMethod));
     }
     updateTitles();
     if (reset)
@@ -272,6 +284,10 @@ IrcUserModel::IrcUserModel(QObject* parent) : QAbstractListModel(parent), d_ptr(
     Q_D(IrcUserModel);
     d->q_ptr = this;
     setChannel(qobject_cast<IrcChannel*>(parent));
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    setRoleNames(irc_user_model_roles());
+#endif
 
     qRegisterMetaType<IrcUser*>();
     qRegisterMetaType<QList<IrcUser*> >();
@@ -429,7 +445,7 @@ IrcUser* IrcUserModel::find(const QString& name) const
     Q_D(const IrcUserModel);
     if (d->channel && !d->userList.isEmpty())
         return IrcChannelPrivate::get(d->channel)->userMap.value(name);
-    return 0;
+    return nullptr;
 }
 
 /*!
@@ -561,7 +577,7 @@ QModelIndex IrcUserModel::index(IrcUser* user) const
 IrcUser* IrcUserModel::user(const QModelIndex& index) const
 {
     if (!hasIndex(index.row(), index.column()))
-        return 0;
+        return nullptr;
 
     return static_cast<IrcUser*>(index.internalPointer());
 }
@@ -580,17 +596,12 @@ IrcUser* IrcUserModel::user(const QModelIndex& index) const
 
     1) The type depends on \ref displayRole.
  */
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 QHash<int, QByteArray> IrcUserModel::roleNames() const
 {
-    QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[Irc::UserRole] = "user";
-    roles[Irc::NameRole] = "name";
-    roles[Irc::PrefixRole] = "prefix";
-    roles[Irc::ModeRole] = "mode";
-    roles[Irc::TitleRole] = "title";
-    return roles;
+    return irc_user_model_roles();
 }
+#endif
 
 /*!
     Returns the number of users on the channel.
@@ -695,9 +706,9 @@ void IrcUserModel::sort(Irc::SortMethod method, Qt::SortOrder order)
         persistentUsers += static_cast<IrcUser*>(index.internalPointer());
 
     if (order == Qt::AscendingOrder)
-        qSort(d->userList.begin(), d->userList.end(), IrcUserLessThan(this, method));
+        std::sort(d->userList.begin(), d->userList.end(), IrcUserLessThan(this, method));
     else
-        qSort(d->userList.begin(), d->userList.end(), IrcUserGreaterThan(this, method));
+        std::sort(d->userList.begin(), d->userList.end(), IrcUserGreaterThan(this, method));
 
     if (d->updateTitles())
         emit titlesChanged(d->titles);

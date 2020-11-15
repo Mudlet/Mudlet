@@ -2,6 +2,7 @@
 # Communi                                                                  #
 #                                                                          #
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
+#    Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -47,7 +48,6 @@ set(SRCS
   src/core/ircmessagedecoder_none.cpp
   src/core/ircnetwork.cpp
   src/core/ircprotocol.cpp
-  src/3rdparty/mozilla/rdf_utils.c
   src/model/ircbuffer.cpp
   src/model/ircbuffermodel.cpp
   src/model/ircchannel.cpp
@@ -63,28 +63,35 @@ set(SRCS
   src/util/irctoken.cpp
   src/util/ircutil.cpp
 )
+# We are not using uchardet so do not want to include this file
+# src/core/ircmessagedecoder_uchardet.cpp
+
 set(HDRS
   include/IrcCore/irccommand_p.h
   include/IrcCore/ircconnection_p.h
+  include/IrcCore/irccore_p.h
   include/IrcCore/ircdebug_p.h
   include/IrcCore/ircmessage_p.h
   include/IrcCore/ircmessagecomposer_p.h
   include/IrcCore/ircmessagedecoder_p.h
   include/IrcCore/ircnetwork_p.h
-  include/IrcModel/ircuser_p.h
   include/IrcModel/ircbuffer_p.h
-  include/IrcModel/ircchannel_p.h
-  include/IrcModel/ircusermodel_p.h
   include/IrcModel/ircbuffermodel_p.h
-  include/IrcUtil/irctoken_p.h
-  include/IrcUtil/irclagtimer_p.h
-  include/IrcUtil/irccommandqueue_p.h
+  include/IrcModel/ircchannel_p.h
+  include/IrcModel/ircuser_p.h
+  include/IrcModel/ircusermodel_p.h
   include/IrcUtil/irccommandparser_p.h
+  include/IrcUtil/irccommandqueue_p.h
+  include/IrcUtil/irclagtimer_p.h
+  include/IrcUtil/irctoken_p.h
 )
 set(MOC_HDRS
   include/IrcCore/irc.h
+  include/IrcCore/irccore.h
   include/IrcCore/irccommand.h
   include/IrcCore/ircconnection.h
+  include/IrcCore/ircfilter.h
+  include/IrcCore/ircglobal.h
   include/IrcCore/ircmessage.h
   include/IrcCore/ircnetwork.h
   include/IrcCore/ircprotocol.h
@@ -104,9 +111,6 @@ set(MOC_HDRS
 )
 set(PUB_HDRS
   ${MOC_HDRS}
-  include/IrcCore/irccore.h
-  include/IrcCore/ircfilter.h
-  include/IrcCore/ircglobal.h
   include/IrcCore/Irc
   include/IrcCore/IrcCommand
   include/IrcCore/IrcCommandFilter
@@ -175,13 +179,13 @@ set_property(SOURCE src/model/ircchannel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircchannel.cpp)
 set_property(SOURCE src/model/ircbuffer.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffer.cpp)
-set_property(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel.cpp)
-set_property(SOURCE src/model/ircbuffermodel.cpp 
+set_property(SOURCE src/model/ircbuffermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircbuffermodel_p.cpp)
 set_property(SOURCE src/model/ircuser.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircuser.cpp)
-set_property(SOURCE src/model/ircusermodel.cpp 
+set_property(SOURCE src/model/ircusermodel.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcModel/moc_ircusermodel.cpp)
 set_property(SOURCE src/util/irccompleter.cpp
   APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/IrcUtil/moc_irccompleter.cpp)

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -56,7 +56,7 @@ class IRC_CORE_EXPORT IrcNetwork : public QObject
     Q_FLAGS(ModeTypes)
 
 public:
-    virtual ~IrcNetwork();
+    ~IrcNetwork() override;
 
     bool isInitialized();
 

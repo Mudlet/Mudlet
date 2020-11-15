@@ -26,39 +26,43 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef IRCCOMMANDQUEUE_P_H
-#define IRCCOMMANDQUEUE_P_H
-
-#include "irccommandqueue.h"
-#include "ircfilter.h"
-#include <QPointer>
-#include <QQueue>
-#include <QTimer>
+#include "ircmessagedecoder_p.h"
+#include <unicode/ucsdet.h>
 
 IRC_BEGIN_NAMESPACE
 
-class IrcCommandQueuePrivate : public QObject,  public IrcCommandFilter
+#ifndef IRC_DOXYGEN
+#define UCSD(x) reinterpret_cast<UCharsetDetector*>(x)
+
+void IrcMessageDecoder::initialize()
 {
-    Q_OBJECT
-    Q_INTERFACES(IrcCommandFilter)
-    Q_DECLARE_PUBLIC(IrcCommandQueue)
+    UErrorCode status = U_ZERO_ERROR;
+    d.detector = ucsdet_open(&status);
+    if (U_FAILURE(status))
+        qWarning("IrcMessageDecoder: ICU initialization failed: %s", u_errorName(status));
+}
 
-public:
-    IrcCommandQueuePrivate();
+void IrcMessageDecoder::uninitialize()
+{
+    ucsdet_close(UCSD(d.detector));
+}
 
-    bool commandFilter(IrcCommand* cmd) override;
-
-    void _irc_updateTimer();
-    void _irc_sendBatch(bool force = false);
-
-    IrcCommandQueue* q_ptr = nullptr;
-    IrcConnection* connection = nullptr;
-    QTimer timer;
-    int batch;
-    int interval;
-    QQueue<QPointer<IrcCommand> > commands;
-};
+QByteArray IrcMessageDecoder::codecForData(const QByteArray &data) const
+{
+    QByteArray encoding;
+    UErrorCode status = U_ZERO_ERROR;
+    if (d.detector) {
+        ucsdet_setText(UCSD(d.detector), data.constData(), data.length(), &status);
+        if (!U_FAILURE(status)) {
+            const UCharsetMatch* match = ucsdet_detect(UCSD(d.detector), &status);
+            if (match && !U_FAILURE(status))
+                encoding = ucsdet_getName(match, &status);
+        }
+    }
+    if (U_FAILURE(status))
+        qWarning("IrcMessageDecoder::codecForData() failed: %s", u_errorName(status));
+    return encoding;
+}
+#endif // IRC_DOXYGEN
 
 IRC_END_NAMESPACE
-
-#endif // IRCCOMMANDQUEUE_P_H
