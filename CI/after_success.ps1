@@ -1,11 +1,11 @@
-Set-PSDebug -Trace 1
-
 if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") -or
     ((Test-Path Env:GITHUB_REPOSITORY) -and $Env:GITHUB_REPOSITORY -ne "Mudlet/Mudlet")) {
   exit 0
 }
 
 $Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$env:GITHUB_WORKSPACE\b\ninja" };
+
+tree /f $Script:BuildFolder
 
 Set-Location "$Script:BuildFolder\src\release"
 windeployqt.exe --release mudlet.exe
