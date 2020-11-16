@@ -1923,25 +1923,25 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                     }
                     painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
 
-                    int rID = -1;
+                    int exitRoomId = -1;
                     QMapIterator<int, QString> otherExitIt = room->getOtherMap();
                     while (otherExitIt.hasNext()) {
                         otherExitIt.next();
                         if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
                             if (otherExitIt.value().mid(1) == itk.key()) {
-                                rID = otherExitIt.key();
+                                exitRoomId = otherExitIt.key();
                                 break;
                             }
                         } else if (otherExitIt.value() == itk.key()) {
-                            rID = otherExitIt.key();
+                            exitRoomId = otherExitIt.key();
                             break;
                         }
                     }
-                    if (rID > -1) {
-                        TRoom* pE = mpMap->mpRoomDB->getRoom(rID);
-                        if (pE && pE->getArea() != mAreaID) {
+                    if (exitRoomId > -1) {
+                        auto pExitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
+                        if (pExitRoom && pExitRoom->getArea() != mAreaID) {
                             QRectF rectExitAreaName(0, 0, 250, 30);
-                            QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pE->getArea());
+                            QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pExitRoom->getArea());
                             rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(8, 2, 8, 2);
 
                             QPointF _p = polyLinePoints.last(), p2 = polyLinePoints.at(polyLinePoints.size() - 2);
