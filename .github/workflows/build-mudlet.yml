@@ -116,7 +116,19 @@ jobs:
         CheckAndInstallLibzip
 
         # fixme - should be used from vcpkg
+        CheckAndInstallHunspell
         CheckAndInstallYajl
+        CheckAndInstallLua
+        CheckAndInstallPcre
+        CheckAndInstallSqlite
+
+        # Shouldn't be needed as it is only used for the luazip module from:
+        # https://github.com/mpeterv/luazip and we can use lua-zip from:
+        # https://github.com/brimworks/lua-zip :
+        CheckAndInstallZziplib
+        CheckAndInstallLuarocks
+        CheckAndInstallPugixml
+        InstallLuaModules
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
