@@ -115,6 +115,9 @@ jobs:
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
+        # fixme - should be used from vcpkg
+        CheckAndInstallYajl
+
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
