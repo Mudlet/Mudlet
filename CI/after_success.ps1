@@ -5,8 +5,12 @@ if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet"
 
 $Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$env:GITHUB_WORKSPACE\b\ninja" };
 
+
 # building with CMake in Github doesn't quite have the same structure as appveyor, so adapt it
 If (Test-Path Env:GITHUB_REPOSITORY) {
+  $Script:QtPath = $Env:Qt5_Dir -replace "/", "\"
+  $Env:PATH = "C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Script:QtPath\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
+  Write-Output "Github path: $Env:PATH"
   New-Item -Path "$Script:BuildFolder\src\release" -ItemType "directory"
   Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Desination "$Script:BuildFolder\src\release\mudlet.exe"
 }
