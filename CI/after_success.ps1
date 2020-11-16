@@ -4,7 +4,7 @@ if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet"
 }
 
 $Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:BUILD_FOLDER" };
-
+$Script:SourceFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:GITHUB_WORKSPACE" };
 
 # building with CMake in Github doesn't quite have the same structure as appveyor, so adapt it
 If (Test-Path Env:GITHUB_REPOSITORY) {
@@ -17,7 +17,7 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
 
 Set-Location "$Script:BuildFolder\src\release"
 windeployqt.exe --release mudlet.exe
-. "$Script:BuildFolder\CI\copy-non-qt-win-dependencies.ps1"
+. "$Script:SourceFolder\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
 
