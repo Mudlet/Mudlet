@@ -1,4 +1,4 @@
-cd "$Env:APPVEYOR_BUILD_FOLDER"
+Set-Location "$Env:APPVEYOR_BUILD_FOLDER"
 
 . CI\appveyor.functions.ps1
 SetQtBaseDir "C:\src\verbose_output.log"
@@ -16,11 +16,11 @@ if("$LastExitCode" -ne "0"){
   exit 1
 }
 
-mingw32-make -j $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors")
+mingw32-make -j $(Get-WmiObject win32_processor | Select-Object -ExpandProperty "NumberOfLogicalProcessors")
 if("$LastExitCode" -ne "0"){
   exit 1
 }
 
-cd "$Env:APPVEYOR_BUILD_FOLDER"
+Set-Location "$Env:APPVEYOR_BUILD_FOLDER"
 
 .\CI\after_success.ps1
