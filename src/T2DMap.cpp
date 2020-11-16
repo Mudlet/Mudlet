@@ -1923,55 +1923,57 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                     }
                     painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
 
-                    int exitRoomId = -1;
-                    QMapIterator<int, QString> otherExitIt = room->getOtherMap();
-                    while (otherExitIt.hasNext()) {
-                        otherExitIt.next();
-                        if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                            if (otherExitIt.value().mid(1) == itk.key()) {
+                    if (!getUserDataBool(room->userData, ROOM_UI_DONTSHOWAREAEXITNAME, false)) {
+                        int exitRoomId = -1;
+                        QMapIterator<int, QString> otherExitIt = room->getOtherMap();
+                        while (otherExitIt.hasNext()) {
+                            otherExitIt.next();
+                            if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
+                                if (otherExitIt.value().mid(1) == itk.key()) {
+                                    exitRoomId = otherExitIt.key();
+                                    break;
+                                }
+                            } else if (otherExitIt.value() == itk.key()) {
                                 exitRoomId = otherExitIt.key();
                                 break;
                             }
-                        } else if (otherExitIt.value() == itk.key()) {
-                            exitRoomId = otherExitIt.key();
-                            break;
                         }
-                    }
-                    if (exitRoomId > -1) {
-                        auto pExitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
-                        if (pExitRoom && pExitRoom->getArea() != mAreaID) {
-                            QRectF rectExitAreaName(0, 0, 250, 30);
-                            QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pExitRoom->getArea());
-                            rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(8, 2, 8, 2);
+                        if (exitRoomId > -1) {
+                            auto pExitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
+                            if (pExitRoom && pExitRoom->getArea() != mAreaID) {
+                                QRectF rectExitAreaName(0, 0, 250, 30);
+                                QString rAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(pExitRoom->getArea());
+                                rectExitAreaName = painter.boundingRect(rectExitAreaName, 0, rAreaName) + QMarginsF(8, 2, 8, 2);
 
-                            QPointF _p = polyLinePoints.last(), p2 = polyLinePoints.at(polyLinePoints.size() - 2);
-                            if (abs(_p.x() - p2.x()) < 4 && _p.y() > p2.y()) {    // getSouth
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y());
-                            }
-                            else if (abs(_p.x() - p2.x()) < 4 && _p.y() < p2.y()) {  // getNorth
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y() - rectExitAreaName.height());
-                            }
-                            else if (_p.x() < p2.x() && abs(_p.y() - p2.y()) < 4) {  // getWest
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width(), _p.y() - rectExitAreaName.height() / 2);
-                            }
-                            else if (_p.x() > p2.x() && abs(_p.y() - p2.y()) < 4) {  // getEast
-                                rectExitAreaName.moveTo(_p.x(), _p.y() - rectExitAreaName.height() / 2);
-                            }
-                            else if (_p.x() < p2.x() && _p.y() < p2.y()) {  // getNorthwest
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y() - rectExitAreaName.height());
-                            }
-                            else if (_p.x() > p2.x() && _p.y() < p2.y()) {  // getNortheast
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y() - rectExitAreaName.height());
-                            }
-                            else if (_p.x() > p2.x() && _p.y() > p2.y()) {  // getSoutheast
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y());
-                            }
-                            else if (_p.x() < p2.x() && _p.y() > p2.y()) {  // getSouthwest
-                                rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y());
-                            }
+                                QPointF _p = polyLinePoints.last(), p2 = polyLinePoints.at(polyLinePoints.size() - 2);
+                                if (abs(_p.x() - p2.x()) < 4 && _p.y() > p2.y()) {    // getSouth
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y());
+                                }
+                                else if (abs(_p.x() - p2.x()) < 4 && _p.y() < p2.y()) {  // getNorth
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() / 2, _p.y() - rectExitAreaName.height());
+                                }
+                                else if (_p.x() < p2.x() && abs(_p.y() - p2.y()) < 4) {  // getWest
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width(), _p.y() - rectExitAreaName.height() / 2);
+                                }
+                                else if (_p.x() > p2.x() && abs(_p.y() - p2.y()) < 4) {  // getEast
+                                    rectExitAreaName.moveTo(_p.x(), _p.y() - rectExitAreaName.height() / 2);
+                                }
+                                else if (_p.x() < p2.x() && _p.y() < p2.y()) {  // getNorthwest
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y() - rectExitAreaName.height());
+                                }
+                                else if (_p.x() > p2.x() && _p.y() < p2.y()) {  // getNortheast
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y() - rectExitAreaName.height());
+                                }
+                                else if (_p.x() > p2.x() && _p.y() > p2.y()) {  // getSoutheast
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.25, _p.y());
+                                }
+                                else if (_p.x() < p2.x() && _p.y() > p2.y()) {  // getSouthwest
+                                    rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y());
+                                }
 
-                            painter.setPen(mpHost->mFgColor_2);
-                            painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                                painter.setPen(mpHost->mFgColor_2);
+                                painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                            }
                         }
                     }
 
@@ -2180,8 +2182,10 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 painter.setBrush(brush);
                 painter.drawPolygon(_poly);
 
-                painter.setPen(mpHost->mFgColor_2);
-                painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                if (!getUserDataBool(room->userData, ROOM_UI_DONTSHOWAREAEXITNAME, false)) {
+                    painter.setPen(mpHost->mFgColor_2);
+                    painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                }
 
                 painter.setPen(__pen);
             }
