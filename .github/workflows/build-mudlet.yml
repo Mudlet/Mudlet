@@ -163,6 +163,8 @@ jobs:
       run: '${{github.workspace}}\CI\after_success.ps1'
           # cd "$Env:APPVEYOR_BUILD_FOLDER"
           # .\CI\after_success.ps1
+      env:
+        BUILD_FOLDER: '${{runner.workspace}}/b/ninja'
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'

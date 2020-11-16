@@ -3,7 +3,7 @@ if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet"
   exit 0
 }
 
-$Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$env:GITHUB_WORKSPACE\b\ninja" };
+$Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:BUILD_FOLDER" };
 
 
 # building with CMake in Github doesn't quite have the same structure as appveyor, so adapt it
