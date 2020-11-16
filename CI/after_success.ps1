@@ -12,7 +12,7 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
   $Env:PATH = "C:\Program Files (x86)\CMake\bin;C:\Program Files\7-Zip;$Script:QtPath\bin;$Env:MINGW_BASE_DIR\bin;" + (($Env:PATH.Split(';') | Where-Object { $_ -ne 'C:\Program Files\Git\usr\bin' }) -join ';')
   Write-Output "Github path: $Env:PATH"
   New-Item -Path "$Script:BuildFolder\src\release" -ItemType "directory"
-  Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Desination "$Script:BuildFolder\src\release\mudlet.exe"
+  Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Destination "$Script:BuildFolder\src\release\mudlet.exe"
 }
 
 Set-Location "$Script:BuildFolder\src\release"
