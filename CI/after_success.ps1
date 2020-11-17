@@ -25,13 +25,8 @@ Remove-Item * -include *.cpp, *.o
 
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
-if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-  $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
-} else {
-  $Script:Commit = git rev-parse --short HEAD
-}
-
-if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
+if (("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
+    -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
@@ -57,7 +52,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     # Squirrel takes Start menu name from the binary
     Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
     # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
-    $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
+    $Script:VersionAndSha = "$Env:VERSION-ptb$Env:BUILD_COMMIT"
   } else {
     Write-Output "=== Creating a release build ==="
     Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
