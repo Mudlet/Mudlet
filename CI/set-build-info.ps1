@@ -37,6 +37,10 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and
 # not all systems we deal with allow uppercase ascii characters
 $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
 
+# temporary - distinguish github-built-ones
+$Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-github"
+
+
 $VersionLine = Select-String -Pattern "Version =" $Script:BuildFolder/src/mudlet.pro
 $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
