@@ -33,6 +33,8 @@ if (Test-Path Env:APPVEYOR) {
 }
 COPY ..\*.dic .
 COPY ..\*.aff .
+
+# What does this copy exactly?
 XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
 if (Test-Path Env:APPVEYOR) {
