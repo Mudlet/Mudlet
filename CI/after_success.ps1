@@ -25,7 +25,7 @@ Remove-Item * -include *.cpp, *.o
 
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
-if (("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
+if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
     -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
