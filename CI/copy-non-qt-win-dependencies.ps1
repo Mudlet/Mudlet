@@ -1,3 +1,8 @@
+# if (Test-Path Env:GITHUB_REPOSITORY)
+
+# Temporary debug
+Get-Childitem -Path $Env:VCPKG_ROOT -Recurse
+
 COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libcrypto-1_1.dll .
