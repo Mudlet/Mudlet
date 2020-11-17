@@ -42,3 +42,8 @@ $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
 Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+
+
+Write-Output "VERSION=$Env:VERSION" >> $env:GITHUB_ENV
+Write-Output "MUDLET_VERSION_BUILD=$Env:MUDLET_VERSION_BUILD" >> $env:GITHUB_ENV
+Write-Output "BUILD_COMMIT=$Env:BUILD_COMMIT" >> $env:GITHUB_ENV
