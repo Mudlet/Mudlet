@@ -172,7 +172,7 @@ jobs:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
-      if: matrix.os != 'windows-latest'
+      if: runner.os != 'Windows'
 
     - name: (Windows) Set build info
       if: runner.os == 'Windows'
