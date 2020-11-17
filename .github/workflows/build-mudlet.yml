@@ -98,7 +98,7 @@ jobs:
         # Use pre-installed Boost
         echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
 
-        # Install dependencies not available on machine
+        # Now install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
         echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
@@ -128,30 +128,30 @@ jobs:
         echo "Env:Path: $Env:Path"
 
         # fixme - should be used from vcpkg
-        CheckAndInstallYajl
-        echo "NoShPath: $NoShPath"
-        echo "Env:Path: $Env:Path"
-        # Requires bash
-        # CheckAndInstallHunspell
-        echo "NoShPath: $NoShPath"
-        echo "Env:Path: $Env:Path"
-        CheckAndInstallLua
-        echo "NoShPath: $NoShPath"
-        echo "Env:Path: $Env:Path"
-        CheckAndInstallPcre
-        echo "NoShPath: $NoShPath"
-        echo "Env:Path: $Env:Path"
-        CheckAndInstallSqlite
-        echo "NoShPath: $NoShPath"
-        echo "Env:Path: $Env:Path"
+        # CheckAndInstallYajl
+        # echo "NoShPath: $NoShPath"
+        # echo "Env:Path: $Env:Path"
+        # # Requires bash
+        # # CheckAndInstallHunspell
+        # echo "NoShPath: $NoShPath"
+        # echo "Env:Path: $Env:Path"
+        # CheckAndInstallLua
+        # echo "NoShPath: $NoShPath"
+        # echo "Env:Path: $Env:Path"
+        # CheckAndInstallPcre
+        # echo "NoShPath: $NoShPath"
+        # echo "Env:Path: $Env:Path"
+        # CheckAndInstallSqlite
+        # echo "NoShPath: $NoShPath"
+        # echo "Env:Path: $Env:Path"
 
         # Shouldn't be needed as it is only used for the luazip module from:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
-        CheckAndInstallZziplib
-        CheckAndInstallLuarocks
-        CheckAndInstallPugixml
-        InstallLuaModules
+        # CheckAndInstallZziplib
+        # CheckAndInstallLuarocks
+        # CheckAndInstallPugixml
+        # InstallLuaModules
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
