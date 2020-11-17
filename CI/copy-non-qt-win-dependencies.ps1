@@ -22,12 +22,18 @@ if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\lua51.dll . } Else { COPY
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libhunspell-1.6-0.dll . } Else { COPY $Script:DllLocation\liblibhunspell.dll . }
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libpcre-1.dll . } Else { COPY $Script:DllLocation\libpcre.dll . }
 
-XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
-XCOPY /S /I /Q /Y ..\..\translations\lua translations\lua
+if (Test-Path Env:APPVEYOR) {
+  XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
+  XCOPY /S /I /Q /Y ..\..\translations\lua translations\lua
+  XCOPY /S /I /Q /Y ..\..\3rdparty\lcf lcf
+} Else {
+  XCOPY /S /I /Q /Y $Env:GITHUB_WORKSPACE\src\mudlet-lua mudlet-lua
+  XCOPY /S /I /Q /Y $Env:GITHUB_WORKSPACE\translations\lua translations\lua
+  XCOPY /S /I /Q /Y $Env:GITHUB_WORKSPACE\3rdparty\lcf lcf
+}
 COPY ..\*.dic .
 COPY ..\*.aff .
 XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
-XCOPY /S /I /Q /Y ..\..\3rdparty\lcf lcf
 
 if (Test-Path Env:APPVEYOR) {
   COPY ..\..\3rdparty\discord\rpc\lib\discord-rpc32.dll discord-rpc32.dll
