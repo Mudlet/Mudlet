@@ -1877,14 +1877,14 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ]  - Lesen der Karte (Format-Version:%1) Datei:
+      <translation>[ INFO ]  - Lese Karte (Formatversion: %1) aus Datei: 
 &quot;%2&quot;,
 bitte warten...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1405"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation>[ INFO ]  - Lese Karte (Formatversion: %1) Datei: &quot;%2&quot;.</translation>
+      <translation>[ INFO ]  - Lese Karte (Formatversion: %1) aus Datei: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1517"/>
