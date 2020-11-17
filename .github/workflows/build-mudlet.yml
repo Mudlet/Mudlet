@@ -112,15 +112,32 @@ jobs:
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
         $NoShPath = filterPathForSh
 
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
+
         CheckAndInstallZlib
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
         CheckAndInstallLibzip
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
 
         # fixme - should be used from vcpkg
-        CheckAndInstallHunspell
         CheckAndInstallYajl
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
+        CheckAndInstallHunspell
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
         CheckAndInstallLua
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
         CheckAndInstallPcre
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
         CheckAndInstallSqlite
+        echo "NoShPath: $NoShPath"
+        echo "Env:Path: $Env:Path"
 
         # Shouldn't be needed as it is only used for the luazip module from:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
