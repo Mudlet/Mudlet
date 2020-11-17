@@ -13,14 +13,14 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and
   }
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
     $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
-    $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
+    $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Env:BUILD_COMMIT"
   }  elseif ($Env:GITHUB_EVENT_NAME -eq "pull_request") {
     $Env:BUILD_COMMIT = git rev-parse --short $Env:GITHUB_SHA
     # This pulls eb58e2d0, but need 2901871
     # HEAD is now at eb58e2d0 Merge 2901871d7ad39482338863639f10b246623ff18d into c993ae52c25b2f9b6855398028588c1e3a4a20a1
     $Script:Pr_Pattern_Number = [regex]'refs/pull/(.+?)/'
     $Script:PR_NUMBER = ($Script:Pr_Pattern_Number.Matches($Env:GITHUB_REF) | ForEach-Object { $_.groups[1].value })
-    $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Script:PR_NUMBER-$Commit"
+    $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Script:PR_NUMBER-$Env:BUILD_COMMIT"
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
 
