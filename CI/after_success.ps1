@@ -1,7 +1,5 @@
-Set-PSDebug -Trace 2
-
 if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") -or
-    ((Test-Path Env:GITHUB_REPOSITORY) -and $Env:GITHUB_REPOSITORY -ne "Mudlet/Mudlet")) {
+((Test-Path Env:GITHUB_REPOSITORY) -and $Env:GITHUB_REPOSITORY -ne "Mudlet/Mudlet")) {
   exit 0
 }
 
@@ -16,6 +14,8 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
   New-Item -Path "$Script:BuildFolder\src\release" -ItemType "directory"
   Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Destination "$Script:BuildFolder\src\release\mudlet.exe"
 }
+
+Set-PSDebug -Trace 2
 
 Set-Location "$Script:BuildFolder\src\release"
 windeployqt.exe --release mudlet.exe
