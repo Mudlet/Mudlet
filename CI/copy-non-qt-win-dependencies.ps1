@@ -5,12 +5,11 @@ if (Test-Path Env:APPVEYOR) {
 }
 
 # Temporary debug
-Get-Childitem -Path $Env:VCPKG_ROOT -Recurse
-
-D:\a\Mudlet\Mudlet\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin
+# Get-Childitem -Path $Env:VCPKG_ROOT -Recurse
 
 COPY $Script:DllLocation\libyajl.dll .
-# COPY $Script:DllLocation\lua51.dll .
+
+# Find alternatives
 # COPY $Script:DllLocation\libcrypto-1_1.dll .
 # COPY $Script:DllLocation\libssl-1_1.dll .
 
@@ -18,9 +17,11 @@ COPY $Script:DllLocation\libyajl.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libzip.dll .
 COPY $Env:MINGW_BASE_DIR\zlib1.dll .
 
+if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\lua51.dll . } Else { COPY $Script:DllLocation\liblua.dll . }
 # vcpkg seems to produce liblibhunspell.dll, https://github.com/microsoft/vcpkg/issues/14606
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libhunspell-1.6-0.dll . } Else { COPY $Script:DllLocation\liblibhunspell.dll . }
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libpcre-1.dll . } Else { COPY $Script:DllLocation\libpcre.dll . }
+
 XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
 XCOPY /S /I /Q /Y ..\..\translations\lua translations\lua
 COPY ..\*.dic .
