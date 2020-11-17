@@ -1,16 +1,26 @@
-# if (Test-Path Env:GITHUB_REPOSITORY)
+if (Test-Path Env:APPVEYOR) {
+  $Script:DllLocation = "$Env:MINGW_BASE_DIR\bin"
+} else {
+  $Script:DllLocation = "$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
+}
 
 # Temporary debug
 Get-Childitem -Path $Env:VCPKG_ROOT -Recurse
 
-COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
-COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
-COPY $Env:MINGW_BASE_DIR\bin\libcrypto-1_1.dll .
-COPY $Env:MINGW_BASE_DIR\bin\libssl-1_1.dll .
+D:\a\Mudlet\Mudlet\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin
+
+COPY $Script:DllLocation\libyajl.dll .
+# COPY $Script:DllLocation\lua51.dll .
+# COPY $Script:DllLocation\libcrypto-1_1.dll .
+# COPY $Script:DllLocation\libssl-1_1.dll .
+
+# Theseare always installed via functions.ps1, so a static location
 COPY $Env:MINGW_BASE_DIR\bin\libzip.dll .
-COPY $Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll .
-COPY $Env:MINGW_BASE_DIR\bin\libpcre-1.dll .
-COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
+COPY $Env:MINGW_BASE_DIR\zlib1.dll .
+
+# vcpkg seems to produce liblibhunspell.dll, https://github.com/microsoft/vcpkg/issues/14606
+if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libhunspell-1.6-0.dll . } Else { COPY $Script:DllLocation\liblibhunspell.dll . }
+if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libpcre-1.dll . } Else { COPY $Script:DllLocation\libpcre.dll . }
 XCOPY /S /I /Q /Y ..\mudlet-lua mudlet-lua
 XCOPY /S /I /Q /Y ..\..\translations\lua translations\lua
 COPY ..\*.dic .
