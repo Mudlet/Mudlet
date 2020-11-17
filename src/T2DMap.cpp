@@ -1626,6 +1626,13 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
     const float widgetWidth = width();
     const float widgetHeight = height();
 
+    const float area_miny = pArea->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
+    const float area_maxy = pArea->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
+    const float area_minx = pArea->min_x * mRoomWidth + static_cast<float>(mRX);
+    const float area_maxx = pArea->max_x * mRoomWidth + static_cast<float>(mRX);
+    const float area_width = abs(area_maxx - area_minx);
+    const float area_height = abs(area_maxy - area_miny);
+
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
         customLineDestinationTarget = mCustomLinesRoomTo;
@@ -1971,8 +1978,10 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                                     rectExitAreaName.moveTo(_p.x() - rectExitAreaName.width() * 0.75, _p.y());
                                 }
 
-                                painter.setPen(mpHost->mFgColor_2);
-                                painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                                if (!(xyzoom > 40 && rectExitAreaName.width() >= qMax(area_width, area_height) / 3)) {
+                                    painter.setPen(mpHost->mFgColor_2);
+                                    painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                                }
                             }
                         }
                     }
@@ -2183,8 +2192,10 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 painter.drawPolygon(_poly);
 
                 if (!getUserDataBool(room->userData, ROOM_UI_DONTSHOWAREAEXITNAME, false)) {
-                    painter.setPen(mpHost->mFgColor_2);
-                    painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                    if (!(xyzoom > 40 && rectExitAreaName.width() >= qMax(area_width, area_height) / 3)) {
+                        painter.setPen(mpHost->mFgColor_2);
+                        painter.drawText(rectExitAreaName, Qt::AlignCenter, rAreaName);
+                    }
                 }
 
                 painter.setPen(__pen);
