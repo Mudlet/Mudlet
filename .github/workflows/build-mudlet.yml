@@ -131,7 +131,8 @@ jobs:
         CheckAndInstallYajl
         echo "NoShPath: $NoShPath"
         echo "Env:Path: $Env:Path"
-        CheckAndInstallHunspell
+        # Requires bash
+        # CheckAndInstallHunspell
         echo "NoShPath: $NoShPath"
         echo "Env:Path: $Env:Path"
         CheckAndInstallLua
