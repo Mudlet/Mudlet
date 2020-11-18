@@ -49,5 +49,6 @@ if (Test-Path Env:GITHUB_WORKSPACE) {
   COPY $Env:BUILD_FOLDER\3rdparty\qtkeychain\libqt5keychain.dll .
   COPY $Env:QT_BASE_DIR\bin\libgcc_s_seh-1.dll .
   COPY $Env:QT_BASE_DIR\bin\libstdc++-6.dll .
+  COPY $Env:QT_BASE_DIR\bin\libwinpthread-1.dll .
   COPY $Script:DllLocation\libpugixml.dll
 }
