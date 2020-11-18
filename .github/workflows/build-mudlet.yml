@@ -98,7 +98,7 @@ jobs:
         # Use pre-installed Boost
         echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
 
-        # Now install dependencies not available on machine
+        # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
         echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
@@ -108,7 +108,6 @@ jobs:
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
 
         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
-        echo "QT_BASE_DIR=$env:QT_BASE_DIR" >> $env:GITHUB_ENV
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
 

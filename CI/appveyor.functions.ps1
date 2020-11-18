@@ -32,6 +32,10 @@ function SetQtBaseDir([string] $logFile) {
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
+
+  if (Test-Path Env:GITHUB_REPOSITORY) {
+    Write-Output "QT_BASE_DIR=$env:QT_BASE_DIR" >> $env:GITHUB_ENV
+  }
 }
 
 function SetMingwBaseDir([string] $logFile) {
