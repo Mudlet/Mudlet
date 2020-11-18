@@ -20,7 +20,7 @@ Set-PSDebug -Trace 2
 Set-Location "$Script:BuildFolder\src\release"
 
 $Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
-$Script:QtVersion = $VersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
 if ([version]$Script:QtVersion -gt [version]'5.14') {
   windeployqt.exe mudlet.exe
 } else {
