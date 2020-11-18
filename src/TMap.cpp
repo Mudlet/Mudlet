@@ -521,14 +521,6 @@ void TMap::audit()
     }
 }
 
-void TMap::tidyMap(int areaID)
-{
-}
-
-void TMap::solveRoomCollision(int id, int creationDirection, bool PCheck)
-{
-}
-
 QList<int> TMap::detectRoomCollisions(int id)
 {
     QList<int> collList;
@@ -642,7 +634,7 @@ void TMap::initGraph()
         int target = pSourceR->getNorth();
         TRoom* pTargetR;
         quint8 direction = DIR_NORTH;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             // In above tests the second test is to eliminate self-edges (they
             // are of no use).  The third test is to eliminate targets that we
             // have already found to be unreachable because they are invalid or
@@ -658,7 +650,7 @@ void TMap::initGraph()
 
         target = pSourceR->getEast();
         direction = DIR_EAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -672,7 +664,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSouth();
         direction = DIR_SOUTH;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -686,7 +678,7 @@ void TMap::initGraph()
 
         target = pSourceR->getWest();
         direction = DIR_WEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -700,7 +692,7 @@ void TMap::initGraph()
 
         target = pSourceR->getUp();
         direction = DIR_UP;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -714,7 +706,7 @@ void TMap::initGraph()
 
         target = pSourceR->getDown();
         direction = DIR_DOWN;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -728,7 +720,7 @@ void TMap::initGraph()
 
         target = pSourceR->getNortheast();
         direction = DIR_NORTHEAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -742,7 +734,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSoutheast();
         direction = DIR_SOUTHEAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -756,7 +748,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSouthwest();
         direction = DIR_SOUTHWEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -770,7 +762,7 @@ void TMap::initGraph()
 
         target = pSourceR->getNorthwest();
         direction = DIR_NORTHWEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -784,7 +776,7 @@ void TMap::initGraph()
 
         target = pSourceR->getIn();
         direction = DIR_IN;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -798,7 +790,7 @@ void TMap::initGraph()
 
         target = pSourceR->getOut();
         direction = DIR_OUT;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -819,7 +811,7 @@ void TMap::initGraph()
 
             target = itSpecialExit.key();
             direction = DIR_OTHER;
-            if (target > 0 && source != target && !unUsableRoomSet.contains(target)) {
+            if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target)) {
                 pTargetR = mpRoomDB->getRoom(target);
                 if (pTargetR && !pTargetR->isLocked) {
                     route r;
@@ -1099,7 +1091,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pA->rooms;
         } else {
             // Switched to a (faster) QSet<int> from a QList<int> in version 18
-            QList<int> _oldList = pA->rooms.toList();
+            QList<int> _oldList = pA->rooms.values();
             ofs << _oldList;
         }
         ofs << pA->zLevels;
@@ -2245,7 +2237,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     // Not used:    connect(mpNetworkReply, &QNetworkReply::readyRead, this, &TMap::slot_readyRead);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
+#else
     connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
+#endif
     // Not used:    connect(mpNetworkReply, &QNetworkReply::sslErrors, this, &TMap::slot_sslErrors);
     connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
