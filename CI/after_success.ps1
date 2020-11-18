@@ -21,23 +21,29 @@ Set-Location "$Script:BuildFolder\src\release"
 
 $Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
 $Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+echo "Last exit code: $LASTEXITCODE"
 if ([version]$Script:QtVersion -ge [version]'5.14.0') {
   windeployqt.exe mudlet.exe
 } else {
   windeployqt.exe --release mudlet.exe
 }
+echo "Last exit code: $LASTEXITCODE"
 
 . "$Script:SourceFolder\CI\copy-non-qt-win-dependencies.ps1"
 
+echo "Last exit code: $LASTEXITCODE"
 Remove-Item * -include *.cpp, *.o
 
+echo "Last exit code: $LASTEXITCODE"
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
+echo "Last exit code: $LASTEXITCODE"
 if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
     -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
 
+  echo "Last exit code: $LASTEXITCODE"
   if (Test-Path Env:APPVEYOR) {
     cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "$Script:BuildFolder\src\release\*"
 
@@ -46,15 +52,20 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Write-Output "=== Uploading the snapshot build ==="
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
-  } else {
+  }
+  else {
+    echo "Last exit code: $LASTEXITCODE"
     Write-Output "=== ... later, via Github ==="
     Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release\*" >> $env:GITHUB_ENV
     Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip" >> $env:GITHUB_ENV
+    echo "Last exit code: $LASTEXITCODE"
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Set-Content -Path $outFile -Value "Github artifact, see https://github.com/$env:GITHUB_REPOSITORY/runs/$env:GITHUB_RUN_ID"
+    echo "Last exit code: $LASTEXITCODE"
   }
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
+  echo "Last exit code: $LASTEXITCODE"
 } else {
   if ($Script:PublicTestBuild) {
 
