@@ -108,6 +108,7 @@ jobs:
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
 
         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        echo "QT_BASE_DIR=$env:QT_BASE_DIR" >> $env:GITHUB_ENV
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
 
