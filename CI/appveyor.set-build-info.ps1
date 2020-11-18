@@ -38,7 +38,7 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and
 $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
 
 # temporary - distinguish github-built-ones
-if (Test-Path GITHUB_REPOSITORY) {
+if (Test-Path Env:GITHUB_REPOSITORY) {
   $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-github"
 }
 
