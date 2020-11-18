@@ -209,8 +209,8 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
   }
 }
 
-if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-  $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
+if (Test-Path Env:PR_NUMBER) {
+  $prId = " ,#$Env:PR_NUMBER"
 }
 
 if (Test-Path variable:DEPLOY_URL) {

@@ -14,11 +14,13 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
     $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
     $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Env:BUILD_COMMIT"
+    Write-Output "PR_NUMBER=$env:APPVEYOR_PULL_REQUEST_NUMBER" >> $env:GITHUB_ENV
   }  elseif ($Env:GITHUB_EVENT_NAME -eq "pull_request") {
     $Env:BUILD_COMMIT = git rev-parse --short $Env:GITHUB_SHA^2
     $Script:Pr_Pattern_Number = [regex]'refs/pull/(.+?)/'
-    $Script:PR_NUMBER = ($Script:Pr_Pattern_Number.Matches($Env:GITHUB_REF) | ForEach-Object { $_.groups[1].value })
     $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Script:PR_NUMBER-$Env:BUILD_COMMIT"
+    $Script:PR_NUMBER = ($Script:Pr_Pattern_Number.Matches($Env:GITHUB_REF) | ForEach-Object { $_.groups[1].value })
+    Write-Output "PR_NUMBER=$env:PR_NUMBER" >> $env:GITHUB_ENV
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
 
