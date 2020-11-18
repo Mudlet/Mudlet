@@ -37,7 +37,10 @@ COPY ..\*.aff .
 echo "Last exit code: $LASTEXITCODE"
 
 # What does this copy exactly?
-XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
+if (Test-Path Env:APPVEYOR) {
+  # doesn't work in actions yet
+  XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
+}
 echo "Last exit code: $LASTEXITCODE"
 
 if (Test-Path Env:APPVEYOR) {
