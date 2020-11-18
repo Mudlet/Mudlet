@@ -156,7 +156,6 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        Get-ChildItem env:
         ${{github.workspace}}\CI\validate_deployment.ps1
         ${{github.workspace}}\CI\appveyor.set-build-info.ps1
 
