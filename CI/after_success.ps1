@@ -51,7 +51,7 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release\*" >> $env:GITHUB_ENV
     Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip" >> $env:GITHUB_ENV
     Set-Variable -Name "outFile" -Value "upload-location.txt";
-    Set-Content -Path $outFile -Value '<add upload location here>'
+    Set-Content -Path $outFile -Value "Github artifact, see https://github.com/$env:GITHUB_REPOSITORY/runs/$env:GITHUB_RUN_ID"
   }
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
