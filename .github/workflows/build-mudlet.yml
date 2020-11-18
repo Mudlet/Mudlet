@@ -101,7 +101,6 @@ jobs:
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
-        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
         . ${{github.workspace}}\CI\appveyor.functions.ps1
 
         # Libzip install complains when \bin is missing

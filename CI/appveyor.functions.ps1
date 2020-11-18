@@ -51,6 +51,10 @@ function SetMingwBaseDir([string] $logFile) {
   }
   Write-Output "Using $Env:MINGW_BASE_DIR as MinGW base directory." | Tee-Object -File "$logFile" -Append
 
+  if (Test-Path Env:GITHUB_REPOSITORY) {
+    Write-Output "MINGW_BASE_DIR=$Env:MINGW_BASE_DIR" >> $Env:GITHUB_ENV
+  }
+
   if(!(Test-Path Env:MINGW_BASE_DIR_BASH)){
     $Env:MINGW_BASE_DIR_BASH = $Env:MINGW_BASE_DIR -replace "\\", "/" -replace "C:", "/c"
   }
