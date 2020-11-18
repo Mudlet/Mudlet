@@ -47,6 +47,6 @@ if (Test-Path Env:APPVEYOR) {
 if (Test-Path Env:GITHUB_WORKSPACE) {
   COPY $Env:BUILD_FOLDER\3rdparty\edbee-lib\edbee-lib\qslog\bin\libQsLog.dll .
   COPY $Env:BUILD_FOLDER\3rdparty\qtkeychain\libqt5keychain.dll .
-  COPY $Env:MINGW_BASE_DIR\bin\libgcc_s_seh-1.dll .
+  COPY $Env:QT_BASE_DIR\bin\libgcc_s_seh-1.dll .
   COPY $Script:DllLocation\libpugixml.dll
 }
