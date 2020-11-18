@@ -98,7 +98,6 @@ public:
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(QString& msg);
-    void tidyMap(int area);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void update();
@@ -107,7 +106,6 @@ public:
     void audit();
 
     QList<int> detectRoomCollisions(int id);
-    void solveRoomCollision(int id, int creationDirection, bool PCheck = true);
     void setRoom(int);
     bool findPath(int from, int to);
     bool gotoRoom(int);
