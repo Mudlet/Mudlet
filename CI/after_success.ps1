@@ -57,7 +57,7 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     echo "Last exit code: $LASTEXITCODE"
     Write-Output "=== ... later, via Github ==="
     Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release\*" >> $env:GITHUB_ENV
-    Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip" >> $env:GITHUB_ENV
+    Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows" >> $env:GITHUB_ENV
     echo "Last exit code: $LASTEXITCODE"
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Set-Content -Path $outFile -Value "Github artifact, see https://github.com/$env:GITHUB_REPOSITORY/runs/$env:GITHUB_RUN_ID"
