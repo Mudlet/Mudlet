@@ -210,7 +210,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: Upload packaged Windows
-    - uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v2
       if: runner.os == 'Windows' && ${{env.FOLDER_TO_UPLOAD}}
       with:
         name: ${{env.UPLOAD_FILENAME}}
