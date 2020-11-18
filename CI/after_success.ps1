@@ -18,7 +18,15 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
 Set-PSDebug -Trace 2
 
 Set-Location "$Script:BuildFolder\src\release"
-windeployqt.exe --release mudlet.exe
+
+$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
+$Script:QtVersion = $VersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
+if ([version]$Script:QtVersion -gt [version]'5.14') {
+  windeployqt.exe mudlet.exe
+} else {
+  windeployqt.exe --release mudlet.exe
+}
+
 . "$Script:SourceFolder\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
