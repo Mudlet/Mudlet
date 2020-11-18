@@ -15,8 +15,6 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
   Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Destination "$Script:BuildFolder\src\release\mudlet.exe"
 }
 
-Set-PSDebug -Trace 2
-
 Set-Location "$Script:BuildFolder\src\release"
 
 $Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
