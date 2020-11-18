@@ -37,17 +37,18 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   Rename-Item -Path "$Script:BuildFolder\src\release\mudlet.exe" -NewName "Mudlet.exe"
-  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "$Script:BuildFolder\src\release\*"
 
-  Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
-  Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
-  Set-Variable -Name "outFile" -Value "upload-location.txt";
-  Write-Output "=== Uploading the snapshot build ==="
   if (Test-Path Env:APPVEYOR) {
+    cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "$Script:BuildFolder\src\release\*"
+
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
+    Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
+    Set-Variable -Name "outFile" -Value "upload-location.txt";
+    Write-Output "=== Uploading the snapshot build ==="
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
   } else {
     Write-Output "=== ... later, via Github ==="
-    Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release" >> $env:GITHUB_ENV
+    Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release\*" >> $env:GITHUB_ENV
     Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip" >> $env:GITHUB_ENV
     Set-Content -Path $outFile -Value '<add upload location here>'
   }

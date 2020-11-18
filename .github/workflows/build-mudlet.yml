@@ -214,7 +214,7 @@ jobs:
       if: runner.os == 'Windows' && ${{env.FOLDER_TO_UPLOAD}}
       with:
         name: ${{env.UPLOAD_FILENAME}}
-        path: '${{env.FOLDER_TO_UPLOAD}}\${{env.UPLOAD_FILENAME}}'
+        path: ${{env.FOLDER_TO_UPLOAD}}
 
     - name: (windows) Show relevant logs
       if: failure() && runner.os == 'Windows'
