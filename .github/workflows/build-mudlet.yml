@@ -209,11 +209,12 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - name: Upload packaged Windows
     - uses: actions/upload-artifact@v2
-      if: always()
+      if: runner.os == 'Windows' && ${{env.FOLDER_TO_UPLOAD}}
       with:
-        name: ${{runner.os}}-${{matrix.compiler}}-build-directory
-        path: '${{runner.workspace}}/b/ninja' # or path/to/artifact
+        name: ${{env.UPLOAD_FILENAME}}
+        path: '${{env.BUILD_FOLDER}}/src/release/${{env.UPLOAD_FILENAME}}' # or path/to/artifact
 
     - name: (windows) Show relevant logs
       if: failure() && runner.os == 'Windows'
