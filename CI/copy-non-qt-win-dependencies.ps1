@@ -3,7 +3,6 @@ if (Test-Path Env:APPVEYOR) {
 } else {
   $Script:DllLocation = "$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
 }
-echo "Last exit code: $LASTEXITCODE"
 
 # Temporary debug
 # Get-Childitem -Path $Env:VCPKG_ROOT -Recurse
@@ -34,14 +33,12 @@ if (Test-Path Env:APPVEYOR) {
 }
 COPY ..\*.dic .
 COPY ..\*.aff .
-echo "Last exit code: $LASTEXITCODE"
 
 # What does this copy exactly?
 if (Test-Path Env:APPVEYOR) {
   # doesn't work in actions yet
   XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 }
-echo "Last exit code: $LASTEXITCODE"
 
 if (Test-Path Env:APPVEYOR) {
   COPY ..\..\3rdparty\discord\rpc\lib\discord-rpc32.dll discord-rpc32.dll
@@ -49,4 +46,3 @@ if (Test-Path Env:APPVEYOR) {
   COPY $Env:GITHUB_WORKSPACE\3rdparty\discord\rpc\lib\discord-rpc32.dll discord-rpc32.dll
 }
 
-echo "Last exit code: $LASTEXITCODE"

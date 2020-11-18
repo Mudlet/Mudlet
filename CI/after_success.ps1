@@ -19,23 +19,18 @@ Set-Location "$Script:BuildFolder\src\release"
 
 $Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
 $Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
-echo "Last exit code: $LASTEXITCODE"
 if ([version]$Script:QtVersion -ge [version]'5.14.0') {
   windeployqt.exe mudlet.exe
 } else {
   windeployqt.exe --release mudlet.exe
 }
-echo "Last exit code: $LASTEXITCODE"
 
 . "$Script:SourceFolder\CI\copy-non-qt-win-dependencies.ps1"
 
-echo "Last exit code: $LASTEXITCODE"
 Remove-Item * -include *.cpp, *.o
 
-echo "Last exit code: $LASTEXITCODE"
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
-echo "Last exit code: $LASTEXITCODE"
 if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
     -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
