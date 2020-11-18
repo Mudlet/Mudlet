@@ -1827,7 +1827,7 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[信息] - 读取地图文件中 (格式版本: %1):
+      <translation>[ 信息 ]  - 读取地图文件中 (格式版本: %1):
 &quot;%2&quot;,
 请稍等...</translation>
     </message>
