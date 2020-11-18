@@ -20,7 +20,7 @@ if ($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and
     $Script:Pr_Pattern_Number = [regex]'refs/pull/(.+?)/'
     $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Script:PR_NUMBER-$Env:BUILD_COMMIT"
     $Script:PR_NUMBER = ($Script:Pr_Pattern_Number.Matches($Env:GITHUB_REF) | ForEach-Object { $_.groups[1].value })
-    Write-Output "PR_NUMBER=$env:PR_NUMBER" >> $env:GITHUB_ENV
+    Write-Output "PR_NUMBER=$Script:PR_NUMBER" >> $env:GITHUB_ENV
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
 
