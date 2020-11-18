@@ -13,6 +13,9 @@ If (Test-Path Env:GITHUB_REPOSITORY) {
   Write-Output "Github path: $Env:PATH"
   New-Item -Path "$Script:BuildFolder\src\release" -ItemType "directory"
   Move-Item -Path "$Script:BuildFolder\src\mudlet.exe" -Destination "$Script:BuildFolder\src\release\mudlet.exe"
+
+  # temp debug
+  Get-ChildItem -Recurse D:\a\Mudlet
 }
 
 Set-Location "$Script:BuildFolder\src\release"
