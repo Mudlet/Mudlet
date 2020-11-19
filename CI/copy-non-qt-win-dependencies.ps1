@@ -28,8 +28,14 @@ if (Test-Path Env:APPVEYOR) {
   XCOPY /S /I /Q /Y $Env:GITHUB_WORKSPACE\translations\lua translations\lua
   XCOPY /S /I /Q /Y $Env:GITHUB_WORKSPACE\3rdparty\lcf lcf
 }
-COPY ..\*.dic .
-COPY ..\*.aff .
+
+if (Test-Path Env:APPVEYOR) {
+  COPY ..\*.dic .
+  COPY ..\*.aff .
+} else {
+  COPY $Env:GITHUB_WORKSPACE\*.dic .
+  COPY $Env:GITHUB_WORKSPACE\*.aff .
+}
 
 # doesn't work in actions yet
 if (Test-Path Env:APPVEYOR) {
