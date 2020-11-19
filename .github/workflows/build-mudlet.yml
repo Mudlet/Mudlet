@@ -116,7 +116,6 @@ jobs:
         # But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
         $NoShPath = filterPathForSh
 
-
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
@@ -127,9 +126,8 @@ jobs:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
         # CheckAndInstallZziplib
-        # CheckAndInstallLuarocks
-        # CheckAndInstallPugixml
-        # InstallLuaModules
+        CheckAndInstallLuarocks
+        InstallLuaModules
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
