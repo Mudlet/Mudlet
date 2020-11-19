@@ -28,7 +28,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.12.9\mingw73_32"
+      $Env:QT_BASE_DIR = "C:\Qt\5.12.10\mingw73_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -292,7 +292,7 @@ function InstallPcre() {
   DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"
   Set-Location pcre\pcre-8.43
-  RunConfigure "--enable-utf --enable-unicode-properties --enable-pcre16 --prefix=$Env:MINGW_BASE_DIR_BASH"
+  RunConfigure "--enable-utf --enable-unicode-properties --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
 }
