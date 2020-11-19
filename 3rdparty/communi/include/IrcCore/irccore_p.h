@@ -26,39 +26,57 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef IRCCOMMANDQUEUE_P_H
-#define IRCCOMMANDQUEUE_P_H
+#ifndef IRCCORE_P_H
+#define IRCCORE_P_H
 
-#include "irccommandqueue.h"
-#include "ircfilter.h"
-#include <QPointer>
-#include <QQueue>
-#include <QTimer>
+#include "ircglobal.h"
+
+#include <QtCore/qlist.h>
+#include <QtCore/qset.h>
+#include <QtCore/qstring.h>
 
 IRC_BEGIN_NAMESPACE
 
-class IrcCommandQueuePrivate : public QObject,  public IrcCommandFilter
-{
-    Q_OBJECT
-    Q_INTERFACES(IrcCommandFilter)
-    Q_DECLARE_PUBLIC(IrcCommandQueue)
+namespace IrcPrivate {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    template <typename T>
+    QSet<T> listToSet(const QList<T> &list) { return QSet<T>(list.cbegin(), list.cend()); }
+    template <typename T>
+    static inline QList<T> setToList(const QSet<T> &set) { return QList<T>(set.cbegin(), set.cend()); }
+#else
+    template <typename T>
+    static inline QSet<T> listToSet(const QList<T> &list) { return list.toSet(); }
+    template <typename T>
+    static inline QList<T> setToList(const QSet<T> &set) { return set.toList(); }
+#endif
+}
 
-public:
-    IrcCommandQueuePrivate();
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+namespace Qt {
+    const QString::SplitBehavior SkipEmptyParts = QString::SkipEmptyParts;
+}
+#endif
 
-    bool commandFilter(IrcCommand* cmd) override;
+#ifndef Q_FALLTHROUGH
+#   if defined(__cplusplus)
+#       if __has_cpp_attribute(clang::fallthrough)
+#           define Q_FALLTHROUGH() [[clang::fallthrough]]
+#       elif __has_cpp_attribute(gnu::fallthrough)
+#           define Q_FALLTHROUGH() [[gnu::fallthrough]]
+#       elif __has_cpp_attribute(fallthrough)
+#           define Q_FALLTHROUGH() [[fallthrough]]
+#       endif
+#   endif
+#endif
 
-    void _irc_updateTimer();
-    void _irc_sendBatch(bool force = false);
-
-    IrcCommandQueue* q_ptr = nullptr;
-    IrcConnection* connection = nullptr;
-    QTimer timer;
-    int batch;
-    int interval;
-    QQueue<QPointer<IrcCommand> > commands;
-};
+#ifndef Q_FALLTHROUGH
+#   if (defined(Q_CC_GNU) && Q_CC_GNU >= 700) && !defined(Q_CC_INTEL)
+#       define Q_FALLTHROUGH() __attribute__((fallthrough))
+#   else
+#       define Q_FALLTHROUGH() (void)0
+#   endif
+#endif
 
 IRC_END_NAMESPACE
 
-#endif // IRCCOMMANDQUEUE_P_H
+#endif // IRCCORE_P_H

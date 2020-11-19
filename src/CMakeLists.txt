@@ -376,6 +376,9 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
+target_compile_definitions(communi PUBLIC IRC_STATIC)
+
 target_link_libraries(
   mudlet
   communi
