@@ -126,8 +126,8 @@ jobs:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
         # CheckAndInstallZziplib
-        CheckAndInstallLuarocks
-        InstallLuaModules
+        # CheckAndInstallLuarocks
+        # InstallLuaModules
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
