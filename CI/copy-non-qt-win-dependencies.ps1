@@ -31,9 +31,9 @@ if (Test-Path Env:APPVEYOR) {
 COPY ..\*.dic .
 COPY ..\*.aff .
 
-# What does this copy exactly?
+# doesn't work in actions yet
 if (Test-Path Env:APPVEYOR) {
-  # doesn't work in actions yet
+  # copy in Luarocks-related DLL's
   XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 }
 
