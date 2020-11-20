@@ -19,7 +19,7 @@ jobs:
       with:
         luaVersion: "5.1.5"
 
-    - uses: leafo/gh-actions-luarocks@v3
+    - uses: leafo/gh-actions-luarocks@v4
       name: Install LuaRocks
 
     - name: Install LDoc
