@@ -429,7 +429,11 @@ function InstallLuaArgparse() {
 function InstallLuaYajl() {
   Set-Location $env:LUAROCKS_DIR
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  if (Test-Path Env:GITHUB_REPOSITORY) {
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  } else {
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin`"", "YAJL_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
+  }
 }
 
 function InstallLuaZip () {
