@@ -361,17 +361,13 @@ function InstallZziplib() {
   Set-Location "$workingBaseDir"
 }
 
-function InstallLuarocks([string] $location = "C:\LuaRocks", [string] $customLuaExe) {
+function InstallLuarocks([string] $location = "C:\LuaRocks") {
   # works for 64bit just as well
   DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.4.0-win32.zip" "luarocks.zip"
   ExtractZip "luarocks.zip" "luarocks"
   Set-Location luarocks\luarocks-3.4.0-win32
   Step "installing luarocks"
-  if (Test-Path variable:customLuaExe) {
-    exec ".\install.bat" @("/P", $location, "/MW", "/Q", "/LUA", $customLuaExe)
-  } else {
-    exec ".\install.bat" @("/P", $location, "/MW", "/Q")
-  }
+  exec ".\install.bat" @("/P", $location, "/MW", "/Q")
   Set-Location $location\lua\luarocks\core
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
@@ -522,8 +518,8 @@ function CheckAndInstallZziplib(){
     CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
 }
 
-function CheckAndInstallLuarocks([string] $location = "C:\LuaRocks", $customLuaExe) {
-    CheckAndInstall "luarocks" $location+"\luarocks.bat" { InstallLuarocks $location $customLuaExe }
+function CheckAndInstallLuarocks([string] $location = "C:\LuaRocks") {
+    CheckAndInstall "luarocks" $location+"\luarocks.bat" { InstallLuarocks $location }
 }
 
 function CheckAndInstallPugixml(){
