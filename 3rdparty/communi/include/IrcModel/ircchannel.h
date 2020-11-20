@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -45,20 +45,20 @@ class IRC_MODEL_EXPORT IrcChannel : public IrcBuffer
     Q_PROPERTY(QString topic READ topic NOTIFY topicChanged)
 
 public:
-    Q_INVOKABLE explicit IrcChannel(QObject* parent = 0);
-    virtual ~IrcChannel();
+    Q_INVOKABLE explicit IrcChannel(QObject* parent = nullptr);
+    ~IrcChannel() override;
 
     QString key() const;
     QString mode() const;
     QString topic() const;
 
-    virtual bool isActive() const;
+    bool isActive() const override;
 
 public Q_SLOTS:
     void who();
     void join(const QString& key = QString());
     void part(const QString& reason = QString());
-    void close(const QString& reason = QString());
+    void close(const QString& reason = QString()) override;
 
 Q_SIGNALS:
     void keyChanged(const QString& key);

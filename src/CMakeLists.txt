@@ -31,13 +31,15 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  if(BUILD matches "-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((BUILD matches "-dev.+") or (BUILD matches "-test.+"))
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
+  # Neither BUILD nor APP_BUILD does not seem to be available?
+
+  # if(APP_BUILD matches "-ptb.+")
+  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  # else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  endif()
+  # endif()
 endif()
 
 set(mudlet_SRCS
@@ -373,6 +375,9 @@ target_compile_definitions(mudlet
 if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
+
+# One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
+target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries(
   mudlet
