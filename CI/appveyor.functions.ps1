@@ -294,8 +294,8 @@ function InstallLua() {
   exec "etc\winmake"
   Step "installing lua"
   exec "etc\winmake" @("install", "$Env:MINGW_BASE_DIR")
-  Step "checking Lua rocks"
-  exec "lua" @("-v")
+  Step "checking Lua wocks"
+  & "lua -v"
 }
 
 function InstallPcre() {
