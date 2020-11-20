@@ -129,7 +129,7 @@ jobs:
 
         # temp debug
         Get-ChildItem -Recurse $Env:VCPKG_ROOT
-        $env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
+        Invoke-Expression $env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
         Set-PSDebug -Trace 2
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks" "$env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua"
         InstallLuaModules
