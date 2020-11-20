@@ -429,8 +429,10 @@ function InstallLuaArgparse() {
 
 function InstallLuaYajl() {
   Set-Location $env:LUAROCKS_DIR
-  Get-ChildItem -Path $env:VCPKG_ROOT -Recurse
+  Get-ChildItem -Path "$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include" -Recurse
 
+  # D:\a\Mudlet\Mudlet\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\yajl\yajl_parse.h
+  # $env:VCPKG_ROOT\installed\x64-mingw-dynamic\include\yajl\yajl_parse.h
   if (Test-Path Env:GITHUB_REPOSITORY) {
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin`"", "YAJL_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
@@ -458,11 +460,11 @@ function InstallLuaZip () {
 }
 
 function InstallLuaModules(){
-  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
+  CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
+  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
-  CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
