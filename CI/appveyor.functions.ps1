@@ -452,9 +452,9 @@ function InstallLuaZip () {
 }
 
 function InstallLuaModules(){
+  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
-  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
   CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
