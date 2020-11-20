@@ -366,6 +366,9 @@ function InstallZziplib() {
 
   Get-ChildItem -Path . -Recurse
   # exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
+  echo "printing makefile"
+  Get-Content Makefile
+  echo "done with makefile"
   RunMakeInstall
   Set-Location "$workingBaseDir"
 }
