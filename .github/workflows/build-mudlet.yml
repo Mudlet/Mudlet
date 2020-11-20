@@ -123,6 +123,13 @@ jobs:
         # But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
         $NoShPath = filterPathForSh
 
+        # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
+        # Move this to post-build step!
+        CheckAndInstallLua
+        CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
+        Set-PSDebug -Trace 2
+        InstallLuaModules
+
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
@@ -134,13 +141,6 @@ jobs:
         # https://github.com/brimworks/lua-zip :
         # CheckAndInstallZziplib
 
-        # temp debug
-        # Get-ChildItem -Recurse $Env:VCPKG_ROOT
-        # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
-        CheckAndInstallLua
-        CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
-        Set-PSDebug -Trace 2
-        InstallLuaModules
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
