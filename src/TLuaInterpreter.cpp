@@ -1314,7 +1314,13 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
     QString windowName {WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        // the next line should be "pushnil"; compatibility with old bugs and all that
+        lua_pushstring(L, "ERROR: mini console does not exist");
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
     QString line = console->getCurrentLine();
     lua_pushstring(L, line.toUtf8().constData());
     return 1;
