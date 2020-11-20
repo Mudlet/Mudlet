@@ -4929,7 +4929,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="832"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
-      <translation>&lt;bh2&gt;&lt;bu&gt;Библиотека IRC Коммуни&lt;b/u&gt;&lt;b/h2&gt;&lt;bh3&gt;Авторское право © 2008-2020 Проект Коммуни&lt;b/h3&gt;</translation>
+      <translation>&lt;bh2&gt;&lt;bu&gt;Библиотека IRC Communi&lt;b/u&gt;&lt;b/h2&gt;&lt;bh3&gt;Авторское право © 2008-2020 Проект Communi&lt;b/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="835"/>
@@ -10271,7 +10271,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="345"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если эта опция выбрана, то формат файла журнала будет HTML (&apos;.html&apos;) который может передавать цвет, шрифт и другую информацию о форматировании, а не только обычный текст (ето расширение файла &apos;.txt&apos;).  Если опция изменена, пока запись в журнал уже открыт, необходимо остановить и перезапустить запись в журнал, чтобы этот параметр вступили в силу в новом формате журнала.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="514"/>
