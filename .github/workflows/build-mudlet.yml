@@ -117,14 +117,15 @@ jobs:
         # But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
         $NoShPath = filterPathForSh
 
-        # TODO - cache these!
-        CheckAndInstallZlib
-        CheckAndInstallLibzip
-
         # Shouldn't be needed as it is only used for the luazip module from:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
         CheckAndInstallZziplib
+
+        # TODO - cache these!
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
+
 
         # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
         # Move this to post-build step!

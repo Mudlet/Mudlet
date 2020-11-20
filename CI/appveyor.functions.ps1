@@ -363,6 +363,9 @@ function InstallZziplib() {
   (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
   RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
+
+  Get-ChildItem -Path . -Recurse
+  # exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
   RunMakeInstall
   Set-Location "$workingBaseDir"
 }
