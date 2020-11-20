@@ -405,7 +405,12 @@ function InstallLuasql() {
 
 function InstallRexPcre() {
   Set-Location $env:LUAROCKS_DIR
-  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  if (Test-Path Env:GITHUB_REPOSITORY) {
+    Get-ChildItem -Path $env:VCPKG_ROOT -Recurse
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  } else {
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  }
 }
 
 function InstallLuaUtf8() {
