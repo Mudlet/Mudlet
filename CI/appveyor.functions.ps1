@@ -355,21 +355,40 @@ function InstallLibzip() {
 
 # Shouldn't be needed now:
 function InstallZziplib() {
+  # DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
+  # ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
+  # Set-Location zziplib\zziplib-FixZzipStrndup
+
+  # Step "changing configure script"
+  # (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
+  # RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
+  # RunMake
+
+  # Get-ChildItem -Path . -Recurse
+  # # exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
+  # echo "printing makefile"
+  # Get-Content Makefile
+  # echo "done with makefile"
+  # RunMakeInstall
+  # Set-Location "$workingBaseDir"
+
+
+
+
+  $Env:Path = $NoShPath
   DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
   ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-FixZzipStrndup
-
-  Step "changing configure script"
-  (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
-  RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
+  if (!(Test-Path -Path "build" -PathType Container)) {
+    Step "Creating zziplib build path"
+    New-Item build -ItemType Directory >> "$logFile" 2>&1
+  }
+  Set-Location build
+  Step "Running cmake"
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
-
-  Get-ChildItem -Path . -Recurse
-  # exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
-  echo "printing makefile"
-  Get-Content Makefile
-  echo "done with makefile"
   RunMakeInstall
+  $Env:Path = $ShPath
   Set-Location "$workingBaseDir"
 }
 
