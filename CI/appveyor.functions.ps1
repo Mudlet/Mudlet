@@ -365,9 +365,9 @@ function InstallZziplib() {
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
   # works for 64bit just as well
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.4.0-win32.zip" "luarocks.zip"
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
   ExtractZip "luarocks.zip" "luarocks"
-  Set-Location luarocks\luarocks-3.4.0-win32
+  Set-Location luarocks\luarocks-3.1.2-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", $location, "/MW", "/Q")
   Set-Location $location\lua\luarocks\core
@@ -397,6 +397,7 @@ function InstallLfs() {
   Set-Location $env:LUAROCKS_DIR
   ls $env:LUAROCKS_DIR
   # .\luarocks.bat --help
+  lua -v
   lua luarocks.lua --help
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaFileSystem")
 }
