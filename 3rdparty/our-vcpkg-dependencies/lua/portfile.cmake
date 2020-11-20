@@ -1,5 +1,3 @@
-include(vcpkg_common_functions)
-
 vcpkg_download_distfile(ARCHIVE
     URLS "https://www.lua.org/ftp/lua-5.1.5.tar.gz"
     FILENAME "lua-5.1.5.tar.gz"
