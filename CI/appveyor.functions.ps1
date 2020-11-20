@@ -367,7 +367,8 @@ function InstallLuarocks([string] $location = "C:\LuaRocks") {
   ExtractZip "luarocks.zip" "luarocks"
   Set-Location luarocks\luarocks-3.4.0-win32
   Step "installing luarocks"
-  exec ".\install.bat" @("/P", $location, "/MW", "/Q")
+  # exec ".\install.bat" @("/P", $location, "/MW", "/Q")
+  exec ".\install.bat" @("/P", $location, "/MW")
   Set-Location $location\lua\luarocks\core
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
