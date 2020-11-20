@@ -129,7 +129,7 @@ jobs:
 
         # temp debug
         Get-ChildItem -Recurse $Env:VCPKG_ROOT
-        CheckAndInstallLuarocks
+        CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
         InstallLuaModules
 
     - name: (Linux Clang) change compiler
