@@ -376,9 +376,9 @@ function InstallZziplib() {
 
 
   $Env:Path = $NoShPath
-  DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
-  ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
-  Set-Location zziplib\zziplib-FixZzipStrndup
+  DownloadFile "https://github.com/gdraheim/zziplib/archive/master.tar.gz" "zziplib.tar.gz"
+  ExtractTar "zziplib.tar.gz" "zziplib"
+  Set-Location zziplib\zziplib
   Get-ChildItem -Path . -Recurse
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating zziplib build path"
