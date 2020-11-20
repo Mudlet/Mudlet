@@ -72,12 +72,12 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    - name: (Windows) package Mudlet
+    - name: Upload Lua
+      uses: actions/upload-artifact@v2
       if: runner.os == 'Windows'
-      shell: pwsh
-      run: '${{github.workspace}}\CI\after_success.ps1'
-      env:
-        BUILD_FOLDER: '${{runner.workspace}}\b\ninja'
+      with:
+        name: lua
+        path: ${{env.VCPKG_ROOT}}\installed\x64-mingw-dynamic\tools\lua
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
