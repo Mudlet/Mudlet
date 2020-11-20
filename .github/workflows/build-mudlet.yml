@@ -3,6 +3,7 @@ on:
   push:
     branches: [master, development]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   compile-mudlet:
