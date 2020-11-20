@@ -273,7 +273,7 @@ function InstallYajl() {
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build
-  Step "running cmake"
+  Step "Running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "..")
   RunMake
   Step "installing"
@@ -342,7 +342,7 @@ function InstallLibzip() {
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build
-  Step "running cmake"
+  Step "Running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DENABLE_BZIP2=OFF", "-DENABLE_LZMA=OFF", "..")
   RunMake
   RunMakeInstall
@@ -386,7 +386,7 @@ function InstallPugixml() {
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build
-  Step "running cmake"
+  Step "Running cmake"
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
