@@ -422,7 +422,8 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight());
+                mpConsole->scrollUp(0);
+                QTimer::singleShot(0, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
                 ke->accept();
                 return true;
 
