@@ -86,6 +86,9 @@ function script:exec {
     $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
+  echo "logfile start:"
+  Get-Content $logFile
+  echo "logfile end:"
   if ($exitCode -ne 0)
   {
     throw $errorMessage
