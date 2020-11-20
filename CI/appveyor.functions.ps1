@@ -366,9 +366,9 @@ function InstallZziplib() {
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
   # works for 64bit just as well
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.3.1-win32.zip" "luarocks.zip"
   ExtractZip "luarocks.zip" "luarocks"
-  Set-Location luarocks\luarocks-3.1.2-win32
+  Set-Location luarocks\luarocks-3.3.1-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", $location, "/MW", "/Q")
   Set-Location $location\lua\luarocks\core
@@ -436,7 +436,7 @@ function InstallLuaYajl() {
   if (Test-Path Env:GITHUB_REPOSITORY) {
     $script:FordwardSlashes = $Env:VCPKG_ROOT -replace "\\", "/"
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$script:FordwardSlashes/installed/x64-mingw-dynamic/bin"
-    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR\TESTING`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "YAJL_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"")
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "YAJL_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"")
   } else {
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
