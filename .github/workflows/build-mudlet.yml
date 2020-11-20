@@ -126,6 +126,9 @@ jobs:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
         # CheckAndInstallZziplib
+
+        # temp debug
+        Get-ChildItem -Recurse $Env:VCPKG_ROOT
         CheckAndInstallLuarocks
         InstallLuaModules
 
