@@ -128,9 +128,9 @@ jobs:
         # CheckAndInstallZziplib
 
         # temp debug
-        Get-ChildItem -Recurse $Env:VCPKG_ROOT
-        Invoke-Expression $env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
+        # Get-ChildItem -Recurse $Env:VCPKG_ROOT
         Set-PSDebug -Trace 2
+        Invoke-Expression $env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks" "$env:VCPKG_ROOT\installed\x64-mingw-dynamic\tools\lua"
         InstallLuaModules
 
