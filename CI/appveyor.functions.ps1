@@ -82,6 +82,7 @@ function script:exec {
   if($parameter.Length -eq 0){
     $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   } else {
+    echo "running $cmd $parameter"
     $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
@@ -434,8 +435,9 @@ function InstallLuaYajl() {
   # D:\a\Mudlet\Mudlet\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\yajl\yajl_parse.h
   # $env:VCPKG_ROOT\installed\x64-mingw-dynamic\include\yajl\yajl_parse.h
   if (Test-Path Env:GITHUB_REPOSITORY) {
-    $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
-    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin`"", "YAJL_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
+    $script:FordwardSlashes = $Env:VCPKG_ROOT -replace "\\", "/"
+    $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$script:FordwardSlashes/installed/x64-mingw-dynamic/bin"
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "YAJL_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"")
   } else {
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
