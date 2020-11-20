@@ -517,8 +517,8 @@ function CheckAndInstallZziplib(){
     CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
 }
 
-function CheckAndInstallLuarocks(){
-    CheckAndInstall "luarocks" "C:\LuaRocks\luarocks.bat" { InstallLuarocks }
+function CheckAndInstallLuarocks([string] $location = "C:\LuaRocks\luarocks.bat") {
+    CheckAndInstall "luarocks" $location { InstallLuarocks }
 }
 
 function CheckAndInstallPugixml(){
