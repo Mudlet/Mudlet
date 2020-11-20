@@ -53,6 +53,7 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
   }
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
+  Remove-Item $outFile
 } else {
   if ($Script:PublicTestBuild) {
 
