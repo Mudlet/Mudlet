@@ -86,9 +86,9 @@ function script:exec {
     $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -RedirectStandardOutput "$outLog" -RedirectStandardError "$errLog" -NoNewWindow).ExitCode
   }
   Get-Content $outLog, $errLog | Out-File $logFile -Append
-  echo "logfile start:"
-  Get-Content $logFile
-  echo "logfile end:"
+  # echo "logfile start:"
+  # Get-Content $logFile
+  # echo "logfile end:"
   if ($exitCode -ne 0)
   {
     throw $errorMessage
@@ -439,7 +439,7 @@ function InstallLuaYajl() {
   if (Test-Path Env:GITHUB_REPOSITORY) {
     $script:FordwardSlashes = $Env:VCPKG_ROOT -replace "\\", "/"
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$script:FordwardSlashes/installed/x64-mingw-dynamic/bin"
-    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "YAJL_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"",  "LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"", "--verbose")
+    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/bin`"", "YAJL_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"", "LUA_INCDIR=`"$script:FordwardSlashes/installed/x64-mingw-dynamic/include`"")
   } else {
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
