@@ -4896,7 +4896,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="832"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bh2&gt;&lt;bu&gt;Communi IRC Library&lt;b/u&gt;&lt;b/h2&gt;&lt;bh3&gt;Copyright © 2008-2020 The Communi Project&lt;b/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="835"/>
