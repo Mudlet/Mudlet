@@ -299,18 +299,6 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
 
@@ -330,18 +318,6 @@ bool TCommandLine::event(QEvent* event)
                 // Do the "normal" return key action if no or just the keypad
                 // modifier is present:
                 enterCommand(ke);
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
 
@@ -374,9 +350,6 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
                 historyMove(MOVE_DOWN);
-                if (!mpHost->mHighlightHistory){
-                    moveCursor(QTextCursor::End);
-                }
                 ke->accept();
                 return true;
 
@@ -411,9 +384,6 @@ bool TCommandLine::event(QEvent* event)
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
                 historyMove(MOVE_UP);
-                if (!mpHost->mHighlightHistory){
-                    moveCursor(QTextCursor::End);
-                }
                 ke->accept();
                 return true;
 
@@ -872,6 +842,8 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
+    mLastCompletion.clear();
+    mUserKeptOnTyping = false;
 
     QStringList _l = _t.split(QChar::LineFeed);
 
@@ -895,8 +867,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         mHistoryList.push_front(toPlainText());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
+        mHistoryBuffer = -1;
         clear();
     } else {
+        mHistoryBuffer = 0;
         selectAll();
     }
     adjustHeight();
@@ -1040,7 +1014,11 @@ void TCommandLine::historyMove(MoveDirection direction)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
+        if (mpHost->mHighlightHistory) {
+            selectAll();
+        } else {
+            moveCursor(QTextCursor::End);
+        }
         adjustHeight();
     } else {
         mAutoCompletionCount += shift;
