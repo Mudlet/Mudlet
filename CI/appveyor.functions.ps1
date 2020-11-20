@@ -396,7 +396,7 @@ function InstallPugixml() {
 function InstallLfs() {
   Set-Location $env:LUAROCKS_DIR
   ls $env:LUAROCKS_DIR
-  exec "$env:LUAROCKS_DIR\luarocks.bat" @("--help")
+  "$env:LUAROCKS_DIR\luarocks.bat --help"
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaFileSystem")
 }
 
