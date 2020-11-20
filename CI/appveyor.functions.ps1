@@ -371,6 +371,7 @@ function InstallLuarocks([string] $location = "C:\LuaRocks") {
   Set-Location $location\lua\luarocks\core
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
+  $env:LUAROCKS_DIR = $location
 }
 
 function InstallPugixml() {
@@ -391,37 +392,37 @@ function InstallPugixml() {
 }
 
 function InstallLfs() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaFileSystem")
 }
 
 function InstallLuasql() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
 }
 
 function InstallRexPcre() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 }
 
 function InstallLuaUtf8() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
 }
 
 function InstallLuaLunajson() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lunajson")
 }
 
 function InstallLuaArgparse() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "argparse")
 }
 
 function InstallLuaYajl() {
-  Set-Location \LuaRocks
+  Set-Location $env:LUAROCKS_DIR
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
   exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 }

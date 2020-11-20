@@ -136,9 +136,10 @@ jobs:
 
         # temp debug
         # Get-ChildItem -Recurse $Env:VCPKG_ROOT
-        Set-PSDebug -Trace 2
+        # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
         CheckAndInstallLua
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
+        Set-PSDebug -Trace 2
         InstallLuaModules
 
     - name: (Linux Clang) change compiler
