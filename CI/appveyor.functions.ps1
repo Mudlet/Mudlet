@@ -386,7 +386,7 @@ function InstallZziplib() {
   }
   Set-Location build
   Step "Running cmake"
-  exec "cmake" @("-G", "`"Ninja`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
   # $Env:Path = $ShPath
