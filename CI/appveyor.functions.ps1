@@ -347,9 +347,6 @@ function InstallLibzip() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DENABLE_BZIP2=OFF", "-DENABLE_LZMA=OFF", "..")
   RunMake
   RunMakeInstall
-  echo "logfile start:"
-  Get-Content $logFile
-  echo "logfile end:"
   $Env:Path = $ShPath
 }
 
@@ -368,6 +365,9 @@ function InstallZziplib() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
+  echo "logfile start:"
+  Get-Content $logFile
+  echo "logfile end:"
 }
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
