@@ -386,7 +386,13 @@ function InstallZziplib() {
   }
   Set-Location build
   Step "Running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  # 2020 - 11 - 21T08:43:44.4486680Z     Directory: D:\a\Mudlet\Mudlet\3rdparty\vcpkg\downloads\tools\ninja\1.10.1-windows
+  # 2020 - 11 - 21T08:43:44.4487289Z
+  # 2020 - 11 - 21T08:43:44.4487510Z
+  # 2020 - 11 - 21T08:43:44.4491999Z Mode                LastWriteTime         Length Name
+  # 2020 - 11 - 21T08:43:44.4494625Z ----                -------------         ------ ----
+  # 2020 - 11 - 21T08:43:44.4503852Z -a----        8/18/2020   7:34 PM         539136 ninja.exe
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
   # $Env:Path = $ShPath
