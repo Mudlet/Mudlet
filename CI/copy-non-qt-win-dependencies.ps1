@@ -37,11 +37,8 @@ if (Test-Path Env:APPVEYOR) {
   COPY $Env:GITHUB_WORKSPACE\*.aff .
 }
 
-# doesn't work in actions yet
-if (Test-Path Env:APPVEYOR) {
-  # copy in Luarocks-related DLL's
-  XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
-}
+# copy in Luarocks-related DLL's
+XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
 if (Test-Path Env:APPVEYOR) {
   COPY ..\..\3rdparty\discord\rpc\lib\discord-rpc32.dll discord-rpc32.dll
