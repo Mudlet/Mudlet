@@ -349,6 +349,10 @@ bool TRoomDB::removeArea(int id)
         // This means areas.clear() is not needed during map
         // deletion
         areas.remove(id);
+        // Must also nuke any map labels in the area - otherwise auditing the
+        // map later will regenerate an unnamed area with the same Id to be the
+        // owner of them...!
+        mpMap->mapLabels.remove(id);
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
