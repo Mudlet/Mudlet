@@ -379,7 +379,6 @@ function InstallZziplib() {
   DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.71.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.71
-  Get-ChildItem -Path . -Recurse
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating zziplib build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
