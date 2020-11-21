@@ -92,6 +92,13 @@ jobs:
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
+    - name: (Windows) Restore non-vcpkg dependencies cache
+      if: runner.os == 'Windows'
+      uses: actions/cache@v2
+      with:
+        path: '${{runner.workspace}}\mingw73_64'
+        key: ${{runner.OS}}-mingw-cache-${{hashFiles('.github/workflows/build-mudlet.yml')}}-${{hashFiles('CI/appveyor.functions.ps1')}}
+
     - name: (Windows) Install non-vcpkg dependencies
       if: runner.os == 'Windows'
       shell: powershell
