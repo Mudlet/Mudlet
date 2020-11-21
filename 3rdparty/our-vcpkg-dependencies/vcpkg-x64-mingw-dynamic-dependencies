@@ -4,6 +4,3 @@ yajl
 hunspell
 pugixml
 pcre
-# --overlay-ports=../our-vcpkg-dependencies/lua
-# lua[core]
-
