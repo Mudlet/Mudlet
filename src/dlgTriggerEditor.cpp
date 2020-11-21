@@ -6664,6 +6664,7 @@ void dlgTriggerEditor::autoSave()
 
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
+    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -6680,6 +6681,7 @@ void dlgTriggerEditor::enterEvent(QEvent* pE)
 
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
+    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -8361,6 +8363,7 @@ bool dlgTriggerEditor::event(QEvent* event)
 
 void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 {
+    Q_UNUSED(event)
     if (mpSourceEditorArea->isVisible()) {
         slot_move_source_find();
     }

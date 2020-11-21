@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -188,35 +189,6 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
     QTreeWidget::mousePressEvent(event);
 }
 
-void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end)
-{
-    if (parent.isValid()) {
-        mOldParentID = parent.data(Qt::UserRole).toInt();
-    } else {
-        mOldParentID = 0;
-    }
-
-    if (mOldParentID == 0) {
-        mOldParentID = parent.sibling(start, 0).data(Qt::UserRole).toInt();
-    }
-
-    if (parent.isValid()) {
-        QModelIndex child = parent.child(start, 0);
-        mChildID = child.data(Qt::UserRole).toInt();
-        if (mChildID == 0) {
-            if (parent.isValid()) {
-                child = parent.model()->index(start, 0, QModelIndex());
-            }
-            if (child.isValid()) {
-                mChildID = child.data(Qt::UserRole).toInt();
-            } else {
-                mChildID = 0;
-            }
-        }
-    }
-}
-
-
 void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
 {
     // determine position in parent list
@@ -340,10 +312,6 @@ void TTreeWidget::dropEvent(QDropEvent* event)
     }
     mIsDropAction = true;
     QTreeWidget::dropEvent(event);
-}
-
-void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)
-{
 }
 
 void TTreeWidget::dragMoveEvent(QDragMoveEvent* e)
