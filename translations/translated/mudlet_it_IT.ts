@@ -10250,7 +10250,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="345"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extension &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed while logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione per salvare i file di log in formato HTML (estensione &apos;.html&apos;) in modo che contenga colori, tipi di carattere e altre informazioni di formattazione invece che solamente il testo ricevuto dal gioco (estensione &apos;.txt&apos;).  Se cambi l'opzione mentre il logging è attivo è necessario riavviarlo affinché la variazione venga applicata.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="514"/>
