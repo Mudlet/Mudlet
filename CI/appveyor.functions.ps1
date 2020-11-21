@@ -376,9 +376,9 @@ function InstallZziplib() {
 
 
   # $Env:Path = $NoShPath
-  DownloadFile "https://github.com/gdraheim/zziplib/archive/master.tar.gz" "zziplib.tar.gz"
+  DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.71.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
-  Set-Location zziplib\zziplib-master
+  Set-Location zziplib\zziplib-0.13.71
   Get-ChildItem -Path . -Recurse
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating zziplib build path"
@@ -386,7 +386,7 @@ function InstallZziplib() {
   }
   Set-Location build
   Step "Running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  exec "cmake" @("-G", "`"Ninja`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
   # $Env:Path = $ShPath
