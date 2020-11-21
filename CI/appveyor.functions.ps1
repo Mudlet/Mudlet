@@ -355,6 +355,7 @@ function InstallLibzip() {
 
 # Shouldn't be needed now:
 function InstallZziplib() {
+  $Env:Path = $NoShPath
   DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.71.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.71
@@ -364,18 +365,11 @@ function InstallZziplib() {
   }
   Set-Location build
   Step "Running cmake"
-  # 2020 - 11 - 21T08:43:44.4486680Z     Directory: D:\a\Mudlet\Mudlet\3rdparty\vcpkg\downloads\tools\ninja\1.10.1-windows
-  # 2020 - 11 - 21T08:43:44.4487289Z
-  # 2020 - 11 - 21T08:43:44.4487510Z
-  # 2020 - 11 - 21T08:43:44.4491999Z Mode                LastWriteTime         Length Name
-  # 2020 - 11 - 21T08:43:44.4494625Z ----                -------------         ------ ----
-  # 2020 - 11 - 21T08:43:44.4503852Z -a----        8/18/2020   7:34 PM         539136 ninja.exe
-  $env:PATH = "$env:VCPKG_ROOT\downloads\tools\ninja\1.10.1-windows;$env:PATH"
-  exec "cmake" @("-G", "Ninja", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
-  # $Env:Path = $ShPath
-  Set-Location "$workingBaseDir"
+  $Env:Path = $ShPath
 }
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
