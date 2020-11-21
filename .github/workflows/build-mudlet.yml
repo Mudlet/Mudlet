@@ -215,3 +215,8 @@ jobs:
           echo "zziplib CMakeOutput.log: "
           cat "${{runner.workspace}}/src/zziplib/zziplib-master/build/CMakeFiles/CMakeOutput.log"
         }
+        }
+        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log") {
+          echo "zlib build.log: "
+          cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log"
+        }
