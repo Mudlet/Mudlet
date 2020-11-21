@@ -414,7 +414,7 @@ function InstallLuasql() {
 
 function InstallRexPcre() {
   Set-Location $env:LUAROCKS_DIR
-  if (Test-Path Env:GITHUB_REPOSITORY) {
+  if (Test-Path Env:VCPKG_ROOT) {
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\lib`"", "PCRE_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
   } else {
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
@@ -439,7 +439,7 @@ function InstallLuaArgparse() {
 function InstallLuaYajl() {
   Set-Location $env:LUAROCKS_DIR
 
-  if (Test-Path Env:GITHUB_REPOSITORY) {
+  if (Test-Path Env:VCPKG_ROOT) {
     $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin;$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin`"", "YAJL_INCDIR=`"$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"", "LUA_INCDIR=`"$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
   } else {
