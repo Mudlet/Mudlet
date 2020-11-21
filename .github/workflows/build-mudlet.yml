@@ -130,7 +130,6 @@ jobs:
         # Move this to post-build step!
         CheckAndInstallLua
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
-        Set-PSDebug -Trace 2
         CheckAndInstallSqlite
         InstallLuaModules
 
