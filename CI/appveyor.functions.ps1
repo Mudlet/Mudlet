@@ -355,7 +355,6 @@ function InstallLibzip() {
 
 # Shouldn't be needed now:
 function InstallZziplib() {
-  $Env:Path = $NoShPath
   DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.71.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.71
@@ -369,7 +368,6 @@ function InstallZziplib() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
-  $Env:Path = $ShPath
 }
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
