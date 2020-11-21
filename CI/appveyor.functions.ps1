@@ -375,7 +375,7 @@ function InstallZziplib() {
 
 
 
-  $Env:Path = $NoShPath
+  # $Env:Path = $NoShPath
   DownloadFile "https://github.com/gdraheim/zziplib/archive/master.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-master
@@ -389,7 +389,7 @@ function InstallZziplib() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
-  $Env:Path = $ShPath
+  # $Env:Path = $ShPath
   Set-Location "$workingBaseDir"
 }
 
