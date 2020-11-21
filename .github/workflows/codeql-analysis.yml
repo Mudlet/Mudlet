@@ -88,6 +88,8 @@ jobs:
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
         cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/gcc_64/
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
