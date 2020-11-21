@@ -149,6 +149,8 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
