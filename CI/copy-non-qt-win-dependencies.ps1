@@ -1,4 +1,4 @@
-if (Test-Path Env:APPVEYOR) {
+if (!(Test-Path Env:VCPKG_ROOT)) {
   $Script:DllLocation = "$Env:MINGW_BASE_DIR\bin"
 } else {
   $Script:DllLocation = "$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
