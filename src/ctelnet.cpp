@@ -1527,15 +1527,21 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += OPT_CHARSET;
 
                 if (!acceptedCharacterSet.isEmpty()) {
+                    QByteArray value;
                     if (acceptedCharacterSet.contains(QByteArray("ASCII"))) {
-                        setEncoding(QByteArray("ASCII"), true); // Force variants of ASCII to ASCII
+                        value = QByteArray("ASCII");
+                        setEncoding(value, true); // Force variants of ASCII to ASCII
                     } else if (acceptedCharacterSet.startsWith("ISO-")) {
-                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(4)), true); // Align with TEncodingTable::csmEncodings
+                        value = QByteArray("ISO " + acceptedCharacterSet.mid(4));
+                        setEncoding(value, true); // Align with TEncodingTable::csmEncodings
                     } else if (acceptedCharacterSet.startsWith("ISO") && !acceptedCharacterSet.startsWith("ISO ")) {
-                        setEncoding(QByteArray("ISO " + acceptedCharacterSet.mid(3)), true); // Align with TEncodingTable::csmEncodings
+                        value = QByteArray("ISO " + acceptedCharacterSet.mid(3));
+                        setEncoding(value, true); // Align with TEncodingTable::csmEncodings
                     } else {
-                        setEncoding(acceptedCharacterSet, true);
+                        value = acceptedCharacterSet;
+                        setEncoding(value, true);
                     }
+                    qDebug() << "Game changed encoding to" << value;
 
                     output += CHARSET_ACCEPTED;
                     output += payload[1]; // Separator
