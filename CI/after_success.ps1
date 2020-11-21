@@ -43,8 +43,7 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Write-Output "=== Uploading the snapshot build ==="
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
-  }
-  else {
+  } else {
     Write-Output "=== ... later, via Github ==="
     Write-Output "FOLDER_TO_UPLOAD=$Script:BuildFolder\src\release\*" >> $env:GITHUB_ENV
     Write-Output "UPLOAD_FILENAME=Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows" >> $env:GITHUB_ENV
