@@ -4,6 +4,8 @@ if (!(Test-Path Env:VCPKG_ROOT)) {
   $Script:DllLocation = "$Env:VCPKG_ROOT\installed\x64-mingw-dynamic\bin"
 }
 
+$Script:SourceFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:GITHUB_WORKSPACE" };
+
 COPY $Script:DllLocation\libyajl.dll .
 
 # Find alternatives
