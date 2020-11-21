@@ -120,12 +120,11 @@ jobs:
         # Shouldn't be needed as it is only used for the luazip module from:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
-        # CheckAndInstallZziplib
-
-        # TODO - cache these!
+        # can't install zziplib & zlib from vcpkg due to https://github.com/microsoft/vcpkg/issues/14689
+        CheckAndInstallZziplib
         CheckAndInstallZlib
-        CheckAndInstallLibzip
 
+        CheckAndInstallLibzip
 
         # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
         # Move this to post-build step!
@@ -214,8 +213,4 @@ jobs:
         if (Test-Path -Path "${{runner.workspace}}/src/zziplib/zziplib-master/build/CMakeFiles/CMakeOutput.log") {
           echo "zziplib CMakeOutput.log: "
           cat "${{runner.workspace}}/src/zziplib/zziplib-master/build/CMakeFiles/CMakeOutput.log"
-        }
-        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log") {
-          echo "zlib build.log: "
-          cat "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log"
         }

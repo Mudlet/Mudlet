@@ -355,27 +355,6 @@ function InstallLibzip() {
 
 # Shouldn't be needed now:
 function InstallZziplib() {
-  # DownloadFile "https://github.com/keneanung/zziplib/archive/FixZzipStrndup.tar.gz" "zziplib-FixZzipStrndup.tar.gz"
-  # ExtractTar "zziplib-FixZzipStrndup.tar.gz" "zziplib"
-  # Set-Location zziplib\zziplib-FixZzipStrndup
-
-  # Step "changing configure script"
-  # (Get-Content configure -Raw) -replace 'uname -msr', 'uname -ms' | Out-File -encoding ASCII configure >> "$logFile" 2>&1
-  # RunConfigure "--disable-mmap --prefix=$Env:MINGW_BASE_DIR_BASH"
-  # RunMake
-
-  # Get-ChildItem -Path . -Recurse
-  # # exec "XCOPY" @("/S", "/I", "/Q", "yajl-2.1.0\include", "$Env:MINGW_BASE_DIR\include")
-  # echo "printing makefile"
-  # Get-Content Makefile
-  # echo "done with makefile"
-  # RunMakeInstall
-  # Set-Location "$workingBaseDir"
-
-
-
-
-  # $Env:Path = $NoShPath
   DownloadFile "https://github.com/gdraheim/zziplib/archive/v0.13.71.tar.gz" "zziplib.tar.gz"
   ExtractTar "zziplib.tar.gz" "zziplib"
   Set-Location zziplib\zziplib-0.13.71
@@ -391,7 +370,8 @@ function InstallZziplib() {
   # 2020 - 11 - 21T08:43:44.4491999Z Mode                LastWriteTime         Length Name
   # 2020 - 11 - 21T08:43:44.4494625Z ----                -------------         ------ ----
   # 2020 - 11 - 21T08:43:44.4503852Z -a----        8/18/2020   7:34 PM         539136 ninja.exe
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  $env:PATH = "$env:VCPKG_ROOT\downloads\tools\ninja\1.10.1-windows;$env:PATH"
+  exec "cmake" @("-G", "Ninja", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
   # $Env:Path = $ShPath
