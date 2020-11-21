@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,12 +17,14 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "TMxpLinkTagHandler.h"
 #include "TMxpClient.h"
 
 // <A href=URL [hint=text] [expire=name]>
 TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
+    Q_UNUSED(ctx)
     if (tag->hasAttribute("EXPIRE")) {
         return MXP_TAG_NOT_HANDLED;
     }
@@ -39,8 +42,11 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     client.setLinkMode(true);
     return MXP_TAG_HANDLED;
 }
+
 TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
     QStringList *links, *hints;
     if (!client.getLink(mLinkId, &links, &hints)) {
         return MXP_TAG_NOT_HANDLED;

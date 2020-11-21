@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,7 +36,9 @@ class TMxpTagHandler
 public:
     virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
-    virtual void handleContent(char ch) {}
+    virtual void handleContent(char ch) {
+        Q_UNUSED(ch)
+    }
 
     void handleContent(const QString& text)
     {
@@ -45,6 +48,8 @@ public:
     }
 
     virtual void handleTextNode(TMxpContext& ctx, TMxpClient& client, MxpTextNode* tag) {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
         handleContent(tag->getContent());
     }
 
@@ -57,11 +62,26 @@ public:
         }
     }
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return true; }
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        Q_UNUSED(tag)
+        return true;
+    }
 
-    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) { return MXP_TAG_NOT_HANDLED; }
+    virtual TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        Q_UNUSED(tag)
+        return MXP_TAG_NOT_HANDLED;
+    }
 
-    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) { return MXP_TAG_NOT_HANDLED; }
+    virtual TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        Q_UNUSED(tag)
+        return MXP_TAG_NOT_HANDLED;
+    }
 
     virtual ~TMxpTagHandler() = default;
 
@@ -76,7 +96,11 @@ class TMxpSingleTagHandler : public TMxpTagHandler
 public:
     virtual ~TMxpSingleTagHandler() = default;
 
-    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) { return tag->isNamed(tagName); }
+    virtual bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) {
+        Q_UNUSED(ctx)
+        Q_UNUSED(client)
+        return tag->isNamed(tagName);
+    }
 
 protected:
     explicit TMxpSingleTagHandler(QString tagName) : tagName(std::move(tagName)) {}
