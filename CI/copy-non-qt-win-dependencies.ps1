@@ -33,8 +33,8 @@ if (Test-Path Env:APPVEYOR) {
   COPY ..\*.dic .
   COPY ..\*.aff .
 } else {
-  COPY $Env:GITHUB_WORKSPACE\*.dic .
-  COPY $Env:GITHUB_WORKSPACE\*.aff .
+  COPY $Env:GITHUB_WORKSPACE\src\*.dic .
+  COPY $Env:GITHUB_WORKSPACE\src\*.aff .
 }
 
 # copy in Luarocks-related DLL's
