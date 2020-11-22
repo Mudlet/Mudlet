@@ -136,6 +136,8 @@ jobs:
 
         CheckAndInstallLibzip
 
+        # yajl headers need to be in same place as Lua, and since we install Lua manually, have to do the same for yajl
+        CheckAndInstallYajl
         # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
         # Move this to post-build step!
         CheckAndInstallLua
