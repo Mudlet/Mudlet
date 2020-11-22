@@ -39,7 +39,9 @@
 
 TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
+, mCommandLineName(QStringLiteral("main"))
 , mpHost(pHost)
+, mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 , mTabCompletionCount()
@@ -51,8 +53,6 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
-, mType(type)
-, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);

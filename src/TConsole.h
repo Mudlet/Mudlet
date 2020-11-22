@@ -255,7 +255,6 @@ public:
     bool mTriggerEngineMode;
 
     QPoint mUserCursor;
-    bool mWindowIsHidden;
     int mWrapAt;
     QLineEdit* networkLatency;
     QPoint P_begin;

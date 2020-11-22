@@ -30,10 +30,13 @@
 
 static jmp_buf buf;
 
-LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
+LuaInterface::LuaInterface(Host* pH)
+: mpHost(pH)
+, mHostID(pH->getHostID())
+, depth()
+, interpreter(pH->getLuaInterpreter())
+, L()
 {
-    interpreter = mpHost->getLuaInterpreter();
-    mHostID = mpHost->getHostID();
     varUnit.reset(new VarUnit());
     //set our panic function
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
