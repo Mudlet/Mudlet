@@ -449,7 +449,9 @@ function InstallLuaZip () {
   ExtractZip "luazip.zip" "luazip"
   Set-Location luazip\luazip-master
   Step "installing luazip"
+  echo "printing VCPKG_ROOT"
   Get-ChildItem -Path $env:VCPKG_ROOT -Recurse
+  echo "printing MINGW_BASE_DIR"
   Get-ChildItem -Path $Env:MINGW_BASE_DIR -Recurse
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
