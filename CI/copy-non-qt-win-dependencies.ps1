@@ -6,7 +6,7 @@ if (!(Test-Path Env:VCPKG_ROOT)) {
 
 $Script:SourceFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:GITHUB_WORKSPACE" };
 
-COPY $Script:DllLocation\libyajl.dll .
+COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 
 # Find alternatives
 # COPY $Script:DllLocation\libcrypto-1_1.dll .
