@@ -450,6 +450,7 @@ function InstallLuaZip () {
   Set-Location luazip\luazip-master
   Step "installing luazip"
   Get-ChildItem -Path $env:VCPKG_ROOT -Recurse
+  Get-ChildItem -Path $Env:MINGW_BASE_DIR -Recurse
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
@@ -463,11 +464,7 @@ function InstallLuaModules(){
   CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
-  # fails to find -lzzip
-  if(!(Test-Path Env:GITHUB_REPOSITORY))
-  {
-    CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
-  }
+  CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
 }
 
 function CheckAndInstall7z(){
