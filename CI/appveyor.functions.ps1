@@ -364,6 +364,7 @@ function InstallZziplib() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
+  Get-Content -Path $logFile
 }
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
