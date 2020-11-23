@@ -361,7 +361,6 @@ function InstallZziplib() {
   }
   Set-Location build
   Step "Running cmake"
-
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
@@ -526,7 +525,7 @@ function CheckAndInstallLibzip(){
 }
 
 function CheckAndInstallZziplib(){
-    CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib }
+    CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip-0.dll.a" { InstallZziplib }
 }
 
 function CheckAndInstallLuarocks([string] $location = "C:\LuaRocks") {

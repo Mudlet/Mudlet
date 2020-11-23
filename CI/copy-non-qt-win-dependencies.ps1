@@ -40,9 +40,6 @@ if (Test-Path Env:APPVEYOR) {
 }
 
 # copy in Luarocks-related DLL's
-echo "debug 1"
-Get-ChildItem -Recurse $Env:MINGW_BASE_DIR\lib\lua\5.1
-echo "debug 2"
 XCOPY /S /I /Q /Y $Env:MINGW_BASE_DIR\lib\lua\5.1 .
 
 if (Test-Path Env:APPVEYOR) {
