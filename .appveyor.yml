@@ -31,7 +31,7 @@ build_script:
 
 on_failure:
 - cd C:\src
-- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+- bash -c "cat ./verbose_output.log"
 
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
