@@ -15,8 +15,8 @@ COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 # These are always installed via functions.ps1, so a static location
 COPY $Env:MINGW_BASE_DIR\bin\libzip.dll .
 COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
+COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
 
-if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\lua51.dll . } Else { COPY $Script:DllLocation\liblua.dll . }
 # vcpkg seems to produce liblibhunspell.dll, https://github.com/microsoft/vcpkg/issues/14606
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libhunspell-1.6-0.dll . } Else { COPY $Script:DllLocation\liblibhunspell.dll . }
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libpcre-1.dll . } Else { COPY $Script:DllLocation\libpcre.dll . }
