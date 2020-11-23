@@ -208,7 +208,7 @@ jobs:
         path: ${{env.FOLDER_TO_UPLOAD}}
 
     - name: (windows) Show relevant logs
-      if: failure() && runner.os == 'Windows'
+      if: always() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
