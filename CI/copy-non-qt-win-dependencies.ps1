@@ -16,6 +16,7 @@ COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libzip.dll .
 COPY $Env:MINGW_BASE_DIR\bin\zlib1.dll .
 COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
+COPY $Env:MINGW_BASE_DIR\bin\libzzip-0.dll .
 
 # vcpkg seems to produce liblibhunspell.dll, https://github.com/microsoft/vcpkg/issues/14606
 if (Test-Path Env:APPVEYOR) { COPY $Script:DllLocation\libhunspell-1.6-0.dll . } Else { COPY $Script:DllLocation\liblibhunspell.dll . }
@@ -56,8 +57,4 @@ if (Test-Path Env:GITHUB_WORKSPACE) {
   COPY $Env:QT_BASE_DIR\bin\libstdc++-6.dll .
   COPY $Env:QT_BASE_DIR\bin\libwinpthread-1.dll .
   COPY $Script:DllLocation\libpugixml.dll .
-
-  # zziplib's .dll for some reason is not installed, only .dll.a is
-  # FIXME remove hardcoded location
-  COPY D:\a\Mudlet\src\zziplib\zziplib-0.13.71\build\zzip\libzzip-0.dll .
 }

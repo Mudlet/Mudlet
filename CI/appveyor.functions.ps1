@@ -364,10 +364,10 @@ function InstallZziplib() {
   exec "cmake" @("-G", "`"MinGW Makefiles`"", "--target", "libzzip", "--build", ".", "-DZZIPTEST=off", "-DZZIPDOCS=off", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
   RunMake
   RunMakeInstall
-  echo "Zziplib build log:"
-  Get-Content -Path $logFile
-  echo "Contents of /build:"
-   Get-ChildItem -Recurse .
+
+  # bug in cmake installers, the .dll is not installed https://github.com/gdraheim/zziplib/issues/107
+  Step "Manually installing libzzip-0.dll"
+  Copy-Item zzip\libzzip-0.dll $Env:MINGW_BASE_DIR\bin
 }
 
 function InstallLuarocks([string] $location = "C:\LuaRocks") {
