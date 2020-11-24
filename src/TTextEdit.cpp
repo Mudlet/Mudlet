@@ -867,12 +867,13 @@ void TTextEdit::normaliseSelection()
     }
 }
 
-void TTextEdit::expandSelectionToWords() {
+void TTextEdit::expandSelectionToWords()
+{
     int yind = mPA.y();
     int xind = mPA.x();
     for (; xind >= 0; --xind) {
         if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind))) {
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
             break;
         }
     }
@@ -880,9 +881,9 @@ void TTextEdit::expandSelectionToWords() {
 
     yind = mPB.y();
     xind = mPB.x();
-    for (; xind < static_cast<int>(mpBuffer->lineBuffer[yind].size()); ++xind) {
-        if (mpBuffer->lineBuffer[yind].at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind))) {
+    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
             break;
         }
     }
