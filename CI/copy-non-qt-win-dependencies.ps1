@@ -55,5 +55,9 @@ if (Test-Path Env:GITHUB_WORKSPACE) {
   COPY $Env:QT_BASE_DIR\bin\libgcc_s_seh-1.dll .
   COPY $Env:QT_BASE_DIR\bin\libstdc++-6.dll .
   COPY $Env:QT_BASE_DIR\bin\libwinpthread-1.dll .
-  COPY $Script:DllLocation\libpugixml.dll
+  COPY $Script:DllLocation\libpugixml.dll .
+
+  # zziplib's .dll for some reason is not installed, only .dll.a is
+  # FIXME remove hardcoded location
+  COPY D:\a\Mudlet\src\zziplib\zziplib-0.13.71\build\zzip\libzzip-0.dll .
 }
