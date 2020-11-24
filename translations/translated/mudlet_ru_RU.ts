@@ -1826,7 +1826,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="446"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[ INFO ]  - Начало проверки карты...</translation>
+      <translation>[ INFO ] - Начало проверки карты...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1036"/>
