@@ -1530,12 +1530,12 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15675"/>
       <source>No error message available from Lua</source>
-      <translation>Нет сообщения об ошибке от Луа</translation>
+      <translation>Нет сообщения об ошибке от Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15677"/>
       <source>Lua error: %1</source>
-      <translation>Ошибка Луа: %1</translation>
+      <translation>Ошибка Lua: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15679"/>
@@ -3931,7 +3931,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2319"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>ЛУА</translation>
+      <translation>Lua</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2330"/>
@@ -4939,7 +4939,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation>&lt;h2&gt;&lt;u&gt;lua - Луа 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 1994 — 2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
+      <translation>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 1994 — 2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="844"/>
@@ -10412,7 +10412,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1135"/>
       <source>Echo Lua errors to the main console</source>
-      <translation>Показывать ошибки Луа на главном консоле</translation>
+      <translation>Показывать ошибки Lua на главном консоле</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1142"/>
@@ -11353,12 +11353,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2677"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Позволять Луа постановлять состояние Discord&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Позволять Lua постановлять состояние Discord&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2680"/>
       <source>Enable Lua API</source>
-      <translation>Включить API Луа</translation>
+      <translation>Включить API Lua</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2712"/>
@@ -11961,7 +11961,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation>Команда или скрипт Луа</translation>
+      <translation>Команда или скрипт Lua</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
