@@ -131,7 +131,6 @@ jobs:
 
 
         CheckAndInstallZziplib
-        Get-ChildItem -Recurse $Env:MINGW_BASE_DIR
         CheckAndInstallZlib
 
         CheckAndInstallLibzip
