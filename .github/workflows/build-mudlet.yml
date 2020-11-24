@@ -129,9 +129,9 @@ jobs:
         # https://github.com/brimworks/lua-zip :
         # can't install zziplib & zlib from vcpkg due to https://github.com/microsoft/vcpkg/issues/14689
 
-        Get-ChildItem -Recurse $Env:MINGW_BASE_DIR
 
         CheckAndInstallZziplib
+        Get-ChildItem -Recurse $Env:MINGW_BASE_DIR
         CheckAndInstallZlib
 
         CheckAndInstallLibzip
