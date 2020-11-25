@@ -155,6 +155,7 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
+    // 1/2/3 for single/double/triple click seen so far
     int  mMouseTrackLevel;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
