@@ -855,7 +855,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         } else {
             mHistoryList.push_front(toPlainText());
         }
-        mHistoryList.push_front("");
+        mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
         clear();
