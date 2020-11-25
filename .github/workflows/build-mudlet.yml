@@ -37,7 +37,7 @@ jobs:
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.14.1'
+            qt: '5.12.10'
 
     steps:
     - name: Restore Qt cache
