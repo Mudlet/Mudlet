@@ -2788,6 +2788,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                     // IAC SB COMPRESS2 IAC SE for MCCP v2
                     if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                        // TODO this code looks ahead instead of using the state machine.
+                        // This is not a good idea.
                         char _ch = buffer[i];
                         if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
                             bool _compress = false;
@@ -2817,11 +2819,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                     datalen = 0;
                                     i = -1; // end the loop, this will make i and datalen the same.
                                 }
-                                //bugfix: BenH
+                                // compressed data starts in clean state
                                 iac = false;
                                 insb = false;
                                 command = "";
-                                ////////////////
                                 goto MAIN_LOOP_END;
                             }
                         }
