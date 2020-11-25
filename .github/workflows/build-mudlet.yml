@@ -124,14 +124,14 @@ jobs:
         # But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
         $NoShPath = filterPathForSh
 
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
         # Shouldn't be needed as it is only used for the luazip module from:
         # https://github.com/mpeterv/luazip and we can use lua-zip from:
         # https://github.com/brimworks/lua-zip :
         # can't install zziplib & zlib from vcpkg due to https://github.com/microsoft/vcpkg/issues/14689
         CheckAndInstallZziplib
-        CheckAndInstallZlib
 
-        CheckAndInstallLibzip
 
         # yajl headers need to be in same place as Lua, and since we install Lua manually, have to do the same for yajl
         CheckAndInstallYajl
