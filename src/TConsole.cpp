@@ -176,15 +176,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setLayout(centralLayout);
     auto baseVFrameLayout = new QVBoxLayout;
     mpBaseVFrame->setLayout(baseVFrameLayout);
-    baseVFrameLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->setSpacing(0);
     centralLayout->addWidget(mpBaseVFrame);
     auto baseHFrameLayout = new QHBoxLayout;
     mpBaseHFrame->setLayout(baseHFrameLayout);
-    baseHFrameLayout->setMargin(0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseHFrameLayout->setSpacing(0);
     layout()->setSpacing(0);
-    layout()->setMargin(0);
+    layout()->setContentsMargins(0, 0, 0, 0);
     setContentsMargins(0, 0, 0, 0);
 
     auto topBarLayout = new QHBoxLayout;
@@ -200,25 +200,25 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     //mpTopToolBar->setPalette(topbarPalette);
 
 
-    topBarLayout->setMargin(0);
+    topBarLayout->setContentsMargins(0, 0, 0, 0);
     topBarLayout->setSpacing(0);
     auto leftBarLayout = new QVBoxLayout;
     mpLeftToolBar->setLayout(leftBarLayout);
     mpLeftToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpLeftToolBar->setAutoFillBackground(true);
-    leftBarLayout->setMargin(0);
+    leftBarLayout->setContentsMargins(0, 0, 0, 0);
     leftBarLayout->setSpacing(0);
     mpLeftToolBar->setContentsMargins(0, 0, 0, 0);
     auto rightBarLayout = new QVBoxLayout;
     mpRightToolBar->setLayout(rightBarLayout);
     mpRightToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpRightToolBar->setAutoFillBackground(true);
-    rightBarLayout->setMargin(0);
+    rightBarLayout->setContentsMargins(0, 0, 0, 0);
     rightBarLayout->setSpacing(0);
     mpRightToolBar->setContentsMargins(0, 0, 0, 0);
     mpBaseVFrame->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->setSpacing(0);
-    baseVFrameLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     mpTopToolBar->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->addWidget(mpTopToolBar);
     baseVFrameLayout->addWidget(mpBaseHFrame);
@@ -227,7 +227,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     auto coreSpreadLayout = new QVBoxLayout;
     mpCorePane->setLayout(coreSpreadLayout);
     mpCorePane->setContentsMargins(0, 0, 0, 0);
-    coreSpreadLayout->setMargin(0);
+    coreSpreadLayout->setContentsMargins(0, 0, 0, 0);
     coreSpreadLayout->setSpacing(0);
     coreSpreadLayout->addWidget(mpMainFrame);
     mpCorePane->setSizePolicy(sizePolicy);
@@ -236,12 +236,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpTopToolBar->setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setAutoFillBackground(true);
     baseHFrameLayout->setSpacing(0);
-    baseHFrameLayout->setMargin(0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
     setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    centralLayout->setMargin(0);
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpMainFrame->show();
@@ -261,9 +260,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
     mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
 
-    baseVFrameLayout->setMargin(0);
-    baseHFrameLayout->setMargin(0);
-    centralLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
+    centralLayout->setContentsMargins(0, 0, 0, 0);
 
     if (mType == MainConsole) {
         mpCommandLine = new TCommandLine(pH, mpCommandLine->MainCommandLine, this, mpMainDisplay);
@@ -280,7 +279,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
     layer->setLayout(vLayoutLayer);
-    layoutLayer->setMargin(0);
+    layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(0);
 
     mpScrollBar->setFixedWidth(15);
@@ -332,7 +331,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
     vLayoutLayer->setContentsMargins(0, 0, 0, 0);
-    vLayoutLayer->setMargin(0);
     vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
@@ -342,7 +340,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setMinimumHeight(31);
 
     layoutLayer2 = new QHBoxLayout(layerCommandLine);
-    layoutLayer2->setMargin(0);
+    layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layoutLayer2->setSpacing(0);
 
     mpButtonMainLayer = new QWidget;
@@ -351,7 +349,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
     auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
     layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
-    layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
@@ -361,7 +358,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
     layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
-    layoutButtonLayer->setMargin(0);
+    layoutButtonLayer->setContentsMargins(0, 0, 0, 0);
     layoutButtonLayer->setSpacing(0);
 
     auto buttonLayerSpacer = new QWidget(buttonLayer);
@@ -545,9 +542,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mpBaseVFrame->setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
-    mpBaseVFrame->layout()->setMargin(0);
     mpBaseVFrame->layout()->setSpacing(0);
-    mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
 
 
