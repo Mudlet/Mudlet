@@ -2850,7 +2850,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         if(!mIncompleteSB) {
                             mIncompleteSB = true;
                             qWarning(R"("TELNET: the server did not properly terminate a subnegotiation (code %02x).\nSome data loss is likely. You should ask them to fix this.)",command[2]);
-                            qWarning("");
                         }
 
 
