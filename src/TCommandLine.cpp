@@ -81,11 +81,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     QPlainTextEdit::event(event);
     adjustHeight();
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
-        mHistoryBuffer = -1;
-    } else {
-        mHistoryBuffer = 0;
-    }
+    mHistoryBuffer = 0;
     if (mTabCompletionOld != toPlainText()) {
         mUserKeptOnTyping = true;
         mAutoCompletionCount = -1;
@@ -136,11 +132,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped.clear();
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 mLastCompletion.clear();
                 break;
 
@@ -222,11 +214,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Backspace:
             if ((ke->modifiers() & (allModifiers & ~(Qt::ControlModifier|Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Ignore state of <CTRL> and <SHIFT> keys
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -249,11 +237,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_Delete:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -405,11 +389,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 setPalette(mRegularPalette);
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 ke->accept();
                 return true;
 
@@ -862,17 +842,24 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     }
 
     if (!toPlainText().isEmpty()) {
-        mHistoryBuffer = 0;
+        if (mpHost->mAutoClearCommandLineAfterSend) {
+            mHistoryBuffer = 0;
+        } else {
+            mHistoryBuffer = 1;
+        }
         setPalette(mRegularPalette);
 
         mHistoryList.removeAll(toPlainText());
-        mHistoryList.push_front(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
-        mHistoryBuffer = -1;
         clear();
     } else {
-        mHistoryBuffer = 0;
         selectAll();
     }
     adjustHeight();
@@ -1006,9 +993,7 @@ void TCommandLine::historyMove(MoveDirection direction)
     }
     int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
-        if (toPlainText().size() != 0) {
-            mHistoryBuffer += shift;
-        }
+        mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
         }
