@@ -107,6 +107,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncodingWarningIssued(false)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
+, mIncompleteSB(false)
 {
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -2846,6 +2847,12 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                         command.pop_back();
                         command += TN_SE;
                         processTelnetCommand(command);
+                        if(!mIncompleteSB) {
+                            mIncompleteSB = true;
+                            qWarning(R"("TELNET: the server did not properly terminate a subnegotiation (code %02x).\nSome data loss is likely. You should ask them to fix this.)",command[2]);
+                            qWarning("");
+                        }
+
 
                         // Re-enter the state machine.
                         command = TN_IAC;
