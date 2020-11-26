@@ -6843,9 +6843,7 @@ int TLuaInterpreter::getButtonState(lua_State* L)
 int TLuaInterpreter::getNetworkLatency(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    double number;
-    number = host.mTelnet.networkLatency;
-    lua_pushnumber(L, number);
+    lua_pushnumber(L, host.mTelnet.networkLatencyTime);
     return 1;
 }
 

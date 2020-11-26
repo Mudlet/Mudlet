@@ -27,6 +27,7 @@
 
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
@@ -190,8 +191,8 @@ public:
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
+    double networkLatencyTime;
+    QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
@@ -291,9 +292,9 @@ private:
     bool mIsTimerPosting;
     QTimer* mTimerLogin;
     QTimer* mTimerPass;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    int mRecordLastChunkMSecTimeOffset;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
