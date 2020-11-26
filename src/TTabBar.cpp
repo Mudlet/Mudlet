@@ -126,8 +126,6 @@ QSize TTabBar::tabSizeHint(int index) const
         // the text to show) the (possibly Qt modified to include an
         // accelarator) actual tabText and not the profile name that we have
         // stored in the tabData:
-        // In Qt 5.11 (int) QFontMetrics::horizontalAdvance(const QString&)
-        // replaced (int) QFontMetrics::width(const QString&)
         const int w = fm.horizontalAdvance(tabText(index));
 
         QFont f = font();
