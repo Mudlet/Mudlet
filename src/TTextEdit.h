@@ -141,6 +141,7 @@ private:
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
+    void expandSelectionToWords();
 
     int mFontHeight;
     int mFontWidth;
@@ -154,6 +155,8 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
+    // 1/2/3 for single/double/triple click seen so far
+    int  mMouseTrackLevel;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;

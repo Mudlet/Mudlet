@@ -60,6 +60,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
+, mMouseTrackLevel(0)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
@@ -866,6 +867,30 @@ void TTextEdit::normaliseSelection()
     }
 }
 
+void TTextEdit::expandSelectionToWords()
+{
+    int yind = mPA.y();
+    int xind = mPA.x();
+    for (; xind >= 0; --xind) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+            break;
+        }
+    }
+    mPA.setX(xind+1);
+
+    yind = mPB.y();
+    xind = mPB.x();
+    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+            break;
+        }
+    }
+    mPB.setX(xind-1);
+}
+
+
 void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 {
     if (mFontWidth == 0 || mFontHeight == 0) {
@@ -909,10 +934,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA = cursorLocation;
         mPB = mDragSelectionEnd;
     }
-    if (mCtrlSelecting) {
-        mPA.setX(0);
-        mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
-    }
 
     for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
@@ -935,7 +956,10 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA = cursorLocation;
         mPB = mDragStart;
     }
-    if (mCtrlSelecting) {
+    if (mMouseTrackLevel == 2) {
+        expandSelectionToWords();
+    }
+    if (mCtrlSelecting || mMouseTrackLevel == 3) {
         mPA.setX(0);
         mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
     }
@@ -1146,51 +1170,38 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
-            int xind = x;
-            int yind = y;
+            mMouseTracking = true;
+            mMouseTrackLevel++;
+            if (mMouseTrackLevel > 3) {
+                mMouseTrackLevel = 3;
+            }
 
-            if (yind >= mpBuffer->lineBuffer.size()) {
+            if (y >= mpBuffer->lineBuffer.size()) {
                 return;
             }
-            if (xind >= mpBuffer->lineBuffer[yind].size()) {
+            if (x >= mpBuffer->lineBuffer[y].size()) {
                 return;
             }
-            while (xind < static_cast<int>(mpBuffer->buffer[yind].size())) {
-                QChar c = mpBuffer->lineBuffer[yind].at(xind);
-                if (c == QChar::Space) {
-                    break;
-                }
-                xind++;
-            }
-            // For ignoring user specified characters, we first stop at space boundaries, then we
-            // proceed to search within these spaces for ignored characters and chop off any we find.
-            while (xind > 0 && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind - 1))) {
-                xind--;
-            }
-            mDragSelectionEnd.setX(xind - 1);
-            mDragSelectionEnd.setY(yind);
-            for (xind = x - 1; xind > 0; --xind) {
-                if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space) {
-                    break;
-                }
-            }
-            int lsize = mpBuffer->lineBuffer[yind].size();
-            while (xind + 1 < lsize && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind + 1))) {
-                xind++;
-            }
-            if (xind > 0) {
-                mDragStart.setX(xind + 1);
-            } else {
-                mDragStart.setX(0);
-            }
-            mDragStart.setY(yind);
+
+            mDragStart.setX(x);
+            mDragStart.setY(y);
+            mDragSelectionEnd.setX(x);
+            mDragSelectionEnd.setY(y);
             normaliseSelection();
+            if (mMouseTrackLevel == 2) {
+                expandSelectionToWords();
+            } else {
+                mPA.setX(0);
+                mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
+            }
+            mLastClickTimer.start();
             highlightSelection();
             event->accept();
             return;
         } else {
             mLastClickTimer.start();
             mMouseTracking = true;
+            mMouseTrackLevel = 1;
             if (y >= mpBuffer->size()) {
                 return;
             }
