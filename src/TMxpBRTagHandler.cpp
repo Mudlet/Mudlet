@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - virginmedia.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,8 +20,5 @@
 #include "TMxpBRTagHandler.h"
 TMxpTagHandlerResult TMxpBRTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(client)
-    Q_UNUSED(tag)
     return MXP_TAG_COMMIT_LINE;
 }

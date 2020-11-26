@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -72,11 +71,7 @@ public:
     const QColor& getBgColor() { return bgColors.last(); }
 
     // TODO: implement support for fonts?
-    void pushFont(const QString& fontFace, const QString& fontSize) override {
-        Q_UNUSED(fontFace)
-        Q_UNUSED(fontSize)
-    }
-
+    void pushFont(const QString& fontFace, const QString& fontSize) override {}
     void popFont() override {}
 
     int setLink(const QStringList& links, const QStringList& hints) override;
@@ -92,22 +87,14 @@ public:
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
 
-    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
-        Q_UNUSED(elementName)
-        Q_UNUSED(values)
-        Q_UNUSED(content)
+    void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override
+    {
         // TODO: raise mxp event
     }
 
-    void publishEntity(const QString& name, const QString& value) override {
-        Q_UNUSED(name)
-        Q_UNUSED(value)
-    }
+    void publishEntity(const QString& name, const QString& value) override {}
 
-    void setVariable(const QString& name, const QString& value) override {
-        Q_UNUSED(name)
-        Q_UNUSED(value)
-    }
+    void setVariable(const QString& name, const QString& value) override {}
 
     TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) override;
 

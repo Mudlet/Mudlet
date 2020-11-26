@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -67,20 +66,11 @@ public:
 
     virtual bool tagReceived(MxpTag* tag) { return tag->isStartTag() ? startTagReceived(tag->asStartTag()) : endTagReceived(tag->asEndTag()); }
 
-    virtual bool startTagReceived(MxpStartTag* startTag) {
-        Q_UNUSED(startTag)
-        return true;
-    }
+    virtual bool startTagReceived(MxpStartTag* startTag) { return true; }
 
-    virtual bool endTagReceived(MxpEndTag* startTag) {
-        Q_UNUSED(startTag)
-        return true;
-    }
+    virtual bool endTagReceived(MxpEndTag* startTag) { return true; }
 
-    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) {
-        Q_UNUSED(tag)
-        return result;
-    }
+    virtual TMxpTagHandlerResult tagHandled(MxpTag* tag, TMxpTagHandlerResult result) { return result; }
 };
 
 #endif //MUDLET_TMXPCLIENT_H
