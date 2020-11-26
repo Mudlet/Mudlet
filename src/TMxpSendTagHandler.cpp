@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -103,8 +102,6 @@ QString TMxpSendTagHandler::extractHint(MxpStartTag* tag)
 
 TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(tag)
     if (mIsHrefInContent) {
         updateHrefInLinks(client);
     }

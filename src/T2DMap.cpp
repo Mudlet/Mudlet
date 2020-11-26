@@ -1238,7 +1238,6 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
-    Q_UNUSED(e)
     if (!mpMap) {
         return;
     }
@@ -4671,7 +4670,6 @@ bool T2DMap::getCenterSelection()
 
 void T2DMap::exportAreaImage(int id)
 {
-    Q_UNUSED(id)
     paintMap();
 }
 

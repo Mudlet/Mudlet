@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -254,6 +254,62 @@ void dlgMapper::show2dView()
     dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
 #endif
 }
+
+void dlgMapper::choseRoom(QListWidgetItem* pT)
+{
+    QString txt = pT->text();
+
+    QHashIterator<int, TRoom*> it(mpMap->mpRoomDB->getRoomMap());
+    while (it.hasNext()) {
+        it.next();
+        int i = it.key();
+        TRoom* pR = mpMap->mpRoomDB->getRoom(i);
+        if (!pR) {
+            continue;
+        }
+        if (pR->name == txt) {
+            qDebug() << "found room id=" << i;
+            mpMap->mTargetID = i;
+            if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), i)) {
+                mpHost->mpConsole->printSystemMessage(tr("Cannot find a path to this room.\n"));
+            } else {
+                mpMap->mpHost->startSpeedWalk();
+            }
+            break;
+        }
+    }
+    mpHost->mpConsole->setFocus();
+}
+
+void dlgMapper::goRoom()
+{
+    //    QString txt = roomID->text();
+    //    searchList->clear();
+    //    int id = txt.toInt();
+
+    //    if (id != 0 && mpMap->rooms.contains(id)) {
+    //        mpMap->mTargetID = id;
+    //        if (mpMap->findPath(0,0)) {
+    //            qDebug() << "glwidget: starting speedwalk path length=" << mpMap->mPathList.size();
+    //            mpMap->mpHost->startSpeedWalk();
+    //        } else {
+    //            QString msg = "Cannot find a path to this room.\n";
+    //            mpHost->mpConsole->printSystemMessage(msg);
+    //        }
+    //    } else {
+    //        QMapIterator<int, TRoom *> it(mpMap->rooms);
+    //        while (it.hasNext()) {
+    //            it.next();
+    //            int i = it.key();
+    //            if (mpMap->rooms[i]->name.contains(txt, Qt::CaseInsensitive)) {
+    //                qDebug() << "inserting match:" << i;
+    //                searchList->addItem(mpMap->rooms[i]->name);
+    //            }
+    //        }
+    //    }
+    //    mpHost->mpConsole->setFocus();
+}
+
 
 void dlgMapper::slot_roomSize(int d)
 {

@@ -1,8 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -20,21 +19,16 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
 #include "TMxpVarTagHandler.h"
 #include "TMxpClient.h"
-
 bool TMxpVarTagHandler::supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(client)
-    return tag->isNamed(QStringLiteral("VAR")) || tag->isNamed(QStringLiteral("V"));
+    return tag->isNamed("VAR") || tag->isNamed("V");
 }
+
 
 TMxpTagHandlerResult TMxpVarTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(client)
     mCurrentStartTag = *tag;
     mCurrentVarContent.clear();
     return MXP_TAG_HANDLED;
@@ -44,8 +38,6 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleStartTag(TMxpContext& ctx, TMxpCli
 //<VAR Name [DESC=description] [PRIVATE] [PUBLISH] [DELETE] [ADD] [REMOVE]>Value</VAR>
 TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(tag)
     const QString& name = mCurrentStartTag.getAttrName(0);
     const QString& value = mCurrentVarContent;
 
@@ -55,7 +47,6 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
 
     return MXP_TAG_HANDLED;
 }
-
 void TMxpVarTagHandler::handleContent(char ch)
 {
     mCurrentVarContent.append(ch);

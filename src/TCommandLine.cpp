@@ -819,7 +819,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
-    Q_UNUSED(event)
     QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;

@@ -647,7 +647,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     QPoint P_topLeft = r.topLeft();
     QPoint P_bottomRight = r.bottomRight();
-
+    int x_topLeft = 0;
     int y_topLeft = P_topLeft.y();
     int x_bottomRight = P_bottomRight.x();
     int y_bottomRight = P_bottomRight.y();
@@ -2003,8 +2003,10 @@ void TTextEdit::slot_analyseSelection()
     utf8Bytes[4] = '\0';
 
     int total = 0;
+    bool isSingleLine = false;
     startColumn = mPA.x();
     if (mPA.y() == mPB.y()) {
+        isSingleLine = true;
         // The selection is from mPA.x() to mPB.x()
         endColumn = mPB.x();
         if (endColumn == -1) {

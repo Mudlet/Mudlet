@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018, 2020 by Stephen Lyons                  *
+ *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -552,7 +552,6 @@ bool TRoom::hasExitLock(int exit)
 // 0=offen 1=zu
 bool TRoom::hasSpecialExitLock(int to, const QString& cmd)
 {
-    Q_UNUSED(cmd)
     if (other.contains(to)) {
         QMapIterator<int, QString> it(other);
         while (it.hasNext()) {

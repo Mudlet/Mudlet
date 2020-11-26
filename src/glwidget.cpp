@@ -258,6 +258,11 @@ void GLWidget::topView()
     update();
 }
 
+
+void GLWidget::goRoom(const QString& s)
+{
+}
+
 void GLWidget::setScale(int angle)
 {
     mScale = 150 / ((float)angle + 300);
@@ -2244,7 +2249,6 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    Q_UNUSED(event)
     mPanMode = false;
 }
 
