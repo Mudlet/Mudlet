@@ -1094,6 +1094,7 @@ void TConsole::runTriggers(int line)
         TDebug(QColor(Qt::darkGreen), QColor(Qt::black)) << "new line arrived:" >> 0;
         TDebug(QColor(Qt::lightGray), QColor(Qt::black)) << mCurrentLine << "\n" >> 0;
     }
+    qDebug() << mCurrentLine;
     mpHost->incomingStreamProcessor(mCurrentLine, line);
     mIsPromptLine = false;
 
