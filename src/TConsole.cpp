@@ -93,7 +93,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSystemMessageFgColor(QColor(Qt::red))
 , mTriggerEngineMode(false)
 , mWrapAt(100)
-, networkLatency(new QLineEdit)
+, mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
@@ -403,37 +403,37 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleLogging);
 
-    networkLatency->setReadOnly(true);
-    networkLatency->setSizePolicy(sizePolicy4);
-    networkLatency->setFocusPolicy(Qt::NoFocus);
-    networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+    mpLineEdit_networkLatency->setReadOnly(true);
+    mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
+    mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
+    mpLineEdit_networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
            "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
-    networkLatency->setMaximumSize(120, 30);
-    networkLatency->setMinimumSize(120, 30);
-    networkLatency->setAutoFillBackground(true);
-    networkLatency->setContentsMargins(0, 0, 0, 0);
+    mpLineEdit_networkLatency->setMaximumSize(120, 30);
+    mpLineEdit_networkLatency->setMinimumSize(120, 30);
+    mpLineEdit_networkLatency->setAutoFillBackground(true);
+    mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
     QPalette basePalette;
     basePalette.setColor(QPalette::Text, QColor(Qt::black));
     basePalette.setColor(QPalette::Base, QColor(Qt::white));
-    networkLatency->setPalette(basePalette);
-    networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    mpLineEdit_networkLatency->setPalette(basePalette);
+    mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     int width;
     int maxWidth = 120;
     width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
     if (width < maxWidth) {
-        networkLatency->setFont(latencyFont);
+        mpLineEdit_networkLatency->setFont(latencyFont);
     } else {
         QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
         width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
         if (width < maxWidth) {
-            networkLatency->setFont(latencyFont2);
+            mpLineEdit_networkLatency->setFont(latencyFont2);
         } else {
             QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
             width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            networkLatency->setFont(latencyFont3);
+            mpLineEdit_networkLatency->setFont(latencyFont3);
         }
     }
 
@@ -497,10 +497,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(networkLatency, 0, 11);
+    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    networkLatency->setFrame(false);
+    mpLineEdit_networkLatency->setFrame(false);
     //QPalette whitePalette;
     //whitePalette.setColor( QPalette::Window, baseColor);//,255) );
     layerCommandLine->setPalette(basePalette);
@@ -1053,7 +1053,7 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
-    mProcessingTime.restart();
+    mProcessingTimer.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
@@ -1066,11 +1066,21 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 
-    double processT = mProcessingTime.elapsed();
+    double processT = mProcessingTimer.elapsed() / 1000.0;
     if (mpHost->mTelnet.mGA_Driver) {
-        networkLatency->setText(QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency, 0, 'f', 3).arg(processT / 1000, 0, 'f', 3));
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2",
+                                            // intentional comment to separate arguments
+                                            "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                            "'S'ystem (processing) time")
+                                                 .arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3)
+                                                 .arg(processT, 0, 'f', 3));
     } else {
-        networkLatency->setText(QString("<no GA> S:%1").arg(processT / 1000, 0, 'f', 3));
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1",
+                                            // intentional comment to separate arguments
+                                            "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                            "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                            "network latency...")
+                                                 .arg(processT, 0, 'f', 3));
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
