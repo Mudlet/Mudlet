@@ -298,20 +298,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // The language code has been found in the UserData role for one of the
         // entries - so select it
         comboBox_guiLanguage->setCurrentIndex(currentIndex);
-        connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        connect(comboBox_guiLanguage, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
     } else {
         currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
         if (Q_LIKELY(currentIndex != -1)) {
            // The default code has been found in the UserData role for one of
            // the entries - so select it as a fallback
             comboBox_guiLanguage->setCurrentIndex(currentIndex);
-            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+            connect(comboBox_guiLanguage, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
         } else if (comboBox_guiLanguage->count()) {
             // There is at least ONE entry but it is not the expected one
             // or the American English default - so select that first one as a
             // last ditch effort:
             comboBox_guiLanguage->setCurrentIndex(0);
-            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+            connect(comboBox_guiLanguage, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
         } else {
             // Nothing available - so disable the control:
             comboBox_guiLanguage->setEnabled(false);
@@ -3687,9 +3687,9 @@ void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState sta
 
 // This slot is called when the QComboBox for the locale/language in this dialog
 // is changed by the user.
-void dlgProfilePreferences::slot_changeGuiLanguage(const QString& language)
+void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
 {
-    Q_UNUSED(language);
+    Q_UNUSED(languageIndex);
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
