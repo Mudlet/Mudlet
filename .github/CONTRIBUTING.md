@@ -110,7 +110,7 @@ Of course, before embarking on such a journey, [discuss with the core team](http
 
 The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is: 
 1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison. 
-2. Else _rebase and merge_ if you'd like to keep the history, but know this will not link to the PR in changelog, etc.
+2. Else _rebase and merge_ if you'd like to keep the history, but know this will not link to the PR in PTR changelogs, etc.
 3. Avoid creating a _merge commit_.
 
 ## Merging auto-generated translation PRs
