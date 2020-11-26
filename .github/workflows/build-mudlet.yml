@@ -132,7 +132,6 @@ jobs:
         # can't install zziplib & zlib from vcpkg due to https://github.com/microsoft/vcpkg/issues/14689
         CheckAndInstallZziplib
 
-
         # yajl headers need to be in same place as Lua, and since we install Lua manually, have to do the same for yajl
         CheckAndInstallYajl
         # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
@@ -198,15 +197,15 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: Upload packaged Windows
+    - name: (Windows) Upload packaged Mudlet
       uses: actions/upload-artifact@v2
       if: runner.os == 'Windows' && env.FOLDER_TO_UPLOAD
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
 
-    - name: (windows) Show relevant logs
-      if: always() && runner.os == 'Windows'
+    - name: (Windows) Show logs on error
+      if: failure() && runner.os == 'Windows'
       run: |
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
@@ -217,11 +216,7 @@ jobs:
           echo "Standard output log from non-vcpkg dependencies: "
           cat $env:WORKING_BASE_DIR\stdout.log
         }
-        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
-          echo "CMakeOutput.log: "
-          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
-        }
-        if (Test-Path -Path "${{runner.workspace}}/src/zziplib/zziplib-master/build/CMakeFiles/CMakeOutput.log") {
-          echo "zziplib CMakeOutput.log: "
-          cat "${{runner.workspace}}/src/zziplib/zziplib-master/build/CMakeFiles/CMakeOutput.log"
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\verbose_output.log") {
+          echo "Verbose output log from non-vcpkg dependencies: "
+          cat $env:WORKING_BASE_DIR\verbose_output.log
         }
