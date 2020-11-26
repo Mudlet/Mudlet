@@ -413,7 +413,11 @@ function InstallLuasql() {
 function InstallRexPcre() {
   Set-Location $env:LUAROCKS_DIR
   if (Test-Path Env:VCPKG_ROOT) {
-    exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\lib`"", "PCRE_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
+    if ($64Bit) {
+      exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\lib`"", "PCRE_INCDIR=`"$env:VCPKG_ROOT\installed\x64-mingw-dynamic\include`"")
+    } else {
+      exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$env:VCPKG_ROOT\installed\x32-mingw-dynamic\lib`"", "PCRE_INCDIR=`"$env:VCPKG_ROOT\installed\x32-mingw-dynamic\include`"")
+    }
   } else {
     exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
   }
