@@ -913,10 +913,10 @@ void TConsole::slot_toggleReplayRecording()
         }
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
-        printSystemMessage(tr("Replay recording has started. File: %1\n").arg(mReplayFile.fileName()));
+        printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
     } else {
         mReplayFile.close();
-        printSystemMessage(tr("Replay recording has been stopped. File: %1\n").arg(mReplayFile.fileName()));
+        printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
     }
 }
 
