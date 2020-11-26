@@ -66,7 +66,7 @@ QFile replayFile;
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mResponseProcessed(true)
-, networkLatency()
+, networkLatencyTime(0.0)
 , mAlertOnNewData(true)
 , mGA_Driver(false)
 , mFORCE_GA_OFF(false)
@@ -93,7 +93,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mIsTimerPosting()
-, lastTimeOffset()
+, mRecordLastChunkMSecTimeOffset()
 , enableCHARSET(false)
 , enableATCP(false)
 , enableGMCP(false)
@@ -479,7 +479,7 @@ void cTelnet::handle_socket_signal_connected()
     QString func = "onConnect";
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
-    mConnectionTime.start();
+    mConnectionTimer.start();
     mTimerLogin->start(2000);
     mTimerPass->start(3000);
 
@@ -508,7 +508,13 @@ void cTelnet::handle_socket_signal_disconnected()
     mpHost->raiseEvent(event);
 
     QTime timeDiff(0, 0, 0, 0);
-    msg = QString(tr("[ INFO ]  - Connection time: %1\n    ")).arg(timeDiff.addMSecs(mConnectionTime.elapsed()).toString("hh:mm:ss.zzz"));
+    msg = tr("[ INFO ]  - Connection time: %1\n    ")
+                  .arg(timeDiff.addMSecs(mConnectionTimer.elapsed())
+                               .toString(tr("hh:mm:ss.zzz",
+                                            // Intentional comment to separate arguments
+                                            "This is the format to be used to show the profile connection time, it follows "
+                                            "the rules of the \"QDateTime::toString(...)\" function and may need "
+                                            "modification for some locales, e.g. France, Spain.")));
     mNeedDecompression = false;
     reset();
 
@@ -732,7 +738,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         ++mCommands;
         if (mCommands == 1) {
             mWaitingForResponse = true;
-            networkLatencyTime.restart();
+            networkLatencyTimer.restart();
         }
     }
 
@@ -2539,8 +2545,8 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 
 void cTelnet::recordReplay()
 {
-    lastTimeOffset = 0;
-    timeOffset.start();
+    mRecordLastChunkMSecTimeOffset = 0;
+    mRecordingChunkTimer.start();
 }
 
 bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
@@ -2686,7 +2692,7 @@ void cTelnet::slot_processReplayChunk()
             mGA_Driver = true;
             if (mCommands > 0) {
                 mCommands--;
-                if (networkLatencyTime.elapsed() > 2000) {
+                if (networkLatencyTimer.elapsed() > 2000) {
                     mCommands = 0;
                 }
             }
@@ -2711,8 +2717,7 @@ void cTelnet::slot_processReplayChunk()
 void cTelnet::handle_socket_signal_readyRead()
 {
     if (mWaitingForResponse) {
-        double time = networkLatencyTime.elapsed();
-        networkLatency = time / 1000;
+        networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;
         mWaitingForResponse = false;
     }
 
@@ -2746,9 +2751,9 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
-            mpHost->mpConsole->mReplayStream << timeOffset.elapsed() - lastTimeOffset;
+            mpHost->mpConsole->mReplayStream << mRecordingChunkTimer.elapsed() - mRecordLastChunkMSecTimeOffset;
             mpHost->mpConsole->mReplayStream << datalen;
-            mpHost->mpConsole->mReplayStream.writeRawData(&buffer[0], datalen);
+            mpHost->mpConsole->mReplayStream.writeRawData(buffer, datalen);
         }
 
         recvdGA = false;
@@ -2866,7 +2871,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     mGA_Driver = true;
                     if (mCommands > 0) {
                         mCommands--;
-                        if (networkLatencyTime.elapsed() > 2000) {
+                        if (networkLatencyTimer.elapsed() > 2000) {
                             mCommands = 0;
                         }
                     }
@@ -2885,7 +2890,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         gotRest(cleandata);
     }
     mpHost->mpConsole->finalize();
-    lastTimeOffset = timeOffset.elapsed();
+    mRecordLastChunkMSecTimeOffset = mRecordingChunkTimer.elapsed();
 }
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)

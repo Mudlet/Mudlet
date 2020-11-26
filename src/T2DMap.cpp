@@ -573,7 +573,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
     QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
     QVector<quint32> codePoints = symbolString.toUcs4();
     QVector<bool> isUsable;
-    for (uint i = 0; i < codePoints.size(); ++i) {
+    for (int i = 0; i < codePoints.size(); ++i) {
         isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
     }
 
@@ -1238,7 +1238,6 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
-    Q_UNUSED(e)
     if (!mpMap) {
         return;
     }
@@ -2410,7 +2409,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         infoLeftSideAvoid += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
 
-    uint infoHeight = 5 + mFontHeight; // Account for first iteration
+    int infoHeight = 5 + mFontHeight; // Account for first iteration
     QRect testRect;
     // infoRect has a 10 margin on either side and on top to widget frame.
     mMapInfoRect = QRect(infoLeftSideAvoid, 10, width() - 10 - infoLeftSideAvoid, infoHeight);
@@ -4671,7 +4670,6 @@ bool T2DMap::getCenterSelection()
 
 void T2DMap::exportAreaImage(int id)
 {
-    Q_UNUSED(id)
     paintMap();
 }
 

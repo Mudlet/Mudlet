@@ -4749,7 +4749,7 @@ void dlgTriggerEditor::saveVar()
         }
     }
     //redo this here in case we changed type
-    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
+    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
     if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
@@ -5553,7 +5553,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     mpVarsMainArea->checkBox_variable_hidden->setChecked(vu->isHidden(var));
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
-    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
+    pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
     pItem->setCheckState(0, Qt::Unchecked);
     if (!vu->shouldSave(var)) {
@@ -6664,7 +6664,6 @@ void dlgTriggerEditor::autoSave()
 
 void dlgTriggerEditor::enterEvent(QEvent* pE)
 {
-    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -6681,7 +6680,6 @@ void dlgTriggerEditor::enterEvent(QEvent* pE)
 
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
-    Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -8363,7 +8361,6 @@ bool dlgTriggerEditor::event(QEvent* event)
 
 void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 {
-    Q_UNUSED(event)
     if (mpSourceEditorArea->isVisible()) {
         slot_move_source_find();
     }
