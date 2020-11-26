@@ -940,7 +940,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
             // Exit stubs:
-            unsigned int _listCount = pR->exitStubs.count();
+            int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // These next few constuction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
