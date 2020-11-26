@@ -5,6 +5,7 @@ if (((Test-Path Env:APPVEYOR) -and "$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet"
 
 $Script:BuildFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:BUILD_FOLDER" };
 $Script:SourceFolder = If (Test-Path Env:APPVEYOR) { $Env:APPVEYOR_BUILD_FOLDER } Else { "$Env:GITHUB_WORKSPACE" };
+$Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
 # building with CMake in Github doesn't quite have the same structure as appveyor, so adapt it
 If (Test-Path Env:GITHUB_REPOSITORY) {
@@ -27,8 +28,6 @@ if ([version]$Script:QtVersion -ge [version]'5.14.0') {
 . "$Script:SourceFolder\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
-
-$Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-ptb') } else { $FALSE }
 
 if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -and $Env:GITHUB_REF.StartsWith("refs/tags/"))) `
     -and -Not $Script:PublicTestBuild) {
