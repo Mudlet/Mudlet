@@ -16,3 +16,6 @@
 [submodule "3rdparty/vcpkg"]
 	path = 3rdparty/vcpkg
 	url = https://github.com/microsoft/vcpkg
+[submodule "3rdparty/backward-cpp"]
+	path = 3rdparty/backward-cpp
+	url = https://github.com/bombela/backward-cpp.git
