@@ -1916,7 +1916,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
 
 void cTelnet::setGMCPVariables(const QByteArray& msg)
 {
-    qDebug() "start" << __FUNCTION__;
+    qDebug() << "start" << __FUNCTION__;
     QString transcodedMsg;
     if (mpOutOfBandDataIncomingCodec) {
         // Message is encoded
