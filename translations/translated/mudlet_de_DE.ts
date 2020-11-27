@@ -1406,18 +1406,18 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="911"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Die Aufzeichnung der Wiederholung wurde gestartet. Datei: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="914"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Die Aufzeichnung der Wiederholung wurde beendet. Datei: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1069"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1076"/>
@@ -3944,7 +3944,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2558"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ]  - Lade Wiederholungsdatei: &quot;%1&quot;.</translation>
+      <translation>[ INFO ]  - Lade Wiederholung aus Datei: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2577"/>
