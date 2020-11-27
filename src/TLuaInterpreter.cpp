@@ -133,7 +133,7 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
         }                                                                                      \
         lua_tostring(_L, pos_);                                                                \
     })
-    
+
 #define CONSOLE_NIL(_L, _name)                                                                 \
     ({                                                                                         \
         auto name_ = (_name);                                                                  \
@@ -14090,6 +14090,7 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
 {
+    qDebug() "start" << __FUNCTION__;
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State* L = pGlobalLua;
     QStringList tokenList = key.split(QLatin1Char('.'));
@@ -14477,6 +14478,7 @@ void TLuaInterpreter::setMatches(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::call_luafunction(void* pT)
 {
+    qDebug() "start" << __FUNCTION__;
     lua_State* L = pGlobalLua;
     lua_pushlightuserdata(L, pT);
     lua_gettable(L, LUA_REGISTRYINDEX);
@@ -14581,6 +14583,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 // to cut down on spammy output if things are okay.
 bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
 {
+    qDebug() "start" << __FUNCTION__;
     lua_State* L = pGlobalLua;
     setMatches(L);
 
@@ -15027,6 +15030,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
+    qDebug() "start" << __FUNCTION__;
     if (function.isEmpty()) {
         return false;
     }

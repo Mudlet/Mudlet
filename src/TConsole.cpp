@@ -1089,6 +1089,7 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
 
 void TConsole::runTriggers(int line)
 {
+    qDebug() "start" << __FUNCTION__;
     mDeletedLines = 0;
     mUserCursor.setY(line);
     mIsPromptLine = buffer.promptBuffer.at(line);
