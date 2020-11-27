@@ -126,7 +126,7 @@ QSize TTabBar::tabSizeHint(int index) const
         // the text to show) the (possibly Qt modified to include an
         // accelarator) actual tabText and not the profile name that we have
         // stored in the tabData:
-        const int w = fm.width(tabText(index));
+        const int w = fm.horizontalAdvance(tabText(index));
 
         QFont f = font();
         f.setBold(mStyle.tabBold(index));
@@ -134,12 +134,11 @@ QSize TTabBar::tabSizeHint(int index) const
         f.setUnderline(mStyle.tabUnderline(index));
         const QFontMetrics bfm(f);
 
-        const int bw = bfm.width(tabText(index));
+        const int bw = bfm.horizontalAdvance(tabText(index));
 
         return {s.width() - w + bw, s.height()};
-    } else {
-        return QTabBar::tabSizeHint(index);
     }
+    return QTabBar::tabSizeHint(index);
 }
 
 QString TTabBar::tabName(const int index) const
