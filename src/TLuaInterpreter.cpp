@@ -5509,7 +5509,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
     if (entrances.count() > 1) {
         std::sort(entrances.begin(), entrances.end());
     }
-    for (uint i = 0; i < entrances.size(); i++) {
+    for (int i = 0; i < entrances.size(); i++) {
         lua_pushnumber(L, i + 1);
         lua_pushnumber(L, entrances.at(i));
         lua_settable(L, -3);
@@ -6843,9 +6843,7 @@ int TLuaInterpreter::getButtonState(lua_State* L)
 int TLuaInterpreter::getNetworkLatency(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    double number;
-    number = host.mTelnet.networkLatency;
-    lua_pushnumber(L, number);
+    lua_pushnumber(L, host.mTelnet.networkLatencyTime);
     return 1;
 }
 

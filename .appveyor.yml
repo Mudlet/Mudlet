@@ -31,7 +31,8 @@ build_script:
 
 on_failure:
 - cd C:\src
-- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+- powershell "Push-AppveyorArtifact ./verbose_output.log"
+- echo "Build failed - see verbose_output.log artifact upload for more information."
 
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
