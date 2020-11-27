@@ -325,9 +325,6 @@ find_package(PCRE REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
-list(APPEND CMAKE_MODULE_PATH ../3rdparty/backward-cpp)
-list(APPEND CMAKE_PREFIX_PATH ../3rdparty/backward-cpp)
-find_package(Backward)
 
 if(NOT USE_OWN_QT5KEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
@@ -401,7 +398,6 @@ target_link_libraries(
   # YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
-  Backward::Backward
   qt5keychain)
 
 if(Qt5TextToSpeech_FOUND)
