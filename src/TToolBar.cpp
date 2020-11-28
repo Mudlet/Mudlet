@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2019-2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -59,6 +60,7 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
+    Q_UNUSED(e)
     mpTAction->mpHost->setToolbarLayoutUpdated(this);
 }
 
