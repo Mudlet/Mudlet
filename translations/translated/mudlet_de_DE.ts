@@ -8671,7 +8671,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/mudlet.cpp" line="740"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Englisch (USA, groß)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="741"/>
