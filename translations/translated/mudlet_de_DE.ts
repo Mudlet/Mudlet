@@ -9067,7 +9067,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Dutch (Netherlands Antilles)</source>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Niederländische Antillen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="820"/>
@@ -9087,7 +9087,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="823"/>
       <source>Dutch (Suriname)</source>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Surinam)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="824"/>
@@ -10672,7 +10672,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeigt eine Benachrichtigung in der Symbolleiste an, wenn Mudlet minimiert ist und neue Daten eintreffen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
@@ -10682,7 +10682,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies erfordert auch die Aktivierung von GMCP in der nächsten Gruppe unten.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
@@ -11505,7 +11505,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5177"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Alle Codepoint-Probleme sofort melden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5235"/>
