@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2018, 2020 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -95,13 +96,11 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
 
     int i = 0;
     QList<int> beforeSendingHost;
-    int sendingHost = -1;
     QList<int> afterSendingHost;
     while (i < hostList.size()) {
         if (hostList.at(i) && hostList.at(i) != pHost) {
             beforeSendingHost.append(i++);
         } else if (hostList.at(i) && hostList.at(i) == pHost) {
-            sendingHost = i++;
             break;
         } else {
             i++;

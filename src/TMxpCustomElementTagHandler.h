@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,7 +38,10 @@ class TMxpCustomElementTagHandler : public TMxpTagHandler
     const QMap<QString, QString>& parseFlagAttributes(const MxpStartTag* tag, const TMxpElement& el);
 
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override { return ctx.getElementRegistry().containsElement(tag->getName()); }
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
+        Q_UNUSED(client)
+        return ctx.getElementRegistry().containsElement(tag->getName());
+    }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;

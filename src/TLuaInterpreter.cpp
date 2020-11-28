@@ -724,8 +724,6 @@ int TLuaInterpreter::resetProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectString
 int TLuaInterpreter::selectString(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 2) {
@@ -1354,7 +1352,6 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLineNumber
 int TLuaInterpreter::getLineNumber(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
     QString windowName;
     int s = 0;
 
@@ -2347,11 +2344,9 @@ int TLuaInterpreter::selectSection(lua_State* L)
     }
     int to = lua_tointeger(L, s);
 
-    Host& host = getHostFromLua(L);
-
     auto console = CONSOLE(L, windowName);
     int ret = console->selectSection(from, to);
-    lua_pushboolean(L, ret == -1 ? false : true);
+    lua_pushboolean(L, ret != -1);
     return 1;
 }
 
@@ -3121,6 +3116,7 @@ int TLuaInterpreter::remainingTime(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMudlet
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
+    Q_UNUSED(L)
     mudlet::self()->forceClose();
     return 0;
 }
@@ -6232,6 +6228,7 @@ int TLuaInterpreter::playSoundFile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopSounds
 int TLuaInterpreter::stopSounds(lua_State* L)
 {
+    Q_UNUSED(L)
     //doesn't take an argument
     mudlet::self()->stopSounds();
     return 0;
@@ -6412,8 +6409,6 @@ int TLuaInterpreter::setPopup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBold
 int TLuaInterpreter::setBold(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -6435,8 +6430,6 @@ int TLuaInterpreter::setBold(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setItalics
 int TLuaInterpreter::setItalics(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -6458,8 +6451,6 @@ int TLuaInterpreter::setItalics(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline
 int TLuaInterpreter::setOverline(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -6481,8 +6472,6 @@ int TLuaInterpreter::setOverline(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setReverse
 int TLuaInterpreter::setReverse(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -6504,8 +6493,6 @@ int TLuaInterpreter::setReverse(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setStrikeOut
 int TLuaInterpreter::setStrikeOut(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -6527,8 +6514,6 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUnderline
 int TLuaInterpreter::setUnderline(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
@@ -11143,8 +11128,6 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         return 2;
     }
 
-    Host& host = getHostFromLua(L);
-
     auto console = CONSOLE(L, windowName);
     console->setFgColor(luaRed, luaGreen, luaBlue);
     return 0;
@@ -11153,7 +11136,6 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBgColor
 int TLuaInterpreter::setBgColor(lua_State* L)
 {
-    Host* pHost = &getHostFromLua(L);
     QString windowName;
     int r, g, b, alpha;
 
@@ -11329,7 +11311,6 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         customFormat = lua_toboolean(L, s);
     }
 
-    Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
         lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
         return lua_error(L);
@@ -11343,7 +11324,6 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
 int TLuaInterpreter::insertText(lua_State* L)
 {
-    auto& host = getHostFromLua(L);
     QString windowName;
     int s = 0;
 
@@ -11497,7 +11477,6 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         customFormat = lua_toboolean(L, s);
     }
 
-    Host& host = getHostFromLua(L);
     if (commandList.size() != hintList.size()) {
         lua_pushfstring(L, "echoPopup: commands and hints list aren't the same size");
         return lua_error(L);
@@ -11579,7 +11558,6 @@ int TLuaInterpreter::echoLink(lua_State* L)
         gotBool = true;
     }
 
-    Host& host = getHostFromLua(L);
     QString text;
     QString windowName;
     QStringList function;
@@ -12471,7 +12449,6 @@ int TLuaInterpreter::getEpoch(lua_State *L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
     QString windowName {WINDOW_NAME(L, 1)};
 
     auto console = CONSOLE(L, windowName);
@@ -13138,6 +13115,7 @@ void TLuaInterpreter::ttsBuild()
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkip
 int TLuaInterpreter::ttsSkip(lua_State* L)
 {
+    Q_UNUSED(L)
     TLuaInterpreter::ttsBuild();
 
     speechUnit->stop();
@@ -13490,6 +13468,7 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsPause
 int TLuaInterpreter::ttsPause(lua_State* L)
 {
+    Q_UNUSED(L)
     TLuaInterpreter::ttsBuild();
 
     speechUnit->pause();
@@ -13500,6 +13479,7 @@ int TLuaInterpreter::ttsPause(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsResume
 int TLuaInterpreter::ttsResume(lua_State* L)
 {
+    Q_UNUSED(L)
     TLuaInterpreter::ttsBuild();
 
     speechUnit->resume();
@@ -15575,6 +15555,7 @@ QString TLuaInterpreter::getLuaString(const QString& stringName)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#handleWindowResizeEvent is using noop function publicly - compare initLuaGlobals()
 int TLuaInterpreter::noop(lua_State* L)
 {
+    Q_UNUSED(L)
     return 0;
 }
 
