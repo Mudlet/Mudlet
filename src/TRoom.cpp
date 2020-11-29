@@ -635,7 +635,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
         }
 
         QString finalCmd = _prefix % _strippedCmd;
-        other.insertMulti(to, finalCmd);
+        other.insert(to, finalCmd);
     } else { // Clean up related data:
         customLinesArrow.remove(_strippedCmd);
         customLinesColor.remove(_strippedCmd);
