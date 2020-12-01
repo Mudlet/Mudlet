@@ -1,7 +1,9 @@
 name: Build Mudlet
 on:
-  - pull_request
-  - push
+  push:
+    branches: [master, development]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   compile-mudlet:
@@ -10,36 +12,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
         include:
-          # - os: windows-latest
-          #   triplet: x64-windows
           - os: ubuntu-latest
-            buildname: 'ubuntu'
+            buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
+            qt: '5.14.1'
+          - os: ubuntu-latest
+            buildname: 'ubuntu / clang'
+            triplet: x64-linux
+            compiler: clang_64
+            qt: '5.14.1'
+          - os: ubuntu-latest
+            buildname: 'ubuntu / qt 5.11'
+            triplet: x64-linux
+            compiler: gcc_64
+            qt: '5.11.0'
           - os: macos-latest
-            buildname: 'macos / C++ tests'
+            buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
-    env:
-      qt: "5.14.1"
+            qt: '5.14.1'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
+            qt: '5.14.1'
 
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
+      # 5.11 cache restoration goes awry
+      if: matrix.qt != '5.11.0'
       id: cache-qt
       with:
-        path: ${{runner.workspace}}/Qt/${{env.qt}}
-        key: ${{runner.os}}-qt-${{env.qt}}
-        restore-keys: |
-          ${{runner.os}}-qt-
+        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
-      if: steps.cache-qt.outputs.cache-hit != 'true'
       with:
-        version: ${{env.qt}}
+        version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
@@ -49,20 +62,6 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-
-    - name: (macOS) Install homebrew dependencies
-      if: runner.os == 'macOS'
-      run: |
-        # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip
-
-    - name: (Linux) Install apt dependencies
-      if: runner.os == 'Linux'
-      run: |
-        # Installing packages might fail as the github image becomes outdated
-        sudo apt update
-        # These aren't available or don't work well in vcpkg
-        sudo apt install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev libxkbcommon-x11-0 libqt5x11extras5
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
@@ -74,6 +73,70 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
+    - name: (macOS) Install non-vcpkg dependencies
+      if: runner.os == 'macOS'
+      run: |
+        # these aren't available or don't work well in vcpkg
+        brew install pkg-config libzzip libzip ccache
+
+        echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+    - name: (Linux) Install non-vcpkg dependencies
+      if: runner.os == 'Linux'
+      run: |
+        # Installing packages might fail as the github image becomes outdated
+        sudo apt update
+        # These aren't available or don't work well in vcpkg
+        sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev
+
+        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+    - name: (Windows) Install non-vcpkg dependencies
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        # Use pre-installed Boost
+        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
+
+        # Install dependencies not available on machine
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
+        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
+        . ${{github.workspace}}\CI\appveyor.functions.ps1
+
+        # Libzip install complains when \bin is missing
+        New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
+
+        SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
+        $NoShPath = filterPathForSh
+
+        CheckAndInstallZlib
+        CheckAndInstallLibzip
+
+    - name: (Linux Clang) change compiler
+      if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
+      run: |
+         echo "CXX=clang++" >> $GITHUB_ENV
+         echo "CC=clang" >> $GITHUB_ENV
+
+    - name: (Qt 5.11) disable optional components
+      if: matrix.qt == '5.11.0'
+      run: |
+        echo "WITH_UPDATER=no" >> $GITHUB_ENV
+        echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+        echo "WITH_FONTS=no" >> $GITHUB_ENV
+
+    - name: (Linux/macOS) restore ccache
+      uses: actions/cache@v2
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
+      if: matrix.os != 'windows-latest'
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -81,9 +144,32 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b/ninja'
-        cmakeAppendedArgs: --target test -G Ninja -DCMAKE_PREFIX_PATH=${{runner.workspace}}/Qt/${{env.qt}}/${{matrix.compiler}}/
+        cmakeAppendedArgs: >-
+          --target test
+          -G Ninja
+          -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
+          -DVCPKG_APPLOCAL_DEPS=OFF
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: (windows) Show relevant logs logs
+      if: failure() && runner.os == 'Windows'
+      run: |
+        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
+          echo "Standard error log from non-vcpkg dependencies: "
+          cat $env:WORKING_BASE_DIR\stderr.log
+        }
+        if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
+          echo "Standard output log from non-vcpkg dependencies: "
+          cat $env:WORKING_BASE_DIR\stdout.log
+        }
+        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
+          echo "CMakeOutput.log: "
+          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
+        }

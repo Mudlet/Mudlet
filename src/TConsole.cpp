@@ -63,7 +63,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mBgColor(QColor(Qt::black))
 , mBgImageMode(0)
 , mBgImagePath()
-, mClipboard(mpHost)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")
@@ -94,7 +93,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSystemMessageFgColor(QColor(Qt::red))
 , mTriggerEngineMode(false)
 , mWrapAt(100)
-, networkLatency(new QLineEdit)
+, mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
@@ -177,15 +176,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setLayout(centralLayout);
     auto baseVFrameLayout = new QVBoxLayout;
     mpBaseVFrame->setLayout(baseVFrameLayout);
-    baseVFrameLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->setSpacing(0);
     centralLayout->addWidget(mpBaseVFrame);
     auto baseHFrameLayout = new QHBoxLayout;
     mpBaseHFrame->setLayout(baseHFrameLayout);
-    baseHFrameLayout->setMargin(0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseHFrameLayout->setSpacing(0);
     layout()->setSpacing(0);
-    layout()->setMargin(0);
+    layout()->setContentsMargins(0, 0, 0, 0);
     setContentsMargins(0, 0, 0, 0);
 
     auto topBarLayout = new QHBoxLayout;
@@ -201,25 +200,25 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     //mpTopToolBar->setPalette(topbarPalette);
 
 
-    topBarLayout->setMargin(0);
+    topBarLayout->setContentsMargins(0, 0, 0, 0);
     topBarLayout->setSpacing(0);
     auto leftBarLayout = new QVBoxLayout;
     mpLeftToolBar->setLayout(leftBarLayout);
     mpLeftToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpLeftToolBar->setAutoFillBackground(true);
-    leftBarLayout->setMargin(0);
+    leftBarLayout->setContentsMargins(0, 0, 0, 0);
     leftBarLayout->setSpacing(0);
     mpLeftToolBar->setContentsMargins(0, 0, 0, 0);
     auto rightBarLayout = new QVBoxLayout;
     mpRightToolBar->setLayout(rightBarLayout);
     mpRightToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpRightToolBar->setAutoFillBackground(true);
-    rightBarLayout->setMargin(0);
+    rightBarLayout->setContentsMargins(0, 0, 0, 0);
     rightBarLayout->setSpacing(0);
     mpRightToolBar->setContentsMargins(0, 0, 0, 0);
     mpBaseVFrame->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->setSpacing(0);
-    baseVFrameLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     mpTopToolBar->setContentsMargins(0, 0, 0, 0);
     baseVFrameLayout->addWidget(mpTopToolBar);
     baseVFrameLayout->addWidget(mpBaseHFrame);
@@ -228,7 +227,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     auto coreSpreadLayout = new QVBoxLayout;
     mpCorePane->setLayout(coreSpreadLayout);
     mpCorePane->setContentsMargins(0, 0, 0, 0);
-    coreSpreadLayout->setMargin(0);
+    coreSpreadLayout->setContentsMargins(0, 0, 0, 0);
     coreSpreadLayout->setSpacing(0);
     coreSpreadLayout->addWidget(mpMainFrame);
     mpCorePane->setSizePolicy(sizePolicy);
@@ -237,12 +236,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpTopToolBar->setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setAutoFillBackground(true);
     baseHFrameLayout->setSpacing(0);
-    baseHFrameLayout->setMargin(0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
     setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    centralLayout->setMargin(0);
     mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpBackground->move(mMainFrameLeftWidth, mMainFrameTopHeight);
     mpMainFrame->show();
@@ -262,9 +260,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
     mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
 
-    baseVFrameLayout->setMargin(0);
-    baseHFrameLayout->setMargin(0);
-    centralLayout->setMargin(0);
+    baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
+    baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
+    centralLayout->setContentsMargins(0, 0, 0, 0);
 
     if (mType == MainConsole) {
         mpCommandLine = new TCommandLine(pH, mpCommandLine->MainCommandLine, this, mpMainDisplay);
@@ -281,7 +279,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
     layer->setLayout(vLayoutLayer);
-    layoutLayer->setMargin(0);
+    layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(0);
 
     mpScrollBar->setFixedWidth(15);
@@ -333,7 +331,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     vLayoutLayer->addLayout(layoutLayer);
     vLayoutLayer->addWidget(mpHScrollBar);
     vLayoutLayer->setContentsMargins(0, 0, 0, 0);
-    vLayoutLayer->setMargin(0);
     vLayoutLayer->setSpacing(0);
 
     layerCommandLine = new QWidget; //( mpMainFrame );//layer );
@@ -343,7 +340,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setMinimumHeight(31);
 
     layoutLayer2 = new QHBoxLayout(layerCommandLine);
-    layoutLayer2->setMargin(0);
+    layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layoutLayer2->setSpacing(0);
 
     mpButtonMainLayer = new QWidget;
@@ -352,7 +349,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
     auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
     layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
-    layoutButtonMainLayer->setMargin(0);
     layoutButtonMainLayer->setContentsMargins(0, 0, 0, 0);
 
     layoutButtonMainLayer->setSpacing(0);
@@ -362,7 +358,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
     layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
-    layoutButtonLayer->setMargin(0);
+    layoutButtonLayer->setContentsMargins(0, 0, 0, 0);
     layoutButtonLayer->setSpacing(0);
 
     auto buttonLayerSpacer = new QWidget(buttonLayer);
@@ -407,37 +403,37 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleLogging);
 
-    networkLatency->setReadOnly(true);
-    networkLatency->setSizePolicy(sizePolicy4);
-    networkLatency->setFocusPolicy(Qt::NoFocus);
-    networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
+    mpLineEdit_networkLatency->setReadOnly(true);
+    mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
+    mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
+    mpLineEdit_networkLatency->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds), <br>"
            "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
-    networkLatency->setMaximumSize(120, 30);
-    networkLatency->setMinimumSize(120, 30);
-    networkLatency->setAutoFillBackground(true);
-    networkLatency->setContentsMargins(0, 0, 0, 0);
+    mpLineEdit_networkLatency->setMaximumSize(120, 30);
+    mpLineEdit_networkLatency->setMinimumSize(120, 30);
+    mpLineEdit_networkLatency->setAutoFillBackground(true);
+    mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
     QPalette basePalette;
     basePalette.setColor(QPalette::Text, QColor(Qt::black));
     basePalette.setColor(QPalette::Base, QColor(Qt::white));
-    networkLatency->setPalette(basePalette);
-    networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    mpLineEdit_networkLatency->setPalette(basePalette);
+    mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     int width;
     int maxWidth = 120;
     width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
     if (width < maxWidth) {
-        networkLatency->setFont(latencyFont);
+        mpLineEdit_networkLatency->setFont(latencyFont);
     } else {
         QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
         width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
         if (width < maxWidth) {
-            networkLatency->setFont(latencyFont2);
+            mpLineEdit_networkLatency->setFont(latencyFont2);
         } else {
             QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
             width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            networkLatency->setFont(latencyFont3);
+            mpLineEdit_networkLatency->setFont(latencyFont3);
         }
     }
 
@@ -501,10 +497,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(networkLatency, 0, 11);
+    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    networkLatency->setFrame(false);
+    mpLineEdit_networkLatency->setFrame(false);
     //QPalette whitePalette;
     //whitePalette.setColor( QPalette::Window, baseColor);//,255) );
     layerCommandLine->setPalette(basePalette);
@@ -546,9 +542,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mpBaseVFrame->setContentsMargins(0, 0, 0, 0);
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
-    mpBaseVFrame->layout()->setMargin(0);
     mpBaseVFrame->layout()->setSpacing(0);
-    mpBaseHFrame->layout()->setMargin(0);
     mpBaseHFrame->layout()->setSpacing(0);
 
 
@@ -914,12 +908,10 @@ void TConsole::slot_toggleReplayRecording()
         }
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
-        QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage(message);
+        printSystemMessage(tr("Replay recording has started. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
     } else {
         mReplayFile.close();
-        QString message = QString("Replay recording has been stopped. File: ") + mReplayFile.fileName() + "\n";
-        printSystemMessage(message);
+        printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
     }
 }
 
@@ -1059,7 +1051,7 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
-    mProcessingTime.restart();
+    mProcessingTimer.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText(incomingSocketData, isFromServer);
     mTriggerEngineMode = false;
@@ -1072,11 +1064,21 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 
-    double processT = mProcessingTime.elapsed();
+    double processT = mProcessingTimer.elapsed() / 1000.0;
     if (mpHost->mTelnet.mGA_Driver) {
-        networkLatency->setText(QString("N:%1 S:%2").arg(mpHost->mTelnet.networkLatency, 0, 'f', 3).arg(processT / 1000, 0, 'f', 3));
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2",
+                                            // intentional comment to separate arguments
+                                            "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                            "'S'ystem (processing) time")
+                                                 .arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3)
+                                                 .arg(processT, 0, 'f', 3));
     } else {
-        networkLatency->setText(QString("<no GA> S:%1").arg(processT / 1000, 0, 'f', 3));
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1",
+                                            // intentional comment to separate arguments
+                                            "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                            "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                            "network latency...")
+                                                 .arg(processT, 0, 'f', 3));
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
@@ -1151,6 +1153,11 @@ void TConsole::finalize()
 void TConsole::scrollDown(int lines)
 {
     mUpperPane->scrollDown(lines);
+    if (!mUpperPane->mIsTailMode &&
+        (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
+        mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
+        mUpperPane->scrollDown(100);                             // needs another scroll to force mIsTailMode
+    }
     if (mUpperPane->mIsTailMode) {
         mLowerPane->mCursorY = buffer.lineBuffer.size();
         mLowerPane->hide();
@@ -1163,11 +1170,15 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
+    bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
+    if (lowerAppears) {
+        QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+    }
     mUpperPane->scrollUp(lines);
 }
 
@@ -1594,18 +1605,10 @@ std::list<int> TConsole::getFgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).foreground()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
@@ -1629,18 +1632,10 @@ std::list<int> TConsole::getBgColor()
     auto line = buffer.buffer.at(y);
     int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        int n = 1;
         QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
-        while (len - 1 >= x+n) {
-            if (color != line.at(x+n).background()) {
-                break;
-            }
-            n += 1;
-        }
-        result.push_back(n);
     }
 
     return result;
@@ -2032,16 +2027,16 @@ void TConsole::copy()
 
 void TConsole::cut()
 {
-    mClipboard = buffer.cut(P_begin, P_end);
+    mpHost->mpConsole->mClipboard = buffer.cut(P_begin, P_end);
 }
 
 void TConsole::paste()
 {
     if (buffer.size() - 1 > mUserCursor.y()) {
-        buffer.paste(mUserCursor, mClipboard);
+        buffer.paste(mUserCursor, mpHost->mpConsole->mClipboard);
         mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y());
     } else {
-        buffer.appendBuffer(mClipboard);
+        buffer.appendBuffer(mpHost->mpConsole->mClipboard);
     }
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
@@ -2049,13 +2044,13 @@ void TConsole::paste()
 
 void TConsole::pasteWindow(TBuffer bufferSlice)
 {
-    mClipboard = bufferSlice;
+    mpHost->mpConsole->mClipboard = bufferSlice;
     paste();
 }
 
 void TConsole::appendBuffer()
 {
-    buffer.appendBuffer(mClipboard);
+    buffer.appendBuffer(mpHost->mpConsole->mClipboard);
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 }
