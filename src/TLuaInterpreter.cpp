@@ -14070,14 +14070,16 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
 {
-    qDebug() << "start" << __FUNCTION__;
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     lua_State* L = pGlobalLua;
     QStringList tokenList = key.split(QLatin1Char('.'));
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (!lua_checkstack(L, tokenList.size() + 5)) {
         qCritical() << "ERROR: could not grow Lua stack by" << tokenList.size() + 5 << "elements, parsing GMCP/MSDP failed. Current stack size is" << lua_gettop(L);
         return;
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int i = 0;
     for (int total = tokenList.size() - 1; i < total; ++i) {
         lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
@@ -14090,6 +14092,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
         lua_remove(L, -2);
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     bool __needMerge = false;
     lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
     Host& host = getHostFromLua(L);
@@ -14099,6 +14102,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             __needMerge = true;
         }
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     lua_pop(L, 1);
     if (!__needMerge) {
         lua_pushstring(L, tokenList.at(i).toUtf8().constData());
@@ -14107,12 +14111,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
 
     lua_getglobal(L, "json_to_value");
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
 
     if (!lua_isfunction(L, -1)) {
         lua_settop(L, 0);
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     auto dataInUtf8 = string_data.toUtf8();
     lua_pushlstring(L, dataInUtf8.constData(), dataInUtf8.length());
     int error = lua_pcall(L, 1, 1, 0);
@@ -14121,6 +14127,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         lua_rawset(L, -3);
         if (__needMerge) {
             lua_settop(L, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             lua_getglobal(L, "__gmcp_merge_gmcp_sub_tables");
             if (!lua_isfunction(L, -1)) {
                 lua_settop(L, 0);
@@ -14133,6 +14140,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                 lua_getfield(L, -1, tokenList.at(i).toUtf8().constData());
                 lua_remove(L, -2);
             }
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
             lua_pcall(L, 2, 0, 0);
         }
@@ -14147,6 +14155,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             QString _f = "json_to_value";
             logError(e, _n, _f);
         }
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     }
     lua_settop(L, 0);
 
@@ -14154,6 +14163,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     // with the actual key given as parameter e.g. event=gmcp.foo, param="gmcp.foo.bar"
 
     QString token = protocol;
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (protocol == QLatin1String("msdp")) {
         key.prepend(QLatin1String("msdp."));
     } else {
@@ -14174,6 +14184,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
         host.raiseEvent(event);
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0).toLower() == "ire" && tokenList.at(1).toLower() == "composer" && tokenList.at(2).toLower() == "edit") {
         QRegularExpression rx(QStringLiteral(R"lit(\{ ?"title": ?"(.*)", ?"text": ?"(.*)" ?\})lit"));
@@ -14238,7 +14249,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             host.mTelnet.mpComposer->show();
         }
     }
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     lua_pop(L, lua_gettop(L));
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
 }
 
 // No documentation available in wiki - internal function
