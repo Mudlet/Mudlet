@@ -1030,7 +1030,7 @@ function packageDrop(event, fileName, suffix)
   else
     local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
     echo(failureText)
-  end if
+  end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
