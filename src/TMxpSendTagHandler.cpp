@@ -21,7 +21,6 @@
 #include "TMxpClient.h"
 #include "TStringUtils.h"
 
-TMxpSendTagHandler::TMxpSendTagHandler() : TMxpSingleTagHandler("SEND"), mLinkId(0), mIsHrefInContent(false) {}
 TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     //    if (tag->hasAttr("EXPIRE") && tag->getAttr(0).isNamed("EXPIRE"))
@@ -65,6 +64,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 
     return MXP_TAG_HANDLED;
 }
+
 QString TMxpSendTagHandler::extractHref(MxpStartTag* tag)
 {
     if (tag->getAttributesCount() == 0) {

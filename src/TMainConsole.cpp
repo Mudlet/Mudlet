@@ -51,14 +51,14 @@
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
-, mSpellDic()
+, mClipboard(pH)
+, mLogToLogFile(false)
+, mEnableUserDictionary(true)
+, mUseSharedDictionary(false)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
 , mpHunspellCodec_system(nullptr)
-, mLogFileName(QString(""))
-, mLogToLogFile(false)
-, mClipboard(pH)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a

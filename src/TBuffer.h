@@ -196,7 +196,6 @@ public:
 
     int mCursorY;
 
-
     // State of MXP systen:
     bool mEchoingText;
 

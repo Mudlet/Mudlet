@@ -73,6 +73,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mpCurrentTriggerItem(nullptr)
 , mpCurrentAliasItem(nullptr)
 , mpCurrentVarItem(nullptr)
+, mIsGrabKey(false)
 , mpHost(pH)
 , mpSourceEditorDocument(nullptr)
 , mpSourceEditorEdbee(nullptr)
@@ -85,9 +86,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 // TODO: Implement other searchOptions:
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
-, mCleanResetQueued(false)
 , mSavingAs(false)
-, mIsGrabKey(false)
+, mCleanResetQueued(false)
 , mAutosaveInterval{}
 , mTriggerEditorSplitterState{}
 , mAliasEditorSplitterState{}

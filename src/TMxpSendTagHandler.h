@@ -1,5 +1,8 @@
+#ifndef MUDLET_TMXPSENDTAGHANDLER_H
+#define MUDLET_TMXPSENDTAGHANDLER_H
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,14 +20,31 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPSENDTAGHANDLER_H
-#define MUDLET_TMXPSENDTAGHANDLER_H
 #include "TEntityResolver.h"
 #include "TMxpTagHandler.h"
 
 // <SEND [href=command] [hint=text] [prompt] [expire=name]>
 class TMxpSendTagHandler : public TMxpSingleTagHandler
 {
+public:
+    static QString extractHref(MxpStartTag* tag);
+    static QString extractHint(MxpStartTag* tag);
+
+    TMxpSendTagHandler()
+    : TMxpSingleTagHandler(QStringLiteral("SEND"))
+    , mIsHrefInContent(false)
+    , mLinkId(0)
+    {}
+
+    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
+
+    void handleContent(char ch) override;
+
+private:
+    void updateHrefInLinks(TMxpClient& client) const;
+    void resetCurrentTagContent(TMxpClient& client);
+
     inline static const QString ATTR_HREF = QStringLiteral("href");
     inline static const QString ATTR_HINT = QStringLiteral("hint");
     inline static const QString ATTR_PROMPT = QStringLiteral("prompt");
@@ -34,19 +54,6 @@ class TMxpSendTagHandler : public TMxpSingleTagHandler
     bool mIsHrefInContent;
     QString mCurrentTagContent;
     int mLinkId;
-
-    void updateHrefInLinks(TMxpClient& client) const;
-    void resetCurrentTagContent(TMxpClient& client);
-public:
-    static QString extractHref(MxpStartTag* tag);
-    static QString extractHint(MxpStartTag* tag);
-
-    TMxpSendTagHandler();
-    TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
-    TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
-
-    void handleContent(char ch) override;
-
 };
-#include "TMxpTagHandler.h"
+
 #endif //MUDLET_TMXPSENDTAGHANDLER_H

@@ -1,3 +1,6 @@
+#ifndef MUDLET_TMXPMUDLET_H
+#define MUDLET_TMXPMUDLET_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
@@ -17,8 +20,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef MUDLET_TMXPMUDLET_H
-#define MUDLET_TMXPMUDLET_H
 
 #include "TEntityResolver.h"
 #include "TLinkStore.h"
@@ -35,27 +36,22 @@ class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
-
-    Host* mpHost;
-
-    bool mLinkMode;
-
 public:
-    // Shouldn't be here, look for a better solution
-    QQueue<TMxpEvent> mMxpEvents;
-
-    TMxpMudlet(Host* pHost);
+    TMxpMudlet(Host* pHost)
+    : isBold(false)
+    , isItalic(false)
+    , isUnderline(false)
+    , mpHost(pHost)
+    , mLinkMode(false)
+    {}
 
     QString getVersion() override;
 
     void sendToServer(QString& str) override;
 
     void setLinkMode(bool val) override { mLinkMode = val; }
-
     bool isInLinkMode() const { return mLinkMode; }
 
-    QList<QColor> fgColors, bgColors;
     void pushColor(const QString& fgColor, const QString& bgColor) override;
 
     void popColor() override;
@@ -86,8 +82,6 @@ public:
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 
-    bool isBold, isItalic, isUnderline;
-
     void setBold(bool bold) override { isBold = bold; }
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
@@ -113,6 +107,22 @@ public:
 
     void enqueueMxpEvent(MxpStartTag* tag);
     TLinkStore& getLinkStore();
+
+    QList<QColor> fgColors;
+    QList<QColor> bgColors;
+
+    // Shouldn't be here, look for a better solution
+    QQueue<TMxpEvent> mMxpEvents;
+
+    bool isBold;
+    bool isItalic;
+    bool isUnderline;
+
+private:
+    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
+
+    Host* mpHost;
+    bool mLinkMode;
 };
 
 #endif //MUDLET_TMXPMUDLET_H

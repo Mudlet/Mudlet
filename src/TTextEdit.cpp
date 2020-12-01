@@ -64,11 +64,11 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
+, mScreenOffset(0)
+, mMaxHRange(0)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
-, mScreenOffset(0)
-, mMaxHRange(0)
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
