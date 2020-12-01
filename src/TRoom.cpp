@@ -73,6 +73,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 , mSymbol(QString())
 , highlight(false)
 , highlightColor(QColor(255, 150, 0))
+, highlightRadius()
 , rendered(false)
 , id(0)
 , area(-1)
@@ -90,7 +91,6 @@ TRoom::TRoom(TRoomDB* pRDB)
 , in(-1)
 , out(-1)
 , mpRoomDB(pRDB)
-, highlightRadius()
 {
 }
 

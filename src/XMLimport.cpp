@@ -949,7 +949,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
 
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
-    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
     pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
