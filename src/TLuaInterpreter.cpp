@@ -6561,6 +6561,7 @@ int TLuaInterpreter::debug(lua_State* L)
     return 0;
 }
 
+// No documentation available in wiki - internal function
 int TLuaInterpreter::showHandlerError(lua_State* L)
 {
     Host& host = getHostFromLua(L);
