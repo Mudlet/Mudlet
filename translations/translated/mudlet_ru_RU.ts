@@ -1412,24 +1412,24 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="911"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Началась запись воспроизведения. Файл: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="914"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Запись преобразования остановлена. Файл: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1069"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1076"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1408"/>
@@ -3914,7 +3914,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="513"/>
       <source>hh:mm:ss.zzz</source>
       <comment>This is the format to be used to show the profile connection time, it follows the rules of the &quot;QDateTime::toString(...)&quot; function and may need modification for some locales, e.g. France, Spain.</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
