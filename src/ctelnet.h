@@ -320,6 +320,8 @@ private:
     // Set if the current connection is via a proxy
     bool mConnectViaProxy;
 
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB;
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);
