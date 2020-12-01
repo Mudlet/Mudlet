@@ -107,6 +107,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , mEncodingWarningIssued(false)
 , mEncoderFailureNoticeIssued(false)
 , mConnectViaProxy(false)
+, mIncompleteSB(false)
 {
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -2793,6 +2794,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
                     // IAC SB COMPRESS2 IAC SE for MCCP v2
                     if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                        // TODO this code looks ahead instead of using the state machine.
+                        // This is not a good idea.
                         char _ch = buffer[i];
                         if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
                             bool _compress = false;
@@ -2822,11 +2825,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                                     datalen = 0;
                                     i = -1; // end the loop, this will make i and datalen the same.
                                 }
-                                //bugfix: BenH
+                                // compressed data starts in clean state
                                 iac = false;
                                 insb = false;
                                 command = "";
-                                ////////////////
                                 goto MAIN_LOOP_END;
                             }
                         }
@@ -2834,15 +2836,33 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     //7. inside IAC SB
 
                     command += ch;
-                    if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
-                    {
+                    if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
                         processTelnetCommand(command);
                         command = "";
                         iac = false;
                         insb = false;
-                    }
-                    if (iac) {
+                    } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
+                        command.pop_back();
                         iac = false;
+                    } else if (iac) {
+                        // Telnet options within a subcommand are not supported.
+                        // We assume that the SE went missing, possibly due to a
+                        // server bug, and try to recover.
+                        // Cf. https://github.com/Mudlet/Mudlet/issues/4385
+                        command.pop_back();
+                        command += TN_SE;
+                        processTelnetCommand(command);
+                        if (!mIncompleteSB) {
+                            mIncompleteSB = true;
+                            qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).\nSome data loss is likely - please mention this problem to the game admins.)",command[2]);
+                        }
+
+
+                        // Re-enter the state machine.
+                        command = TN_IAC;
+                        iac = true;
+                        insb = false;
+                        i -= 1;
                     } else if (ch == TN_IAC) {
                         iac = true;
                     }
