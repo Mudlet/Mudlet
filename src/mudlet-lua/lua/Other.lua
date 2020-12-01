@@ -6,6 +6,7 @@ mudlet = mudlet or {}
 mudlet.supports = {
   coroutines = true
 }
+mudlet.Locale = mudlet.Locale or loadTranslations("MudletOther")
 
 -- enforce uniform locale so scripts don't get
 -- tripped up on number representation differences (. vs ,)
@@ -1023,7 +1024,13 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptable_suffix, suffix) then
     return
   end
-  installPackage(fileName)
+  if installPackage(fileName) then
+    local successText = mudlet.Locale.packageInstallSuccess and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully."
+    echo(successText)
+  else
+    local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
+    echo(failureText)
+  end if
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
