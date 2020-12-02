@@ -133,7 +133,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
     if (mMxpTagBuilder.hasTag()) {
         QScopedPointer<MxpTag> tag(mMxpTagBuilder.buildTag());
 
-        //        qDebug() << "TAG RECEIVED: " << tag->asString();
+                qDebug() << "TAG RECEIVED: " << tag->toString();
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }

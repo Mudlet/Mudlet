@@ -417,7 +417,6 @@ public:
     bool mFORCE_SAVE_ON_EXIT;
 
     bool mSslTsl;
-    bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
@@ -643,8 +642,6 @@ private:
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
 
-    QString mBufferIncomingData;
-
     QFile mErrorLogFile;
 
     QMap<QString, TEvent*> mEventMap;
@@ -675,12 +672,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value

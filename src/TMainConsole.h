@@ -43,12 +43,6 @@ public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
 
-    QMap<QString, TConsole*> mSubConsoleMap;
-    QMap<QString, TDockWidget*> mDockWidgetMap;
-    QMap<QString, TCommandLine*> mSubCommandLineMap;
-    QMap<QString, TLabel*> mLabelMap;
-    TBuffer mClipboard;
-
     void resetMainConsole();
 
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
@@ -99,12 +93,17 @@ public:
     QPair<bool, QString> addWordToSet(const QString&);
     QPair<bool, QString> removeWordFromSet(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+    void toggleLogging(bool);
 
+    QMap<QString, TConsole*> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TLabel*> mLabelMap;
+    TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile;
-    void toggleLogging(bool);
 
 private:
     // Was public in Host class but made private there and cloned to here
