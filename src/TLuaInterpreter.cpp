@@ -15024,7 +15024,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
-    qDebug() << "start" << __FUNCTION__;
+    qDebug() << __FUNCTION__ << function << pE.mArgumentList <<__FILE__ << __LINE__;
     if (function.isEmpty()) {
         return false;
     }
@@ -15071,7 +15071,10 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         }
     }
 
+
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     error = lua_pcall(L, maxArguments, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
 
     if (mudlet::debugMode && pE.mArgumentList.size() > LUA_FUNCTION_MAX_ARGS) {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: more than " << LUA_FUNCTION_MAX_ARGS
