@@ -490,7 +490,11 @@ void dlgIRC::slot_onTextEntered()
         lineEdit->clear();
     } else if (input.length() > 1) {
         QString error;
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
+#else
         QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
+#endif
         if (commandParser->commands().contains(command))
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(QStringLiteral("<"), QStringLiteral("&lt;")).replace(QStringLiteral(">"), QStringLiteral("&gt;")));
         else
@@ -791,7 +795,11 @@ QStringList dlgIRC::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << dlgIRC::DefaultChannels;
     } else {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        channels = channelstr.split(QStringLiteral(" "), Qt::SkipEmptyParts);
+#else
         channels = channelstr.split(QStringLiteral(" "), QString::SkipEmptyParts);
+#endif
     }
     return channels;
 }
