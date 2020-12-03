@@ -65,7 +65,7 @@ void TAlias::setName(const QString& name)
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getAliasUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
 bool TAlias::match(const QString& toMatch)

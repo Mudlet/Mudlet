@@ -134,7 +134,7 @@ void TTrigger::setName(const QString& name)
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
-    mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
 static void pcre_deleter(pcre* pointer)
