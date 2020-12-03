@@ -219,7 +219,11 @@ QString IrcMessageFormatter::formatNickMessage(IrcNickMessage* message, bool isF
 QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool isForLua)
 {
     if (message->isReply()) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        const QStringList params = message->content().split(" ", Qt::SkipEmptyParts);
+#else
         const QStringList params = message->content().split(" ", QString::SkipEmptyParts);
+#endif
         const QString cmd = params.value(0);
         if (cmd.toUpper() == "PING") {
             const QString secs = formatSeconds(params.value(1).toInt());
@@ -335,8 +339,7 @@ QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isF
     Q_UNUSED(isForLua)
     quint64 msec = message->timeStamp().toMSecsSinceEpoch();
     quint64 dms = (QDateTime::currentMSecsSinceEpoch() - msec);
-    const QString secs = QString().sprintf("%04.3f", (float)((float)dms / (float)1000));
-    return QObject::tr("! %1 replied in %2 seconds").arg(message->nick(), secs);
+    return QObject::tr("! %1 replied in %2 seconds").arg(message->nick()).arg(dms / 1000.0, 4, 'f', 3, QLatin1Char('0'));
 }
 
 // Normal messages sent to channels are processed by our client as if they are private messages.

@@ -68,7 +68,7 @@ void TKey::setName(const QString& name)
         mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
 
 bool TKey::match(int key, int modifier, const bool isToMatchAll)
