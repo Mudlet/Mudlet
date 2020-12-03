@@ -15046,6 +15046,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // Lua is limited to ~50 arguments on a function
     auto maxArguments = std::min(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
     for (int i = 0; i < maxArguments; i++) {
+        qDebug() << "pushed" << pE.mArgumentTypeList.at(i);
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
             lua_pushnumber(L, pE.mArgumentList.at(i).toDouble());
@@ -15072,7 +15073,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
 
-    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
+    qDebug() << __FUNCTION__ << maxArguments << __FILE__ << __LINE__;
     error = lua_pcall(L, maxArguments, LUA_MULTRET, 0);
     qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
 
