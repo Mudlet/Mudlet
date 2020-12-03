@@ -46,7 +46,11 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     }
 
     if (tag->hasAttribute("ATT")) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', Qt::SkipEmptyParts);
+#else
         el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', QString::SkipEmptyParts);
+#endif
     }
 
     if (tag->hasAttribute("TAG")) {

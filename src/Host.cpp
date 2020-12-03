@@ -1017,7 +1017,11 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
+#else
         commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+#endif
     } else {
         // don't split command if the command separator is blank
         commandList << cmd;
