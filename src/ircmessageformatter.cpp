@@ -339,8 +339,7 @@ QString IrcMessageFormatter::formatPongMessage(IrcPongMessage* message, bool isF
     Q_UNUSED(isForLua)
     quint64 msec = message->timeStamp().toMSecsSinceEpoch();
     quint64 dms = (QDateTime::currentMSecsSinceEpoch() - msec);
-    const QString secs = QString().sprintf("%04.3f", (float)((float)dms / (float)1000));
-    return QObject::tr("! %1 replied in %2 seconds").arg(message->nick(), secs);
+    return QObject::tr("! %1 replied in %2 seconds").arg(message->nick()).arg(dms / 1000.0, 4, 'f', 3, QLatin1Char('0'));
 }
 
 // Normal messages sent to channels are processed by our client as if they are private messages.
