@@ -14122,7 +14122,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     auto dataInUtf8 = string_data.toUtf8();
     lua_pushlstring(L, dataInUtf8.constData(), dataInUtf8.length());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 1, 1, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error == 0) {
         // Top of stack should now contain the lua representation of json.
         lua_rawset(L, -3);
@@ -14143,7 +14145,9 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             }
             qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             lua_pcall(L, 2, 0, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         }
     } else {
         {
@@ -14478,7 +14482,9 @@ bool TLuaInterpreter::call_luafunction(void* pT)
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         if (error != 0) {
             int nbpossible_errors = lua_gettop(L);
             for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14529,7 +14535,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         if (error != 0) {
             int nbpossible_errors = lua_gettop(L);
             for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14582,7 +14590,9 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     setMatches(L);
 
     lua_getglobal(L, function.toUtf8().constData());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14614,7 +14624,9 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     setMatches(L);
 
     lua_getglobal(L, function.toUtf8().constData());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14694,7 +14706,9 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     lua_State* L = pGlobalLua;
 
     lua_getfield(L, LUA_GLOBALSINDEX, function.c_str());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, 1, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14753,7 +14767,9 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     }
 
     lua_getglobal(L, function.toUtf8().constData());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14805,7 +14821,9 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     }
 
     lua_getglobal(L, function.toUtf8().constData());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
@@ -14843,7 +14861,9 @@ bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     int error = 0;
     lua_pushstring(L, text.toUtf8().constData());
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     error = lua_pcall(L, 1, LUA_MULTRET, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error) {
         std::string err = "";
         if (lua_isstring(L, -1)) {
@@ -14872,7 +14892,9 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         switch (qE->type()) {
         // This means the default argument value was used, so ignore
         case (QEvent::None):
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             error = lua_pcall(L, 0, LUA_MULTRET, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             break;
         // These are all QMouseEvents
         case (QEvent::MouseButtonPress):
@@ -14920,7 +14942,9 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             break;
         }
         // These are QEvents
@@ -14944,13 +14968,17 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
 
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             break;
         }
         case (QEvent::Leave): {
             // Seems there isn't a QLeaveEvent, so no
             // extra information to be gotten
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             error = lua_pcall(L, 0, LUA_MULTRET, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             break;
         }
         // This is a QWheelEvent
@@ -14995,12 +15023,16 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, qME->angleDelta().y());
             lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
 
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             error = lua_pcall(L, 1, LUA_MULTRET, 0);
+            qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
             break;
         }
         }
     } else {
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
         error = lua_pcall(L, 0, LUA_MULTRET, 0);
+        qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     }
 
     if (error) {
@@ -15108,7 +15140,9 @@ double TLuaInterpreter::condenseMapLoad()
     lua_State* L = pGlobalLua;
 
     lua_getfield(L, LUA_GLOBALSINDEX, "condenseMapLoad");
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     int error = lua_pcall(L, 0, 1, 0);
+    qDebug() << __FUNCTION__ << __FILE__ << __LINE__;
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
