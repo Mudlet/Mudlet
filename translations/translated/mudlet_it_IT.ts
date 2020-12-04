@@ -1256,7 +1256,8 @@ per le stanze selezionate:</translation>
       <location filename="../src/TAlias.cpp" line="192"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nell'alias, cattura meno gruppi.
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="261"/>
@@ -3442,7 +3443,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="375"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nel trigger, cattura meno gruppi.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1127"/>
