@@ -64,7 +64,7 @@ function SetLuarocksPath([string] $logFile) {
   $Env:LUA_CPATH = "$Env:MINGW_BASE_DIR\lib\lua\5.1\?.dll;$Env:LUA_CPATH"
   Write-Output "Using $Env:LUA_CPATH as LuaRocks path." | Tee-Object -File "$logFile" -Append
 }
-exec
+
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
 function script:exec {
