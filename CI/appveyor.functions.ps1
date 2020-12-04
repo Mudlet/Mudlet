@@ -64,7 +64,7 @@ function SetLuarocksPath([string] $logFile) {
   $Env:LUA_CPATH = "$Env:MINGW_BASE_DIR\lib\lua\5.1\?.dll;$Env:LUA_CPATH"
   Write-Output "Using $Env:LUA_CPATH as LuaRocks path." | Tee-Object -File "$logFile" -Append
 }
-
+exec
 # Helper functions
 # see http://patrick.lioi.net/2011/08/18/powershell-and-calling-external-executables/
 function script:exec {
@@ -87,6 +87,29 @@ function script:exec {
   Get-Content $outLog, $errLog | Out-File $logFile -Append
   if ($exitCode -ne 0)
   {
+    throw $errorMessage
+  }
+  # restore exit behavior
+  $global:ErrorActionPreference = "Stop"
+}
+
+function script:execShow {
+  [CmdletBinding()]
+
+  param(
+    [Parameter(Position = 0, Mandatory = 1)][string]$cmd,
+    [Parameter(Position = 1, Mandatory = 0)][string[]]$parameter = @(),
+    [Parameter(Position = 2, Mandatory = 0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+  )
+  # ignore standard error for external programs
+  $global:ErrorActionPreference = "Continue"
+  if ($parameter.Length -eq 0) {
+    $exitCode = (Start-Process -FilePath $cmd -Wait -PassThru -NoNewWindow).ExitCode
+  }
+  else {
+    $exitCode = (Start-Process -FilePath $cmd -ArgumentList $parameter -Wait -PassThru -NoNewWindow).ExitCode
+  }
+  if ($exitCode -ne 0) {
     throw $errorMessage
   }
   # restore exit behavior
@@ -291,7 +314,7 @@ function InstallLua() {
   exec "XCOPY" @("/Y", "/S", "/I", "/Q", "$workingBaseDir\luawinmake\luawinmake-master\etc", "$workingBaseDir\lua-5.1.5\lua-5.1.5\etc")
   Set-Location lua-5.1.5\lua-5.1.5
   Step "compiling lua"
-  exec "etc\winmake"
+  execShow "etc\winmake"
   Step "installing lua"
   exec "etc\winmake" @("install", "$Env:MINGW_BASE_DIR")
 }
