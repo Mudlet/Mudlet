@@ -1551,7 +1551,6 @@ void cTelnet::processTelnetCommand(const std::string& command)
                     qDebug() << "Game changed encoding to" << value;
 
                     output += CHARSET_ACCEPTED;
-                    output += payload[1]; // Separator
                     output += encodeAndCookBytes(acceptedCharacterSet.toStdString());
                 } else {
                     output += CHARSET_REJECTED;
