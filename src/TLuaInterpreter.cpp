@@ -425,8 +425,13 @@ void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, 
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
     event.mArgumentList << QString::number(bytesDownloaded);
     event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
-    event.mArgumentList << QString::number(totalBytes);
-    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+    if(totalBytes >= 0) {
+        event.mArgumentList << QString::number(totalBytes);
+        event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+    } else {
+        event.mArgumentList << QString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+    }
 
     host.raiseEvent(event);
 }
