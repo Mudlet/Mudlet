@@ -1803,6 +1803,16 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
+int TLuaInterpreter::getWindowWrap(lua_State* L)
+{
+    QString windowName {WINDOW_NAME(L, 1)};
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushnumber(L, console->getWrapAt());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
@@ -15777,6 +15787,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "debugc", TLuaInterpreter::debug);
     lua_register(pGlobalLua, "showHandlerError", TLuaInterpreter::showHandlerError);
     lua_register(pGlobalLua, "setWindowWrap", TLuaInterpreter::setWindowWrap);
+    lua_register(pGlobalLua, "getWindowWrap", TLuaInterpreter::getWindowWrap);
     lua_register(pGlobalLua, "setWindowWrapIndent", TLuaInterpreter::setWindowWrapIndent);
     lua_register(pGlobalLua, "resetFormat", TLuaInterpreter::resetFormat);
     lua_register(pGlobalLua, "moveCursorEnd", TLuaInterpreter::moveCursorEnd);
