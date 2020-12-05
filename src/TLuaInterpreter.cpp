@@ -10809,7 +10809,10 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
     connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file " << reply->url().toString() << "\n" >> 0;
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file "
+                                                        << reply->url().toString() << "\n" >> 0;
+        }
     });
 
     if (mudlet::debugMode) {
