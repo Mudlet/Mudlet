@@ -31,13 +31,15 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  if(APP_BUILD MATCHES "^-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD MATCHES "^-dev.+") OR (APP_BUILD MATCHES "^-test.+"))
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
+  # Neither BUILD nor APP_BUILD does not seem to be available?
+
+  # if(APP_BUILD matches "-ptb.+")
+  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  # else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  endif()
+  # endif()
 endif()
 
 set(mudlet_SRCS
@@ -77,7 +79,6 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mudlet.cpp
-    MxpTag.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -118,6 +119,7 @@ set(mudlet_SRCS
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
+    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
@@ -204,7 +206,6 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mudlet.h
-    MxpTag.h
     post_guard.h
     pre_guard.h
     ScriptUnit.h
@@ -252,6 +253,7 @@ set(mudlet_HDRS
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
+    MxpTag.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -319,7 +321,6 @@ find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
-find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
@@ -374,6 +375,9 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
+target_compile_definitions(communi PUBLIC IRC_STATIC)
+
 target_link_libraries(
   mudlet
   communi
@@ -390,7 +394,6 @@ target_link_libraries(
   Qt5::OpenGL
   Qt5::UiTools
   Qt5::Widgets
-  YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
   qt5keychain)

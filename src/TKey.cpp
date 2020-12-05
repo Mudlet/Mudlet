@@ -31,12 +31,12 @@ TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
+, mKeyCode()
+, mKeyModifier()
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
-, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -44,13 +44,13 @@ TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
 , exportItem( true )
 , mModuleMasterFolder( false )
+, mRegisteredAnonymousLuaFunction(false)
 , mName( name )
+, mKeyCode()
+, mKeyModifier()
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
-, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -68,7 +68,7 @@ void TKey::setName(const QString& name)
         mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
 
 bool TKey::match(int key, int modifier, const bool isToMatchAll)

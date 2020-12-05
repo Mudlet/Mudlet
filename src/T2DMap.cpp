@@ -113,10 +113,10 @@ T2DMap::T2DMap(QWidget* parent)
 , mCustomLinesRoomFrom()
 , mCustomLinesRoomTo()
 , mpCurrentLineStyle()
-, mCurrentLineStyle(Qt::SolidLine)
 , mpCurrentLineColor()
-, mCurrentLineColor(Qt::red)
 , mpCurrentLineArrow()
+, mCurrentLineStyle(Qt::SolidLine)
+, mCurrentLineColor(Qt::red)
 , mCurrentLineArrow(true)
 , mBubbleMode()
 , mMapperUseAntiAlias(true)
@@ -573,7 +573,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
     QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
     QVector<quint32> codePoints = symbolString.toUcs4();
     QVector<bool> isUsable;
-    for (uint i = 0; i < codePoints.size(); ++i) {
+    for (int i = 0; i < codePoints.size(); ++i) {
         isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
     }
 
@@ -1238,6 +1238,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
+    Q_UNUSED(e)
     if (!mpMap) {
         return;
     }
@@ -2409,7 +2410,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         infoLeftSideAvoid += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
 
-    uint infoHeight = 5 + mFontHeight; // Account for first iteration
+    int infoHeight = 5 + mFontHeight; // Account for first iteration
     QRect testRect;
     // infoRect has a 10 margin on either side and on top to widget frame.
     mMapInfoRect = QRect(infoLeftSideAvoid, 10, width() - 10 - infoLeftSideAvoid, infoHeight);
@@ -4580,8 +4581,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             return;
         }
 
-        int dx = qRound((event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0) + 1.0) - room->x;
-        int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy - 1.0) - room->y;
+        int dx = qRound((event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0)) - room->x;
+        int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy) - room->y;
         QSetIterator<int> itRoom = mMultiSelectionSet;
         while (itRoom.hasNext()) {
             room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -4670,6 +4671,7 @@ bool T2DMap::getCenterSelection()
 
 void T2DMap::exportAreaImage(int id)
 {
+    Q_UNUSED(id)
     paintMap();
 }
 

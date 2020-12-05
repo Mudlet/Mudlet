@@ -33,6 +33,7 @@
 
 #include "pre_guard.h"
 #include <QDataStream>
+#include <QElapsedTimer>
 #include <QHBoxLayout>
 #include <QFile>
 #include <QLabel>
@@ -204,7 +205,6 @@ public:
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;
-    TBuffer mClipboard;
     QColor mCommandBgColor;
     QColor mCommandFgColor;
 
@@ -245,7 +245,7 @@ public:
     QScrollBar* mpHScrollBar;
 
 
-    QTime mProcessingTime;
+    QElapsedTimer mProcessingTimer;
     bool mRecordReplay;
     QFile mReplayFile;
     QDataStream mReplayStream;
@@ -256,9 +256,8 @@ public:
     bool mTriggerEngineMode;
 
     QPoint mUserCursor;
-    bool mWindowIsHidden;
     int mWrapAt;
-    QLineEdit* networkLatency;
+    QLineEdit* mpLineEdit_networkLatency;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;

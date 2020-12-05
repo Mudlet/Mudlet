@@ -11,11 +11,12 @@
 	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined", "--init" ],
 
 	// Set *default* container specific settings.json values on container create.
-	"settings": { 
+	"settings": {
 		"terminal.integrated.shell.linux": "/bin/bash"
 	},
 
 	// Add the IDs of extensions you want installed when the container is created.
+	// update list in .vscode/extensions.json
 	"extensions": [
 		"ms-vscode.cpptools",
 		"ms-vscode.cmake-tools"

@@ -46,7 +46,6 @@
 #include "dlgIRC.h"
 #include "mudlet.h"
 
-
 #include "pre_guard.h"
 #include <chrono>
 #include <QDialog>
@@ -55,6 +54,8 @@
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+
+using namespace std::chrono;
 
 stopWatch::stopWatch()
 : mIsInitialised(false)
@@ -197,7 +198,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, hostname, id)
-, mpDlgIRC(nullptr)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -212,7 +212,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(QStringLiteral(";;"))
-, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
 , mEnableMSP(true)
@@ -220,17 +219,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerMXPenabled(true)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
-, mMediaLocationGMCP(QString())
-, mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
 , mSslTsl(false)
+, mSslIgnoreExpired(false)
+, mSslIgnoreSelfSigned(false)
+, mSslIgnoreAll(false)
 , mUseProxy(false)
-, mProxyAddress(QString())
 , mProxyPort(0)
-, mProxyUsername(QString())
-, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
@@ -243,8 +240,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
-, mLogDir(QString())
-, mLogFileName(QString())
 , mLogFileNameFormat(QLatin1String("yyyy-MM-dd#HH-mm-ss")) // In the past we have used "yyyy-MM-dd#hh-mm-ss" but we always want a 24-hour clock
 , mResetProfile(false)
 , mScreenHeight(25)
@@ -362,6 +357,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -390,8 +390,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerColor(Qt::white)
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
-, mProfileStyleSheet(QString())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
@@ -449,6 +447,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (mudlet::scmIsPublicTestVersion) {
         thankForUsingPTB();
     }
+
+    connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
+    connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
 }
 
 Host::~Host()
@@ -1015,7 +1017,11 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
+#else
         commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+#endif
     } else {
         // don't split command if the command separator is blank
         commandList << cmd;
@@ -1387,6 +1393,14 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
+    mTimerUnit.doCleanup();
+}
+
+// When Mudlet is running in online mode, deleted timers are cleaned up in bulk
+// on every new line. When in offline mode, new lines don't come - so they are
+// cleaned up in bulk periodically.
+void Host::slot_purgeTimers()
+{
     mTimerUnit.doCleanup();
 }
 
@@ -2864,7 +2878,7 @@ void Host::close()
     if (mpDlgIRC) {
         mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
         mpDlgIRC->deleteLater();
-        mpDlgIRC.reset(nullptr);
+        mpDlgIRC = nullptr;
     }
     if (mpConsole) {
         mpConsole->close();

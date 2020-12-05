@@ -417,7 +417,6 @@ public:
     bool mFORCE_SAVE_ON_EXIT;
 
     bool mSslTsl;
-    bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
@@ -602,7 +601,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
-    QScopedPointer<dlgIRC> mpDlgIRC;
+    QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
     QList<TToolBar*> mToolbarLayoutChanges;
@@ -620,6 +619,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
+    void slot_purgeTimers();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -641,8 +641,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    QString mBufferIncomingData;
 
     QFile mErrorLogFile;
 
@@ -674,12 +672,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value
@@ -753,6 +745,8 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    QTimer purgeTimer;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

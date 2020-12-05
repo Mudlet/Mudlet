@@ -48,10 +48,13 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
 , mIsLineTrigger(false)
@@ -64,9 +67,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
 }
@@ -79,12 +79,15 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mName( name )
 , mRegexCodeList( regexList )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mRegexCodePropertyList(regexProperyList)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
@@ -98,9 +101,6 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
@@ -134,7 +134,7 @@ void TTrigger::setName(const QString& name)
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
-    mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
 static void pcre_deleter(pcre* pointer)

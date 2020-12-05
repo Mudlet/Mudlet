@@ -60,14 +60,15 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
+, mMouseTrackLevel(0)
 , mpBuffer(pB)
 , mpConsole(pC)
 , mpHost(pH)
+, mScreenOffset(0)
+, mMaxHRange(0)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
-, mScreenOffset(0)
-, mMaxHRange(0)
 // Should be the same as the size of the timeStampFormat constant in the TBuffer
 // class:
 , mTimeStampWidth(13)
@@ -646,7 +647,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     QPoint P_topLeft = r.topLeft();
     QPoint P_bottomRight = r.bottomRight();
-    int x_topLeft = 0;
+
     int y_topLeft = P_topLeft.y();
     int x_bottomRight = P_bottomRight.x();
     int y_bottomRight = P_bottomRight.y();
@@ -826,12 +827,16 @@ void TTextEdit::highlightSelection()
     update(mSelectedRegion.boundingRect());
     update(newRegion);
     mSelectedRegion = newRegion;
+
+    QClipboard* clipboard = QApplication::clipboard();
+    if (clipboard->supportsSelection()) {
+        // X11 has a second clipboard that's updated on any selection
+        clipboard->setText(getSelectedText(), QClipboard::Selection);
+    }
 }
 
 void TTextEdit::unHighlight()
 {
-    normaliseSelection();
-
     // clang-format off
     for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
          y < endY;
@@ -861,6 +866,30 @@ void TTextEdit::normaliseSelection()
         mPB = mDragStart;
     }
 }
+
+void TTextEdit::expandSelectionToWords()
+{
+    int yind = mPA.y();
+    int xind = mPA.x();
+    for (; xind >= 0; --xind) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+            break;
+        }
+    }
+    mPA.setX(xind+1);
+
+    yind = mPB.y();
+    xind = mPB.x();
+    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
+            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
+            break;
+        }
+    }
+    mPB.setX(xind-1);
+}
+
 
 void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 {
@@ -905,10 +934,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA = cursorLocation;
         mPB = mDragSelectionEnd;
     }
-    if (mCtrlSelecting) {
-        mPA.setX(0);
-        mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
-    }
 
     for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
@@ -931,7 +956,10 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mPA = cursorLocation;
         mPB = mDragStart;
     }
-    if (mCtrlSelecting) {
+    if (mMouseTrackLevel == 2) {
+        expandSelectionToWords();
+    }
+    if (mCtrlSelecting || mMouseTrackLevel == 3) {
         mPA.setX(0);
         mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
     }
@@ -1142,51 +1170,38 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         if (mLastClickTimer.elapsed() < 300) {
-            int xind = x;
-            int yind = y;
+            mMouseTracking = true;
+            mMouseTrackLevel++;
+            if (mMouseTrackLevel > 3) {
+                mMouseTrackLevel = 3;
+            }
 
-            if (yind >= mpBuffer->lineBuffer.size()) {
+            if (y >= mpBuffer->lineBuffer.size()) {
                 return;
             }
-            if (xind >= mpBuffer->lineBuffer[yind].size()) {
+            if (x >= mpBuffer->lineBuffer[y].size()) {
                 return;
             }
-            while (xind < static_cast<int>(mpBuffer->buffer[yind].size())) {
-                QChar c = mpBuffer->lineBuffer[yind].at(xind);
-                if (c == QChar::Space) {
-                    break;
-                }
-                xind++;
-            }
-            // For ignoring user specified characters, we first stop at space boundaries, then we
-            // proceed to search within these spaces for ignored characters and chop off any we find.
-            while (xind > 0 && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind - 1))) {
-                xind--;
-            }
-            mDragSelectionEnd.setX(xind - 1);
-            mDragSelectionEnd.setY(yind);
-            for (xind = x - 1; xind > 0; --xind) {
-                if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space) {
-                    break;
-                }
-            }
-            int lsize = mpBuffer->lineBuffer[yind].size();
-            while (xind + 1 < lsize && mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer[yind].at(xind + 1))) {
-                xind++;
-            }
-            if (xind > 0) {
-                mDragStart.setX(xind + 1);
-            } else {
-                mDragStart.setX(0);
-            }
-            mDragStart.setY(yind);
+
+            mDragStart.setX(x);
+            mDragStart.setY(y);
+            mDragSelectionEnd.setX(x);
+            mDragSelectionEnd.setY(y);
             normaliseSelection();
+            if (mMouseTrackLevel == 2) {
+                expandSelectionToWords();
+            } else {
+                mPA.setX(0);
+                mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
+            }
+            mLastClickTimer.start();
             highlightSelection();
             event->accept();
             return;
         } else {
             mLastClickTimer.start();
             mMouseTracking = true;
+            mMouseTrackLevel = 1;
             if (y >= mpBuffer->size()) {
                 return;
             }
@@ -1988,10 +2003,8 @@ void TTextEdit::slot_analyseSelection()
     utf8Bytes[4] = '\0';
 
     int total = 0;
-    bool isSingleLine = false;
     startColumn = mPA.x();
     if (mPA.y() == mPB.y()) {
-        isSingleLine = true;
         // The selection is from mPA.x() to mPB.x()
         endColumn = mPB.x();
         if (endColumn == -1) {

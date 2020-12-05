@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -73,6 +73,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 , mSymbol(QString())
 , highlight(false)
 , highlightColor(QColor(255, 150, 0))
+, highlightRadius()
 , rendered(false)
 , id(0)
 , area(-1)
@@ -90,7 +91,6 @@ TRoom::TRoom(TRoomDB* pRDB)
 , in(-1)
 , out(-1)
 , mpRoomDB(pRDB)
-, highlightRadius()
 {
 }
 
@@ -552,6 +552,7 @@ bool TRoom::hasExitLock(int exit)
 // 0=offen 1=zu
 bool TRoom::hasSpecialExitLock(int to, const QString& cmd)
 {
+    Q_UNUSED(cmd)
     if (other.contains(to)) {
         QMapIterator<int, QString> it(other);
         while (it.hasNext()) {
@@ -634,7 +635,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
         }
 
         QString finalCmd = _prefix % _strippedCmd;
-        other.insertMulti(to, finalCmd);
+        other.insert(to, finalCmd);
     } else { // Clean up related data:
         customLinesArrow.remove(_strippedCmd);
         customLinesColor.remove(_strippedCmd);
