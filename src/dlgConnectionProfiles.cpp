@@ -69,7 +69,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     }
     QPixmap holdPixmap;
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = notificationAreaIconLabelWarning->pixmap();
@@ -77,7 +77,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelWarning->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = notificationAreaIconLabelError->pixmap();
@@ -85,7 +85,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelError->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = notificationAreaIconLabelInformation->pixmap();
@@ -2243,7 +2243,7 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
         font.setPointSize(--fontSize);
         QFontMetrics fm(font);
         testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, name);
-    } while (fontSize > 1 && ! textRectangle.contains(testRect));
+    } while (fontSize > 1 && !textRectangle.contains(testRect));
     pI->setFont(font);
     pI->setData(csmNameRole, name);
     pI->setText(name);
