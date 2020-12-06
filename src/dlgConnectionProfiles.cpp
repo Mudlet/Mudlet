@@ -72,7 +72,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
 #else
-    holdPixmap = notificationAreaIconLabelWarning->pixmap();
+    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
 #endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelWarning->setPixmap(holdPixmap);
@@ -80,7 +80,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
 #else
-    holdPixmap = notificationAreaIconLabelError->pixmap();
+    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
 #endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelError->setPixmap(holdPixmap);
@@ -88,7 +88,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
 #else
-    holdPixmap = notificationAreaIconLabelInformation->pixmap();
+    holdPixmap = *(notificationAreaIconLabelInformation->pixmap());
 #endif
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelInformation->setPixmap(holdPixmap);
