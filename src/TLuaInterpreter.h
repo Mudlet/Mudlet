@@ -599,6 +599,7 @@ private:
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     void handleHttpOK(QNetworkReply*);
+    static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
