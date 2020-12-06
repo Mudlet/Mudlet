@@ -3449,7 +3449,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
         mpVarsMainArea->lineEdit_var_name->setText(QString());
         mpVarsMainArea->lineEdit_var_name->setPlaceholderText(tr("Table name..."));
 
-        clearDocument(mpSourceEditorEdbee, QLatin1Literal("NewTable"));
+        clearDocument(mpSourceEditorEdbee, QLatin1String("NewTable"));
     } else {
         // in lieu of readonly
         mpSourceEditorEdbee->setEnabled(true);
@@ -8685,7 +8685,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
-    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
     ew->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     auto config = mpSourceEditorEdbee->config();
