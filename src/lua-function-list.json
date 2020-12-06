@@ -416,6 +416,7 @@
     "setUserWindowTitle": "setUserWindowTitle(windowName, text)",
     "setWindow": "setWindow(windowName, name, [Xpos, Ypos, show])",
     "setWindowWrap": "setWindowWrap(windowName, wrapAt)",
+    "getWindowWrap": "getWindowWrap(windowName)",
     "setWindowWrapIndent": "setWindowWrapIndent(windowName, wrapTo)",
     "shms": "shms(seconds, bool)",
     "showCaptureGroups": "showCaptureGroups()",

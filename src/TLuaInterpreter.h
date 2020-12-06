@@ -324,6 +324,7 @@ public:
     static int debug(lua_State* L);
     static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
+    static int getWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
     static int resetFormat(lua_State*);
     static int moveCursorEnd(lua_State*);
