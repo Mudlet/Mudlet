@@ -415,6 +415,27 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     pHost->raiseEvent(event);
 }
 
+void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes) {
+    Host& host = getHostFromLua(L);
+
+    TEvent event {};
+    event.mArgumentList << QStringLiteral("sysDownloadFileProgress");
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    event.mArgumentList << fileUrl;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+    event.mArgumentList << QString::number(bytesDownloaded);
+    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+    if(totalBytes >= 0) {
+        event.mArgumentList << QString::number(totalBytes);
+        event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+    } else {
+        event.mArgumentList << QString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+    }
+
+    host.raiseEvent(event);
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
@@ -10791,6 +10812,13 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
+    connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
+        raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file "
+                                                        << reply->url().toString() << "\n" >> 0;
+        }
+    });
 
     if (mudlet::debugMode) {
         TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: script is downloading from " << reply->url().toString() << "\n" >> 0;
