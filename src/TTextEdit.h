@@ -58,12 +58,13 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
     uint getGraphemeBaseCharacter(const QString& str) const;
-    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen, int *offset = nullptr) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
     void scrollTo(int);
+    void scrollH(int);
     void scrollUp(int lines);
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
@@ -73,21 +74,27 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
+    void updateScrollBar(int);
+    void calculateHMaxRange();
+    void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
-    int bufferScrollUp(int lines);
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a ) { mBgColor = QColor(r, g, b, a); }
+    void resetHScrollbar() { mScreenOffset = 0; mMaxHRange = 0; }
+    int getScreenHeight() { return mScreenHeight; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
+    void reportCodepointErrors();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
     int mCursorY;
+    int mCursorX;
     QFont mDisplayFont;
     QColor mFgColor;
     int mFontAscent;
@@ -111,11 +118,13 @@ public slots:
     void slot_copySelectionToClipboard();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
+    void slot_hScrollBarMoved(int);
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+    void slot_changeDebugShowAllProblemCodepoints(const bool);
 
 private slots:
     void slot_copySelectionToClipboardImage();
@@ -127,11 +136,12 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOutOfbounds, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
-    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
+    void expandSelectionToWords();
 
     int mFontHeight;
     int mFontWidth;
@@ -145,6 +155,8 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
+    // 1/2/3 for single/double/triple click seen so far
+    int  mMouseTrackLevel;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
     QPoint mDragStart, mDragSelectionEnd;
@@ -156,12 +168,13 @@ private:
     TBuffer* mpBuffer;
     TConsole* mpConsole;
     QPointer<Host> mpHost;
-    QScrollBar* mpScrollBar;
     // screen height in characters
     int mScreenHeight;
     // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
+    int mScreenOffset;
+    int mMaxHRange;
     QTime mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
@@ -169,7 +182,7 @@ private:
     // Set in constructor for run-time Qt versions less than 5.11 which only
     // supports up to Unicode 8.0:
     bool mUseOldUnicode8;
-    // How many "normal" width "characters" are each tab stop apart, whilst
+    // How many "normal" width "characters" are each tab stop apart, while
     // there is no current mechanism to adjust this, sensible values will
     // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
     // in the past it was typically 8 and this is what we'll use at present:
@@ -178,6 +191,8 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
+    bool mShowAllCodepointIssues;
+    mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

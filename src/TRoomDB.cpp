@@ -30,6 +30,10 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+const QString ROOM_UI_SHOWNAME = QStringLiteral("room.ui_showName");
+const QString ROOM_UI_NAMEPOS = QStringLiteral("room.ui_nameOffset");
+const QString ROOM_UI_NAMEFONT = QStringLiteral("room.ui_nameFont");
+const QString ROOM_UI_NAMESIZE = QStringLiteral("room.ui_nameSize");
 
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
@@ -206,7 +210,7 @@ bool TRoomDB::__removeRoom(int id)
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead whilst modifying the original
+        // copy and iterating through that instead while modifying the original
         while (i != _entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
@@ -345,6 +349,10 @@ bool TRoomDB::removeArea(int id)
         // This means areas.clear() is not needed during map
         // deletion
         areas.remove(id);
+        // Must also nuke any map labels in the area - otherwise auditing the
+        // map later will regenerate an unnamed area with the same Id to be the
+        // owner of them...!
+        mpMap->mapLabels.remove(id);
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
@@ -870,7 +878,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.next();
             unsigned int newRoomId = 0;
             do {
-                ; // Noop - needed increment is done in test condition!
+                ; // No-op - needed increment is done in test condition!
             } while (validUsedRoomIds.contains(++newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
@@ -932,7 +940,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
             // Exit stubs:
-            unsigned int _listCount = pR->exitStubs.count();
+            int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // These next few constuction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance
@@ -1326,3 +1334,27 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
 
     pA->calcSpan(); // The area extents will need recalculation after adding the rooms
 }
+
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue)
+{
+    if (!userData.contains(key)) {
+        return defaultValue;
+    }
+    QString value = userData.value(key);
+    if (value.isEmpty()) {
+        return defaultValue;
+    }
+    switch (value[0].unicode()) {
+      case 'y': case 'Y':
+      case 't': case 'T':
+      case '1':
+        return true;
+      case 'n': case 'N':
+      case 'f': case 'F':
+      case '0':
+        return false;
+      default:
+        return defaultValue;
+    }
+}
+

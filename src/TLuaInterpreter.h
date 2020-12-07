@@ -29,7 +29,6 @@
 
 #include "pre_guard.h"
 #include <QEvent>
-#include <QMutex>
 #include <QNetworkAccessManager>
 #include <QNetworkCookieJar>
 #include <QNetworkCookie>
@@ -105,6 +104,8 @@ public:
     void loadGlobal();
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
+    int check_for_custom_speedwalk();
+    void set_lua_integer(const QString& varName, int varValue);
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
@@ -126,7 +127,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, QString&);
+    int startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -323,6 +324,7 @@ public:
     static int debug(lua_State* L);
     static int showHandlerError(lua_State* L);
     static int setWindowWrap(lua_State*);
+    static int getWindowWrap(lua_State*);
     static int setWindowWrapIndent(lua_State*);
     static int resetFormat(lua_State*);
     static int moveCursorEnd(lua_State*);
@@ -361,10 +363,12 @@ public:
     static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
+    static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setCmdLineAction(lua_State*);
     static int resetCmdLineAction(lua_State*);
+    static int setCmdLineStyleSheet(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
@@ -376,8 +380,6 @@ public:
     static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
-    static int setConsoleBackgroundImage(lua_State*);
-    static int resetConsoleBackgroundImage(lua_State*);
     static int setProfileIcon(lua_State*);
     static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
@@ -386,7 +388,7 @@ public:
     static int getButtonState(lua_State*);
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
-    static int loadRawFile(lua_State*);
+    static int loadReplay(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
@@ -420,6 +422,8 @@ public:
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
+    static int disableHorizontalScrollBar(lua_State*);
+    static int enableHorizontalScrollBar(lua_State*);
     static int enableCommandLine(lua_State*);
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State* L);
@@ -568,6 +572,10 @@ public:
     static int unzipAsync(lua_State* L);
     static int setMapWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
+    static int getMapBackgroundColor(lua_State*);
+    static int setMapBackgroundColor(lua_State*);
+    static int getMapRoomExitsColor(lua_State*);
+    static int setMapRoomExitsColor(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -592,6 +600,7 @@ private:
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     void handleHttpOK(QNetworkReply*);
+    static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif

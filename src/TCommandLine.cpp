@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -38,7 +39,9 @@
 
 TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
+, mCommandLineName(QStringLiteral("main"))
 , mpHost(pHost)
+, mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 , mTabCompletionCount()
@@ -50,8 +53,6 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
 , mUserDictionarySuggestionsCount()
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
-, mType(type)
-, mCommandLineName("main")
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -80,11 +81,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     QPlainTextEdit::event(event);
     adjustHeight();
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
-        mHistoryBuffer = -1;
-    } else {
-        mHistoryBuffer = 0;
-    }
+    mHistoryBuffer = 0;
     if (mTabCompletionOld != toPlainText()) {
         mUserKeptOnTyping = true;
         mAutoCompletionCount = -1;
@@ -135,11 +132,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped.clear();
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 mLastCompletion.clear();
                 break;
 
@@ -221,11 +214,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Backspace:
             if ((ke->modifiers() & (allModifiers & ~(Qt::ControlModifier|Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Ignore state of <CTRL> and <SHIFT> keys
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -248,11 +237,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_Delete:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -279,6 +264,7 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mCursorX = 0;
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
@@ -297,18 +283,6 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
 
@@ -328,18 +302,6 @@ bool TCommandLine::event(QEvent* event)
                 // Do the "normal" return key action if no or just the keypad
                 // modifier is present:
                 enterCommand(ke);
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
 
@@ -371,7 +333,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                historyDown(ke);
+                historyMove(MOVE_DOWN);
                 ke->accept();
                 return true;
 
@@ -405,7 +367,7 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
-                historyUp(ke);
+                historyMove(MOVE_UP);
                 ke->accept();
                 return true;
 
@@ -427,11 +389,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 setPalette(mRegularPalette);
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 ke->accept();
                 return true;
 
@@ -444,7 +402,8 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpHost->mScreenHeight);
+                mpConsole->scrollUp(0);
+                QTimer::singleShot(0, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
                 ke->accept();
                 return true;
 
@@ -457,7 +416,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollDown(mpHost->mScreenHeight);
+                mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
@@ -590,7 +549,7 @@ void TCommandLine::adjustHeight()
         }
         return;
     }
-    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
+    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -791,7 +750,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
                 } else {
                     QAction* pA = nullptr;
-                    if (mpConsole->isUsingSharedDictionary()) {
+                    auto mainConsole = mpConsole->mpHost->mpConsole;
+                    if (mainConsole->isUsingSharedDictionary()) {
                         pA = new QAction(tr("no suggestions (shared)",
                                                  // Intentional comment
                                                  "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
@@ -859,10 +819,13 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
+    Q_UNUSED(event)
     QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
+    mLastCompletion.clear();
+    mUserKeptOnTyping = false;
 
     QStringList _l = _t.split(QChar::LineFeed);
 
@@ -879,11 +842,20 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     }
 
     if (!toPlainText().isEmpty()) {
-        mHistoryBuffer = 0;
+        if (mpHost->mAutoClearCommandLineAfterSend) {
+            mHistoryBuffer = 0;
+        } else {
+            mHistoryBuffer = 1;
+        }
         setPalette(mRegularPalette);
 
         mHistoryList.removeAll(toPlainText());
-        mHistoryList.push_front(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
         clear();
@@ -921,7 +893,11 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+#else
     QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
+#endif
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -1010,43 +986,18 @@ void TCommandLine::handleAutoCompletion()
     mAutoCompletionCount = -1;
 }
 
-// cursor down: cycles chronologically through the command history.
-
-void TCommandLine::historyDown(QKeyEvent* event)
-{
-    if (mHistoryList.empty()) {
-        return;
-    }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
-        mHistoryBuffer--;
-        if (mHistoryBuffer >= mHistoryList.size()) {
-            mHistoryBuffer = mHistoryList.size() - 1;
-        }
-        if (mHistoryBuffer < 0) {
-            mHistoryBuffer = 0;
-        }
-        setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
-        adjustHeight();
-    } else {
-        mAutoCompletionCount--;
-        handleAutoCompletion();
-    }
-}
-
-// cursor up: turns on autocompletion mode and cycles through all possible matches
+// cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
-void TCommandLine::historyUp(QKeyEvent* event)
+void TCommandLine::historyMove(MoveDirection direction)
 {
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
-        if (toPlainText().size() != 0) {
-            mHistoryBuffer++;
-        }
+    int shift = (direction == MOVE_UP ? 1 : -1);
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
+        mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
         }
@@ -1054,10 +1005,14 @@ void TCommandLine::historyUp(QKeyEvent* event)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
+        if (mpHost->mHighlightHistory) {
+            selectAll();
+        } else {
+            moveCursor(QTextCursor::End);
+        }
         adjustHeight();
     } else {
-        mAutoCompletionCount++;
+        mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
 }

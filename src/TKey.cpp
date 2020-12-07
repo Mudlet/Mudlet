@@ -31,11 +31,12 @@ TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
+, mKeyCode()
+, mKeyModifier()
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
 {
 }
 
@@ -43,12 +44,13 @@ TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
 , exportItem( true )
 , mModuleMasterFolder( false )
+, mRegisteredAnonymousLuaFunction(false)
 , mName( name )
+, mKeyCode()
+, mKeyModifier()
 , mpHost( pHost )
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
-, mKeyCode()
-, mKeyModifier()
 {
 }
 
@@ -66,7 +68,7 @@ void TKey::setName(const QString& name)
         mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
 
 bool TKey::match(int key, int modifier, const bool isToMatchAll)
@@ -158,7 +160,7 @@ void TKey::compile()
     }
 }
 
-bool TKey::setScript(QString& script)
+bool TKey::setScript(const QString& script)
 {
     mScript = script;
     mNeedsToBeCompiled = true;
@@ -192,5 +194,15 @@ void TKey::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpHost->mLuaInterpreter.call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     mpHost->mLuaInterpreter.call(mFuncName, mName);
 }

@@ -96,21 +96,30 @@ function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
 end
 
+-- Enables the horizontal scroll bar for this window
+function Geyser.MiniConsole:enableHorizontalScrollBar()
+  enableHorizontalScrollBar(self.name)
+end
+
+-- Disables the horizontal scroll bar for this window
+function Geyser.MiniConsole:disableHorizontalScrollBar()
+  disableHorizontalScrollBar(self.name)
+end
+
 -- Start commandLine functions
---- Enables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+
+--- Enables the command-line for this window
 function Geyser.MiniConsole:enableCommandLine()
   enableCommandLine(self.name)
 end
 
---- Disables the scroll bar for this window
--- @param isVisible boolean to set visibility.
+--- Disables the command-line for this window
 function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
 end
 
 --- Sets an action to be used when text is send in this commandline. When this
--- function is called by the event system, text the commandline sends will be 
+-- function is called by the event system, text the commandline sends will be
 -- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
 -- the setClickCallback events
 -- @param func The function to use.
@@ -150,6 +159,14 @@ end
 -- see: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 function Geyser.MiniConsole:getCmdLine()
   return getCmdLine(self.name)
+end
+
+--- Sets the style sheet of the command-line
+-- @param css The style sheet string
+function Geyser.MiniConsole:setCmdLineStyleSheet(css)
+  css = css or self.cmdLineStylesheet
+  setCmdLineStyleSheet(self.name, css)
+  self.cmdLineStylesheet = css
 end
 
 --- Sets bold status for this miniconsole
@@ -206,13 +223,13 @@ end
 -- @param mode background image mode (1 "border", 2 "center", 3 "tile", 4 "style")
 function Geyser.MiniConsole:setBackgroundImage(imgPath, mode)
   self.imgPath = imgPath
-  return setConsoleBackgroundImage(self.name, imgPath, mode)
+  return setBackgroundImage(self.name, imgPath, mode)
 end
 
 --- resets the background image of this miniconsole
 function Geyser.MiniConsole:resetBackgroundImage()
   self.imgPath = nil
-  return resetConsoleBackgroundImage(self.name)
+  return resetBackgroundImage(self.name)
 end
 
 --- inserts clickable text into the miniconsole at the end of the current line.
@@ -423,6 +440,11 @@ function Geyser.MiniConsole:new (cons, container)
     else
       me:disableScrollBar()
     end
+    if cons.horizontalScrollBar then
+      me:enableHorizontalScrollBar()
+    else
+      me:disableHorizontalScrollBar()
+    end
     if cons.font then
       me:setFont(cons.font)
     end
@@ -430,6 +452,14 @@ function Geyser.MiniConsole:new (cons, container)
       me:enableAutoWrap()
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
+    end
+    if me.commandLine then
+      me:enableCommandLine()
+    else
+      me:disableCommandLine()
+    end
+    if me.cmdLineStylesheet and me.commandLine then
+      me:setCmdLineStyleSheet()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end

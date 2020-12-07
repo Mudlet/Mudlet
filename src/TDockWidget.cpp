@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,7 +42,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
     if (!mpHost->isClosingDown()) {
-        mudlet::self()->hideWindow(mpHost, widgetConsoleName);
+        mpHost->hideWindow(widgetConsoleName);
         event->ignore();
         return;
     } else {
@@ -53,16 +53,14 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
-    }
+    Q_UNUSED(event)
+    mpHost->setDockLayoutUpdated(widgetConsoleName);
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setDockLayoutUpdated(mpHost, widgetConsoleName);
-    }
+    Q_UNUSED(event)
+    mpHost->setDockLayoutUpdated(widgetConsoleName);
 }
 
 void TDockWidget::setVisible(bool visible)

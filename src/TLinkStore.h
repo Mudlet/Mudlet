@@ -33,19 +33,19 @@ class TLinkStore {
     QMap<int, QStringList> mHintStore;
 
     int mLinkID;
-
     int maxLinks;
-public:
-    TLinkStore() : TLinkStore(scmMaxLinks)
-    {};
 
-    explicit TLinkStore(int maxLinks) : maxLinks(maxLinks), mLinkID(0)
-    {}
+public:
+    TLinkStore() : TLinkStore(scmMaxLinks) {}
+
+    explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
     int addLinks(const QStringList& links, const QStringList& hints);
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
+    QStringList getLinksConst(int id) const;
+    QStringList getHintsConst(int id) const;
 
     int getCurrentLinkID() const;
 

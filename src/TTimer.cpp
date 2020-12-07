@@ -86,12 +86,11 @@ void TTimer::setName(const QString& name)
     mName = name;
     // Merely for information if needed later:
     mpQTimer->setObjectName(QStringLiteral("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
-    mpHost->getTimerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTimerUnit()->mLookupTable.insert(name, this);
 }
 
 void TTimer::setTime(QTime time)
 {
-    QMutexLocker locker(&mLock);
     // Stop the timer before doing anything else:
     mpQTimer->stop();
     mTime = time;

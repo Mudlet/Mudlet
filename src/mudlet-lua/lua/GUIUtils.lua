@@ -10,8 +10,6 @@
 --- @name gaugesTable
 gaugesTable = {}
 
-
-
 --- The <i>color_table table</i> holds definition of color names. These are intended to be
 -- used in conjunction with fg() and bg() colorizer functions.
 -- Mudlet's original table - going back a few years - differs from the
@@ -783,28 +781,28 @@ local rgbToHsv = function(r, g, b)
   local max, min = math.max(r, g, b), math.min(r, g, b)
   local h, s, v
   v = max
-  
+
   local d = max - min
-  if max == 0 then 
-    s = 0 
-  else 
-    s = d / max 
+  if max == 0 then
+    s = 0
+  else
+    s = d / max
   end
-  
+
   if max == min then
     h = 0 -- achromatic
   else
     if max == r then
       h = (g - b) / d
       if g < b then h = h + 6 end
-    elseif max == g then 
+    elseif max == g then
       h = (b - r) / d + 2
-    elseif max == b then 
+    elseif max == b then
       h = (r - g) / d + 4
     end
     h = h / 6
   end
-  
+
   return h, s, v
 end
 
@@ -813,12 +811,12 @@ end
 local step = function(r,g,b)
   local lum = math.sqrt( .241 * r + .691 * g + .068 * b )
   local reps = 8
-  
+
   local h, s, v = rgbToHsv(r,g,b)
-  
+
   local h2 = math.floor(h * reps)
   local v2 = math.floor(v * reps)
-  if h2 % 2 == 1 then 
+  if h2 % 2 == 1 then
     v2 = reps - v2
     lum = reps - lum
   end
@@ -861,7 +859,7 @@ function showColors(...)
       sort = val
     end
   end
-  
+
   local colors = {}
   for k, v in pairs(color_table) do
     local color = {}
@@ -872,11 +870,11 @@ function showColors(...)
       table.insert(colors,color)
     end
   end
-  
-  if sort then 
+
+  if sort then
     table.sort(colors, sortColorsByName)
   else
-    table.sort(colors,sortColorsByHue) 
+    table.sort(colors,sortColorsByHue)
   end
   local i = 1
   for _, k in ipairs(colors) do
@@ -978,15 +976,15 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})?(?:,[0-9a-fA-F]{6,})?)|(\|r|#r)]],
+        [[(\x5c?(?:#|\|c)(?:[0-9a-fA-F]{6})(?:,[0-9a-fA-F]{6,})?)|(?:\||#)(/?[biru])]],
         rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?)?]],
       },
       Decimal = {
-        [[(<[0-9,:]+>)|(<r>)]],
+        [[(<[0-9,:]+>)|<(/?[biru])>]],
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}),?([0-9]{1,3})?)?>]],
       },
       Color = {
-        [[(<[a-zA-Z0-9_,:]+>)]],
+        [[(</?[a-zA-Z0-9_,:]+>)]],
         rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
       },
       Ansi = {
@@ -1012,8 +1010,20 @@ if rex then
         if s then
           t[#t + 1] = s
         end
-        if r then
+        if r == 'r' then
           t[#t + 1] = "\27reset"
+        elseif r == "b" then
+          t[#t + 1] = "\27bold"
+        elseif r == "/b" then
+          t[#t + 1] = "\27boldoff"
+        elseif r == "i" then
+          t[#t + 1] = "\27italics"
+        elseif r == "/i" then
+          t[#t + 1] = "\27italicsoff"
+        elseif r == "u" then
+          t[#t + 1] = "\27underline"
+        elseif r == "/u" then
+          t[#t + 1] = "\27underlineoff"
         end
         if c then
           if style == 'Hex' or style == 'Decimal' then
@@ -1049,8 +1059,20 @@ if rex then
             -- pass it into the text stream then
             t[#t + 1] = ((fr or br) and color or c)
           elseif style == 'Color' then
-            if c == "<reset>" then
+            if c == "<reset>" or c == "<r>" then
               t[#t + 1] = "\27reset"
+            elseif c == "<b>" then
+              t[#t + 1] = "\27bold"
+            elseif c == "</b>" then
+              t[#t + 1] = "\27boldoff"
+            elseif c == "<i>" then
+              t[#t + 1] = "\27italics"
+            elseif c == "</i>" then
+              t[#t + 1] = "\27italicsoff"
+            elseif c == "<u>" then
+              t[#t + 1] = "\27underline"
+            elseif c == "</u>" then
+              t[#t + 1] = "\27underlineoff"
             else
               local fcolor, bcolor = _Echos.Patterns[style][2]:match(c)
               local color = {}
@@ -1092,7 +1114,7 @@ if rex then
     local out, reset
     local args = { ... }
     local n = #args
-    
+
     if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
@@ -1117,7 +1139,7 @@ if rex then
       else
         error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
       end
-      
+
     else
       if args[1] and args[2] and args[1] ~= "main" then
         win, str = args[1], args[2]
@@ -1128,13 +1150,13 @@ if rex then
       end
     end
     win = win or "main"
-    
+
     out = function(...)
       _G[func](...)
     end
-    
+
     local t = _Echos.Process(str, style)
-    
+
     deselect(win)
     resetFormat(win)
     if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
@@ -1149,6 +1171,18 @@ if rex then
           ba = ba or 255
           setBgColor(win, br, bg, bb, ba)
         end
+      elseif v == "\27bold" then
+        setBold(win, true)
+      elseif v == "\27boldoff" then
+        setBold(win, false)
+      elseif v == "\27italics" then
+        setItalics(win, true)
+      elseif v == "\27italicsoff" then
+        setItalics(win, false)
+      elseif v == "\27underline" then
+        setUnderline(win, true)
+      elseif v == "\27underlineoff" then
+        setUnderline(win, false)
       elseif v == "\27reset" then
         resetFormat(win)
       else
@@ -1277,7 +1311,7 @@ if rex then
   function cechoLink(...)
     xEcho("Color", "echoLink", ...)
   end
-	
+
   --- Inserts a link with embedded color name information at the current position
   ---
   --- @usage cinsertLink([window, ] string, command, hint)
@@ -1337,7 +1371,7 @@ if rex then
   function hechoPopup(...)
     xEcho("Hex", "echoPopup", ...)
   end
-	
+
   --- Echos a popup with embedded color name information.
   ---
   --- @usage cinsertPopup([window, ] string, {commands}, {hints})
@@ -1414,7 +1448,7 @@ if rex then
     local back = cols[2]
     if fore ~= "" then
       if fore == "r" or fore == "reset" then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       else
         local colorNumber = ctable[fore]
         if colorNumber then
@@ -1507,7 +1541,7 @@ if rex then
         result = result .. rgbToAnsi(color:match("<(.+)>"))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1540,7 +1574,7 @@ if rex then
         result = result .. hexToAnsi(color:sub(2,-1))
       end
       if res then
-        result = result .. "\27[39;49m"
+        result = result .. "\27[0m"
       end
     end
     return result
@@ -1738,7 +1772,15 @@ local grayscaleComponents = {
   [23] = 255
 }
 
-local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
+
+-- function for converting a raw ANSI string into plain strings
+function ansi2string(text)
+  assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
+  local result = rex.gsub(text, ansiPattern, "")
+  return result
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
@@ -1752,7 +1794,9 @@ function ansi2decho(text, ansi_default_color)
   local result = rex.gsub(text, ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
-    local t = string.split(s, ";") -- split the codes into an indexed table
+    local delim = ";"
+    if s:find(":") then delim = ":" end
+    local t = string.split(s, delim) -- split the codes into an indexed table
 
     -- given an xterm256 index, returns an rgb string for decho use
     local function convertindex(tag)
@@ -1804,7 +1848,6 @@ function ansi2decho(text, ansi_default_color)
         coloursToUse = colours
       else
         isColorCode = true
-
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
         --                      4 is back
         local cmd = code - (layerCode * 10) -- extract the actual "command"
@@ -1818,8 +1861,13 @@ function ansi2decho(text, ansi_default_color)
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
-          colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
-          i = i + 4
+          if delim == ";" then
+            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            i = i + 4
+          elseif delim == ":" then
+            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            i = i + 5
+          end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
           colour = lightColours[cmd]
@@ -1857,9 +1905,8 @@ function ansi2decho(text, ansi_default_color)
         output[#output + 1] = table.concat(fg, ",")
       end
 
-      output[#output + 1] = ':'
-
       if bg then
+        output[#output + 1] = ':'
         output[#output + 1] = table.concat(bg, ",")
       end
       output[#output + 1] = '>'
@@ -1911,7 +1958,7 @@ function setHexBgColor(windowName, colorString)
   end
 
   if #col ~= 6 then
-    error("setHexFgColor needs a 6 digit hex color code.")
+    error("setHexBgColor needs a 6 digit hex color code.")
   end
 
   local colTable = {
@@ -2058,16 +2105,62 @@ function resizeMapWidget(width, height)
   openMapWidget(-1, -1, width, height)
 end
 
---wrapper for createButton 
+--
+-- functions to manipulate room label display and offsets
+--
+-- get offset of room's label (x,y)
+-- @param room Room ID
+function getRoomNameOffset(room)
+  assert(type(room) == 'number', 'getRoomNameOffset: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+
+  local d = getRoomUserData(room, "room.ui_nameOffset")
+  if d == nil or d == "" then return 0,0 end
+  local split = {}
+  for w in string.gfind(d, '[%.%d]+') do split[#split+1] = tonumber(w) end
+  if #split == 1 then return 0,split[1] end
+  if #split >= 2 then return split[1],split[2] end
+  return 0,0
+end
+
+-- set offset of room's label (x,y)
+-- @param room Room ID
+-- @param room X shift (positive = to the right)
+-- @param room Y shift (positive = down)
+function setRoomNameOffset(room, x, y)
+  assert(type(room) == 'number', 'setRoomNameOffset: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+  assert(type(x) == 'number', 'setRoomNameOffset: bad argument #2 type (X shift as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'setRoomNameOffset: bad argument #3 type (y shift as number expected, got '..type(y)..'!)')
+
+  if x == 0 then
+    setRoomUserData(room, "room.ui_nameOffset", y)
+  else
+    setRoomUserData(room, "room.ui_nameOffset", x .. " " .. y)
+  end
+end
+
+-- show or hide a room's name
+-- @param room Room ID
+-- @param flag (bool)
+function setRoomNameVisible(room, flag)
+  assert(type(room) == 'number', 'setRoomNameVisible: bad argument #1 type (room ID as number expected, got '..type(room)..'!)')
+  assert(type(flag) == 'boolean', 'setRoomNameVisible: bad argument #2 type (flag as boolean expected, got '..type(flag)..'!)')
+
+  setRoomUserData(room, "room.ui_showName", flag and "1" or "0")
+end
+
+--wrapper for createButton
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
 
 -- Internal function used by copy2html and copy2decho
 local function copy2color(name,win,str,inst)
-  local line = getCurrentLine(win or "main")
-  if (not str and line == "ERROR: mini console does not exist") or type(str) == "number" then
+  local line,err = getCurrentLine(win or "main")
+  if err ~= nil then
     win, str, inst = "main", win, str
-    line = getCurrentLine(win)
+    line,err = getCurrentLine(win)
+    if err ~= nil then
+      error(err)
+    end
   end
   win = win or "main"
   str = str or line
@@ -2095,7 +2188,7 @@ local function copy2color(name,win,str,inst)
       r,g,b = getFgColor()
       rb,gb,bb = getBgColor()
     end
-    
+
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
       result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
@@ -2167,8 +2260,8 @@ mudlet.BgImageMode ={
   ["style"]  = 4,
 }
 
-local setConsoleBackgroundImageLayer = setConsoleBackgroundImage
-function setConsoleBackgroundImage(...)
+local setConsoleBackgroundImageLayer = setBackgroundImage
+function setBackgroundImage(...)
   local mode = arg[arg.n]
   if type(mode) == "string" then
     mode = mudlet.BgImageMode[mode] or mode
@@ -2200,16 +2293,16 @@ local function setActionCallback(callbackFunc, name, func, ...)
   end
   assert(type(func) == 'function', '<setActionCallback: bad argument #2 type (function expected, got '..type(func)..'!)>')
   if nr > 1 then
-    return callbackFunc(name, 
-    function(event) 
-      if not event then 
-        arg.n = nr - 1 
-      end 
-      arg[nr] = event 
-      func(unpack_w_nil(arg)) 
+    return callbackFunc(name,
+    function(event)
+      if not event then
+        arg.n = nr - 1
+      end
+      arg[nr] = event
+      func(unpack_w_nil(arg))
     end )
-  end 
-  callbackFunc(name, func) 
+  end
+  callbackFunc(name, func)
 end
 
 local setLC = setLC or setLabelClickCallback

@@ -45,10 +45,6 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
-# after for some warnings that we wish to ignore:
-!msvc:CONFIG += warn_off
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -93,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.9.1
+VERSION = 4.10.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -269,7 +265,6 @@ unix:!macx {
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
-        -lyajl \
         -lzip \
         -lz \
         -lpugixml
@@ -320,7 +315,6 @@ unix:!macx {
         -lpcre-1 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -lyajl \
         -lpugixml \
         -lWs2_32
 
@@ -356,7 +350,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -563,6 +557,7 @@ SOURCES += \
     TLabel.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TMainConsole.cpp \
     TMap.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
@@ -667,6 +662,7 @@ HEADERS += \
     TLabel.h \
     TLinkStore.h \
     TLuaInterpreter.h \
+    TMainConsole.h \
     TMap.h \
     TMatchState.h \
     TMedia.h \
@@ -1383,12 +1379,12 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-    
+
     # Set the macOS application's icon
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
     } else {
-        contains(BUILD, "-dev.+") {
+        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             ICON = icons/mudlet_dev.icns
         } else {
             ICON = icons/mudlet.icns
@@ -1433,14 +1429,15 @@ macx {
 }
 
 win32 {
-    # set the Windows binary icon
+    # set the Windows binary icon, a proper .ico file will contains several
+    # images/layers in specific formats and is used in MORE than one way!
     contains(BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
             RC_ICONS = icons/mudlet_dev.ico
         } else {
-            RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico
+            RC_ICONS = icons/mudlet.ico
         }
     }
 

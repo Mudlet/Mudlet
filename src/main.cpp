@@ -155,10 +155,13 @@ int main(int argc, char* argv[])
 
     if (mudlet::scmIsPublicTestVersion) {
         app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
-        app->setApplicationVersion(APP_VERSION APP_BUILD);
     } else {
         app->setApplicationName(QStringLiteral("Mudlet"));
+    }
+    if (mudlet::scmIsReleaseVersion) {
         app->setApplicationVersion(APP_VERSION);
+    } else {
+        app->setApplicationVersion(APP_VERSION APP_BUILD);
     }
 
     QCommandLineParser parser;

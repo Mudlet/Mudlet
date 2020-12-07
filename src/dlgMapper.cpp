@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2016, 2019-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -81,6 +81,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
+    showRoomNames->setVisible(mpMap->getRoomNamesPresent());
+    showRoomNames->setChecked(mpMap->getRoomNamesShown());
+
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
@@ -96,6 +99,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
     connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+    connect(showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
@@ -173,6 +177,12 @@ void dlgMapper::slot_toggleShowRoomIDs(int s)
     mp2dMap->update();
 }
 
+void dlgMapper::slot_toggleShowRoomNames(int s)
+{
+    mpMap->setRoomNamesShown(s == Qt::Checked);
+    mp2dMap->update();
+}
+
 void dlgMapper::slot_toggleStrongHighlight(int v)
 {
     mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
@@ -194,7 +204,7 @@ void dlgMapper::show2dView()
     }
     if (!glWidget) {
         glWidget = new GLWidget(widget);
-        glWidget->setObjectName(QString::fromUtf8("glWidget"));
+        glWidget->setObjectName("glWidget");
 
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         sizePolicy.setHorizontalStretch(0);
@@ -244,62 +254,6 @@ void dlgMapper::show2dView()
     dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
 #endif
 }
-
-void dlgMapper::choseRoom(QListWidgetItem* pT)
-{
-    QString txt = pT->text();
-
-    QHashIterator<int, TRoom*> it(mpMap->mpRoomDB->getRoomMap());
-    while (it.hasNext()) {
-        it.next();
-        int i = it.key();
-        TRoom* pR = mpMap->mpRoomDB->getRoom(i);
-        if (!pR) {
-            continue;
-        }
-        if (pR->name == txt) {
-            qDebug() << "found room id=" << i;
-            mpMap->mTargetID = i;
-            if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), i)) {
-                mpHost->mpConsole->printSystemMessage(tr("Cannot find a path to this room.\n"));
-            } else {
-                mpMap->mpHost->startSpeedWalk();
-            }
-            break;
-        }
-    }
-    mpHost->mpConsole->setFocus();
-}
-
-void dlgMapper::goRoom()
-{
-    //    QString txt = roomID->text();
-    //    searchList->clear();
-    //    int id = txt.toInt();
-
-    //    if (id != 0 && mpMap->rooms.contains(id)) {
-    //        mpMap->mTargetID = id;
-    //        if (mpMap->findPath(0,0)) {
-    //            qDebug() << "glwidget: starting speedwalk path length=" << mpMap->mPathList.size();
-    //            mpMap->mpHost->startSpeedWalk();
-    //        } else {
-    //            QString msg = "Cannot find a path to this room.\n";
-    //            mpHost->mpConsole->printSystemMessage(msg);
-    //        }
-    //    } else {
-    //        QMapIterator<int, TRoom *> it(mpMap->rooms);
-    //        while (it.hasNext()) {
-    //            it.next();
-    //            int i = it.key();
-    //            if (mpMap->rooms[i]->name.contains(txt, Qt::CaseInsensitive)) {
-    //                qDebug() << "inserting match:" << i;
-    //                searchList->addItem(mpMap->rooms[i]->name);
-    //            }
-    //        }
-    //    }
-    //    mpHost->mpConsole->setFocus();
-}
-
 
 void dlgMapper::slot_roomSize(int d)
 {
@@ -355,7 +309,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
                 qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area name not valid.";
             }
         } else {
-            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area valid.";
+            qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room area not valid.";
         }
     } else {
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";

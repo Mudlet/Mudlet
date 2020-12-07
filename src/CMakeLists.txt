@@ -21,6 +21,7 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
+configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
@@ -30,7 +31,15 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+  # Neither BUILD nor APP_BUILD does not seem to be available?
+
+  # if(APP_BUILD matches "-ptb.+")
+  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  # else()
+    list(APPEND mudlet_RCCS icons/mudlet.ico)
+  # endif()
 endif()
 
 set(mudlet_SRCS
@@ -92,6 +101,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
@@ -222,6 +232,7 @@ set(mudlet_HDRS
     TLabel.h
     TLinkStore.h
     TLuaInterpreter.h
+    TMainConsole.h
     TMap.h
     TMatchState.h
     TMedia.h
@@ -310,7 +321,6 @@ find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
-find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
@@ -335,6 +345,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS}
                       ${mudlet_UIS})
+target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(
   mudlet
@@ -364,6 +375,9 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
+target_compile_definitions(communi PUBLIC IRC_STATIC)
+
 target_link_libraries(
   mudlet
   communi
@@ -380,7 +394,6 @@ target_link_libraries(
   Qt5::OpenGL
   Qt5::UiTools
   Qt5::Widgets
-  YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
   qt5keychain)
