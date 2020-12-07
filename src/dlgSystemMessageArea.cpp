@@ -29,7 +29,7 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
     setupUi(this);
 
     QPixmap holdPixmap;
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = *(notificationAreaIconLabelWarning->pixmap());
@@ -37,7 +37,7 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelWarning->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = *(notificationAreaIconLabelError->pixmap());
@@ -45,7 +45,7 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
     holdPixmap.setDevicePixelRatio(5.3);
     notificationAreaIconLabelError->setPixmap(holdPixmap);
 
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15,0))
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
 #else
     holdPixmap = *(notificationAreaIconLabelInformation->pixmap());
