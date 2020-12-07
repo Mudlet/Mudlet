@@ -683,7 +683,7 @@ void mudlet::initEdbee()
 
     auto grammarManager = edbee->grammarManager();
     // We only need the single Lua lexer, probably ever
-    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+    grammarManager->readGrammarFile(QLatin1String(":/edbee_defaults/Lua.tmLanguage"));
 
     //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
     loadLuaFunctionList();
@@ -3336,7 +3336,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
             QString entryInArchive(zs.name);
-            QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
+            QString pathInArchive(entryInArchive.section(QStringLiteral("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )

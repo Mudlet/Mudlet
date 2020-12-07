@@ -1570,6 +1570,11 @@ int TConsole::getColumnNumber()
     return mUserCursor.x();
 }
 
+int TConsole::getWrapAt()
+{
+    return buffer.mWrapAt;
+}
+
 int TConsole::getLineCount()
 {
     return buffer.getLastLineNumber();
