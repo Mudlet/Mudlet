@@ -2233,17 +2233,20 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
         return;
     }
 
-    // Set to one larger than wanted so that do loop can contain the decrementor
-    int fontSize = 11;
-    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
-    // For an icon of size 120x30 allow another 20 underneath it for the text:
-    QRect textRectangle(0, 0, 119, 19);
-    QRect testRect;
-    do {
-        font.setPointSize(--fontSize);
-        QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, name);
-    } while (fontSize > 1 && !textRectangle.contains(testRect));
+// This section of code not currently wanted but retained for another day
+//    // Set to one larger than wanted so that do loop can contain the decrementor
+//    int fontSize = 11;
+//    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
+//    // For an icon of size 120x30 allow another 20 underneath it for the text:
+//    QRect textRectangle(0, 0, 119, 19);
+//    QRect testRect;
+//    do {
+//        font.setPointSize(--fontSize);
+//        QFontMetrics fm(font);
+//        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, name);
+//    } while (fontSize > 1 && !textRectangle.contains(testRect));
+
+    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
     pI->setFont(font);
     pI->setData(csmNameRole, name);
     pI->setText(name);
@@ -2278,14 +2281,23 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     background.fill(Qt::transparent);
     uint hash = qHash(text);
     QRadialGradient shade(75, 5, 40, 45, 25);
-    quint8 i1 = hash % 255;
-    quint8 i2 = (7 * hash) % 255;
-    quint8 i3 = (11 * hash) % 255;
-    quint8 i4 = (3 * hash) % 255;
-    quint8 i5 = (13 * hash) % 255;
-    quint8 i6 = (5 * hash) % 255;
-    shade.setColorAt(1, QColor(i1, i2, i3, 255));
-    shade.setColorAt(0, QColor(i4, i5, i6, 255));
+    QColor color0(((3 * hash) % 255), ((13 * hash) % 255), ((5 * hash) % 255));
+    QColor color1((hash % 255), ((7 * hash) % 255), ((11 * hash) % 255));
+    shade.setColorAt(0, color0);
+    shade.setColorAt(1, color1);
+
+    // Set to one larger than wanted so that do loop can contain the decrementor
+    int fontSize = 30;
+    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
+    // For an icon of size 120x30 allow 90x30 for the text:
+    QRect textRectangle(0, 0, 89, 29);
+    QRect testRect;
+    // Really long names will be drawn very small (font size 6) with the ends clipped off:
+    do {
+        font.setPointSize(--fontSize);
+        QFontMetrics fm(font);
+        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, text);
+    } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
         QPainter pt(&background);
@@ -2293,6 +2305,13 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
         pt.fillRect(QRect(0, 0, 120, 30), shade);
         QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
         pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        pt.setFont(font);
+        if ((color0.lightness() + color1.lightness()) > 255) {
+            pt.setPen(Qt::black);
+        } else {
+            pt.setPen(Qt::white);
+        }
+        pt.drawText(QRect(29, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
     }
     return QIcon(background);
 }
