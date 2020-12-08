@@ -899,7 +899,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
 #endif
 
-    wordList.append(commandLineSuggestions.toList());
+    wordList.append(commandLineSuggestions.values());
 
     if (direction) {
         mTabCompletionCount++;

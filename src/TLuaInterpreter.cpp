@@ -12578,7 +12578,13 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineSuggestions
 int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
 {
-    QString name {CMDLINE_NAME(L, 1)};
+    int n = lua_gettop(L);
+    QString name = "main";
+
+    if (n == 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+
     auto pN = COMMANDLINE(L, name);
 
     pN->clearSuggestions();
