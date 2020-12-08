@@ -1173,7 +1173,7 @@ void TCommandLine::addSuggestion(const QString& suggestion)
     commandLineSuggestions += suggestion;
 }
 
-//This method removed word from internal suggestion list for command line tab auto completion
+//This method removes word from internal suggestion list for command line tab auto completion
 void TCommandLine::removeSuggestion(const QString& suggestion)
 {
     commandLineSuggestions.remove(suggestion);
