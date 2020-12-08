@@ -12541,7 +12541,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
+        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n, luaL_typename(L, n));
         return lua_error(L);
     }
     QString text{lua_tostring(L, n)};
@@ -12563,7 +12563,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
+        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (sugestion text as string expected, got %s)", n, luaL_typename(L, n));
         return lua_error(L);
     }
     QString text{lua_tostring(L, n)};
