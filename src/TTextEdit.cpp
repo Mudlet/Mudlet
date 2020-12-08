@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -177,6 +177,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     }
 }
 
+// Only wired up for the upper pane:
 void TTextEdit::slot_scrollBarMoved(int line)
 {
     if (mpConsole->mpScrollBar) {
@@ -187,6 +188,7 @@ void TTextEdit::slot_scrollBarMoved(int line)
 
 void TTextEdit::updateScrollBar(int line)
 {
+    Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
     int screenHeight{mScreenHeight};
     if (mIsTailMode){
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
@@ -201,6 +203,7 @@ void TTextEdit::updateScrollBar(int line)
     }
 }
 
+// Only wired up for the upper pane:
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
@@ -296,9 +299,12 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance
-        mpHost->mScreenWidth = mScreenWidth;
-        mpHost->mScreenHeight = mScreenHeight;
+        // Note the values in the "parent" Host instance - for the UPPER pane
+        // so that they are available for NAWS:
+        if (!mIsLowerPane) {
+            mpHost->mScreenWidth = mScreenWidth;
+            mpHost->mScreenHeight = mScreenHeight;
+        }
     } else {
         mScreenWidth = currentScreenWidth;
     }
@@ -1706,18 +1712,35 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    int k = 3;
-    if (e->delta() < 0) {
-        mpConsole->scrollDown(abs(k));
-        e->accept();
-        return;
+    // On basis in Qt documentation that angleDelta(): "Returns the distance
+    // that the wheel is rotated, in eighths of a degree."
+    // 8 per degree * 15 degree step for "normal" mouse wheel = 120:
+    const double yFactor = 120.0;
+    const double xFactor = 120.0;
+    // Make the speed up be half of the (upper pane) lines - need to round it so
+    // that a decimal part does not make the end +/- value for up/down different
+    // in magitude:
+    double ySpeedUp = qRound(mpConsole->mUpperPane->getScreenHeight() / 2.0);
+    double xSpeedUp = 10.0;
+
+    // Allow the control key to introduce a speed up - might need to check that
+    // this does not complicate selection of multiple lines!:
+    const QPoint delta = e->angleDelta();
+    int yDelta = qRound((delta.y() * (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 1.0)) / yFactor);
+    int xDelta = qRound((delta.x() * (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 1.0)) / xFactor);
+    bool used = false;
+    if (yDelta > 0) {
+        mpConsole->scrollUp(yDelta);
+        used = true;
+    } else {
+        mpConsole->scrollDown(-yDelta);
+        used = true;
     }
-    if (e->delta() > 0) {
-        mpConsole->scrollUp(k);
-        e->accept();
-        return;
-    }
-    e->ignore();
+
+    // Space for future use of xDelta
+    Q_UNUSED(xDelta)
+
+    e->setAccepted(used);
 }
 
 int TTextEdit::imageTopLine()
