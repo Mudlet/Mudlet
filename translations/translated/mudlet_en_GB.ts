@@ -2215,7 +2215,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1157"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - In room ID:%1 removing invalid (special) exit to %2 {with no name!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1161"/>
@@ -2226,7 +2226,8 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="1171"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In room ID:%1 patching {internal fixup} of (special) exit to
+%2, was: &quot;%3&quot; now: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1179"/>
@@ -2238,7 +2239,9 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In room with ID: %1 correcting special exit &quot;%2&quot; that
+was to room with an exit to invalid room: %3 to now go
+to: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1215"/>
@@ -2252,7 +2255,11 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Room with ID: %1 has a special exit &quot;%2&quot; with an
+exit to: %3 but that room does not exist.  The exit will
+be removed (but the destination room ID will be stored in
+the room user data under a key:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1259"/>
@@ -3593,7 +3600,7 @@ and this one cannot read it, you need a newer Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="185"/>
       <source>Floating Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Floating Toolbar</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
