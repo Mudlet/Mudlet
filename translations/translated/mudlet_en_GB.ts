@@ -1505,7 +1505,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="70"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Easybutton Bar - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1554,13 +1554,13 @@ rooms:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15665"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Cannot find Lua module %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15679"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Lua module %1 loaded.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16207"/>
@@ -1575,7 +1575,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16232"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Lua functions won&apos;t be available.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16238"/>
@@ -1951,12 +1951,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2094"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Area ID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2096"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Area ID: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2105"/>
@@ -1966,12 +1966,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2112"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Room ID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2114"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>Room ID: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2124"/>
@@ -2009,7 +2009,7 @@ and there is enough space. The download operation has failed.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2220"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Map download initiated, please wait...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2231"/>
@@ -2066,13 +2066,15 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2406"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map download failed, error reported was:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2414"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map download failed, unable to open destination file:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2419"/>
