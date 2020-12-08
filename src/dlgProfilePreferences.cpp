@@ -63,18 +63,29 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     setupUi(this);
 
     QPixmap holdPixmap;
-
-    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
+#else
+    holdPixmap = *(notificationAreaIconLabelWarning->pixmap());
+#endif
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
+    notificationAreaIconLabelWarning->setPixmap(holdPixmap);
 
-    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
+#else
+    holdPixmap = *(notificationAreaIconLabelError->pixmap());
+#endif
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelError->setPixmap(holdPixmap);
+    notificationAreaIconLabelError->setPixmap(holdPixmap);
 
-    holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
+#else
+    holdPixmap = *(notificationAreaIconLabelInformation->pixmap());
+#endif
     holdPixmap.setDevicePixelRatio(5.3);
-    this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
+    notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 
     // The groupBox_debug is no longer empty, (it contains
     // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
