@@ -16067,6 +16067,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine);
     lua_register(pGlobalLua, "getCmdLine", TLuaInterpreter::getCmdLine);
     lua_register(pGlobalLua, "addCmdLineSuggestion", TLuaInterpreter::addCmdLineSuggestion);
+    lua_register(pGlobalLua, "removeCmdLineSuggestion", TLuaInterpreter::removeCmdLineSuggestion);
+    lua_register(pGlobalLua, "clearCmdLineSuggestions", TLuaInterpreter::clearCmdLineSuggestions);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
