@@ -88,9 +88,7 @@ jobs:
         # Installing packages might fail as the github image becomes outdated
         sudo apt update
         # These aren't available or don't work well in vcpkg
-        sudo apt install ccache pkg-config \
-          pcregrep # used by validate_deployment.sh \
-          libzip-dev libglu1-mesa-dev libpulse-dev
+        sudo apt install ccache pkg-config pcregrep libzip-dev libglu1-mesa-dev libpulse-dev
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
