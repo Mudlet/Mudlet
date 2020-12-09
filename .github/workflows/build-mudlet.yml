@@ -73,6 +73,10 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
+    - run: Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse
+      shell: pwsh
+      if: always() && runner.os == 'Windows'
+
     - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
       shell: pwsh
       if: always() && runner.os == 'Windows'
