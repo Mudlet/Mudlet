@@ -73,6 +73,10 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
+    - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
+      shell: pwsh
+      if: always() && runner.os == 'Windows'
+
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
@@ -195,10 +199,6 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
-
-    - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
-      shell: pwsh
-      if: runner.os == 'Windows'
 
     - name: (Windows) Upload packaged Mudlet
       uses: actions/upload-artifact@v2
