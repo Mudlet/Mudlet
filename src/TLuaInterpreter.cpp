@@ -12536,20 +12536,16 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
     int n = lua_gettop(L);
     QString name = "main";
-
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
     if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n, luaL_typename(L, n));
+        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
         return lua_error(L);
     }
     QString text{lua_tostring(L, n)};
-
     auto pN = COMMANDLINE(L, name);
-
     pN->addSuggestion(text);
-
     return 0;
 }
 
@@ -12558,20 +12554,16 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
 {
     int n = lua_gettop(L);
     QString name = "main";
-
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
     if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (sugestion text as string expected, got %s)", n, luaL_typename(L, n));
+        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
         return lua_error(L);
     }
     QString text{lua_tostring(L, n)};
-
     auto pN = COMMANDLINE(L, name);
-
     pN->removeSuggestion(text);
-
     return 0;
 }
 
@@ -12580,15 +12572,11 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
 {
     int n = lua_gettop(L);
     QString name = "main";
-
     if (n == 1) {
         name = CMDLINE_NAME(L, 1);
     }
-
     auto pN = COMMANDLINE(L, name);
-
     pN->clearSuggestions();
-
     return 0;
 }
 
