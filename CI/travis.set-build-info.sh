@@ -45,7 +45,7 @@ elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
 fi
 
 # temporary - distinguish github-built-ones
-if [[ -v GITHUB_REPOSITORY ]]; then
+if [[ -v $GITHUB_REPOSITORY ]]; then
   MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-github"
 fi
 
@@ -53,7 +53,7 @@ fi
 MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
 VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
 
-if [[ -v GITHUB_REPOSITORY ]]; then
+if [[ -v $GITHUB_REPOSITORY ]]; then
   {
     echo "VERSION=$VERSION"
     echo "MUDLET_VERSION_BUILD=$MUDLET_VERSION_BUILD"
