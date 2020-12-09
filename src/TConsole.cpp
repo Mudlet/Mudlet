@@ -889,6 +889,9 @@ void TConsole::slot_toggleLogging()
     mpHost->mpConsole->toggleLogging(true);
 }
 
+// FIXME: This needs to move to the TMainConsole class but the button handling
+// code is currently defined but not used for all TConsole instances - and some
+// of them might be useful to have on the other ones...
 void TConsole::slot_toggleReplayRecording()
 {
     if (mType & CentralDebugConsole) {
@@ -1049,72 +1052,6 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
     string time = s.str();
     return time;
    } */
-
-void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
-{
-    mProcessingTimer.restart();
-    mTriggerEngineMode = true;
-    buffer.translateToPlainText(incomingSocketData, isFromServer);
-    mTriggerEngineMode = false;
-
-    // dequeues MXP events and raise them through the LuaInterpreter
-    // TODO: move this somewhere else more appropriate
-    auto &mxpEventQueue = mpHost->mMxpClient.mMxpEvents;
-    while (!mxpEventQueue.isEmpty()) {
-        const auto& event = mxpEventQueue.dequeue();
-        mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
-    }
-
-    double processT = mProcessingTimer.elapsed() / 1000.0;
-    if (mpHost->mTelnet.mGA_Driver) {
-        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2",
-                                            // intentional comment to separate arguments
-                                            "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
-                                            "'S'ystem (processing) time")
-                                                 .arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3)
-                                                 .arg(processT, 0, 'f', 3));
-    } else {
-        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1",
-                                            // intentional comment to separate arguments
-                                            "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
-                                            "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
-                                            "network latency...")
-                                                 .arg(processT, 0, 'f', 3));
-    }
-    // Modify the tab text if this is not the currently active host - this
-    // method is only used on the "main" console so no need to filter depending
-    // on TConsole types:
-
-    emit signal_newDataAlert(mProfileName);
-}
-
-void TConsole::runTriggers(int line)
-{
-    mDeletedLines = 0;
-    mUserCursor.setY(line);
-    mIsPromptLine = buffer.promptBuffer.at(line);
-    mEngineCursor = line;
-    mUserCursor.setX(0);
-    mCurrentLine = buffer.line(line);
-    mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
-    mCurrentLine.append('\n');
-
-    if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkGreen), QColor(Qt::black)) << "new line arrived:" >> 0;
-        TDebug(QColor(Qt::lightGray), QColor(Qt::black)) << mCurrentLine << "\n" >> 0;
-    }
-    mpHost->incomingStreamProcessor(mCurrentLine, line);
-    mIsPromptLine = false;
-
-    //FIXME: rewrite: if lines above the current line get deleted -> redraw clean slice
-    //       otherwise just delete
-}
-
-void TConsole::finalize()
-{
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
-}
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
    -----------------------------------------
@@ -1291,11 +1228,9 @@ void TConsole::insertText(const QString& text, QPoint P)
     int y = P.y();
     if (mTriggerEngineMode) {
         mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
+        buffer.insertInLine(P, text, mFormatCurrent);
         if (y < mEngineCursor) {
-            buffer.insertInLine(P, text, mFormatCurrent);
             mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
-        } else if (y >= mEngineCursor) {
-            buffer.insertInLine(P, text, mFormatCurrent);
         }
 
     } else {
@@ -1344,189 +1279,7 @@ void TConsole::replace(const QString& text)
 
 void TConsole::skipLine()
 {
-    if (deleteLine(mUserCursor.y())) {
-        mDeletedLines++;
-    }
-}
-
-// TODO: It may be worth considering moving the (now) three following methods
-// to the TMap class...?
-bool TConsole::saveMap(const QString& location, int saveVersion)
-{
-    QDir dir_map;
-    QString filename_map;
-    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-
-    if (location.isEmpty()) {
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
-    } else {
-        filename_map = location;
-    }
-
-    if (!dir_map.exists(directory_map)) {
-        dir_map.mkpath(directory_map);
-    }
-    QFile file_map(filename_map);
-    if (file_map.open(QIODevice::WriteOnly)) {
-        QDataStream out(&file_map);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        mpHost->mpMap->serialize(out, saveVersion);
-        file_map.close();
-    } else {
-        return false;
-    }
-
-    return true;
-}
-
-bool TConsole::loadMap(const QString& location)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or map currently loaded - so try and created mapper
-        // but don't load a map here by default, we do that below and it may not
-        // be the default map anyhow
-        pHost->createMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        return false;
-    }
-
-    pHost->mpMap->mapClear();
-
-    qDebug() << "TConsole::loadMap() - restore map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
-    QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-    if (pHost->mpMap->restore(location)) {
-        pHost->mpMap->audit();
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        pHost->mpMap->mpMapper->show();
-        result = true;
-    } else {
-        pHost->mpMap->mpMapper->mp2dMap->init();
-        pHost->mpMap->mpMapper->updateAreaComboBox();
-        pHost->mpMap->mpMapper->show();
-    }
-
-    if (location.isEmpty()) {
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(1) at %1 report").arg(now.toString(Qt::ISODate)), true);
-    } else {
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
-    }
-
-    return result;
-}
-
-// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
-// of files ending in ".xml"
-// The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
-// it requires in the event of an error (it should be written in a structure
-// to match "loadMap: XXXXX." format) - the presence of a non-null pointer here
-// should be used to suppress the writing of error messages direct to the
-// console - if possible!
-bool TConsole::importMap(const QString& location, QString* errMsg)
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        // Check for valid mpHost pointer (mpHost was/is/will be a QPoint<Host>
-        // in later software versions and is a weak pointer until used
-        // (I think - Slysven ?)
-        if (errMsg) {
-            *errMsg = QStringLiteral("loadMap: NULL Host pointer {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // No map or mapper currently loaded/present - so try and create mapper
-        pHost->createMapper(false);
-    }
-
-    if (!pHost->mpMap || !pHost->mpMap->mpMapper) {
-        // And that failed so give up
-        if (errMsg) {
-            *errMsg = QStringLiteral("loadMap: unable to initialise mapper {in TConsole::importMap(...)} - something is wrong!");
-        }
-        return false;
-    }
-
-    // Dump any outstanding map errors from past activities that had not yet
-    // been logged...
-    qDebug() << "TConsole::importingMap() - importing map case 1.";
-    pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
-    QDateTime now(QDateTime::currentDateTime());
-
-    bool result = false;
-
-    QFileInfo fileInfo(location);
-    QString filePathNameString;
-    if (!fileInfo.filePath().isEmpty()) {
-        if (fileInfo.isRelative()) {
-            // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
-        } else {
-            if (fileInfo.exists()) {
-                filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
-            } else {
-                filePathNameString = fileInfo.absoluteFilePath();
-            }
-        }
-    }
-
-    QFile file(filePathNameString);
-    if (!file.exists()) {
-        if (!errMsg) {
-            QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
-                                 "%1.")
-                                      .arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            // error message for lua loadMap()
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" was not found).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    if (file.open(QFile::ReadOnly | QFile::Text)) {
-        if (!errMsg) {
-            QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
-            pHost->postMessage(infoMsg);
-        }
-
-        result = pHost->mpMap->importMap(file, errMsg);
-
-        file.close();
-        pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
-    } else {
-        if (!errMsg) {
-            QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
-            pHost->postMessage(infoMsg);
-        } else {
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" could not be opened for reading).")
-                              .arg(filePathNameString);
-        }
-        return false;
-    }
-
-    return result;
+    deleteLine(mUserCursor.y());
 }
 
 bool TConsole::deleteLine(int y)
@@ -1986,12 +1739,11 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     mLowerPane->showNewLines();
 }
 
+// An overload of print(const QString& msg):
 void TConsole::print(const char* txt)
 {
     QString msg(txt);
-    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
-    mUpperPane->showNewLines();
-    mLowerPane->showNewLines();
+    print(msg);
 }
 
 // echoUserWindow(const QString& msg) was a redundant wrapper around this method:
@@ -2216,31 +1968,6 @@ QSize TConsole::getMainWindowSize() const
     int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
-}
-
-void TConsole::slot_reloadMap(QList<QString> profilesList)
-{
-    Host* pHost = getHost();
-    if (!pHost) {
-        return;
-    }
-
-    if (!profilesList.contains(mProfileName)) {
-        qDebug() << "TConsole::slot_reloadMap(" << profilesList << ") request received but we:" << mProfileName << "are not mentioned - so we are ignoring it...!";
-        return;
-    }
-
-    QString infoMsg = tr("[ INFO ]  - Map reload request received from system...");
-    pHost->postMessage(infoMsg);
-
-    QString outcomeMsg;
-    if (loadMap(QString())) {
-        outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
-    } else {
-        outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
-    }
-
-    pHost->postMessage(outcomeMsg);
 }
 
 void TConsole::setProfileName(const QString& newName)
