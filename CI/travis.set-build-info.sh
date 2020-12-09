@@ -11,6 +11,8 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     MUDLET_VERSION_BUILD="-testing"
   fi
 
+  echo "GITHUB_EVENT_NAME is $GITHUB_EVENT_NAME"
+
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${BUILD_COMMIT}"
@@ -25,7 +27,9 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}-${BUILD_COMMIT}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
+    echo "here 2"
     BUILD_COMMIT=$(git rev-parse --short HEAD)
+    echo "done 2"
 
     if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
       DATE=$(date +'%Y-%m-%d')
