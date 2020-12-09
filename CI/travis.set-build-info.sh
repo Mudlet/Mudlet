@@ -19,17 +19,12 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
     export PR_NUMBER
   elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-    echo "here"
-    BUILD_COMMIT=git rev-parse --short "${GITHUB_SHA}^2"
-    echo "done"
-    # $Script:Pr_Pattern_Number = [regex]
+    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_SHA}^2")
     PR_NUMBER=$(pcregrep --only-matching=1 "refs/pull/(.+?)/" < "${GITHUB_REF}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}-${BUILD_COMMIT}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
-    echo "here 2"
     BUILD_COMMIT=$(git rev-parse --short HEAD)
-    echo "done 2"
 
     if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
       DATE=$(date +'%Y-%m-%d')
