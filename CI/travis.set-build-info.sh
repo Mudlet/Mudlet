@@ -13,7 +13,7 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
 
   echo "GITHUB_EVENT_NAME is $GITHUB_EVENT_NAME"
 
-  if [[ -v TRAVIS_PULL_REQUEST ]]; then # building for a PR
+  if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
     BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${BUILD_COMMIT}"
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
@@ -43,12 +43,12 @@ if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
-elif [[ -v GITHUB_REPOSITORY ]]; then
+elif [ -n "$GITHUB_REPOSITORY" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${GITHUB_WORKSPACE}/CMakeLists.txt")
 fi
 
 # temporary - distinguish github-built-ones
-if [[ -v GITHUB_REPOSITORY ]]; then
+if [ -n "$GITHUB_REPOSITORY" ]; then
   MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-github"
 fi
 
@@ -56,7 +56,7 @@ fi
 MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
 VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
 
-if [[ -v GITHUB_REPOSITORY ]]; then
+if [ -n "$GITHUB_REPOSITORY" ]; then
   {
     echo "VERSION=$VERSION"
     echo "MUDLET_VERSION_BUILD=$MUDLET_VERSION_BUILD"
