@@ -196,6 +196,10 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
+      shell: pwsh
+      if: always()
+
     - name: (Windows) Upload packaged Mudlet
       uses: actions/upload-artifact@v2
       if: runner.os == 'Windows' && env.FOLDER_TO_UPLOAD
