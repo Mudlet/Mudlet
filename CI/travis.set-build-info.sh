@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
@@ -10,8 +8,6 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
   else
     MUDLET_VERSION_BUILD="-testing"
   fi
-
-  echo "GITHUB_EVENT_NAME is $GITHUB_EVENT_NAME"
 
   if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
     BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
@@ -66,3 +62,4 @@ fi
 
 export VERSION
 export MUDLET_VERSION_BUILD
+export BUILD_COMMIT
