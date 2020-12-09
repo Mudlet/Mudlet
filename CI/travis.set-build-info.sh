@@ -13,7 +13,7 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
 
   echo "GITHUB_EVENT_NAME is $GITHUB_EVENT_NAME"
 
-  if [[ -v $TRAVIS_PULL_REQUEST ]]; then # building for a PR
+  if [[ -v TRAVIS_PULL_REQUEST ]]; then # building for a PR
     BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${BUILD_COMMIT}"
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
