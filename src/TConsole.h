@@ -144,7 +144,6 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
@@ -159,8 +158,6 @@ public:
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void finalize();
-    void runTriggers(int);
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -171,9 +168,6 @@ public:
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
@@ -211,7 +205,6 @@ public:
 
     QString mConsoleName;
     QString mCurrentLine;
-    int mDeletedLines;
     QString mDisplayFontName;
     int mDisplayFontSize;
     QFont mDisplayFont;
@@ -277,12 +270,6 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled;
 
-signals:
-    // Raised when new data is incoming to trigger Alert handling in mudlet
-    // class, second argument is true for a lower priority indication when
-    // locally produced information is painted into main console
-    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
-
 
 public slots:
     void slot_searchBufferUp();
@@ -291,16 +278,13 @@ public slots:
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
 
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
+
 
 private:
     ConsoleType mType;
