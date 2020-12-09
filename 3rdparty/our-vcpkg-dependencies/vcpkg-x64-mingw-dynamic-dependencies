@@ -1,5 +1,8 @@
 --triplet
 x64-mingw-dynamic
+yajl
 hunspell
 pugixml
 pcre
+--overlay-ports=../our-vcpkg-dependencies/lua
+lua[core]

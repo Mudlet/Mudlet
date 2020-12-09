@@ -132,10 +132,10 @@ jobs:
         # can't install zziplib & zlib from vcpkg due to https://github.com/microsoft/vcpkg/issues/14689
         CheckAndInstallZziplib
 
-        # yajl headers need to be in same place as Lua, and since we install Lua manually, have to do the same for yajl
-        CheckAndInstallYajl
-        # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
-        CheckAndInstallLua
+        # # yajl headers need to be in same place as Lua, and since we install Lua manually, have to do the same for yajl
+        # CheckAndInstallYajl
+        # # vcpkg-built lua.exe is dodgy, so we use our own (https://github.com/microsoft/vcpkg/issues/14667)
+        # CheckAndInstallLua
         CheckAndInstallSqlite
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
         InstallLuaModules
