@@ -198,7 +198,7 @@ jobs:
 
     - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
       shell: pwsh
-      if: always()
+      if: runner.os == 'Windows'
 
     - name: (Windows) Upload packaged Mudlet
       uses: actions/upload-artifact@v2
