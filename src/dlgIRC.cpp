@@ -718,6 +718,13 @@ QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
         target = msgPrivate->target();
         break;
     }
+    default:
+        // Other message types are not expected - I hope - SlySven
+        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \""
+                                       << bufferName
+                                       << "\") WARNING - message of type: "
+                                       << msg->type()
+                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
     }
     return target;
 }
