@@ -20,7 +20,7 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     export PR_NUMBER
   elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
     BUILD_COMMIT=$(git rev-parse --short "${GITHUB_SHA}^2")
-    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/pull\///' | sed 's/\/merge//')
+    PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\///' |sed 's/pull\///' | sed 's/\/merge//')
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}-${BUILD_COMMIT}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
