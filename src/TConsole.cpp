@@ -1287,8 +1287,6 @@ bool TConsole::deleteLine(int y)
     return buffer.deleteLine(y);
 }
 
-// FIXME: This method is bogus as it cannot differentiate between a selection of
-// a single QChar/TChar in the buffer and nothing being selected.
 bool TConsole::hasSelection()
 {
     if (P_begin != P_end) {
