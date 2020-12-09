@@ -137,6 +137,12 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
       if: matrix.os != 'windows-latest'
 
+    - name: (Linux/macOS) Set build info
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
