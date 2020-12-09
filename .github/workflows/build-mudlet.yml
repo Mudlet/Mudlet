@@ -77,6 +77,14 @@ jobs:
       shell: pwsh
       if: always() && runner.os == 'Windows'
 
+    - run: cat $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-dbg-out.log
+      shell: pwsh
+      if: always() && runner.os == 'Windows'
+
+    - run: cat $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-rel-out.log
+      shell: pwsh
+      if: always() && runner.os == 'Windows'
+
     - run: . $env:GITHUB_WORKSPACE\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
       shell: pwsh
       if: always() && runner.os == 'Windows'
