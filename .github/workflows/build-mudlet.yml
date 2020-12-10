@@ -113,7 +113,7 @@ jobs:
 
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin" -ErrorAction Ignore
 
-        # copy vcpkg-built Lua to where LuaRocks needs them
+        # copy vcpkg-built release version of Lua to where LuaRocks needs them
         Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
           "$env:MINGW_BASE_DIR\bin"
         Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\lib\liblua.dll.a" `
