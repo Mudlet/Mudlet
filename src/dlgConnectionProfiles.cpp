@@ -2320,7 +2320,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
         pt.drawText(QRect(30, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
         pt.drawText(QRect(28, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
         pt.drawText(QRect(30, 0, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
-        // Then draw the text in the opposite used before to get a strong
+        // Then draw the text in the opposite color than used before to get a strong
         // contrast:
         if ((color0.lightness() + color1.lightness()) > 255) {
             pt.setPen(Qt::black);
