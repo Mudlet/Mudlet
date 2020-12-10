@@ -85,7 +85,10 @@ jobs:
       shell: pwsh
       if: always() && runner.os == 'Windows'
 
-    - run: . $env:GITHUB_WORKSPACE\3rdparty\vcpkg\buildtrees\lua\x64-mingw-dynamic-rel\lua.exe -v
+    - run: |
+        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
+          "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua"
+        . $env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
       shell: pwsh
       if: always() && runner.os == 'Windows'
 
