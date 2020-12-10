@@ -13129,7 +13129,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsBuild
+// No documentation available in wiki - internal function
 void TLuaInterpreter::ttsBuild()
 {
     if (bSpeechBuilt) {
@@ -13373,7 +13373,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsStateChanged
+// No documentation available in wiki - internal function
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
     if (state != speechState) {
