@@ -3,7 +3,7 @@
 set -x
 
 if { [ -n "$TRAVIS_REPO_SLUG" ] && [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; } ||
-   { [ -n "$TRAVIS_REPO_SLUG" ] && [ "${GITHUB_REPOSITORY}" != "Mudlet/Mudlet" ]; } then
+   { [ -n "$GITHUB_REPOSITORY" ] && [ "${GITHUB_REPOSITORY}" != "Mudlet/Mudlet" ]; } then
   exit 0
 fi
 
