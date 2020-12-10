@@ -144,7 +144,8 @@ jobs:
           "$env:MINGW_BASE_DIR\lib"
         Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe" `
           "$env:MINGW_BASE_DIR\bin"
-        . $env:MINGW_BASE_DIR\bin\lua.exe -v
+        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\lua.h" `
+          "$env:MINGW_BASE_DIR\include"
 
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
         InstallLuaModules
