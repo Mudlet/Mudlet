@@ -154,7 +154,11 @@ IF (NOT DEFINED SKIP_INSTALL_HEADERS)
         DESTINATION include
     )
   # If using C++, don't install extern "C" wrapper.
-    IF (NOT COMPILE_AS_CPP)
-        INSTALL(FILES src/lua.hpp DESTINATION include)
-    ENDIF ()
+  # Disabled temporarily - fails with a bizarre error:
+  # file INSTALL cannot find
+  #   "D:/a/Mudlet/Mudlet/3rdparty/vcpkg/buildtrees/lua/src/lua-5-853fffcc8e.clean/src/lua.hpp":
+  # File exists.
+  #  IF (NOT COMPILE_AS_CPP)
+  #      INSTALL(FILES src/lua.hpp DESTINATION include)
+  #  ENDIF ()
 ENDIF ()
