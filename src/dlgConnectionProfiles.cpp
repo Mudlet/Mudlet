@@ -36,43 +36,7 @@
 #include <sstream>
 #include "post_guard.h"
 
-const QVector<QColor> dlgConnectionProfiles::csmCustomIconColors = {{QColor(0, 0, 0)},
-                                                                    {QColor::fromHsv(0, 192, 255)},
-                                                                    {QColor::fromHsv(12, 192, 255)},
-                                                                    {QColor::fromHsv(24, 192, 255)},
-                                                                    {QColor::fromHsv(36, 192, 255)},
-                                                                    {QColor::fromHsv(48, 192, 255)},
-                                                                    {QColor::fromHsv(60, 192, 255)},
-                                                                    {QColor::fromHsv(72, 192, 255)},
-                                                                    {QColor::fromHsv(84, 192, 255)},
-                                                                    {QColor(63, 63, 63)},
-                                                                    {QColor::fromHsv(96, 192, 255)},
-                                                                    {QColor::fromHsv(108, 192, 255)},
-                                                                    {QColor::fromHsv(120, 192, 255)},
-                                                                    {QColor::fromHsv(132, 192, 255)},
-                                                                    {QColor::fromHsv(144, 192, 255)},
-                                                                    {QColor::fromHsv(156, 192, 255)},
-                                                                    {QColor::fromHsv(168, 192, 255)},
-                                                                    {QColor::fromHsv(180, 192, 255)},
-                                                                    {QColor(128, 128, 128)},
-                                                                    {QColor::fromHsv(192, 192, 255)},
-                                                                    {QColor::fromHsv(204, 192, 255)},
-                                                                    {QColor::fromHsv(216, 192, 255)},
-                                                                    {QColor::fromHsv(228, 192, 255)},
-                                                                    {QColor::fromHsv(240, 192, 255)},
-                                                                    {QColor::fromHsv(252, 192, 255)},
-                                                                    {QColor::fromHsv(264, 192, 255)},
-                                                                    {QColor(192, 192, 192)},
-                                                                    {QColor::fromHsv(276, 192, 255)},
-                                                                    {QColor::fromHsv(288, 192, 255)},
-                                                                    {QColor::fromHsv(300, 192, 255)},
-                                                                    {QColor::fromHsv(312, 192, 255)},
-                                                                    {QColor::fromHsv(324, 192, 255)},
-                                                                    {QColor::fromHsv(336, 192, 255)},
-                                                                    {QColor::fromHsv(348, 192, 255)},
-                                                                    {QColor(255, 255, 255)}};
-
-dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
+dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 , validName()
 , validUrl()
@@ -320,6 +284,32 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
                                  // Intentional comment to separate arguments
                                  "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
 
+    // Set up some initial black/white/greys:
+    mCustomIconColors = {{QColor(0, 0, 0)},
+                         {QColor(63, 63, 63)},
+                         {QColor(128, 128, 128)},
+                         {QColor(192, 192, 192)},
+                         {QColor(255, 255, 255)}};
+
+    // Add some color ones with evenly spaced hue
+    for (quint16 i = 0; i < 360; i += 24) {
+        for (quint16 j = 0; j < 3; ++j) {
+            switch (j) {
+            case 0: {
+                mCustomIconColors.append(QColor::fromHsv(i, 255, 255));
+                break;
+            }
+            case 1: {
+                mCustomIconColors.append(QColor::fromHsv(i, 192, 255));
+                break;
+            }
+            case 2: {
+                mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
+                break;
+            }
+            }
+        }
+    }
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -2315,7 +2305,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
 {
     QPixmap background(120, 30);
     uint hash = qHash(text);
-    QColor backgroundColor = csmCustomIconColors.at((hash * 8131) % csmCustomIconColors.count());
+    QColor backgroundColor = mCustomIconColors.at((hash * 8131) % mCustomIconColors.count());
     background.fill(backgroundColor);
 
     // Set to one larger than wanted so that do loop can contain the decrementor

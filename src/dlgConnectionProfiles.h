@@ -132,6 +132,7 @@ private:
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile {};
     QString mDateTimeFormat;
+    QVector<QColor> mCustomIconColors;
 
 
 private slots:
