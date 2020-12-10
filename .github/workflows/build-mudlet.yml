@@ -111,7 +111,7 @@ jobs:
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
         . ${{github.workspace}}\CI\appveyor.functions.ps1
 
-        # copy vcpkg-built Lua to where we need it
+        # copy vcpkg-built Lua to where LuaRocks needs them
         Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
           "$env:MINGW_BASE_DIR\bin"
         Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe" `
