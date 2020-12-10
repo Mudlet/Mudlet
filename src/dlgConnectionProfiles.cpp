@@ -2279,18 +2279,28 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
 {
     QPixmap background(120, 30);
     background.fill(Qt::transparent);
-    uint hash = qHash(text);
-    QRadialGradient shade(75, 5, 40, 45, 25);
-    QColor color0(((3 * hash) % 255), ((13 * hash) % 255), ((5 * hash) % 255));
-    QColor color1((hash % 255), ((7 * hash) % 255), ((11 * hash) % 255));
-    shade.setColorAt(0, color0);
-    shade.setColorAt(1, color1);
+    uint hash1 = qHash(text, 0);
+    uint hash2 = qHash(text, 16381);
+    uint hash3 = qHash(text, 8191);
+    uint hash4 = qHash(text, 2053);
+    QRadialGradient shade(85 - (hash4 % 30), 5 + (hash3 % 20), 40, 35 + (hash2 % 30), 25 - (hash1 % 20));
+    uint16_t innerHue = (7 * hash1) % 360;
+    uint8_t hueDirection = (hash2 % 2) ? 1 : -1;
+    uint8_t hueSpan = (hash3 % 180);
+    QColor color0 = QColor::fromHsv(innerHue, 255, 80);
+    QColor color1 = QColor::fromHsv((innerHue + hueDirection * hueSpan) % 360, 255, 160);
+    QColor color2 = QColor::fromHsv((innerHue + 2 * hueDirection * hueSpan) % 360, 255, 255);
+    shade.setColorAt(0.0, color0);
+    shade.setColorAt(0.5, color1);
+    shade.setColorAt(1.0, color2);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
-    // For an icon of size 120x30 allow 90x30 for the text:
-    QRect textRectangle(0, 0, 89, 29);
+    // For an icon of size 120x30 allow 89x29 for the text (need to take off an
+    // extra pixel to allow the text to be orbited and painted in black
+    // underneath a white top one:
+    QRect textRectangle(0, 0, 88, 28);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
@@ -2306,12 +2316,15 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
         QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
         pt.drawPixmap(QRect(5, 5, 20, 20), pg);
         pt.setFont(font);
-        if ((color0.lightness() + color1.lightness()) > 255) {
-            pt.setPen(Qt::black);
-        } else {
-            pt.setPen(Qt::white);
-        }
-        pt.drawText(QRect(29, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
+        // Draw the text 4 times offset by +/-1 pixel to form a contrasting shadow:
+        pt.setPen(Qt::black);
+        pt.drawText(QRect(28, 0, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(28, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
+        // Then draw the text in white centered on top of the black ones:
+        pt.setPen(Qt::white);
+        pt.drawText(QRect(29, 1, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
     }
     return QIcon(background);
 }
