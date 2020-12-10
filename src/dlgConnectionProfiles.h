@@ -108,6 +108,8 @@ private:
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
 
+    static const QVector<QColor> csmCustomIconColors;
+
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
     // to be valid, but other properties don't have to be

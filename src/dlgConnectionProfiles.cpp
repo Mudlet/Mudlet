@@ -36,6 +36,42 @@
 #include <sstream>
 #include "post_guard.h"
 
+const QVector<QColor> dlgConnectionProfiles::csmCustomIconColors = {{QColor(0, 0, 0)},
+                                                                    {QColor::fromHsv(0, 192, 255)},
+                                                                    {QColor::fromHsv(12, 192, 255)},
+                                                                    {QColor::fromHsv(24, 192, 255)},
+                                                                    {QColor::fromHsv(36, 192, 255)},
+                                                                    {QColor::fromHsv(48, 192, 255)},
+                                                                    {QColor::fromHsv(60, 192, 255)},
+                                                                    {QColor::fromHsv(72, 192, 255)},
+                                                                    {QColor::fromHsv(84, 192, 255)},
+                                                                    {QColor(63, 63, 63)},
+                                                                    {QColor::fromHsv(96, 192, 255)},
+                                                                    {QColor::fromHsv(108, 192, 255)},
+                                                                    {QColor::fromHsv(120, 192, 255)},
+                                                                    {QColor::fromHsv(132, 192, 255)},
+                                                                    {QColor::fromHsv(144, 192, 255)},
+                                                                    {QColor::fromHsv(156, 192, 255)},
+                                                                    {QColor::fromHsv(168, 192, 255)},
+                                                                    {QColor::fromHsv(180, 192, 255)},
+                                                                    {QColor(128, 128, 128)},
+                                                                    {QColor::fromHsv(192, 192, 255)},
+                                                                    {QColor::fromHsv(204, 192, 255)},
+                                                                    {QColor::fromHsv(216, 192, 255)},
+                                                                    {QColor::fromHsv(228, 192, 255)},
+                                                                    {QColor::fromHsv(240, 192, 255)},
+                                                                    {QColor::fromHsv(252, 192, 255)},
+                                                                    {QColor::fromHsv(264, 192, 255)},
+                                                                    {QColor(192, 192, 192)},
+                                                                    {QColor::fromHsv(276, 192, 255)},
+                                                                    {QColor::fromHsv(288, 192, 255)},
+                                                                    {QColor::fromHsv(300, 192, 255)},
+                                                                    {QColor::fromHsv(312, 192, 255)},
+                                                                    {QColor::fromHsv(324, 192, 255)},
+                                                                    {QColor::fromHsv(336, 192, 255)},
+                                                                    {QColor::fromHsv(348, 192, 255)},
+                                                                    {QColor(255, 255, 255)}};
+
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog(parent)
 , validName()
@@ -2278,21 +2314,15 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 QIcon dlgConnectionProfiles::customIcon(const QString& text) const
 {
     QPixmap background(120, 30);
-    background.fill(Qt::transparent);
     uint hash = qHash(text);
-    QRadialGradient shade(75, 5, 40, 45, 25);
-    QColor color0(((3 * hash) % 255), ((13 * hash) % 255), ((5 * hash) % 255));
-    QColor color1((hash % 255), ((7 * hash) % 255), ((11 * hash) % 255));
-    shade.setColorAt(0, color0);
-    shade.setColorAt(1, color1);
+    QColor backgroundColor = csmCustomIconColors.at((hash * 8131) % csmCustomIconColors.count());
+    background.fill(backgroundColor);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
-    // For an icon of size 120x30 allow 89x29 for the text (need to take off an
-    // extra pixel to allow the text to be orbited and painted in black
-    // underneath a white top one:
-    QRect textRectangle(0, 0, 88, 28);
+    // For an icon of size 120x30 allow 89x29 for the text:
+    QRect textRectangle(0, 0, 89, 29);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
@@ -2304,30 +2334,15 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     { // Enclosed in braces to limit lifespan of QPainter:
         QPainter pt(&background);
         pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        pt.fillRect(QRect(0, 0, 120, 30), shade);
         QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
         pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        if (backgroundColor.lightness() > 127) {
+            pt.setPen(Qt::black);
+        } else {
+            pt.setPen(Qt::white);
+        }
         pt.setFont(font);
-        // Draw the text 4 times offset by +/-1 pixel in a similar contrast
-        // (well black on a darker average icon and white on a ligher one)
-        // to form a contrasting shadow for a foreground one:
-        if ((color0.lightness() + color1.lightness()) > 255) {
-            pt.setPen(Qt::white);
-        } else {
-            pt.setPen(Qt::black);
-        }
-        pt.drawText(QRect(28, 0, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
-        pt.drawText(QRect(30, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
-        pt.drawText(QRect(28, 2, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
-        pt.drawText(QRect(30, 0, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
-        // Then draw the text in the opposite color than used before to get a strong
-        // contrast:
-        if ((color0.lightness() + color1.lightness()) > 255) {
-            pt.setPen(Qt::black);
-        } else {
-            pt.setPen(Qt::white);
-        }
-        pt.drawText(QRect(29, 1, 89, 29), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
     }
     return QIcon(background);
 }
