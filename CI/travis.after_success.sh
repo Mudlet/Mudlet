@@ -1,6 +1,8 @@
 #!/bin/bash
 
-if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ]; then
+set -x
+
+if [ "${TRAVIS_REPO_SLUG}" != "Mudlet/Mudlet" ] || [ "${GITHUB_REPOSITORY}" != "Mudlet/Mudlet" ]; then
   exit 0
 fi
 
