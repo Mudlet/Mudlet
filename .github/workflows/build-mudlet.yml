@@ -73,25 +73,6 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    - run: Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse
-      shell: pwsh
-      if: always() && runner.os == 'Windows'
-
-    - run: cat $env:GITHUB_WORKSPACE\3rdparty\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-dbg-out.log
-      shell: pwsh
-      if: always() && runner.os == 'Windows'
-
-    - run: cat $env:GITHUB_WORKSPACE\3rdparty\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-rel-out.log
-      shell: pwsh
-      if: always() && runner.os == 'Windows'
-
-    - run: |
-        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
-          "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua"
-        . $env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe -v
-      shell: pwsh
-      if: always() && runner.os == 'Windows'
-
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
@@ -129,6 +110,13 @@ jobs:
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
         . ${{github.workspace}}\CI\appveyor.functions.ps1
+
+        # copy vcpkg-built Lua to where we need it
+        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
+          "$env:MINGW_BASE_DIR\bin"
+        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe" `
+          "$env:MINGW_BASE_DIR\bin"
+        . $env:MINGW_BASE_DIR\bin\lua.exe -v
 
         # Libzip install complains when \bin is missing
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin" -ErrorAction Ignore
