@@ -66,6 +66,13 @@
   "AdjustableContainer.disconnect": {
     "message":"Disconnect ",
     "description":"disconnect your container from the border frame"
-  }
-  
+  },
+  "MudletOther.packageInstallSuccess": {
+    "message":"Package installed successfully.",
+    "description":"Success message after drag&drop of package file onto Mudlet"
+  },
+  "MudletOther.packageInstallFail": {
+    "message":"Package installation failed.",
+    "description":"Failure message after drag&drop of package file onto Mudlet"
+  }  
 }
