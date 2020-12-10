@@ -167,8 +167,9 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: '${{github.workspace}}/CI/travis.after_success.sh'
       env:
-        BUILD_FOLDER: '${{runner.workspace}}/b/ninja'
-        RUNNER_OS: '${{runner.os}}'
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: deploy
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
