@@ -319,6 +319,19 @@ function InstallLua() {
   exec "etc\winmake" @("install", "$Env:MINGW_BASE_DIR")
 }
 
+# copy vcpkg-built release version of Lua to where LuaRocks needs them
+function InstallVcpkgLua() {
+  Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
+    "$env:MINGW_BASE_DIR\bin"
+  Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\lib\liblua.dll.a" `
+    "$env:MINGW_BASE_DIR\lib"
+  Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe" `
+    "$env:MINGW_BASE_DIR\bin"
+  Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\lua.h" `
+    "$env:MINGW_BASE_DIR\include"
+  Write-Output "LUA_LIBDIR=$env:MINGW_BASE_DIR\lib" >> $env:GITHUB_ENV
+}
+
 function InstallPcre() {
   DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
   ExtractZip "pcre.zip" "pcre"

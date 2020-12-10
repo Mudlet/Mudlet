@@ -137,15 +137,7 @@ jobs:
         # CheckAndInstallLua
         CheckAndInstallSqlite
 
-        # copy vcpkg-built release version of Lua to where LuaRocks needs them
-        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\bin\liblua.dll" `
-          "$env:MINGW_BASE_DIR\bin"
-        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\lib\liblua.dll.a" `
-          "$env:MINGW_BASE_DIR\lib"
-        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\tools\lua\lua.exe" `
-          "$env:MINGW_BASE_DIR\bin"
-        Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\lua.h" `
-          "$env:MINGW_BASE_DIR\include"
+        InstallVcpkgLua
 
         CheckAndInstallLuarocks "${{runner.workspace}}\LuaRocks"
         InstallLuaModules
