@@ -1019,7 +1019,7 @@ end
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  local acceptable_suffix = {"xml", "mpackage", "zip"}
+  local acceptable_suffix = {"xml", "mpackage", "zip", "trigger"}
   if not table.contains(acceptable_suffix, suffix) then
     return
   end
