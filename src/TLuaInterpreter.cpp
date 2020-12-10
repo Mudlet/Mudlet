@@ -15020,6 +15020,9 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             error = lua_pcall(L, 1, LUA_MULTRET, 0);
             break;
         }
+        default: {
+            // No-op - this silences warnings about unhandled QEvent types
+        }
         }
     } else {
         error = lua_pcall(L, 0, LUA_MULTRET, 0);
