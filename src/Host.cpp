@@ -294,7 +294,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(QColorConstants::LightGray)
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
-, mRoomBorderColor(QColorConstants::LighGray)
+, mRoomBorderColor(QColorConstants::LightGray)
 #else
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)
@@ -354,7 +354,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
-, mMapperShowRoomBorders(false)
+, mMapperShowRoomBorders(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()

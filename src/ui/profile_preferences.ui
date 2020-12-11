@@ -2161,6 +2161,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Show room borders</string>
             </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
          </layout>
