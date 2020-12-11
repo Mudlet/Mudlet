@@ -293,22 +293,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     // Add some color ones with evenly spaced hue
     for (quint16 i = 0; i < 360; i += 24) {
-        for (quint16 j = 0; j < 3; ++j) {
-            switch (j) {
-            case 0: {
-                mCustomIconColors.append(QColor::fromHsv(i, 255, 255));
-                break;
-            }
-            case 1: {
-                mCustomIconColors.append(QColor::fromHsv(i, 192, 255));
-                break;
-            }
-            case 2: {
-                mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
-                break;
-            }
-            }
-        }
+        mCustomIconColors.append(QColor::fromHsv(i, 255, 255));
+        mCustomIconColors.append(QColor::fromHsv(i, 192, 255));
+        mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
     }
 }
 
