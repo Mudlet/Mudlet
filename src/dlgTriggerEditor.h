@@ -484,6 +484,10 @@ private:
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
 
+    // We need to keep a record of this button as we have to disable it
+    // for the "Variables" view:
+    QAction* mpExportAction;
+
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
     bool mSavingAs;
