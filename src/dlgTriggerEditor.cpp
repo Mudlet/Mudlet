@@ -625,7 +625,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
-    connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
+    connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_key_selected);
@@ -1321,8 +1321,12 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
     } // End of switch()
 }
 
-void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
+void dlgTriggerEditor::slot_searchMudletItems(const int index)
 {
+    if (index < 0) {
+        return;
+    }
+    const QString s{comboBox_searchTerms->itemText(index)};
     if (s.isEmpty()) {
         return;
     }

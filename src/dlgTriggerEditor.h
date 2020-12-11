@@ -254,7 +254,7 @@ public slots:
     void slot_add_new();
     void slot_add_new_folder();
     void slot_toggle_active();
-    void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
+    void slot_searchMudletItems(const int);
     void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
     void slot_open_source_find();
