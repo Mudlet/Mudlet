@@ -712,6 +712,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     QRectF roomNameRectangle;
     double realHeight;
     int borderWidth = 1 / eSize * mRoomWidth * rSize;
+    bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
     if (isGridMode) {
         realHeight = mRoomHeight;
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
@@ -789,7 +790,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    if (mpHost->mMapperShowRoomBorders && !mBubbleMode) {
+    if (shouldDrawBorder && !mBubbleMode) {
         painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
     }
 
@@ -837,7 +838,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
             QRadialGradient gradient(roomCenter, roomRadius);
             gradient.setColorAt(0.85, roomColor);
             gradient.setColorAt(0, Qt::white);
-            QPen borderPen = mpHost->mMapperShowRoomBorders ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
+            QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
             borderPen.setWidth(borderWidth);
             QPainterPath diameterPath;
             painter.setBrush(gradient);
