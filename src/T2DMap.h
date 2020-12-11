@@ -182,7 +182,7 @@ public slots:
     void shiftZdown();
 #if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
     // This is ONLY used as a slot in older versions
-    void T2DMap::slot_switchArea(const QString& newAreaName)
+    void T2DMap::slot_switchArea(const QString& newAreaName);
 #endif
     void toggleShiftMode();
     void shiftUp();
