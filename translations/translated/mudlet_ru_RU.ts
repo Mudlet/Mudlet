@@ -1636,81 +1636,84 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1096"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1103"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1200"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительная загрузка карты(1) отчет</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1218"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) в %1 отчет</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1220"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) &quot;%1&quot; в %2 отчет</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1262"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительный отчет об импорте карты (1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1285"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ Ошибка ] - Файл карты не найден, путь и имя было:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1291"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверное значение аргумента #1 (используемое имя файла: 
+&quot;%1&quot; не найдено).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Файл карты расположен и открыт, теперь его анализ...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1307"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Импорт карты (1) &quot;%1&quot; в отчете %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1310"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Файл карты обнаружен, но не удалось открыть, проверьте разрешения на:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1313"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверный аргумент #1 (используемое имя файла: 
+&quot;%1&quot; невозможно открыть для чтения).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1335"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Запрос на перезагрузку карты получен от системы...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1340"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] -... Запрос на перезагрузку системной карты завершен.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1342"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - ... Сбой запроса на перезагрузку системной карты.</translation>
     </message>
   </context>
   <context>
