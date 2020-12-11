@@ -1584,7 +1584,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1218"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Carregando mapa(1) no relatório %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1220"/>
@@ -1600,18 +1600,19 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1285"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Ficheiro de mapa não encontrado, caminho e nome usados foram:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1291"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (nome de ficheiro usado: &quot;%1&quot; não foi encontrado).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Ficheiro de mapa localizado e aberto, a analisar agora...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1307"/>
@@ -1627,22 +1628,23 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1313"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: bad argument #1 value (filename used:
+&quot;%1&quot; impossível abrir para leitura).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1335"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Pedido de recarregamento do mapa recebido pelo sistema...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1340"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... Pedido de recarregamento do Sistema de Mapa completo.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1342"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - ... Pedido de recarregamento do Sistema de Mapa falhou.</translation>
     </message>
   </context>
   <context>
