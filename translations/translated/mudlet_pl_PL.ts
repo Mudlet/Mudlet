@@ -1581,70 +1581,70 @@ próbowałem te miejsca:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1200"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Wstępne ładowanie mapy(1) raport</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1218"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (1) w raporcie %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1220"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Ładowanie mapy (1) &quot;%1&quot; w raporcie %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1262"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Raport importu mapy przed odwzorowaniem (1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1285"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Plik mapy nie odnaleziony, ścieżka i nazwa pliku: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1291"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: niepoprawna wartość argumentu #1 (plik o nazwie &quot;%1&quot; nie został znaleziony).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Plik mapy odszukany i otwarty, przetwarzanie...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1307"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy(1) &quot;%1&quot; w raporcie %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1310"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Plik mapy zlokalizowany, ale nie można go otworzyć, proszę sprawdzić uprawnienia dostępu do pliku:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1313"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: niepoprawna wartość argumentu #1 (plik o nazwie &quot;%1&quot; nie mógł być otwarty do odczytu).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1335"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Żądanie przeładowania mapy otrzymane z systemu...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1340"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - ... żądanie ponownego wczytania mapy zakończone.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1342"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - ... żądanie ponownego wczytania mapy zakończone niepowodzeniem.</translation>
     </message>
   </context>
   <context>
