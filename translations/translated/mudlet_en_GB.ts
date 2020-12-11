@@ -1646,7 +1646,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1220"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Loading map(1) &quot;%1&quot; at %2 report</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1262"/>
