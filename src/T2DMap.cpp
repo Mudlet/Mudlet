@@ -789,7 +789,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    if(mpHost->mMapperShowRoomBorders && !mBubbleMode) {
+    if (mpHost->mMapperShowRoomBorders && !mBubbleMode) {
         painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
     }
 
