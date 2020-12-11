@@ -73,7 +73,8 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    - run: sudo apt install tree && tree ${{github.workspace}}/3rdparty/vcpkg
+    - run: sudo apt install tree && tree ${{github.workspace}}/3rdparty/vcpkg && ls ${{github.workspace}}/3rdparty/vcpkg/installed/vcpkg/tools/lua
+      if: runner.os == 'Linux'
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
