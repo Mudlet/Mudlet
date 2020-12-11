@@ -73,9 +73,6 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
-    - run: sudo apt install tree && find ${{github.workspace}}/3rdparty/vcpkg -name "lua"
-      if: runner.os == 'Linux'
-
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
@@ -168,7 +165,10 @@ jobs:
 
     - name: (Linux/macOS) package Mudlet
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: '${{github.workspace}}/CI/travis.after_success.sh'
+      run: |
+        export PATH="${{github.workspace}}/3rdparty/vcpkg/installed/x64-linux/tools/lua:$PATH"
+        lua -v
+        ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
