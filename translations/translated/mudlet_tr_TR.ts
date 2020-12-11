@@ -1604,7 +1604,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu ve açıldı, şimdi inceleniyor...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1307"/>
@@ -1614,7 +1614,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1310"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu fakat açılamadı, lütfen "%1" 'in izinlerini kontrol edin.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1313"/>
