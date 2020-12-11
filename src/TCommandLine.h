@@ -67,6 +67,9 @@ public:
     void resetAction();
     void releaseFunc(const int, const int);
     CommandLineType getType() const { return mType; }
+    void addSuggestion(const QString&);
+    void removeSuggestion(const QString&);
+    void clearSuggestions();
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -111,6 +114,7 @@ private:
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
+    QSet<QString> commandLineSuggestions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
