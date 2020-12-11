@@ -94,16 +94,20 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
-    bool hasCustomIcon(const QString& profileName) const;
+    bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
-    void loadCustomProfile(const QString& profileName) const;
-    void generateCustomProfile(int i, const QString& profileName) const;
-    void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
+    void loadCustomProfile(const QString&) const;
+    void generateCustomProfile(const QString&) const;
+    void setCustomIcon(const QString&, QListWidgetItem*) const;
     template <typename L>
     void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
     void writeSecurePassword(const QString& profile, const QString& pass) const;
     void deleteSecurePassword(const QString& profile) const;
+    void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
+    void setItemName(QListWidgetItem*, const QString&) const;
+    QIcon customIcon(const QString&) const;
+
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -127,6 +131,7 @@ private:
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile {};
     QString mDateTimeFormat;
+    QVector<QColor> mCustomIconColors;
 
 
 private slots:
