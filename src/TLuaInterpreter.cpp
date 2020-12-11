@@ -133,7 +133,7 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
         }                                                                                      \
         lua_tostring(_L, pos_);                                                                \
     })
-    
+
 #define CONSOLE_NIL(_L, _name)                                                                 \
     ({                                                                                         \
         auto name_ = (_name);                                                                  \
@@ -12590,8 +12590,8 @@ int TLuaInterpreter::installPackage(lua_State* L)
     QString location{lua_tostring(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.installPackage(location, 0);
-    return 0;
+    lua_pushboolean(L, host.installPackage(location, 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
