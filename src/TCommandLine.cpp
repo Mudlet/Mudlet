@@ -898,6 +898,9 @@ void TCommandLine::handleTabCompletion(bool direction)
 #else
     QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
 #endif
+
+    wordList.append(commandLineSuggestions.values());
+
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -1162,4 +1165,22 @@ void TCommandLine::releaseFunc(const int existingFunction, const int newFunction
     if (newFunction != existingFunction) {
         mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
     }
+}
+
+//This method adds word to internal suggestion list for command line tab auto completion
+void TCommandLine::addSuggestion(const QString& suggestion)
+{
+    commandLineSuggestions += suggestion;
+}
+
+//This method removes word from internal suggestion list for command line tab auto completion
+void TCommandLine::removeSuggestion(const QString& suggestion)
+{
+    commandLineSuggestions.remove(suggestion);
+}
+
+//This method clears all suggestions added for command line
+void TCommandLine::clearSuggestions()
+{
+    commandLineSuggestions.clear();
 }
