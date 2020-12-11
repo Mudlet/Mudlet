@@ -73,6 +73,8 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
 
+    - run: tree ${{github.workspace}}/3rdparty/vcpkg
+
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
       run: |
