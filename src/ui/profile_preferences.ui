@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>700</width>
-    <height>501</height>
+    <width>718</width>
+    <height>667</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -225,11 +225,11 @@
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
           <item row="0" column="0">
            <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Notify on new data</string>
             </property>
            </widget>
           </item>
@@ -249,11 +249,11 @@
           </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="acceptServerMedia">
-            <property name="text">
-             <string>Allow server to download and play media</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Allow server to download and play media</string>
             </property>
            </widget>
           </item>
@@ -1981,16 +1981,6 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Map view</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mapOptions">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mMapperUseAntiAlias">
-            <property name="toolTip">
-             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use high quality graphics in 2D view</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
@@ -2004,31 +1994,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_mapSymbolsFont">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mMapperUseAntiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>2D Map Room Symbol Font</string>
+             <string>Use high quality graphics in 2D view</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1" alignment="Qt::AlignLeft">
-           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
-          </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
             <property name="text">
              <string>Only use symbols (glyphs) from chosen font</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QPushButton" name="pushButton_showGlyphUsage">
             <property name="text">
              <string>Show symbol usage...</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="4" column="0" colspan="2">
            <widget class="QWidget" name="widget_playerRoomStyle" native="true">
             <layout class="QGridLayout" name="gridLayout_playerRoomStyle">
              <property name="leftMargin">
@@ -2153,6 +2153,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mMapperShowBorders">
+            <property name="toolTip">
+             <string>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show room borders</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -2182,10 +2192,292 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Select your color preferences for the map display</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mapperColors">
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_51">
+            <property name="text">
+             <string>Light green:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLabel" name="label_49">
+            <property name="text">
+             <string>Light black:</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label_39">
             <property name="text">
              <string>Link color</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QPushButton" name="pushButton_cyan_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="2">
+           <widget class="QLabel" name="label_56">
+            <property name="text">
+             <string>Light white:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QPushButton" name="pushButton_magenta_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_45">
+            <property name="text">
+             <string>Magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_54">
+            <property name="text">
+             <string>Light magenta:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pushButton_Lblack_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="3">
+           <widget class="QPushButton" name="pushButton_Lmagenta_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QPushButton" name="pushButton_Lgreen_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_40">
+            <property name="text">
+             <string>Background color:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QPushButton" name="pushButton_Lyellow_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QPushButton" name="pushButton_yellow_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="pushButton_background_color_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="pushButton_black_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QPushButton" name="pushButton_blue_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QPushButton" name="pushButton_red_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QPushButton" name="pushButton_white_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="4">
+           <widget class="Line" name="line_mapperColorsSeparator">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="3">
+           <widget class="QPushButton" name="pushButton_Lwhite_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>Black:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QPushButton" name="pushButton_Lblue_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="3">
+           <widget class="QPushButton" name="pushButton_Lcyan_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QPushButton" name="pushButton_Lred_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QLabel" name="label_53">
+            <property name="text">
+             <string>Light blue:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="2">
+           <widget class="QLabel" name="label_55">
+            <property name="text">
+             <string>Light cyan:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_50">
+            <property name="text">
+             <string>Light red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_green_2">
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_44">
+            <property name="text">
+             <string>Blue:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_47">
+            <property name="text">
+             <string>White:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_42">
+            <property name="text">
+             <string>Red:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="11" column="2" colspan="2">
+           <widget class="QPushButton" name="reset_colors_button_2">
+            <property name="text">
+             <string>Reset all colors to default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_46">
+            <property name="text">
+             <string>Cyan:</string>
             </property>
            </widget>
           </item>
@@ -2202,306 +2494,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_40">
-            <property name="text">
-             <string>Background color:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="pushButton_background_color_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="4">
-           <widget class="Line" name="line_mapperColorsSeparator">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_17">
-            <property name="text">
-             <string>Black:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="pushButton_black_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QLabel" name="label_49">
-            <property name="text">
-             <string>Light black:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="3">
-           <widget class="QPushButton" name="pushButton_Lblack_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_42">
-            <property name="text">
-             <string>Red:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="pushButton_red_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QLabel" name="label_50">
-            <property name="text">
-             <string>Light red:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QPushButton" name="pushButton_Lred_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_43">
-            <property name="text">
-             <string>Green:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QPushButton" name="pushButton_green_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QLabel" name="label_51">
-            <property name="text">
-             <string>Light green:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="3">
-           <widget class="QPushButton" name="pushButton_Lgreen_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_48">
             <property name="text">
              <string>Yellow:</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="pushButton_yellow_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_43">
             <property name="text">
-             <string/>
+             <string>Green:</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="2">
+          <item row="6" column="2">
            <widget class="QLabel" name="label_52">
             <property name="text">
              <string>Light yellow:</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="3">
-           <widget class="QPushButton" name="pushButton_Lyellow_2">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Room border color:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_room_border_color">
             <property name="autoFillBackground">
              <bool>true</bool>
             </property>
             <property name="text">
              <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label_44">
-            <property name="text">
-             <string>Blue:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="1">
-           <widget class="QPushButton" name="pushButton_blue_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="2">
-           <widget class="QLabel" name="label_53">
-            <property name="text">
-             <string>Light blue:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="3">
-           <widget class="QPushButton" name="pushButton_Lblue_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="label_45">
-            <property name="text">
-             <string>Magenta:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="QPushButton" name="pushButton_magenta_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="2">
-           <widget class="QLabel" name="label_54">
-            <property name="text">
-             <string>Light magenta:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="3">
-           <widget class="QPushButton" name="pushButton_Lmagenta_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="0">
-           <widget class="QLabel" name="label_46">
-            <property name="text">
-             <string>Cyan:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="1">
-           <widget class="QPushButton" name="pushButton_cyan_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="2">
-           <widget class="QLabel" name="label_55">
-            <property name="text">
-             <string>Light cyan:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="3">
-           <widget class="QPushButton" name="pushButton_Lcyan_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="0">
-           <widget class="QLabel" name="label_47">
-            <property name="text">
-             <string>White:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="1">
-           <widget class="QPushButton" name="pushButton_white_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="2">
-           <widget class="QLabel" name="label_56">
-            <property name="text">
-             <string>Light white:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="3">
-           <widget class="QPushButton" name="pushButton_Lwhite_2">
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-          <item row="10" column="2" colspan="2">
-           <widget class="QPushButton" name="reset_colors_button_2">
-            <property name="text">
-             <string>Reset all colors to default</string>
             </property>
            </widget>
           </item>
@@ -3402,14 +3429,14 @@ you can use it but there could be issues with aligning columns of text</string>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Show debug messages for timers not smaller than:</string>
                </property>
                <property name="buddy">
                 <cstring>timeEdit_timerDebugOutputMinimumInterval</cstring>
-               </property>
-               <property name="toolTip">
-                <string comment="The term in '...' refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.">&lt;p&gt;Show 'LUA OK' messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</string>
                </property>
               </widget>
              </item>
@@ -3449,11 +3476,11 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="5" column="0">
            <widget class="QCheckBox" name="checkBox_debugShowAllCodepointProblems">
-            <property name="text">
-             <string>Report all Codepoint problems immediately</string>
-            </property>
             <property name="toolTip">
              <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Report all Codepoint problems immediately</string>
             </property>
            </widget>
           </item>
