@@ -1631,81 +1631,84 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMainConsole.cpp" line="1096"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1103"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1200"/>
       <source>Pre-Map loading(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte lädt(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1218"/>
       <source>Loading map(1) at %1 report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht der geladenen Karte(1) bei %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1220"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Lade Karte(1) &quot;%1&quot; bei %2 Bericht</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1262"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Bericht bevor die Karte importiert wird(1)</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1285"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Kartendatei nicht gefunden, verwendeter Pfad und Name waren:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1291"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: Falscher Wert für Argument #1 (benutzter Dateiname: 
+&quot;%1&quot; wurde nicht gefunden).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1300"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1307"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Karte(1) &quot;%1&quot; bei %2 Bericht</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1310"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Kartendatei gefunden, aber sie konnte nicht geöffnet werden. Prüfe bitte die Berechtigungen bei:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1313"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: Falscher Wert für Argument #1 (benutzter Dateiname: 
+&quot;%1&quot; konnte nicht gelesen werden).</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1335"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1340"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - ... System-Anforderung, die Karte neu zu laden, wurde abgeschlossen.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1342"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ] - ... System-Anforderung, die Karte neu zu laden, fehlgeschlagen.</translation>
     </message>
   </context>
   <context>
