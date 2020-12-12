@@ -173,7 +173,7 @@ jobs:
 
         luarocks install --local LuaFileSystem
         luarocks install --local lrexlib-pcre
-        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR=/usr/local/opt/sqlite
+        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/sqlite"
         luarocks install --local luautf8
         luarocks install --local lua-zip
         luarocks install --local luautf8
