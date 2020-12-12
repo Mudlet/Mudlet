@@ -829,7 +829,7 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
     }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
-    pHost->mMapperShowRoomBorders = (attributes().value("mMapperShowRoomBorders") == "yes");
+    pHost->mMapperShowRoomBorders = attributes().value("mMapperShowRoomBorders") == "yes" || !attributes().hasAttribute("mMapperShowRoomBorders");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
     }
