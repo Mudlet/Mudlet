@@ -48,6 +48,7 @@
 #include <QMap>
 #include <QPointer>
 #include <QSettings>
+#include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
@@ -79,7 +80,6 @@
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <QSystemTrayIcon>
 
 #endif
 
