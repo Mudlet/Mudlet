@@ -661,6 +661,8 @@ mudlet::mudlet()
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
     loadMaps();
+
+    setupTrayIcon();
 }
 
 QSettings* mudlet::getQSettings()
@@ -4657,3 +4659,13 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     menuBar()->setStyleSheet(styleSheet);
 }
 
+void mudlet::setupTrayIcon()
+{
+    mTrayIcon.show();
+
+    auto menu = new QMenu(this);
+    auto exitAction = new QAction(tr("Exit"), this);
+    connect(exitAction, &QAction::triggered, this, &mudlet::close);
+    menu->addAction(exitAction);
+    mTrayIcon.setContextMenu(menu);
+}

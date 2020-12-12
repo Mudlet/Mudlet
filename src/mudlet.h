@@ -384,6 +384,7 @@ public:
     QTextOption::Flags mEditorTextOptions;
 
     QPointer<QTableWidget> moduleTable;
+    QSystemTrayIcon mTrayIcon = QSystemTrayIcon(QIcon(":/icons/mudlet.png"));
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -532,6 +533,7 @@ private:
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
+    void setupTrayIcon();
 
     QWidget* mainPane;
 
