@@ -1026,10 +1026,10 @@ function packageDrop(event, fileName, suffix)
   mudlet.Locale = mudlet.Locale or loadTranslations("MudletOther")
   if installPackage(fileName) then
     local successText = mudlet.Locale.packageInstallSuccess and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully."
-    echo(successText)
+    echo(successText .. '\n')
   else
     local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
-    echo(failureText)
+    echo(failureText .. '\n')
   end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
