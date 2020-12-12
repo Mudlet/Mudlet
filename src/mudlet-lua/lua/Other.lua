@@ -1019,17 +1019,23 @@ end
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  local acceptable_suffix = {"xml", "mpackage", "zip", "trigger"}
-  if not table.contains(acceptable_suffix, suffix) then
+  local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
+  if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  mudlet.Locale = mudlet.Locale or loadTranslations("MudletOther")
+
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if installPackage(fileName) then
-    local successText = mudlet.Locale.packageInstallSuccess and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully."
-    echo(successText)
+    local successText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.success 
+      and mudlet.Locale.packageInstall.success.message or "Package installed successfully.")
+    local okPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.OK or "[  OK  ]  - ")
+    decho('<0,150,190>' .. okPrefix .. '<0,160,0>' .. successText .. '\n') 
+    -- Cyan and Light Green; see cTelnet::postMessage for color comparison
   else
-    local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
-    echo(failureText)
+    local failureText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.fail 
+      and mudlet.Locale.packageInstall.fail.message or "Package installation failed.")
+    local warnPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.warn or "[ WARN ]  - ")
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n') -- Orange
   end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
