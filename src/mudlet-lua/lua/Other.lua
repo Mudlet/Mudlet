@@ -1023,13 +1023,14 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
+  local installationSuccessful = installPackage(fileName) 
 
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if installPackage(fileName) then
+  if installationSuccessful then
     local successText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.success 
       and mudlet.Locale.packageInstall.success.message or "Package installed successfully.")
-    local okPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.OK or "[  OK  ]  - ")
-    decho('<0,150,190>' .. okPrefix .. '<0,160,0>' .. successText .. '\n') 
+    local infoPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.info or "[ INFO ]  - ")
+    decho('<0,150,190>' .. infoPrefix .. '<0,160,0>' .. successText .. '\n') 
     -- Cyan and Light Green; see cTelnet::postMessage for color comparison
   else
     local failureText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.fail 

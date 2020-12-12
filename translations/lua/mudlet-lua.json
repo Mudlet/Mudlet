@@ -75,8 +75,8 @@
     "message":"Package installation failed.",
     "description":"Failure message after drag&drop of package file onto Mudlet"
   },
-  "Mudlet.prefix.OK": {
-    "message":"[  OK  ]  - ",
+  "Mudlet.prefix.info": {
+    "message":"[ INFO ]  - ",
     "description":"Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefix.warn": {
