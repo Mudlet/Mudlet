@@ -173,11 +173,11 @@ jobs:
 
         luarocks install --local LuaFileSystem
         luarocks install --local lrexlib-pcre
-        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/sqlite"
+        luarocks install --local lua-yajl YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/yajl"
+        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/sqlite3"
         luarocks install --local luautf8
         luarocks install --local lua-zip
         luarocks install --local luautf8
-        luarocks install --local lua-yajl YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/yajl"
 
         # CI changelog generation dependencies
         luarocks install --local argparse
