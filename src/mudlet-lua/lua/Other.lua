@@ -1019,33 +1019,18 @@ end
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
-  if not table.contains(acceptableSuffix, suffix) then
+  local acceptable_suffix = {"xml", "mpackage", "zip", "trigger"}
+  if not table.contains(acceptable_suffix, suffix) then
     return
   end
   mudlet.Locale = mudlet.Locale or loadTranslations("MudletOther")
-  local installation_success = false
-  local waitingForPackageInstallation = registerAnonymousEventHandler(
-    "sysInstallPackage", 
-    function(_, packageNameReceived, fileNameReceived)
-      debugc(string.format("Received: %s, %s, %s, matching: %s", _, packageNameReceived, fileNameReceived, fileName))
-      if fileNameReceived == fileName then
-        installation_success = true
-        killAnonymousEventHandler(waitingForPackageInstallation)
-        local successText = mudlet.Locale.packageInstallSuccess and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully."
-        echo(successText)
-      end
-    end,
-    false) -- maybe another package gets installed in between, so we need to keep listening until a matching name is found
-  -- unfortunately we get no negative feedback from installPackage(), so after 5 seconds without success, we assume and announce failure:
-  tempTimer(5, function()
-    if not installation_success then
-      killAnonymousEventHandler(waitingForInstallationSuccess)
-      local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
-      echo(failureText)
-    end
-  end)
-  installPackage(fileName)
+  if installPackage(fileName) then
+    local successText = mudlet.Locale.packageInstallSuccess and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully."
+    echo(successText)
+  else
+    local failureText = mudlet.Locale.packageInstallFail and mudlet.Locale.packageInstallFail.message or "Package installation failed."
+    echo(failureText)
+  end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
