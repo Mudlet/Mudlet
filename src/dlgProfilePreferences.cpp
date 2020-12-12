@@ -531,7 +531,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
-    mMapperShowBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -1184,7 +1184,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
-    mMapperShowBorders->setChecked(false);
+    checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -2432,7 +2432,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-        pHost->mMapperShowRoomBorders = mMapperShowBorders->isChecked();
+        pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;
