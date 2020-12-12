@@ -322,8 +322,11 @@ void T2DMap::shiftZdown()
     update();
 }
 
-
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+void T2DMap::switchArea(const QString& newAreaName)
+#else
 void T2DMap::slot_switchArea(const QString& newAreaName)
+#endif
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {

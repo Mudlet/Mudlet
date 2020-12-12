@@ -96,7 +96,11 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
     connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
+#else
     connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
+#endif
     connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     connect(showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
@@ -315,3 +319,13 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
         qDebug() << "dlgResetAreaComboBoxTolayerRoomArea() warning: player room not valid.";
     }
 }
+
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+// Only needed in newer Qt versions as the old SIGNAL overload that returned the
+// QString of the activated QComboBox entry has been obsoleted:
+void dlgMapper::slot_switchArea(const int index)
+{
+    const QString areaName{showArea->itemText(index)};
+    mp2dMap->switchArea(areaName);
+}
+#endif
