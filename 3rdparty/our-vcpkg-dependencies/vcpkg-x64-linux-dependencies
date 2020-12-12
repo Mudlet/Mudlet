@@ -6,4 +6,4 @@ pugixml
 --overlay-ports=../our-vcpkg-dependencies/lua
 lua[core]
 boost-graph
-sqlite
+sqlite3
