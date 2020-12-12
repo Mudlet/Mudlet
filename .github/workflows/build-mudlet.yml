@@ -167,7 +167,23 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
         export PATH="${{github.workspace}}/3rdparty/vcpkg/installed/x64-linux/tools/lua:$PATH"
+        # works for Linux only atm
         lua -v
+
+        luarocks install --local luautf8
+        YAJL_PATH="$(pkg-config --variable=libdir yajl)"
+        echo "Setting search path to $YAJL_PATH"
+        luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
+        luarocks install --local LuaFileSystem
+        luarocks install --local lrexlib-pcre
+        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR=/usr/local/opt/sqlite
+        luarocks install --local luautf8
+        luarocks install --local lua-zip
+
+        # CI changelog generation dependencies
+        luarocks install --local argparse
+        luarocks install --local lunajson
+
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
