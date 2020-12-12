@@ -1063,7 +1063,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
-    connect(pushButton_room_border_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
+    connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1146,7 +1146,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(pushButton_room_border_color, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1430,7 +1430,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
-        pushButton_room_border_color->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRoomBorderColor.name()));
+        pushButton_roomBorderColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRoomBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1451,7 +1451,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
-        pushButton_room_border_color->setStyleSheet(QString());
+        pushButton_roomBorderColor->setStyleSheet(QString());
     }
 }
 
@@ -1848,7 +1848,7 @@ void dlgProfilePreferences::setRoomBorderColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_room_border_color, pHost->mRoomBorderColor);
+        setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
     }
 }
 
