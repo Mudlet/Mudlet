@@ -190,6 +190,8 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
 
 void TTreeWidget::rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end)
 {
+    Q_UNUSED(end)
+
     if (parent.isValid()) {
         mOldParentID = parent.data(Qt::UserRole).toInt();
     } else {
@@ -352,6 +354,9 @@ void TTreeWidget::dropEvent(QDropEvent* event)
 
 void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)
 {
+    Q_UNUSED(parent)
+    Q_UNUSED(first)
+    Q_UNUSED(last)
 }
 
 void TTreeWidget::dragMoveEvent(QDragMoveEvent* e)
