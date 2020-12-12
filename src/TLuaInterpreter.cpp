@@ -48,6 +48,7 @@
 #include "glwidget.h"
 #endif
 
+#include "math.h"
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
@@ -16241,7 +16242,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
-    lua_register(pGlobalLua, "showNativeNotification", TLuaInterpreter::showNativeNotification);
+    lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17925,28 +17926,24 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showNativeNotification
-int TLuaInterpreter::showNativeNotification(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showNotification
+int TLuaInterpreter::showNotification(lua_State* L)
 {
     int n = lua_gettop(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "showNativeNotification: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "showNotification: bad argument #1 type (%s as string expected, got %s!)", n >= 2 ? "title" : "message" , luaL_typename(L, 1));
         return lua_error(L);
     }
     if (n >= 2 && !lua_isstring(L, 2)) {
-        lua_pushfstring(L, "showNativeNotification: bad argument #2 type (word as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "showNotification: bad argument #2 type (message as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    int notificationExpirationTime = 1000;
+    int notificationExpirationTime = 1;
     if (n >= 3 && !lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "showNativeNotification: bad argument #3 type (number expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "showNotification: bad argument #3 type (expiration time in seconds as number expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     } else if (lua_isnumber(L, 3)) {
-        notificationExpirationTime = lua_tonumber(L, 3);
-    }
-    if (notificationExpirationTime <= 0) {
-        lua_pushstring(L, "showNativeNotification: argument #3 must be positive number");
-        return lua_error(L);
+        notificationExpirationTime = qMax(qRound(lua_tonumber(L, 3) / 1000), 1);
     }
 
     QString text{lua_tostring(L, 1)};
@@ -17954,6 +17951,7 @@ int TLuaInterpreter::showNativeNotification(lua_State* L)
     if (lua_isstring(L, 2)) {
         text = lua_tostring(L, 2);
     }
+    mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
 }
