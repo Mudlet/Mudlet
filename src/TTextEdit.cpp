@@ -73,6 +73,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 // class:
 , mTimeStampWidth(13)
 , mShowAllCodepointIssues(false)
+, mMouseWheelRemainder()
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -1712,33 +1713,49 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
-    // On basis in Qt documentation that angleDelta(): "Returns the distance
-    // that the wheel is rotated, in eighths of a degree."
-    // 8 per degree * 15 degree step for "normal" mouse wheel = 120:
-    const double yFactor = 120.0;
-    const double xFactor = 120.0;
     // Make the speed up be half of the (upper pane) lines - need to round it so
     // that a decimal part does not make the end +/- value for up/down different
     // in magitude:
     double ySpeedUp = qRound(mpConsole->mUpperPane->getScreenHeight() / 2.0);
+    // Just a number plucked out of the air for the x-direction:
     double xSpeedUp = 10.0;
 
-    // Allow the control key to introduce a speed up - might need to check that
-    // this does not complicate selection of multiple lines!:
-    const QPoint delta = e->angleDelta();
-    int yDelta = qRound((delta.y() * (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 1.0)) / yFactor);
-    int xDelta = qRound((delta.x() * (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 1.0)) / xFactor);
+    QPointF delta = e->angleDelta();
+    // Convert to degrees:
+    delta /= 8.0;
+    // Allow the control key to introduce a speed up!:
+    delta.rx() *= (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 1.0);
+    delta.ry() *= (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 1.0);
+    // Add on any previously stored (integer) remainder:
+    delta += mMouseWheelRemainder;
+    // Convert to 15 degree steps and record them:
+    int xDelta = qRound(delta.x() / 15.0);
+    int yDelta = qRound(delta.y() / 15.0);
+    // Store the (rounded) remainder
+    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
+
+    qDebug().noquote().nospace() << "TTextEdit::wheelEvent(...) INFO - in \""
+                                 << mpConsole->mConsoleName
+                                 << "\" movement of ("
+                                 << xDelta
+                                 << ", "
+                                 << yDelta
+                                 << ") steps leaving a remainder of ("
+                                 << mMouseWheelRemainder.x()
+                                 << ", "
+                                 << mMouseWheelRemainder.y()
+                                 << ") degrees.";
+
     bool used = false;
     if (yDelta > 0) {
         mpConsole->scrollUp(yDelta);
         used = true;
-    } else {
+    } else if (yDelta < 0) {
         mpConsole->scrollDown(-yDelta);
         used = true;
     }
 
     // Space for future use of xDelta
-    Q_UNUSED(xDelta)
 
     e->setAccepted(used);
 }
