@@ -518,9 +518,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     importAction->setEnabled(true);
     connect(importAction, &QAction::triggered, this, &dlgTriggerEditor::slot_import);
 
-    QAction* exportAction = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Export"), this);
-    exportAction->setEnabled(true);
-    connect(exportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
+    mpExportAction = new QAction(QIcon(QStringLiteral(":/icons/export.png")), tr("Export"), this);
+    mpExportAction->setEnabled(true);
+    connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mProfileSaveAction = new QAction(QIcon(QStringLiteral(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setEnabled(true);
@@ -582,7 +582,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addSeparator();
     toolBar->addAction(deleteTriggerAction);
     toolBar->addAction(importAction);
-    toolBar->addAction(exportAction);
+    toolBar->addAction(mpExportAction);
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
@@ -625,7 +625,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
-    connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
+    connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_key_selected);
@@ -1321,8 +1321,12 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
     } // End of switch()
 }
 
-void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
+void dlgTriggerEditor::slot_searchMudletItems(const int index)
 {
+    if (index < 0) {
+        return;
+    }
+    const QString s{comboBox_searchTerms->itemText(index)};
     if (s.isEmpty()) {
         return;
     }
@@ -6619,10 +6623,6 @@ void dlgTriggerEditor::slot_showSearchAreaResults(const bool isChecked)
 
 void dlgTriggerEditor::saveOpenChanges()
 {
-    if (mCurrentView == EditorViewType::cmUnknownView) {
-        return;
-    }
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
@@ -6645,6 +6645,8 @@ void dlgTriggerEditor::saveOpenChanges()
     case EditorViewType::cmVarsView:
         saveVar();
         break;
+    case EditorViewType::cmUnknownView:
+        return; // Silently ignore this case
     }
 }
 
@@ -6777,6 +6779,8 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpVarsMainArea->setVisible(view == EditorViewType::cmVarsView);
     treeWidget_variables->setVisible(view == EditorViewType::cmVarsView);
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
+
+    mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
 }
 
 void dlgTriggerEditor::slot_show_timers()
@@ -7271,6 +7275,8 @@ void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
     case EditorViewType::cmVarsView:
         saveVar();
         break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_item_selected_save() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 }
 
@@ -7882,6 +7888,10 @@ void dlgTriggerEditor::exportKeyToClipboard()
 
 void dlgTriggerEditor::slot_export()
 {
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+        return;
+    }
+
     QString fileName = QFileDialog::getSaveFileName(this, tr("Export Triggers"), QDir::currentPath(), tr("Mudlet packages (*.xml)"));
     if (fileName.isEmpty()) {
         return;
@@ -7921,6 +7931,12 @@ void dlgTriggerEditor::slot_export()
     case EditorViewType::cmKeysView:
         exportKey(fileName);
         break;
+    case EditorViewType::cmVarsView:
+        [[fallthrough]];
+    case EditorViewType::cmUnknownView:
+        // These two have already been handled so this place in the code should
+        // indeed be:
+        Q_UNREACHABLE();
     }
 }
 
@@ -7945,9 +7961,16 @@ void dlgTriggerEditor::slot_copy_xml()
     case EditorViewType::cmKeysView:
         exportKeyToClipboard();
         break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 }
 
+// FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
 void dlgTriggerEditor::slot_paste_xml()
 {
     XMLimport reader(mpHost);
@@ -7972,6 +7995,12 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 
@@ -8042,6 +8071,12 @@ void dlgTriggerEditor::slot_paste_xml()
         mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 
     // flag for re-rendering so the new item shows up in the right spot
@@ -8103,6 +8138,12 @@ void dlgTriggerEditor::slot_paste_xml()
         treeWidget_keys->setFocus();
         break;
     }
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        break;
     }
 }
 
@@ -8129,6 +8170,11 @@ void dlgTriggerEditor::slot_import()
     case EditorViewType::cmKeysView:
         saveKey();
         break;
+    case EditorViewType::cmVarsView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
@@ -8231,6 +8277,7 @@ void dlgTriggerEditor::doCleanReset()
         runScheduledCleanReset();
     });
 }
+
 void dlgTriggerEditor::runScheduledCleanReset()
 {
     switch (mCurrentView) {
@@ -8252,6 +8299,13 @@ void dlgTriggerEditor::runScheduledCleanReset()
     case EditorViewType::cmKeysView:
         saveKey();
         break;
+    case EditorViewType::cmVarsView:
+        // FIXME: The switch in here need to handle (or at least treat correctly) the
+        // EditorViewType:cmVarsView case but how is not clear:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        break;
+    case EditorViewType::cmUnknownView:
+        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
     treeWidget_triggers->clear();
