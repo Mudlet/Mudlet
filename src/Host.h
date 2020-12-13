@@ -556,6 +556,7 @@ public:
     QColor mWhite_2;
     QColor mFgColor_2;
     QColor mBgColor_2;
+    QColor mRoomBorderColor;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;
@@ -586,6 +587,7 @@ public:
     QColor mCommandLineFgColor;
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
+    bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;

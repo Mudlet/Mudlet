@@ -531,6 +531,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+    checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -1062,6 +1063,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
+    connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1144,6 +1146,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1181,6 +1184,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
+    checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -1426,6 +1430,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
+        pushButton_roomBorderColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRoomBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1446,6 +1451,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
+        pushButton_roomBorderColor->setStyleSheet(QString());
     }
 }
 
@@ -1510,6 +1516,7 @@ void dlgProfilePreferences::resetColors2()
 
     pHost->mFgColor_2 = Qt::lightGray;
     pHost->mBgColor_2 = Qt::black;
+    pHost->mRoomBorderColor = Qt::lightGray;
     pHost->mBlack_2 = Qt::black;
     pHost->mLightBlack_2 = Qt::darkGray;
     pHost->mRed_2 = Qt::darkRed;
@@ -1834,6 +1841,14 @@ void dlgProfilePreferences::setBgColor2()
     Host* pHost = mpHost;
     if (pHost) {
         setColor(pushButton_background_color_2, pHost->mBgColor_2);
+    }
+}
+
+void dlgProfilePreferences::setRoomBorderColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
     }
 }
 
@@ -2417,6 +2432,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+        pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;

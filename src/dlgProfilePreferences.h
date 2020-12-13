@@ -102,6 +102,7 @@ public slots:
     void setColorLightWhite2();
     void setFgColor2();
     void setBgColor2();
+    void setRoomBorderColor();
     void resetColors2();
 
     // Map.

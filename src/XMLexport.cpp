@@ -408,6 +408,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
+    host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_CHARSET_NEGOTIATION_OFF") = pHost->mFORCE_CHARSET_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
@@ -526,6 +527,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("mFgColor2").text().set(pHost->mFgColor_2.name().toUtf8().constData());
         host.append_child("mBgColor2").text().set(pHost->mBgColor_2.name().toUtf8().constData());
+        host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
         host.append_child("mBlack2").text().set(pHost->mBlack_2.name().toUtf8().constData());
         host.append_child("mLightBlack2").text().set(pHost->mLightBlack_2.name().toUtf8().constData());
         host.append_child("mRed2").text().set(pHost->mRed_2.name().toUtf8().constData());
