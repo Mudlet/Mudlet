@@ -11,7 +11,7 @@ dist: xenial
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt-5.12.9-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.15.2-xenial'
     - sourceline: 'ppa:ondrej/php' # more-or-less up to date libzip
     - sourceline: 'ppa:ubuntu-toolchain-r/test' # gcc 7
     packages: &common-packages
@@ -61,19 +61,19 @@ jobs:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=512
+      QT_VERSION=515
       DEPLOY=deploy
     addons:
       apt:
         sources: *add-sources
-        packages: &qt512-packages
+        packages: &qt515-packages
         - *common-packages
-        - qt512base
-        - qt512multimedia
-        - qt512tools
-        - qt512gamepad
-        - qt512speech
-        - qt512translations
+        - qt515base
+        - qt515multimedia
+        - qt515tools
+        - qt515gamepad
+        - qt515speech
+        - qt515translations
 
 before_cache:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
