@@ -4706,17 +4706,16 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         return;
     }
 
-    // int delta = e->delta() / 8 / 15; // Deprecated in Qt 5.x ...!
-    int delta = e->angleDelta().y() / (8 * 15);
-    if (e->modifiers() & Qt::ControlModifier) { // Increase rate if control key down - it makes scrolling through
-                                                // a large number of items in a listwidget's contents easier AND this make it
-                                                // easier to zoom in and out on LARGE area maps
-        delta *= 5;
-    }
-    if (delta != 0) {
+    // Increase rate if control key down - it makes scrolling through
+    // a large number of items in a listwidget's contents easier (that happens
+    // automagically) AND this make it easier to zoom in and out on LARGE area
+    // maps
+    const QPoint delta{e->angleDelta()};
+    const int yDelta = qRound(delta.y() * (e->modifiers() & Qt::ControlModifier ? 5.0 : 1.0) / (8.0 * 15.0));
+    if (yDelta) {
         mPick = false;
         qreal oldZoom = xyzoom;
-        xyzoom = qMax(3.0, xyzoom * pow(1.07, delta));
+        xyzoom = qMax(3.0, xyzoom * pow(1.07, yDelta));
 
         if (oldZoom != xyzoom) {
             const float widgetWidth = width();
@@ -4724,10 +4723,11 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             float xs = 1.0;
             float ys = 1.0;
             if (widgetWidth > 10 && widgetHeight > 10) {
-                if (widgetWidth > widgetHeight)
+                if (widgetWidth > widgetHeight) {
                     xs = (widgetWidth / widgetHeight);
-                else
+                } else {
                     ys = (widgetHeight / widgetWidth);
+                }
             }
 
             // mouse pos within the widget
@@ -4753,8 +4753,8 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         e->accept();
         return;
     }
+
     e->ignore();
-    return;
 }
 
 void T2DMap::setMapZoom(qreal zoom)

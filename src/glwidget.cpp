@@ -2250,33 +2250,25 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    //int delta = e->delta() / 8 / 15;
-    if (e->delta() < 0) {
+    int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    bool used = false;
+    if (yDelta) {
         if (abs(mScale) < 0.3) {
-            mScale -= 0.01;
+            mScale += 0.01 * yDelta;
         } else {
-            mScale -= 0.03;
+            mScale += 0.03 * yDelta;
         }
         makeCurrent();
         resizeGL(width(), height());
         doneCurrent();
         update();
-        e->accept();
-        return;
+        used = true;
     }
-    if (e->delta() > 0) {
-        if (abs(mScale) < 0.3) {
-            mScale += 0.01;
-        } else {
-            mScale += 0.03;
-        }
-        makeCurrent();
-        resizeGL(width(), height());
-        doneCurrent();
-        update();
-        e->accept();
-        return;
-    }
-    e->ignore();
-    return;
+
+    // Space for future use of xDelta - depending on what that is the update
+    // may need to be moved out of the YDelta part
+    Q_UNUSED(xDelta)
+
+    e->setAccepted(used);
 }
