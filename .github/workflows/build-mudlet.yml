@@ -182,7 +182,8 @@ jobs:
         sudo apt install tree && tree ${{env.VCPKG_ROOT}}/installed/x64-linux/lib
         find ${{env.VCPKG_ROOT}} -name "*yajl*"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include" LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib;$LIBRARY_PATH"
+        LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib;$LIBRARY_PATH"
+        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
         luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/sqlite3"
         luarocks install --local luautf8
         luarocks install --local lua-zip
