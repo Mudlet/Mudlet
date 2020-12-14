@@ -4227,7 +4227,7 @@ void T2DMap::slot_setRoomWeight()
                                                           0,                                                                // int current = 0, last value in list
                                                           true,                                                             // bool editable = true
                                                           &isOk,                                                            // bool * ok = 0
-                                                          nullptr,                                                                // Qt::WindowFlags flags = 0
+                                                          Qt::WindowFlags(),                                                // Qt::WindowFlags flags = 0
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
