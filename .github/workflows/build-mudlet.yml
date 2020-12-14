@@ -208,7 +208,6 @@ jobs:
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
-        DEPLOY: deploy
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
