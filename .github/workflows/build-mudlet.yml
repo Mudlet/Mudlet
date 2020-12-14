@@ -177,7 +177,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) package Mudlet
-      if: matrix.deploy == 'true'
+      if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
         # works for Linux only atm
@@ -208,6 +208,7 @@ jobs:
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
