@@ -177,7 +177,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) package Mudlet
-      if: env.deploy == 'true' && (env.os == 'Linux' || runner.os == 'macOS')
+      if: matrix.deploy == 'true' && (env.os == 'Linux' || runner.os == 'macOS')
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
         # works for Linux only atm
