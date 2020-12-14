@@ -13,10 +13,25 @@ VNC_PASSWORD=${2:-"vscode"}
 INSTALL_NOVNC=${3:-"true"}
 
 PACKAGE_LIST="
-    xvfb \
-    x11vnc \
+    tigervnc-standalone-server \
+    tigervnc-common \
     fluxbox \
-    dbus-x11 \
+    dbus-x11 \#!/usr/bin/env bash
+#-------------------------------------------------------------------------------------------------------------
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License. See https://go.microsoft.com/fwlink/?linkid=2090316 for license information.
+#-------------------------------------------------------------------------------------------------------------
+#
+# Docs: https://github.com/microsoft/vscode-dev-containers/blob/master/script-library/docs/desktop-lite.md
+#
+# Syntax: ./desktop-lite-debian.sh [non-root user] [vnc password] [install no vnc flag]
+
+…    chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.Xmodmap /home/${USERNAME}/.fluxbox
+    chown ${USERNAME}:root /usr/local/share/desktop-init.sh /usr/local/bin/set-resolution /usr/local/etc/vscode-dev-containers/vnc-passwd
+fi
+
+echo "Done!"
+
     x11-utils \
     x11-xserver-utils \
     xdg-utils \
@@ -43,8 +58,6 @@ PACKAGE_LIST="
     fonts-noto \
     fonts-wqy-microhei \
     fonts-droid-fallback \
-    python-minimal \
-    python-numpy \
     htop \
     ncdu \
     curl \
@@ -110,6 +123,11 @@ if ! dpkg -s ${PACKAGE_LIST} > /dev/null 2>&1; then
     apt-get -y install --no-install-recommends ${PACKAGE_LIST}
 fi
 
+# Install Emoji font if available in distro - Available in Debian 10+, Ubuntu 18.04+
+if dpkg-query -W fonts-noto-color-emoji > /dev/null 2>&1 && ! dpkg -s fonts-noto-color-emoji > /dev/null 2>&1; then
+    apt-get -y install --no-install-recommends fonts-noto-color-emoji
+fi
+
 # Check at least one locale exists
 if ! grep -o -E '^\s*en_US.UTF-8\s+UTF-8' /etc/locale.gen > /dev/null; then
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen 
@@ -137,6 +155,23 @@ if [ "${INSTALL_NOVNC}" = "true" ] && [ ! -d "/usr/local/novnc" ]; then
     unzip /tmp/websockify-install.zip -d /usr/local/novnc
     ln -s /usr/local/novnc/websockify-${WEBSOCKETIFY_VERSION} /usr/local/novnc/noVNC-${NOVNC_VERSION}/utils/websockify
     rm -f /tmp/websockify-install.zip /tmp/novnc-install.zip
+
+    # noVNC works best with Python 2 right now. Install the right package and use it.
+    if  [[ -z $(apt-cache --names-only search '^python2-minimal$') ]]; then
+        NOVNC_PYTHON_PACKAGE="python-minimal"
+    else
+        NOVNC_PYTHON_PACKAGE="python2-minimal"
+    fi
+    # Distros all have python-numpy for python2 right now, but future proof
+    if [[ -z $(apt-cache --names-only search '^python2-numpy$') ]]; then
+        NOVNC_NUMPY_PACKAGE="python-numpy"
+    else
+        NOVNC_NUMPY_PACKAGE="python2-numpy"
+    fi
+    if ! dpkg -s ${NOVNC_PYTHON_PACKAGE} ${NOVNC_NUMPY_PACKAGE} > /dev/null 2>&1; then
+        apt-get -y install --no-install-recommends ${NOVNC_PYTHON_PACKAGE} ${NOVNC_NUMPY_PACKAGE}
+    fi
+    sed -i -E 's/^python /python2 /' /usr/local/novnc/websockify-${WEBSOCKETIFY_VERSION}/run
 fi 
 
 # Set up folders for scripts and init files
@@ -172,7 +207,7 @@ fi
 
 xrandr --fb \${RESOLUTION} --dpi \${DPI} > /dev/null 2>&1
 
-if [ \$? -ne 0 ] && [ IGNORE_ERROR != "true" ]; then 
+if [ \$? -ne 0 ] && [ "\${IGNORE_ERROR}" != "true" ]; then 
     echo -e "\nFAILED TO SET RESOLUTION!\n"
     exit 1
 fi
@@ -208,7 +243,7 @@ startInBackgroundIfNotRunning()
 # Keep command running in background
 keepRunningInBackground()
 {
-    (\$2 bash -li -c "while :; do echo [\\\$(date)] Process started.; \$3; echo [\\\$(date)] Process exited!; sleep 5; done 2>&1" | sudoIf tee -a /tmp/\$1.log > /dev/null & echo "\$!" | sudoIf tee /tmp/\$1.pid > /dev/null)
+    (\$2 bash -c "while :; do echo [\\\$(date)] Process started.; \$3; echo [\\\$(date)] Process exited!; sleep 5; done 2>&1" | sudoIf tee -a /tmp/\$1.log > /dev/null & echo "\$!" | sudoIf tee /tmp/\$1.pid > /dev/null)
 }
 
 # Use sudo to run as root when required
@@ -249,17 +284,13 @@ while ! pidof dbus-daemon > /dev/null; do
     sleep 1
 done
 
-# Set up Xvfb.
-startInBackgroundIfNotRunning "Xvfb" sudoIf "Xvfb \${DISPLAY:-:1} +extension RANDR -screen 0 \${MAX_VNC_RESOLUTION:-1920x1080x16}"
-
-# Start fluxbox as a light weight window manager.
-startInBackgroundIfNotRunning "fluxbox" sudoUserIf "dbus-launch startfluxbox"
-
-# Start x11vnc
-startInBackgroundIfNotRunning "x11vnc" sudoIf "x11vnc -display \${DISPLAY:-:1} -rfbport \${VNC_PORT:-5901} -localhost -no6 -xkb -shared -forever -passwdfile /usr/local/etc/vscode-dev-containers/vnc-passwd"
-
-# Set resolution
-/usr/local/bin/set-resolution \${VNC_RESOLUTION:-1440x768} \${VNC_DPI:-96} true
+# Startup tigervnc server and fluxbox
+sudo rm -rf /tmp/.X11-unix /tmp/.X*-lock
+mkdir -p /tmp/.X11-unix
+sudoIf chmod 1777 /tmp/.X11-unix
+sudoIf chown root:\${USERNAME} /tmp/.X11-unix
+if [ "\$(echo "\${VNC_RESOLUTION}" | tr -cd 'x' | wc -c)" = "1" ]; then VNC_RESOLUTION=\${VNC_RESOLUTION}x16; fi
+startInBackgroundIfNotRunning "Xtigervnc" sudoUserIf "tigervncserver -screen \${DISPLAY:-:1} \${VNC_RESOLUTION:-1440x768x16} -rfbport \${VNC_PORT:-5901} -dpi \${VNC_DPI:-96} -localhost -desktop fluxbox -fg -passwd /usr/local/etc/vscode-dev-containers/vnc-passwd"
 
 # Spin up noVNC if installed and not runnning.
 if [ -d "/usr/local/novnc" ] && [ "\$(ps -ef | grep /usr/local/novnc/noVNC*/utils/launch.sh | grep -v grep)" = "" ]; then
@@ -275,7 +306,7 @@ exec "\$@"
 log "** SCRIPT EXIT **"
 EOF
 
-echo "${VNC_PASSWORD}" > /usr/local/etc/vscode-dev-containers/vnc-passwd
+echo "${VNC_PASSWORD}" | vncpasswd -f > /usr/local/etc/vscode-dev-containers/vnc-passwd
 touch /root/.Xmodmap 
 chmod +x /usr/local/share/desktop-init.sh /usr/local/bin/set-resolution
 
