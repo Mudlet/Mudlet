@@ -13,7 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # oldest OS supported for maximum compatibility of built AppImage
+          - os: ubuntu-16.04
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
