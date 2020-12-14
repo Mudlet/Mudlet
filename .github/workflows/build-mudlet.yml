@@ -171,25 +171,24 @@ jobs:
         # works for Linux only atm
         lua -v
 
-        luarocks install --local LuaFileSystem
+        luarocks install LuaFileSystem
+        luarocks install luautf8
+        luarocks install lua-zip
+        luarocks install luautf8
+        luarocks install LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install lrexlib-pcre
 
-        luarocks install --local lrexlib-pcre
         # workaround https://github.com/lloyd/yajl/issues/209
         mv ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl.a
         mv ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
         export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
-        luarocks install --local luautf8
-        luarocks install --local lua-zip
-        luarocks install --local luautf8
-        find ${{env.VCPKG_ROOT}} -name "sqlite3.h"
-        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
 
         # CI changelog generation dependencies
-        luarocks install --local argparse
-        luarocks install --local lunajson
+        luarocks install argparse
+        luarocks install lunajson
 
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
