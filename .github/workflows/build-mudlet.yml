@@ -180,7 +180,7 @@ jobs:
 
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
         # works for Linux only atm
-        lua -v
+        # lua -v
 
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
