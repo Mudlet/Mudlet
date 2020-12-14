@@ -185,7 +185,7 @@ jobs:
         luarocks install --local lua-zip
         luarocks install --local luautf8
         find ${{env.VCPKG_ROOT}} -name "sqlite3.h"
-        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
 
         # CI changelog generation dependencies
         luarocks install --local argparse
