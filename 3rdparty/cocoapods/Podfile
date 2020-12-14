@@ -4,5 +4,6 @@ platform :osx, '10.7'
 project 'Empty'
 
 target 'Empty' do
-	pod 'Sparkle', '~> 1.18'
+	use_frameworks!
+	pod 'Sparkle', '~> 1.24'
 end
