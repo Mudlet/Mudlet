@@ -133,7 +133,7 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
         }                                                                                      \
         lua_tostring(_L, pos_);                                                                \
     })
-    
+
 #define CONSOLE_NIL(_L, _name)                                                                 \
     ({                                                                                         \
         auto name_ = (_name);                                                                  \
@@ -12531,6 +12531,55 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
+int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
+        return lua_error(L);
+    }
+    QString text{lua_tostring(L, n)};
+    auto pN = COMMANDLINE(L, name);
+    pN->addSuggestion(text);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineSuggestion
+int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
+        return lua_error(L);
+    }
+    QString text{lua_tostring(L, n)};
+    auto pN = COMMANDLINE(L, name);
+    pN->removeSuggestion(text);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineSuggestions
+int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n == 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pN = COMMANDLINE(L, name);
+    pN->clearSuggestions();
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
@@ -12541,8 +12590,8 @@ int TLuaInterpreter::installPackage(lua_State* L)
     QString location{lua_tostring(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.installPackage(location, 0);
-    return 0;
+    lua_pushboolean(L, host.installPackage(location, 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
@@ -16014,6 +16063,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile);
     lua_register(pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine);
     lua_register(pGlobalLua, "getCmdLine", TLuaInterpreter::getCmdLine);
+    lua_register(pGlobalLua, "addCmdLineSuggestion", TLuaInterpreter::addCmdLineSuggestion);
+    lua_register(pGlobalLua, "removeCmdLineSuggestion", TLuaInterpreter::removeCmdLineSuggestion);
+    lua_register(pGlobalLua, "clearCmdLineSuggestions", TLuaInterpreter::clearCmdLineSuggestions);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);

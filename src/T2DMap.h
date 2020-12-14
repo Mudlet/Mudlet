@@ -82,6 +82,11 @@ public:
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
     void addSymbolToPixmapCache(const QString, const bool);
+    void setPlayerRoomStyle(const int style);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // This is NOT used as a slot in newer versions
+    void switchArea(const QString& newAreaName);
+#endif
 
 
     TMap* mpMap;
@@ -162,7 +167,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    void setPlayerRoomStyle(const int style);
+
 
 public slots:
     void slot_roomSelectionChanged();
@@ -175,7 +180,10 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void slot_switchArea(const QString&);
+#if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
+    // This is ONLY used as a slot in older versions
+    void slot_switchArea(const QString& newAreaName);
+#endif
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();

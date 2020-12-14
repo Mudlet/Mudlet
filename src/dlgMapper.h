@@ -63,6 +63,10 @@ public slots:
     void slot_togglePanel();
     void slot_roomSize(int d);
     void slot_lineSize(int d);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // Only used in newer Qt versions
+    void slot_switchArea(const int);
+#endif
 
 private:
     TMap* mpMap;
