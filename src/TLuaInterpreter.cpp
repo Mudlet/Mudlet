@@ -12524,10 +12524,14 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
-    QString name {CMDLINE_NAME(L, 1)};
-    auto pN = COMMANDLINE(L, name);
-    QString curText = pN->toPlainText();
-    lua_pushstring(L, curText.toUtf8().constData());
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto commandline = COMMANDLINE(L, name);
+    QString text = commandline->toPlainText();
+    lua_pushstring(L, text.toUtf8().constData());
     return 1;
 }
 
