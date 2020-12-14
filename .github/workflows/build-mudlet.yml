@@ -93,6 +93,9 @@ jobs:
         sudo apt install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev
 
         # multiple versions of GCC available - update to latest
+
+        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
+        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
         update-alternatives --config gcc
         update-alternatives --config g++
 
