@@ -19,6 +19,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.1'
+            deploy: true
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -34,11 +35,13 @@ jobs:
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.1'
+            deploy: true
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
             qt: '5.14.1'
+            deploy: true
 
     steps:
     - name: Restore Qt cache
@@ -174,7 +177,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) package Mudlet
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+      if: env.deploy == 'true' && (env.os == 'Linux' || runner.os == 'macOS')
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
         # works for Linux only atm
