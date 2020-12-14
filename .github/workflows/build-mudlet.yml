@@ -174,21 +174,18 @@ jobs:
         luarocks install --local LuaFileSystem
 
         luarocks install --local lrexlib-pcre
-        # $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-        # exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
         # workaround https://github.com/lloyd/yajl/issues/209
         mv ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl.a
         mv ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl.a
-        sudo apt install tree && tree ${{env.VCPKG_ROOT}}/installed/x64-linux/lib
-        find ${{env.VCPKG_ROOT}} -name "*yajl*"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
         export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib:$LIBRARY_PATH"
-        echo "LIBRARY_PATH is $LIBRARY_PATH"
+        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
         luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
-        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include/sqlite3"
         luarocks install --local luautf8
         luarocks install --local lua-zip
         luarocks install --local luautf8
+        find ${{env.VCPKG_ROOT}} -name "sqlite3.h"
+        luarocks install --local LuaSQL-SQLite3 SQLITE_DIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
 
         # CI changelog generation dependencies
         luarocks install --local argparse
