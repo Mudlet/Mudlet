@@ -190,6 +190,8 @@ jobs:
         luarocks install --local argparse
         luarocks install --local lunajson
 
+        sudo apt-get install libssl-dev
+
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
