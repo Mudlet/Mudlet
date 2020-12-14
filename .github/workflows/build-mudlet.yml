@@ -89,19 +89,15 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
-        # Installing packages might fail as the github image becomes outdated
-        sudo apt update
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev
+        sudo apt-get install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev -y
 
-        # multiple versions of GCC available - update to latest
+        # multiple versions of GCC available in Actions - update to latest
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
         sudo update-alternatives --set gcc /usr/bin/gcc-9
         sudo update-alternatives --set g++ /usr/bin/g++-9
-        # update-alternatives --config gcc
-        # update-alternatives --config g++
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -179,6 +175,9 @@ jobs:
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'true'
       run: |
+        echo "find:"
+        find / -name "*libreadline*"
+
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
         # works for Linux only atm
         lua -v
