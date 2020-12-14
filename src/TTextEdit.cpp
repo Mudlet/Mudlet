@@ -1715,7 +1715,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
 {
     // Make the speed up be half of the (upper pane) lines - need to round it so
     // that a decimal part does not make the end +/- value for up/down different
-    // in magitude:
+    // in magnitude:
     double ySpeedUp = qRound(mpConsole->mUpperPane->getScreenHeight() / 2.0);
     // Just a number plucked out of the air for the x-direction:
     double xSpeedUp = 10.0;
@@ -1733,18 +1733,6 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     int yDelta = qRound(delta.y() / 15.0);
     // Store the (rounded) remainder
     mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
-
-    qDebug().noquote().nospace() << "TTextEdit::wheelEvent(...) INFO - in \""
-                                 << mpConsole->mConsoleName
-                                 << "\" movement of ("
-                                 << xDelta
-                                 << ", "
-                                 << yDelta
-                                 << ") steps leaving a remainder of ("
-                                 << mMouseWheelRemainder.x()
-                                 << ", "
-                                 << mMouseWheelRemainder.y()
-                                 << ") degrees.";
 
     bool used = false;
     if (yDelta > 0) {
