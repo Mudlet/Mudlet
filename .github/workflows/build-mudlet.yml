@@ -174,7 +174,8 @@ jobs:
         luarocks install --local LuaFileSystem
 
         luarocks install --local lrexlib-pcre
-        sudo apt install tree && tree ${{env.VCPKG_ROOT}}/installed/x64-linux/include
+        # sudo apt install tree && tree ${{env.VCPKG_ROOT}}/installed/x64-linux/include
+        find ${{env.VCPKG_ROOT}} -name "libyajl*"
         # $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
         # exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
