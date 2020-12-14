@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,8 +32,7 @@
 static jmp_buf buf;
 
 LuaInterface::LuaInterface(Host* pH)
-: mpHost(pH)
-, mHostID(pH->getHostID())
+: mHostID(pH->getHostID())
 , depth()
 , interpreter(pH->getLuaInterpreter())
 , L()

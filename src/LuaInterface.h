@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -44,7 +45,7 @@ class QTreeWidgetItem;
 class LuaInterface
 {
 public:
-    LuaInterface(Host*);
+    explicit LuaInterface(Host*);
     ~LuaInterface();
     void iterateTable(lua_State*, int, TVar*, bool);
     void getVars(bool);
@@ -68,7 +69,6 @@ public:
     static int onPanic(lua_State*);
 
 private:
-    Host* mpHost;
     int mHostID;
     int depth;
     TLuaInterpreter* interpreter;

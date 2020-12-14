@@ -54,7 +54,6 @@ XMLimport::XMLimport(Host* pH)
 , gotScript(false)
 , module(0)
 , mMaxRoomId(0)
-, mMaxAreaId(-1)
 , mVersionMajor(1) // 0 to 255
 , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
