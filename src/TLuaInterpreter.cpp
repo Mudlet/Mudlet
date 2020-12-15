@@ -17988,8 +17988,6 @@ int TLuaInterpreter::prompt(lua_State *L)
     auto *dialog = new QInputDialog(mudlet::self(), Qt::Dialog);
     dialog->setWindowTitle(lua_tostring(L, 1));
     dialog->setLabelText(lua_tostring(L, 2));
-    dialog->setOkButtonText(tr("OK"));
-    dialog->setCancelButtonText(tr("Cancel"));
     dialog->setFixedSize(mudlet::self()->width() / 3, 70);
 
     if (lua_istable(L, 4)) {
@@ -18008,11 +18006,12 @@ int TLuaInterpreter::prompt(lua_State *L)
     lua_pushvalue(L, 3);
     int callback = lua_ref(L, LUA_REGISTRYINDEX);
 
-    connect(dialog, &QDialog::accepted, [=]() {
+    connect(dialog, &QDialog::finished, [=](int result) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+        lua_pushboolean(L, result);
         lua_pushstring(L, dialog->textValue().toUtf8());
-        int error = lua_pcall(L, 1, 0, 0);
-        if (error != 0) {
+        int error = lua_pcall(L, 2, 0, 0);
+        if (error) {
             Host& host = getHostFromLua(L);
             int nbpossible_errors = lua_gettop(L);
             for (int i = 1; i <= nbpossible_errors; i++) {
