@@ -52,7 +52,8 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
   if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
-    echo "INSTALLER BUILT!"
+    echo "INSTALLER BUILT! BUILD_DIR: $BUILD_DIR"
+    find / -name "${VERSION}${MUDLET_VERSION_BUILD}"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
