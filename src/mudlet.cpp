@@ -4661,6 +4661,7 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 
 void mudlet::setupTrayIcon()
 {
+    mTrayIcon.setIcon(windowIcon());
     auto menu = new QMenu(this);
     auto exitAction = new QAction(tr("Exit"), this);
     connect(exitAction, &QAction::triggered, this, &mudlet::close);

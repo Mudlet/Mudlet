@@ -386,7 +386,7 @@ public:
     QTextOption::Flags mEditorTextOptions;
 
     QPointer<QTableWidget> moduleTable;
-    QSystemTrayIcon mTrayIcon = QSystemTrayIcon(QIcon(":/icons/mudlet.png"));
+    QSystemTrayIcon mTrayIcon;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
