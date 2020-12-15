@@ -638,9 +638,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
-     // do nothing for SubConsole or UserWindows
-    } else if (mType & (!SubConsole|!UserWindow)) {
-        //layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
+    } else if (mType & ~(SubConsole|UserWindow)) {
+        // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
