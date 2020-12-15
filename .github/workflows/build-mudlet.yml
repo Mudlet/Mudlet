@@ -206,6 +206,9 @@ jobs:
         luarocks install --local argparse
         luarocks install --local lunajson
 
+        # necessary for Qt multimedia
+        sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
