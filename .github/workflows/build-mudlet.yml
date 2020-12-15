@@ -195,7 +195,6 @@ jobs:
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
         luarocks install --local lua-zip
-        luarocks install --local luautf8
         luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
         luarocks install --local lrexlib-pcre
 
