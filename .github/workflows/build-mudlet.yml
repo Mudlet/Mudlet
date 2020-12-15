@@ -30,7 +30,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.11.0'
-          - os: macos-latest
+          - os: macos-10.15
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
@@ -81,7 +81,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache
+        brew install pkg-config libzzip libzip ccache luarocks
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -181,7 +181,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
     - name: (Linux) package Mudlet
-      if: runner.os == 'Linux' && matrix.deploy == 'deploy'
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
 
@@ -205,7 +205,9 @@ jobs:
         luarocks install --local lunajson
 
         # necessary for Qt multimedia
-        sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+        fi
 
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
