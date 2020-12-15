@@ -64,7 +64,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     else
       echo "=== ... later, via Github ==="
       {
-        echo "FOLDER_TO_UPLOAD=/home/runner/work/Mudlet/b/installers/generic-linux/Mudlet-4.10.1-testing-pr4446-8becb8bd-github.AppImage.tar"
+        echo "FOLDER_TO_UPLOAD=$(pwd)/Mudlet-4.10.1-testing-pr4446-8becb8bd-github.AppImage.tar"
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
