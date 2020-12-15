@@ -54,6 +54,7 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QTableWidget>
 #include <QFileInfo>
 #include <QVector>
@@ -16241,6 +16242,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
+    lua_register(pGlobalLua, "prompt", TLuaInterpreter::prompt);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17922,4 +17924,76 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#prompt
+int TLuaInterpreter::prompt(lua_State *L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "prompt: bad argument #1 type (dialog title as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "prompt: bad argument #2 type (dialog label as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    if (!lua_isfunction(L, 3)) {
+        lua_pushfstring(L, "prompt: bad argument #3 type (callback as function expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+
+    if (lua_gettop(L) >= 4 && !lua_istable(L, 4)) {
+        lua_pushfstring(L, "prompt: bad argument #4 type (option list as table expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    }
+
+    auto *dialog = new QInputDialog(mudlet::self(), Qt::Dialog);
+    dialog->setWindowTitle(lua_tostring(L, 1));
+    dialog->setLabelText(lua_tostring(L, 2));
+    dialog->setOkButtonText(tr("OK"));
+    dialog->setCancelButtonText(tr("Cancel"));
+    dialog->setFixedSize(mudlet::self()->width() / 3, 70);
+
+    if (lua_istable(L, 4)) {
+        QStringList options;
+        lua_pushnil(L);
+        while (lua_next(L, 4) != 0) {
+            if (lua_type(L, -1) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                options << cmd;
+            }
+            lua_pop(L, 1);
+        }
+        dialog->setComboBoxItems(options);
+    }
+
+    lua_pushvalue(L, 3);
+    int callback = lua_ref(L, LUA_REGISTRYINDEX);
+
+    connect(dialog, &QDialog::accepted, [=]() {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+        lua_pushstring(L, dialog->textValue().toUtf8());
+        int error = lua_pcall(L, 1, 0, 0);
+        if (error != 0) {
+            Host& host = getHostFromLua(L);
+            int nbpossible_errors = lua_gettop(L);
+            for (int i = 1; i <= nbpossible_errors; i++) {
+                if (lua_isstring(L, i)) {
+                    std::string e = "Lua error:";
+                    e += lua_tostring(L, i);
+                    QString name = "error in anonymous Lua function";
+                    QString function = "no debug data available";
+                    host.getLuaInterpreter()->logError(e, name, function);
+                    if (mudlet::debugMode) {
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> 0;
+                    }
+                }
+            }
+        }
+    });
+
+    dialog->show();
+    return 0;
 }
