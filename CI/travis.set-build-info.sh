@@ -43,11 +43,6 @@ elif [ -n "$GITHUB_REPOSITORY" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${GITHUB_WORKSPACE}/CMakeLists.txt")
 fi
 
-# temporary - distinguish github-built-ones
-if [ -n "$GITHUB_REPOSITORY" ]; then
-  MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-github"
-fi
-
 # not all systems we deal with allow uppercase ascii characters
 MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
 VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
