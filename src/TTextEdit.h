@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2018, 2020 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -29,9 +30,9 @@
 #include "TBuffer.h"
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
-#include <QTime>
 #include <QWidget>
 #include <chrono>
 #include "post_guard.h"
@@ -175,7 +176,7 @@ private:
     int mScreenWidth;
     int mScreenOffset;
     int mMaxHRange;
-    QTime mLastClickTimer;
+    QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
