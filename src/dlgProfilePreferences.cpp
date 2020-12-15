@@ -2522,8 +2522,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (newIrcNick.isEmpty()) {
-            qsrand(QTime::currentTime().msec());
-            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
         }
 
         if (!newIrcChannels.isEmpty()) {
