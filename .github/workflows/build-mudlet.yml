@@ -172,7 +172,7 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: (Linux/macOS) restore Luarocks
+    - name: (Linux/macOS) restore Luarocks for packaging
       uses: actions/cache@v2
       with:
         path: $HOME/.luarocks
