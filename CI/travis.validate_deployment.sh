@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "${TRAVIS_TAG}" ]; then
+if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
   echo "Not a release build - skipping release validation."
   # don't use exit here:
   # https://docs.travis-ci.com/user/job-lifecycle#how-does-this-work-or-why-you-should-not-use-exit-in-build-steps
