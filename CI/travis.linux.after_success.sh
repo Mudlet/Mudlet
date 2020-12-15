@@ -55,7 +55,6 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     cd "${BUILD_DIR}/../installers/generic-linux"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
-
     tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
     if [ -n "$TRAVIS_REPO_SLUG" ]; then
@@ -63,8 +62,11 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
                     "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
     else
       echo "=== ... later, via Github ==="
+      # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
+      mkdir "upload/"
+      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
       {
-        echo "FOLDER_TO_UPLOAD=$(pwd)"
+        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
