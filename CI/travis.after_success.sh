@@ -10,6 +10,8 @@ fi
 if [ "${TRAVIS_OS_NAME}" = "linux" ] || [ "${RUNNER_OS}" = "Linux" ]; then
   echo Deploy on Linux.
   . CI/travis.linux.after_success.sh;
+  echo $?
+  echo "^ worked?"
 elif [ "${TRAVIS_OS_NAME}" = "osx" ]  || [ "${RUNNER_OS}" = "macOS" ]; then
   echo Deploy on macOS.
   . CI/travis.osx.after_success.sh;

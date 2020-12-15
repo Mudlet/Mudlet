@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+# set -e
 set -x
 
 [ -n "$TRAVIS_REPO_SLUG" ] && BUILD_DIR="${TRAVIS_BUILD_DIR}" || BUILD_DIR="${BUILD_FOLDER}"
@@ -52,6 +52,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
   if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
+    echo "INSTALLER BUILT!"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 

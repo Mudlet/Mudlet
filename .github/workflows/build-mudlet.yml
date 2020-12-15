@@ -19,7 +19,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.1'
-            deploy: 'true'
+            deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -35,13 +35,13 @@ jobs:
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.1'
-            deploy: 'true'
+            deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
             qt: '5.14.1'
-            deploy: 'true'
+            deploy: 'deploy'
 
     steps:
     - name: Restore Qt cache
