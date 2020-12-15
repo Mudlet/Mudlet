@@ -183,22 +183,22 @@ jobs:
     - name: (Linux) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
-        export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
+        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
         luarocks install --local lua-zip
         luarocks install --local luautf8
-        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
         luarocks install --local lrexlib-pcre
 
         # workaround https://github.com/lloyd/yajl/issues/209
-        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl.a
-        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl.a
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib:$LIBRARY_PATH"
+        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
 
         # CI changelog generation dependencies
         luarocks install --local argparse
