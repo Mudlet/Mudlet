@@ -4663,6 +4663,11 @@ void mudlet::setupTrayIcon()
 {
     mTrayIcon.setIcon(windowIcon());
     auto menu = new QMenu(this);
+    auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
+    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+       mTrayIcon.hide();
+    });
+    menu->addAction(hideTrayAction);
     auto exitAction = new QAction(tr("Exit"), this);
     connect(exitAction, &QAction::triggered, this, &mudlet::close);
     menu->addAction(exitAction);
