@@ -172,6 +172,14 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+    - name: (Linux/macOS) restore Luarocks
+      uses: actions/cache@v2
+      with:
+        path: $HOME/.luarocks
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
