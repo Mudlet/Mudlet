@@ -192,6 +192,7 @@ jobs:
         fi
 
         luarocks --help
+        luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --help
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
         luarocks install --local lua-zip
