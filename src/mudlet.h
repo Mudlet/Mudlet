@@ -48,6 +48,7 @@
 #include <QMap>
 #include <QPointer>
 #include <QSettings>
+#include <QSystemTrayIcon>
 #include <QTextOption>
 #include <QTime>
 #include <QVersionNumber>
@@ -79,6 +80,7 @@
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #endif
 
 class QAction;
@@ -384,6 +386,7 @@ public:
     QTextOption::Flags mEditorTextOptions;
 
     QPointer<QTableWidget> moduleTable;
+    QSystemTrayIcon mTrayIcon;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -532,6 +535,7 @@ private:
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
+    void setupTrayIcon();
 
     QWidget* mainPane;
 
