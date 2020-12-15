@@ -48,6 +48,7 @@
 #include "glwidget.h"
 #endif
 
+#include "math.h"
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
@@ -12525,10 +12526,14 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
-    QString name {CMDLINE_NAME(L, 1)};
-    auto pN = COMMANDLINE(L, name);
-    QString curText = pN->toPlainText();
-    lua_pushstring(L, curText.toUtf8().constData());
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto commandline = COMMANDLINE(L, name);
+    QString text = commandline->toPlainText();
+    lua_pushstring(L, text.toUtf8().constData());
     return 1;
 }
 
@@ -16242,6 +16247,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
+    lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     lua_register(pGlobalLua, "prompt", TLuaInterpreter::prompt);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
@@ -17924,6 +17930,36 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showNotification
+int TLuaInterpreter::showNotification(lua_State* L)
+{
+    int n = lua_gettop(L);
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "showNotification: bad argument #1 type (%s as string expected, got %s!)", n >= 2 ? "title" : "message" , luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n >= 2 && !lua_isstring(L, 2)) {
+        lua_pushfstring(L, "showNotification: bad argument #2 type (message as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int notificationExpirationTime = 1;
+    if (n >= 3 && !lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "showNotification: bad argument #3 type (expiration time in seconds as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else if (lua_isnumber(L, 3)) {
+        notificationExpirationTime = qMax(qRound(lua_tonumber(L, 3) / 1000), 1);
+    }
+
+    QString text{lua_tostring(L, 1)};
+    QString title{lua_tostring(L, 1)};
+    if (lua_isstring(L, 2)) {
+        text = lua_tostring(L, 2);
+    }
+    mudlet::self()->mTrayIcon.show();
+    mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#prompt

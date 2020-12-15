@@ -13,11 +13,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # oldest OS supported for maximum compatibility of built AppImage
+          - os: ubuntu-16.04
             buildname: 'ubuntu / gcc'
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.14.1'
+            deploy: 'deploy'
           - os: ubuntu-latest
             buildname: 'ubuntu / clang'
             triplet: x64-linux
@@ -33,11 +35,13 @@ jobs:
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.1'
+            deploy: 'deploy'
           - os: windows-2019
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
             qt: '5.14.1'
+            deploy: 'deploy'
 
     steps:
     - name: Restore Qt cache
@@ -85,10 +89,15 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
-        # Installing packages might fail as the github image becomes outdated
-        sudo apt update
-        # These aren't available or don't work well in vcpkg
-        sudo apt install ccache pkg-config libzip-dev libglu1-mesa-dev libpulse-dev
+        # Install from vcpkg everything we can for cross-platform consistency
+        # If not available, use other methods
+        sudo apt-get install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev -y
+
+        # multiple versions of GCC available in Actions - update to latest
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
+        sudo update-alternatives --set gcc /usr/bin/gcc-9
+        sudo update-alternatives --set g++ /usr/bin/g++-9
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -137,6 +146,12 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
       if: matrix.os != 'windows-latest'
 
+    - name: (Linux/macOS) Set build info
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -156,6 +171,53 @@ jobs:
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
+
+    - name: (Linux/macOS) restore Luarocks for packaging
+      uses: actions/cache@v2
+      with:
+        path: $HOME/.luarocks
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+
+    - name: (Linux) package Mudlet
+      if: runner.os == 'Linux' && matrix.deploy == 'deploy'
+      run: |
+        export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
+
+        luarocks install --local LuaFileSystem
+        luarocks install --local luautf8
+        luarocks install --local lua-zip
+        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        luarocks install --local lrexlib-pcre
+
+        # workaround https://github.com/lloyd/yajl/issues/209
+        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl.a
+        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl.a
+        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
+        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib:$LIBRARY_PATH"
+        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+
+        # CI changelog generation dependencies
+        luarocks install --local argparse
+        luarocks install --local lunajson
+
+        # necessary for Qt multimedia
+        sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+
+        ${{github.workspace}}/CI/travis.after_success.sh
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+
+    - name: Upload packaged Mudlet
+      uses: actions/upload-artifact@v2
+      if: env.FOLDER_TO_UPLOAD
+      with:
+        name: ${{env.UPLOAD_FILENAME}}
+        path: ${{env.FOLDER_TO_UPLOAD}}
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
