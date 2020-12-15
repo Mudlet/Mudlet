@@ -212,6 +212,13 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
+    - name: Upload packaged Mudlet
+      uses: actions/upload-artifact@v2
+      if: env.FOLDER_TO_UPLOAD
+      with:
+        name: ${{env.UPLOAD_FILENAME}}
+        path: ${{env.FOLDER_TO_UPLOAD}}
+
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
       run: |
