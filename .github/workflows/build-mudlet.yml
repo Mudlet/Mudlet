@@ -187,9 +187,11 @@ jobs:
         lua -v
 
         if [ "${RUNNER_OS}" = "macOS" ]; then
+          echo "Aliasing..."
           alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
         fi
 
+        luarocks --help
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
         luarocks install --local lua-zip
