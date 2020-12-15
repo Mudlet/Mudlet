@@ -184,6 +184,11 @@ jobs:
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        lua -v
+
+        if [ "${RUNNER_OS}" = "macOS" ]; then
+          alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
+        fi
 
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
