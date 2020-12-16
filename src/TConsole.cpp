@@ -2020,7 +2020,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     switch (event->button()) {
     case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
     case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
-    case Qt::MidButton:     mudletEvent.mArgumentList.append(QString::number(3));   break;
+    case Qt::MiddleButton:  mudletEvent.mArgumentList.append(QString::number(3));   break;
     case Qt::BackButton:    mudletEvent.mArgumentList.append(QString::number(4));   break;
     case Qt::ForwardButton: mudletEvent.mArgumentList.append(QString::number(5));   break;
     case Qt::TaskButton:    mudletEvent.mArgumentList.append(QString::number(6));   break;
