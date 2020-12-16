@@ -615,7 +615,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            auto result = readPackage();
+            readPackage();
         }
     }
 }
