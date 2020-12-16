@@ -87,21 +87,21 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
-    connect(shiftZup, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZup);
-    connect(shiftZdown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZdown);
-    connect(shiftLeft, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftLeft);
-    connect(shiftRight, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftRight);
-    connect(shiftUp, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftUp);
-    connect(shiftDown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftDown);
+    connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
+    connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
+    connect(shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftLeft);
+    connect(shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftRight);
+    connect(shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftUp);
+    connect(shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftDown);
     connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
     connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
-    connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
+    connect(togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     connect(showArea, qOverload<int>(&QComboBox::activated), this, &dlgMapper::slot_switchArea);
 #else
     connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
 #endif
-    connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
+    connect(dim2, &QAbstractButton::clicked, this, &dlgMapper::show2dView);
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     connect(showRoomNames, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomNames);
 
@@ -219,22 +219,22 @@ void dlgMapper::show2dView()
 
         glWidget->mpMap = mpMap;
         mpMap->mpM = mpMap->mpMapper->glWidget;
-        connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
-        connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
-        connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
-        connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
-        connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
-        connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
-        connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
-        connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
-        connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
-        connect(shiftRight, &QAbstractButton::pressed, glWidget, &GLWidget::shiftRight);
-        connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
-        connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
+        connect(ortho, &QAbstractButton::clicked, glWidget, &GLWidget::fullView);
+        connect(singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::singleView);
+        connect(increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::increaseTop);
+        connect(increaseBottom, &QAbstractButton::clicked, glWidget, &GLWidget::increaseBottom);
+        connect(reduceTop, &QAbstractButton::clicked, glWidget, &GLWidget::reduceTop);
+        connect(reduceBottom, &QAbstractButton::clicked, glWidget, &GLWidget::reduceBottom);
+        connect(shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::shiftZup);
+        connect(shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftZdown);
+        connect(shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::shiftLeft);
+        connect(shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::shiftRight);
+        connect(shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::shiftUp);
+        connect(shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftDown);
         connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
-        connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
-        connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
-        connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
+        connect(defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::defaultView);
+        connect(sideView, &QAbstractButton::clicked, glWidget, &GLWidget::sideView);
+        connect(topView, &QAbstractButton::clicked, glWidget, &GLWidget::topView);
         connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
         connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
         connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);

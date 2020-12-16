@@ -388,7 +388,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     replayButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Record a replay.")));
     replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
-    connect(replayButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleReplayRecording);
+    connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -402,7 +402,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
     logButton->setIcon(logIcon);
-    connect(logButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleLogging);
+    connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
     mpLineEdit_networkLatency->setReadOnly(true);
     mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);

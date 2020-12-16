@@ -702,8 +702,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
-    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
-    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
+    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -800,8 +800,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pBox->setItemIcon(6, icon_color_trigger);
         pBox->setItemIcon(7, icon_prompt);
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
-        connect(pItem->pushButton_fgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_fg);
-        connect(pItem->pushButton_bgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_bg);
+        connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_fg);
+        connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_bg);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
