@@ -3209,7 +3209,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     while (itUsedSymbol.hasNext()) {
         itUsedSymbol.next();
         QString symbol = itUsedSymbol.key();
-        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().values();
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
         }
