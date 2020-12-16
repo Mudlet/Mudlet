@@ -931,12 +931,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         } else {
             ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
             ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
-            ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+            ssl_expires_label->setText(cert.expiryDate().toString(mudlet::self()->getUserLocale().dateFormat(QLocale::ShortFormat)));
             ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-            checkBox_self_signed->setStyleSheet("");
-            checkBox_expired->setStyleSheet("");
-            ssl_issuer_label->setStyleSheet("");
-            ssl_expires_label->setStyleSheet("");
+            checkBox_self_signed->setStyleSheet(QString());
+            checkBox_expired->setStyleSheet(QString());
+            ssl_issuer_label->setStyleSheet(QString());
+            ssl_expires_label->setStyleSheet(QString());
 
             if (!pHost->mTelnet.getSslErrors().empty()) {
                 // handle ssl errors
