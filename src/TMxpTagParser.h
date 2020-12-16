@@ -1,9 +1,9 @@
-
 #ifndef MUDLET_TMXPTAGPARSER_H
 #define MUDLET_TMXPTAGPARSER_H
 
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,10 +32,10 @@
 
 class TMxpTagParser
 {
-    static int readTextBlock(QStringView str, int start, int end, QChar terminatingChar);
+    static int readTextBlock(QStringView str, const int start, const int end, const QChar terminatingChar);
 
 public:
-    static QStringList parseToList(QStringView tagText);
+    static QStringList parseToList(const QStringView tagText);
     static QStringList parseToList(const QString& tagText);
 
     QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false) const;
