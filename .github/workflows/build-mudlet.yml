@@ -218,6 +218,12 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
+        
+    - name: Submit to make.mudlet.org
+      if: env.FOLDER_TO_UPLOAD
+      run: |
+        curl --silent https://api.github.com/repos/Mudlet/Mudlet/actions/runs/$GITHUB_RUN_ID/artifacts | jq '.artifacts[] | select(.name | endswith("${{matrix.triplet}}")).archive_download_url'
+      shell: bash
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
