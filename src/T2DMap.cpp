@@ -4697,7 +4697,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     // to use "globalPos()" instead and see how it lies in relation to the child
     // widget:
     QRect selectionListWidgetGlobalRect = QRect(mapToGlobal(mMultiSelectionListWidget.frameRect().topLeft()), mapToGlobal(mMultiSelectionListWidget.frameRect().bottomRight()));
-    if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPos())) {
+    if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPosition().toPoint())) {
         e->accept();
         return;
     }
