@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,6 +29,7 @@
 #include <QJsonObject>
 #include <QMediaPlaylist>
 #include <QNetworkDiskCache>
+#include <QRandomGenerator>
 #include <QStandardPaths>
 #include "post_guard.h"
 
@@ -763,7 +764,7 @@ void TMedia::play(TMediaData& mediaData)
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         if (fileNameList.size() > 1) {
-            absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+            absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
         } else {
             absolutePathFileName = fileNameList.at(0);
         }
@@ -782,7 +783,7 @@ void TMedia::play(TMediaData& mediaData)
 
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
-                absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+                absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
             } else {
                 absolutePathFileName = fileNameList.at(0);
             }
@@ -804,7 +805,7 @@ void TMedia::play(TMediaData& mediaData)
 
             for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
-                    absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+                    absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
                 } else {
                     absolutePathFileName = fileNameList.at(0);
                 }
