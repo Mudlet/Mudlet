@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -82,10 +82,19 @@ public:
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
-    TChar();
+    // Default constructor - the default argument means it can be used with no
+    // supplied arguments, but it must NOT be marked 'explicit' so as to allow
+    // this:
+    TChar(Host* pH = nullptr);
+    // A non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
-    TChar(Host*);
+    // User defined copy-constructor:
     TChar(const TChar&);
+    // Under the rule of three, because we have a user defined copy-constructor,
+    // we should also have a destructor and an assignment operator but they can,
+    // in this case, be default ones:
+    TChar& operator=(const TChar&) = default;
+    ~TChar() = default;
 
     bool operator==(const TChar&);
     void setColors(const QColor& newForeGroundColor, const QColor& newBackGroundColor) {
