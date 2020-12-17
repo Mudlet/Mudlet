@@ -651,18 +651,19 @@ function doNestEnter(label)
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
+  
+  if not label.nestParent then
+    closeAllLevels(label)
+  else
+    closeNeighbourChildren(label)
+  end
 
   if window.flyOut and window and window.nestedLabels then
-    if not label.nestParent then
-      closeAllLevels(label)
-    else
-      closeNeighbourChildren(label)
-    end
-    --echo("entering window"..window.name.."\n")
-    --Geyser.display(window)
+    label:displayNest()
+  end
+  --echo("entering window"..window.name.."\n")
+  --Geyser.display(window)
 
-      label:displayNest()
-    end
 end
 
 --- Internal function when a nested element is left
