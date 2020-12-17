@@ -218,10 +218,11 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
-        
+
     - name: Submit to make.mudlet.org
       if: env.FOLDER_TO_UPLOAD
       run: |
+        curl "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts"
         curl --silent "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts" | jq '.artifacts[] | select(.name | endswith("${{matrix.triplet}}")).archive_download_url'
       shell: bash
 
