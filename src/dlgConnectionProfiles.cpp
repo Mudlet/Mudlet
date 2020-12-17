@@ -32,6 +32,7 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QRandomGenerator>
 #include <QSettings>
 #include <sstream>
 #include "post_guard.h"
@@ -1511,7 +1512,7 @@ void dlgConnectionProfiles::fillout_form()
         // make sure not to select the test_profile though
         if (profiles_tree_widget->count() > 1) {
             while (toselectRow == -1 || toselectRow == test_profile_row) {
-                toselectRow = qrand() % profiles_tree_widget->count();
+                toselectRow = QRandomGenerator::global()->bounded(profiles_tree_widget->count());
             }
         }
     }

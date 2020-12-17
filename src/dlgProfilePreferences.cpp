@@ -245,7 +245,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
-    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+    connect(closeButton, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(pMudlet, &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
     connect(pMudlet, &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
     // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
@@ -931,12 +931,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         } else {
             ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
             ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
-            ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+            ssl_expires_label->setText(cert.expiryDate().toString(mudlet::self()->getUserLocale().dateFormat(QLocale::ShortFormat)));
             ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-            checkBox_self_signed->setStyleSheet("");
-            checkBox_expired->setStyleSheet("");
-            ssl_issuer_label->setStyleSheet("");
-            ssl_expires_label->setStyleSheet("");
+            checkBox_self_signed->setStyleSheet(QString());
+            checkBox_expired->setStyleSheet(QString());
+            ssl_issuer_label->setStyleSheet(QString());
+            ssl_expires_label->setStyleSheet(QString());
 
             if (!pHost->mTelnet.getSslErrors().empty()) {
                 // handle ssl errors
@@ -2522,8 +2522,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (newIrcNick.isEmpty()) {
-            qsrand(QTime::currentTime().msec());
-            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
         }
 
         if (!newIrcChannels.isEmpty()) {
@@ -2949,13 +2948,17 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     // github uses redirects
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+#else
+    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#endif
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
         QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
             label->hide();
@@ -3209,7 +3212,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     while (itUsedSymbol.hasNext()) {
         itUsedSymbol.next();
         QString symbol = itUsedSymbol.key();
-        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().values();
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
         }

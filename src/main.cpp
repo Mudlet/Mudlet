@@ -333,9 +333,6 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    // seed random number generator (should be done once per lifetime)
-    qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
-
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
     bool first_launch = false;
