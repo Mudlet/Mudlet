@@ -1,6 +1,10 @@
 #!/bin/bash
 
-set -e
+# set -e
+set -x
+
+[ -n "$TRAVIS_REPO_SLUG" ] && BUILD_DIR="${TRAVIS_BUILD_DIR}" || BUILD_DIR="${BUILD_FOLDER}"
+[ -n "$TRAVIS_REPO_SLUG" ] && SOURCE_DIR="${TRAVIS_BUILD_DIR}" || SOURCE_DIR="${GITHUB_WORKSPACE}"
 
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
@@ -32,29 +36,41 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     exit
   fi
 
-  # get commit date now before we check out an change into another git repository
+  # get commit date now before we check out and change into another git repository
   COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
   YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
-  cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
+  cd "${BUILD_DIR}/../installers/generic-linux"
 
-  ln -s "${TRAVIS_BUILD_DIR}" source
+  ln -s "${BUILD_DIR}" source
 
   # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
   export LD_LIBRARY_PATH=
 
-  if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then
+  if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
+    cd "${BUILD_DIR}/../installers/generic-linux"
 
     chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
-
     tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
-    DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
-                   "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
+    if [ -n "$TRAVIS_REPO_SLUG" ]; then
+      DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
+                    "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
+    else
+      echo "=== ... later, via Github ==="
+      # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
+      mkdir "upload/"
+      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
+      {
+        echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+        echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
+      } >> "$GITHUB_ENV"
+      DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
+    fi
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
 
@@ -73,7 +89,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     # the two "undefined" variables are defined by travis
     if [ "${public_test_build}" != "true" ]; then
       echo "=== Registering Mudlet SSH keys for release upload ==="
-      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${TRAVIS_BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
+      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
       eval "$(ssh-agent -s)"
       chmod 600 /tmp/mudlet-deploy-key
       ssh-add /tmp/mudlet-deploy-key
@@ -118,8 +134,8 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
-      cd "${TRAVIS_BUILD_DIR}"
-      changelog=$(lua "${TRAVIS_BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+      cd "${BUILD_DIR}"
+      changelog=$(lua "${BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
@@ -137,7 +153,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       # get the archive script
       wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
 
-      cd "${TRAVIS_BUILD_DIR}"
+      cd "${BUILD_DIR}"
       # generate and upload the tarball
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"

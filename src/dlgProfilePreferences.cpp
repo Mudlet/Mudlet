@@ -245,7 +245,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
-    connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
+    connect(closeButton, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_save_and_exit);
     connect(pMudlet, &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
     connect(pMudlet, &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
     // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
@@ -531,6 +531,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+    checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -930,12 +931,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         } else {
             ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
             ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
-            ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+            ssl_expires_label->setText(cert.expiryDate().toString(mudlet::self()->getUserLocale().dateFormat(QLocale::ShortFormat)));
             ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-            checkBox_self_signed->setStyleSheet("");
-            checkBox_expired->setStyleSheet("");
-            ssl_issuer_label->setStyleSheet("");
-            ssl_expires_label->setStyleSheet("");
+            checkBox_self_signed->setStyleSheet(QString());
+            checkBox_expired->setStyleSheet(QString());
+            ssl_issuer_label->setStyleSheet(QString());
+            ssl_expires_label->setStyleSheet(QString());
 
             if (!pHost->mTelnet.getSslErrors().empty()) {
                 // handle ssl errors
@@ -1062,6 +1063,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
+    connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1144,6 +1146,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(pushButton_foreground_color_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1181,6 +1184,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
+    checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -1426,6 +1430,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mFgColor_2.name()));
         pushButton_background_color_2->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mBgColor_2.name()));
+        pushButton_roomBorderColor->setStyleSheet(QStringLiteral("QPushButton{background-color: %1;}").arg(pHost->mRoomBorderColor.name()));
     } else {
         pushButton_black_2->setStyleSheet(QString());
         pushButton_Lblack_2->setStyleSheet(QString());
@@ -1446,6 +1451,7 @@ void dlgProfilePreferences::setColors2()
 
         pushButton_foreground_color_2->setStyleSheet(QString());
         pushButton_background_color_2->setStyleSheet(QString());
+        pushButton_roomBorderColor->setStyleSheet(QString());
     }
 }
 
@@ -1510,6 +1516,7 @@ void dlgProfilePreferences::resetColors2()
 
     pHost->mFgColor_2 = Qt::lightGray;
     pHost->mBgColor_2 = Qt::black;
+    pHost->mRoomBorderColor = Qt::lightGray;
     pHost->mBlack_2 = Qt::black;
     pHost->mLightBlack_2 = Qt::darkGray;
     pHost->mRed_2 = Qt::darkRed;
@@ -1834,6 +1841,14 @@ void dlgProfilePreferences::setBgColor2()
     Host* pHost = mpHost;
     if (pHost) {
         setColor(pushButton_background_color_2, pHost->mBgColor_2);
+    }
+}
+
+void dlgProfilePreferences::setRoomBorderColor()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
     }
 }
 
@@ -2417,6 +2432,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+        pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;
@@ -2506,8 +2522,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (newIrcNick.isEmpty()) {
-            qsrand(QTime::currentTime().msec());
-            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(rand() % 10000));
+            newIrcNick = QString("%1%2").arg(dlgIRC::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
         }
 
         if (!newIrcChannels.isEmpty()) {
@@ -2933,13 +2948,17 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
     // github uses redirects
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+#else
+    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#endif
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
         QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
             label->hide();
@@ -3193,7 +3212,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     while (itUsedSymbol.hasNext()) {
         itUsedSymbol.next();
         QString symbol = itUsedSymbol.key();
-        QList<int> roomsWithSymbol = itUsedSymbol.value().toList();
+        QList<int> roomsWithSymbol = itUsedSymbol.value().values();
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
         }

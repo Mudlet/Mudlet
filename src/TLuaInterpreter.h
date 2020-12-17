@@ -221,6 +221,9 @@ public:
     static int getSpecialExitsSwap(lua_State*);
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
+    static int addCmdLineSuggestion(lua_State* L);
+    static int removeCmdLineSuggestion(lua_State* L);
+    static int clearCmdLineSuggestions(lua_State* L);
     static int clearSpecialExits(lua_State*);
     static int setGridMode(lua_State* L);
     static int getGridMode(lua_State* L);
@@ -576,6 +579,7 @@ public:
     static int setMapBackgroundColor(lua_State*);
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
+    static int showNotification(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

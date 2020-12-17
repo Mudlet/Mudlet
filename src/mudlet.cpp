@@ -661,6 +661,8 @@ mudlet::mudlet()
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
     loadMaps();
+
+    setupTrayIcon();
 }
 
 QSettings* mudlet::getQSettings()
@@ -2660,12 +2662,16 @@ void mudlet::updateMudletDiscordInvite()
     QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+#else
+    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#endif
         qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
         getReply->deleteLater();
     });
@@ -3302,7 +3308,8 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
 {
-    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0) | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0));
+    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : QTextOption::Flag())
+                                           |(isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : QTextOption::Flag()));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
@@ -4657,3 +4664,17 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     menuBar()->setStyleSheet(styleSheet);
 }
 
+void mudlet::setupTrayIcon()
+{
+    mTrayIcon.setIcon(windowIcon());
+    auto menu = new QMenu(this);
+    auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
+    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+       mTrayIcon.hide();
+    });
+    menu->addAction(hideTrayAction);
+    auto exitAction = new QAction(tr("Exit"), this);
+    connect(exitAction, &QAction::triggered, this, &mudlet::close);
+    menu->addAction(exitAction);
+    mTrayIcon.setContextMenu(menu);
+}

@@ -48,6 +48,7 @@
 #include "glwidget.h"
 #endif
 
+#include "math.h"
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
@@ -66,7 +67,7 @@
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
-        {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
+        {Qt::MiddleButton, QStringLiteral("MidButton")},      {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
         {Qt::TaskButton, QStringLiteral("TaskButton")},       {Qt::ExtraButton4, QStringLiteral("ExtraButton4")},   {Qt::ExtraButton5, QStringLiteral("ExtraButton5")},
         {Qt::ExtraButton6, QStringLiteral("ExtraButton6")},   {Qt::ExtraButton7, QStringLiteral("ExtraButton7")},   {Qt::ExtraButton8, QStringLiteral("ExtraButton8")},
         {Qt::ExtraButton9, QStringLiteral("ExtraButton9")},   {Qt::ExtraButton10, QStringLiteral("ExtraButton10")}, {Qt::ExtraButton11, QStringLiteral("ExtraButton11")},
@@ -12524,11 +12525,64 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCmdLine
 int TLuaInterpreter::getCmdLine(lua_State* L)
 {
-    QString name {CMDLINE_NAME(L, 1)};
-    auto pN = COMMANDLINE(L, name);
-    QString curText = pN->toPlainText();
-    lua_pushstring(L, curText.toUtf8().constData());
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n >= 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto commandline = COMMANDLINE(L, name);
+    QString text = commandline->toPlainText();
+    lua_pushstring(L, text.toUtf8().constData());
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
+int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
+        return lua_error(L);
+    }
+    QString text{lua_tostring(L, n)};
+    auto pN = COMMANDLINE(L, name);
+    pN->addSuggestion(text);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineSuggestion
+int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    if (!lua_isstring(L, n)) {
+        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
+        return lua_error(L);
+    }
+    QString text{lua_tostring(L, n)};
+    auto pN = COMMANDLINE(L, name);
+    pN->removeSuggestion(text);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineSuggestions
+int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n == 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pN = COMMANDLINE(L, name);
+    pN->clearSuggestions();
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
@@ -12541,8 +12595,8 @@ int TLuaInterpreter::installPackage(lua_State* L)
     QString location{lua_tostring(L, 1)};
 
     Host& host = getHostFromLua(L);
-    host.installPackage(location, 0);
-    return 0;
+    lua_pushboolean(L, host.installPackage(location, 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
@@ -16069,6 +16123,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "downloadFile", TLuaInterpreter::downloadFile);
     lua_register(pGlobalLua, "appendCmdLine", TLuaInterpreter::appendCmdLine);
     lua_register(pGlobalLua, "getCmdLine", TLuaInterpreter::getCmdLine);
+    lua_register(pGlobalLua, "addCmdLineSuggestion", TLuaInterpreter::addCmdLineSuggestion);
+    lua_register(pGlobalLua, "removeCmdLineSuggestion", TLuaInterpreter::removeCmdLineSuggestion);
+    lua_register(pGlobalLua, "clearCmdLineSuggestions", TLuaInterpreter::clearCmdLineSuggestions);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
@@ -16244,6 +16301,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapBackgroundColor", TLuaInterpreter::setMapBackgroundColor);
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
+    lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17925,4 +17983,34 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showNotification
+int TLuaInterpreter::showNotification(lua_State* L)
+{
+    int n = lua_gettop(L);
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "showNotification: bad argument #1 type (%s as string expected, got %s!)", n >= 2 ? "title" : "message" , luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n >= 2 && !lua_isstring(L, 2)) {
+        lua_pushfstring(L, "showNotification: bad argument #2 type (message as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int notificationExpirationTime = 1;
+    if (n >= 3 && !lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "showNotification: bad argument #3 type (expiration time in seconds as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else if (lua_isnumber(L, 3)) {
+        notificationExpirationTime = qMax(qRound(lua_tonumber(L, 3) / 1000), 1);
+    }
+
+    QString text{lua_tostring(L, 1)};
+    QString title{lua_tostring(L, 1)};
+    if (lua_isstring(L, 2)) {
+        text = lua_tostring(L, 2);
+    }
+    mudlet::self()->mTrayIcon.show();
+    mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
+    return 0;
 }

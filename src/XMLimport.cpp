@@ -54,7 +54,6 @@ XMLimport::XMLimport(Host* pH)
 , gotScript(false)
 , module(0)
 , mMaxRoomId(0)
-, mMaxAreaId(-1)
 , mVersionMajor(1) // 0 to 255
 , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
@@ -616,7 +615,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            auto result = readPackage();
+            readPackage();
         }
     }
 }
@@ -829,6 +828,7 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
     }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    pHost->mMapperShowRoomBorders = attributes().value("mMapperShowRoomBorders") == "yes" || !attributes().hasAttribute("mMapperShowRoomBorders");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
     }
@@ -1075,6 +1075,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == "mBgColor2") {
                 pHost->mBgColor_2.setNamedColor(readElementText());
+            } else if (name() == "mRoomBorderColor") {
+                pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
