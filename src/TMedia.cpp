@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,6 +29,7 @@
 #include <QJsonObject>
 #include <QMediaPlaylist>
 #include <QNetworkDiskCache>
+#include <QRandomGenerator>
 #include <QStandardPaths>
 #include "post_guard.h"
 
@@ -526,7 +527,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
 
         QNetworkRequest request = QNetworkRequest(fileUrl);
         request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-        request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+        request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
         request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == QStringLiteral("https")) {
@@ -537,8 +538,11 @@ void TMedia::downloadFile(TMediaData& mediaData)
         mpHost->updateProxySettings(mpNetworkAccessManager);
         QNetworkReply* getReply = mpNetworkAccessManager->get(request);
         mMediaDownloads.insert(getReply, mediaData);
-
-        connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+        connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+#else
+        connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#endif
             qWarning() << "TMedia::downloadFile() WARNING - couldn't download sound from " << fileUrl.url();
             getReply->deleteLater();
         });
@@ -760,7 +764,7 @@ void TMedia::play(TMediaData& mediaData)
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         if (fileNameList.size() > 1) {
-            absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+            absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
         } else {
             absolutePathFileName = fileNameList.at(0);
         }
@@ -779,7 +783,7 @@ void TMedia::play(TMediaData& mediaData)
 
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
-                absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+                absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
             } else {
                 absolutePathFileName = fileNameList.at(0);
             }
@@ -801,7 +805,7 @@ void TMedia::play(TMediaData& mediaData)
 
             for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
-                    absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
+                    absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
                 } else {
                     absolutePathFileName = fileNameList.at(0);
                 }
