@@ -17,3 +17,7 @@ mudlet
 translations/translated/lrelease_output.txt
 translations/translated/translation-stats.json
 CMakeLists.txt.user
+
+#CLion
+.idea
+cmake-build-debug

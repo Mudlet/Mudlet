@@ -1331,7 +1331,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    if (event->button() == Qt::MidButton) {
+    if (event->button() == Qt::MiddleButton) {
         mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
         mpConsole->mLowerPane->hide();
         mpBuffer->mCursorY = mpBuffer->size();
