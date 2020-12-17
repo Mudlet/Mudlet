@@ -191,8 +191,8 @@ jobs:
           alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
         fi
 
-        luarocks --help
-        luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --help
+        # luarocks --help
+        luarocks --lua-dir '${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --lua-version "5.1" --help
         luarocks install --local LuaFileSystem
         luarocks install --local luautf8
         luarocks install --local lua-zip
