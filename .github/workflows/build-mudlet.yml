@@ -191,13 +191,11 @@ jobs:
           alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
         fi
 
-        # luarocks --help
-        # luarocks --lua-dir '${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --lua-version "5.1" --help
-        luarocks install --lua-dir '${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua' --lua-version "5.1" --local LuaFileSystem LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
-        luarocks install --local luautf8 --lua-version "5.1"
-        luarocks --lua-version "5.1" install --local lua-zip
-        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
-        luarocks install --local lrexlib-pcre
+        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaFileSystem
+        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local luautf8
+        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-zip
+        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
         # workaround https://github.com/lloyd/yajl/issues/209
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
