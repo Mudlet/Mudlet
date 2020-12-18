@@ -489,6 +489,9 @@ bool TCommandLine::event(QEvent* event)
                 return true;
             }
 
+        case Qt::ALT:
+            return mpHost->mDisableAltFocus;
+
         default:
             // Process as a possible key binding if there are ANY modifiers
             if (keybindingMatched(ke)) {

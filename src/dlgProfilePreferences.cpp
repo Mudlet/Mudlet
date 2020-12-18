@@ -532,6 +532,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkBox_disableAltFocus->setChecked(pHost->mDisableAltFocus);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
@@ -1003,6 +1004,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
 
+
+
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
@@ -1185,6 +1188,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
+    checkBox_disableAltFocus->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
 
@@ -2433,6 +2437,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
+        pHost->mDisableAltFocus = checkBox_disableAltFocus->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
             pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             bool isAreaWidgetInNeedOfResetting = false;
