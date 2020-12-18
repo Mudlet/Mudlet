@@ -44,11 +44,6 @@ jobs:
             deploy: 'deploy'
 
     steps:
-    # - run: |
-    #     Get-ChildItem -Path C:\ -Filter *mingw32-windres.exe -Recurse -ErrorAction SilentlyContinue -Force
-    #     Get-ChildItem -Path D:\ -Filter *mingw32-windres.exe -Recurse -ErrorAction SilentlyContinue -Force
-    #   shell: pwsh
-
     - name: Restore Qt cache
       uses: actions/cache@v2
       # 5.11 cache restoration goes awry
@@ -285,7 +280,7 @@ jobs:
           echo "Compiling Lua stdout: "
           cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-rel-out.log
         }
-        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log") {
+        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zziplib\install-x64-mingw-dynamic-dbg-out.log") {
           echo "zlib log: "
-          cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log
+          cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zziplib\install-x64-mingw-dynamic-dbg-out.log
         }
