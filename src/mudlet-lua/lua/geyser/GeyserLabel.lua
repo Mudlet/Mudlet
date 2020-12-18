@@ -647,26 +647,22 @@ end
 --- to lay out the nested elements within that nested element
 -- @param label The name of the label to use
 function doNestEnter(label)
-  if not label then
-    return
-  end
-
+  local window = label
   if Geyser.Label.closeAllTimer then
     killTimer(Geyser.Label.closeAllTimer)
   end
-  
-  if not label.nestParent then
-    closeAllLevels(label)
-  else
-    closeNeighbourChildren(label)
-  end
 
-  if label.flyOut and label.nestedLabels then
-    label:displayNest()
-  end
-  --echo("entering label"..label.name.."\n")
-  --Geyser.display(label)
+  if window.flyOut and window and window.nestedLabels then
+    if not label.nestParent then
+      closeAllLevels(label)
+    else
+      closeNeighbourChildren(label)
+    end
+    --echo("entering window"..window.name.."\n")
+    --Geyser.display(window)
 
+      label:displayNest()
+    end
 end
 
 --- Internal function when a nested element is left
