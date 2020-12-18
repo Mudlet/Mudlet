@@ -9375,12 +9375,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="4671"/>
       <source>Hide tray icon</source>
-      <translation type="unfinished"/>
+      <translation>Hide tray icon</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4676"/>
       <source>Exit</source>
-      <translation type="unfinished"/>
+      <translation>Exit</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="240"/>
@@ -10977,12 +10977,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2159"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;This enables borders around room. Colour can be set in Mapper colours tab&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Show room borders</source>
-      <translation type="unfinished"/>
+      <translation>Show room borders</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2238"/>
