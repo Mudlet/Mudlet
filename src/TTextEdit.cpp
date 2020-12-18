@@ -1735,8 +1735,8 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
     
     // TIM DEMO NONSENSE...
-    yDelta = qRound(delta.y() / 10.0); // try smaller increments, so movement 2/3 of original distance needed to move one line, aka 150% speed
-    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (10 * yDelta));
+    yDelta = qRound(delta.y() / 5.0); // trying smaller increments compared to 15, so 10 would be movement 2/3 of original distance needed to move one line, aka 150% speed
+    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (5 * yDelta));
     // ...TIM DEMO NONSENSE
 
     bool used = false;
