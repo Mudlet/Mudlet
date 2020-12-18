@@ -192,7 +192,8 @@ jobs:
         fi
 
         # luarocks --help
-        luarocks --lua-dir '${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --lua-version "5.1" LUA_INCDIR "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --help
+        export LUA_INCDIR "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include"
+        luarocks --lua-dir '${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}' --lua-version "5.1" --help
         luarocks install --lua-version "5.1" --local LuaFileSystem
         luarocks install --local luautf8 --lua-version "5.1"
         luarocks --lua-version "5.1" install --local lua-zip
