@@ -10987,7 +10987,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2238"/>
       <source>Room border color:</source>
-      <translation type="unfinished"/>
+      <translation>Room border colour:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2558"/>
