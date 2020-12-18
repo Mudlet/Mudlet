@@ -9457,7 +9457,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
     <message>
       <location filename="../src/mudlet.cpp" line="4671"/>
       <source>Hide tray icon</source>
-      <translation type="unfinished"/>
+      <translation>Tray-Symbol ausblenden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4676"/>
