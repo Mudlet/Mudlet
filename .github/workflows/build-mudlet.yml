@@ -219,6 +219,13 @@ jobs:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
 
+    - name: Submit to make.mudlet.org
+      if: env.FOLDER_TO_UPLOAD
+      run: |
+        curl "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts"
+        curl --silent "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts" | jq '.artifacts[] | select(.name | endswith("${{matrix.triplet}}")).archive_download_url'
+      shell: bash
+
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
       run: |
@@ -235,15 +242,3 @@ jobs:
           echo "CMakeOutput.log: "
           cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
         }
-
-  upload-mudlet:
-    name: upload to make.mudlet.org
-    runs-on: ubuntu-20.04
-    needs: compile-mudlet
-    steps:
-      - name: Submit to make.mudlet.org
-        run: |
-          curl "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts"
-          curl --silent "${GITHUB_API_URL}/repos/Mudlet/Mudlet/actions/runs/${GITHUB_RUN_ID}/artifacts" | jq '.artifacts[] | select(.name | endswith("x64-linux")).archive_download_url'
-        shell: bash
-    
