@@ -128,6 +128,10 @@ jobs:
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
+        choco install sccache
+        echo "SCCACHE_DIR=$env:CACHE_DIR" >> $env:GITHUB_ENV
+        echo "CMAKE_ARGS=-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache >> $env:GITHUB_ENV
+
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -166,6 +170,7 @@ jobs:
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
+          ${{env.CMAKE_ARGS}}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
