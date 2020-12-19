@@ -45,6 +45,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
+    find ${BUILD_DIR} -name "Mudlet.app"
     mv "${BUILD_DIR}/Mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
 
     ./make-installer.sh "${appBaseName}.app"
