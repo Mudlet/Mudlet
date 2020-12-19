@@ -43,6 +43,9 @@ jobs:
             qt: '5.14.1'
             deploy: 'deploy'
 
+    env:
+      CACHE_DIR: ${{runner.workspace}}/ccache
+
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
@@ -84,7 +87,7 @@ jobs:
         brew install pkg-config libzzip libzip ccache luarocks
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=$CACHE_DIR" >> $GITHUB_ENV
 
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
@@ -99,7 +102,7 @@ jobs:
         sudo update-alternatives --set gcc /usr/bin/gcc-9
         sudo update-alternatives --set g++ /usr/bin/g++-9
 
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=$CACHE_DIR" >> $GITHUB_ENV
 
     - name: (Windows) Install non-vcpkg dependencies
       if: runner.os == 'Windows'
@@ -141,7 +144,7 @@ jobs:
     - name: (Linux/macOS) restore ccache
       uses: actions/cache@v2
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{env.CACHE_DIR}}
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
       if: matrix.os != 'windows-latest'
@@ -176,8 +179,8 @@ jobs:
       uses: actions/cache@v2
       with:
         path: $HOME/.luarocks
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
+        key: luarocks-cache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
+        restore-keys: luarocks-cache-${{matrix.os}}-${{matrix.compiler}}-
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
     - name: (Linux/macOS) package Mudlet
