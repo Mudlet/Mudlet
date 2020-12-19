@@ -2933,12 +2933,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->mLuaInterpreter.loadGlobal();
     pHost->hideMudletsVariables();
 
-    pHost->mBlockStopWatchCreation = false;
-    pHost->getScriptUnit()->compileAll();
-    pHost->mIsProfileLoadingSequence = false;
-
-    pHost->updateAnsi16ColorsInTable();
-
     //do modules here
     QMapIterator<QString, int> it(pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
@@ -2948,17 +2942,25 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
         moduleEntry << it.key();
         moduleOrder[it.value()] = moduleEntry;
     }
+
+    //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
+    while (it2.hasNext() && it2.peekNext().key() < 0) {
+        it2.next();
+        mudlet::installModulesList(pHost, it2.value());
+    }
+
+    pHost->mBlockStopWatchCreation = false;
+    pHost->getScriptUnit()->compileAll();
+    pHost->mIsProfileLoadingSequence = false;
+
+    pHost->updateAnsi16ColorsInTable();
+
+    //Load rest of modules after scripts
     while (it2.hasNext()) {
         it2.next();
         QStringList modules = it2.value();
-        for (int i = 0; i < modules.size(); i++) {
-            QStringList entry = pHost->mInstalledModules[modules[i]];
-            pHost->installPackage(entry[0], 1);
-            //we repeat this step here b/c we use the same installPackage method for initial loading,
-            //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-            pHost->mInstalledModules[modules[i]] = entry;
-        }
+        mudlet::installModulesList(pHost, modules);
     }
 
     // install default packages
@@ -2982,6 +2984,17 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     } else {
         QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+    }
+}
+
+void mudlet::installModulesList(Host* pHost, QStringList modules)
+{
+    for (int i = 0; i < modules.size(); i++) {
+        QStringList entry = pHost->mInstalledModules[modules[i]];
+        pHost->installPackage(entry[0], 1);
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        pHost->mInstalledModules[modules[i]] = entry;
     }
 }
 
