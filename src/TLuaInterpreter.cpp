@@ -6031,7 +6031,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#gotoRoom
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomWeight 
 int TLuaInterpreter::getRoomWeight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7037,7 +7037,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             return 2;
         }
     } else if (!lua_isnoneornil(L, 3)) {
-        lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
@@ -17376,7 +17376,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "spellCheckWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
         useUserDictionary = lua_toboolean(L, 2);
