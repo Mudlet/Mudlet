@@ -45,7 +45,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
-    if [ -z "${GITHUB_REPOSITORY}" ]; then
+    if [ -n "${GITHUB_REPOSITORY}" ]; then
       mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
     else
       mv "${BUILD_DIR}/Mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
