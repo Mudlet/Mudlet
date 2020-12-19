@@ -16860,8 +16860,8 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     }
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
-    pT->setIsFolder(false);
-    pT->setIsActive(true);
+    pT->setIsFolder(keycode == -1);
+    pT->setIsActive(keycode != -1); // Folders (keycode == -1) start as inactive
     pT->setTemporary(false);
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
