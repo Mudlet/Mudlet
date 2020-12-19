@@ -44,7 +44,7 @@ jobs:
             deploy: 'deploy'
 
     env:
-      CACHE_DIR: ${{runner.workspace}}/ccache
+      CACHE_DIR: ${{runner.workspace}}/mudlet-build-cache
 
     steps:
     - name: Restore Qt cache
@@ -141,13 +141,12 @@ jobs:
         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name: (Linux/macOS) restore ccache
+    - name: Restore build cache
       uses: actions/cache@v2
       with:
         path: ${{env.CACHE_DIR}}
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
-      if: matrix.os != 'windows-latest'
+        key: muldet-build-cache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
+        restore-keys: mudlet-build-cache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
 
     - name: (Linux/macOS) Set build info
       if: runner.os == 'Linux' || runner.os == 'macOS'
