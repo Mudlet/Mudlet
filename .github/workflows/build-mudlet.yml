@@ -180,45 +180,45 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
-    - name: (Linux/macOS) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-      run: |
-        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        lua -v
+    # - name: (Linux/macOS) package Mudlet
+    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+    #   run: |
+    #     export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+    #     lua -v
 
-        if [ "${RUNNER_OS}" = "macOS" ]; then
-          echo "Aliasing..."
-          alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
-        fi
+    #     if [ "${RUNNER_OS}" = "macOS" ]; then
+    #       echo "Aliasing..."
+    #       alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
+    #     fi
 
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaFileSystem
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local luautf8
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-zip
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaFileSystem
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local luautf8
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-zip
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
-        # workaround https://github.com/lloyd/yajl/issues/209
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
-        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+    #     # workaround https://github.com/lloyd/yajl/issues/209
+    #     mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
+    #     mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
+    #     # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
+    #     export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+    #     # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
 
-        # CI changelog generation dependencies
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local argparse
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lunajson
+    #     # CI changelog generation dependencies
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local argparse
+    #     luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lunajson
 
-        # necessary for Qt multimedia
-        if [ "${RUNNER_OS}" = "Linux" ]; then
-          sudo apt-get install libgstreamer-plugins-base1.0-0 -y
-        fi
+    #     # necessary for Qt multimedia
+    #     if [ "${RUNNER_OS}" = "Linux" ]; then
+    #       sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+    #     fi
 
-        ${{github.workspace}}/CI/travis.after_success.sh
-      env:
-        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-        RUNNER_OS: ${{runner.os}}
-        DEPLOY: ${{matrix.deploy}}
+    #     ${{github.workspace}}/CI/travis.after_success.sh
+    #   env:
+    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+    #     RUNNER_OS: ${{runner.os}}
+    #     DEPLOY: ${{matrix.deploy}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
