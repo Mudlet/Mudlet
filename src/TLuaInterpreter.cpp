@@ -8243,7 +8243,11 @@ int TLuaInterpreter::permKey(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
+    auto validationResult = pLuaInterpreter->validLuaCode(luaFunction);
+    if(!validationResult.first) {
+        lua_pushfstring(L, "permKey: bad argument #%d type (%s)", argIndex, validationResult.second.toUtf8().constData());
+        return lua_error(L);
+    }
     int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
@@ -13833,7 +13837,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 
     lua_State* L = pIndenterState.get();
 
-    if (!validLuaCode(code)) {
+    if (!validLuaCode(code).first) {
         return code;
     }
 
@@ -13934,15 +13938,21 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// returns true if the given Lua code is valid, false otherwise
-bool TLuaInterpreter::validLuaCode(const QString &code)
+// returns pair where first if the given Lua code is valid, false otherwise
+std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
-    lua_pop(L, lua_gettop(L));
-
-    return error == 0;
+    int topElementIndex = lua_gettop(L);
+    QString e = "No error message available from Lua";
+    if (error) {
+        e = "Lua syntax error:";
+        if (lua_isstring(L, topElementIndex)) {
+            e.append(lua_tostring(L, topElementIndex));
+        }
+    }
+    lua_pop(L, topElementIndex);
+    return std::make_pair(!error, e);
 }
 
 // No documentation available in wiki - internal function
