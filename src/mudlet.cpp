@@ -794,7 +794,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
-                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -3430,14 +3430,13 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
-    QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
-    if (!jsonFile->open(QFile::ReadOnly)) {
+    auto jsonFile = QFile(QStringLiteral(":/lua-function-list.json"));
+    if (!jsonFile.open(QFile::ReadOnly)) {
         return false;
     }
 
-    const QByteArray data = jsonFile->readAll();
-
-    jsonFile->close();
+    const QByteArray data = jsonFile.readAll();
+    jsonFile.close();
 
     auto json_doc = QJsonDocument::fromJson(data);
 
