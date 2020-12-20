@@ -75,6 +75,7 @@
 #include <QRandomGenerator>
 #include <zip.h>
 #include "post_guard.h"
+#include "AltFocusMenuBarDisable.h"
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -252,6 +253,8 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+
+    qApp->setStyle(new AltFocusMenuBarDisable());
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
