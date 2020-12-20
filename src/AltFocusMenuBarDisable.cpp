@@ -18,15 +18,14 @@
  ***************************************************************************/
 
 #include "AltFocusMenuBarDisable.h"
-
+#include "mudlet.h"
 #include <QProxyStyle>
-
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(Host *pHost): mHost(pHost) {}
 
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return mHost->mDisableAltFocus;
+
+        return mudlet::self()->mpCurrentActiveHost && mudlet::self()->mpCurrentActiveHost->mDisableAltFocus ? 1: 0;
     }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);

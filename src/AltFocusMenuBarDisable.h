@@ -18,17 +18,11 @@
  ***************************************************************************/
 
 #include <QProxyStyle>
-#include "Host.h"
 
 class AltFocusMenuBarDisable : public QProxyStyle
 {
 
 public:
-    explicit AltFocusMenuBarDisable(Host *mHost);
-
     int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
-
-private:
-    Host* mHost;
 
 };
