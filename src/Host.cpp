@@ -54,6 +54,7 @@
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
+#include "AltFocusMenuBarDisable.h"
 
 using namespace std::chrono;
 
@@ -454,6 +455,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
+
+    qApp->setStyle(new AltFocusMenuBarDisable(this));
 }
 
 Host::~Host()
