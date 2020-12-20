@@ -489,7 +489,7 @@ bool TCommandLine::event(QEvent* event)
                 return true;
             }
 
-        case Qt::ALT:
+        case Qt::Key_Alt:
             return mpHost->mDisableAltFocus;
 
         default:
