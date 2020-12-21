@@ -281,8 +281,7 @@ set(mudlet_HDRS
     VarUnit.h
     widechar_width.h
     XMLexport.h
-    XMLimport.h
-    )
+    XMLimport.h)
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
