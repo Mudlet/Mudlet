@@ -31,7 +31,6 @@
 #include "pre_guard.h"
 #include <QString>
 #include <QStringBuilder>
-#include <QRegularExpression>
 #include "post_guard.h"
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
