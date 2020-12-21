@@ -1152,7 +1152,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
