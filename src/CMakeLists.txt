@@ -45,6 +45,7 @@ endif()
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
+    AltFocusMenuBarDisable.cpp
     ctelnet.cpp
     discord.cpp
     dlgAboutDialog.cpp
@@ -173,6 +174,7 @@ set(mudlet_UIS
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    AltFocusMenuBarDisable.h
     ctelnet.h
     discord.h
     dlgAboutDialog.h
@@ -280,8 +282,6 @@ set(mudlet_HDRS
     widechar_width.h
     XMLexport.h
     XMLimport.h
-    AltFocusMenuBarDisable.cpp
-    AltFocusMenuBarDisable.h
     )
 
 if(USE_UPDATER)
