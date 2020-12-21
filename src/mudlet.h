@@ -535,6 +535,7 @@ private:
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
+    void installModulesList(Host*, QStringList);
     void setupTrayIcon();
 
     QWidget* mainPane;
