@@ -329,8 +329,6 @@ function InstallVcpkgLua() {
     "$env:MINGW_BASE_DIR\bin"
   Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\lua.h" `
     "$env:MINGW_BASE_DIR\include"
-  # Copy-Item "$env:GITHUB_WORKSPACE\3rdparty\vcpkg\installed\x64-mingw-dynamic\include\lua.hpp" `
-  #   "$env:MINGW_BASE_DIR\include"
   Write-Output "LUA_LIBDIR=$env:MINGW_BASE_DIR\lib" >> $env:GITHUB_ENV
 }
 
