@@ -116,7 +116,7 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
             return tag->getAttribute(attrIndex).getName();
         }
 
-        // not attribute was not given, use default value - if defined:
+        // If an attribute was not given, use its default value - if defined:
         if (element.defaultValues.contains(attrName.toLower())) {
             return element.defaultValues.value(attrName);
         }

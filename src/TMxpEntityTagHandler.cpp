@@ -50,7 +50,7 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
             client.publishEntity(name, value);
         }
     } else if (!tag->hasAttribute("ADD") && !tag->hasAttribute("REMOVE")) {
-        // Apparently there is no (or an empty value), so set us to empty string:
+        // Apparently there is no (or an empty) value, so set us to empty string:
         const QString& value = "";
         resolver.registerEntity(name, value);
         client.publishEntity(name, value);
