@@ -828,7 +828,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             event->ignore();
             return;
         }
-        if(messageBox.clickedButton() == alwaysButton) {
+        if (messageBox.clickedButton() == alwaysButton) {
             mpHost->mFORCE_SAVE_ON_EXIT = true;
         }
         if (choice == QMessageBox::Yes || messageBox.clickedButton() == alwaysButton) {
