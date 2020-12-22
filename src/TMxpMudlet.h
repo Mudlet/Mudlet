@@ -36,13 +36,7 @@ class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
-    inline static const QString scmVersion = QStringLiteral("%1%2").arg(QString::fromLatin1(APP_VERSION), QString::fromLatin1(APP_BUILD));
 
-    Host* mpHost;
-
-    bool mLinkMode;
-
-    QList<QColor> fgColors, bgColors;
     // These are also a kind of stack for parameters as fg/bgColours, but here a
     // simple counter suffices:
     int boldCtr, italicCtr, underlineCtr, strikeOutCtr;
@@ -50,9 +44,10 @@ class TMxpMudlet : public TMxpClient
 
 public:
     TMxpMudlet(Host* pHost)
-    : isBold(false)
-    , isItalic(false)
-    , isUnderline(false)
+    : boldCtr(0)
+    , italicCtr(0)
+    , underlineCtr(0)
+    , strikeOutCtr(0)
     , mpHost(pHost)
     , mLinkMode(false)
     {}
@@ -134,10 +129,6 @@ public:
 
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
-
-    bool isBold;
-    bool isItalic;
-    bool isUnderline;
 
 private:
     inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);

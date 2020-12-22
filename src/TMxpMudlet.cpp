@@ -24,8 +24,6 @@
 #include "TLinkStore.h"
 
 
-TMxpMudlet::TMxpMudlet(Host* pHost) : mpHost(pHost), mLinkMode(false), boldCtr(0), italicCtr(0), underlineCtr(0), strikeOutCtr(0) {}
-
 QString TMxpMudlet::getVersion()
 {
     return scmVersion;
