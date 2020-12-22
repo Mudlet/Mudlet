@@ -281,6 +281,10 @@ jobs:
           cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\lua\install-x64-mingw-dynamic-rel-out.log
         }
         if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zziplib\install-x64-mingw-dynamic-dbg-out.log") {
-          echo "zlib log: "
+          echo "zziplib log: "
           cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zziplib\install-x64-mingw-dynamic-dbg-out.log
+        }
+        if (Test-Path -Path "D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log") {
+          echo "zlib log: "
+          cat D:\a\Mudlet\Mudlet\3rdparty\vcpkg\buildtrees\zlib\install-x64-mingw-dynamic-dbg-out.log
         }
