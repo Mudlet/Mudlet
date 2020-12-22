@@ -13942,13 +13942,14 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
+    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
     int topElementIndex = lua_gettop(L);
-    QString e = "No error message available from Lua";
+    QString e = "";
     if (error) {
-        e = "Lua syntax error:";
         if (lua_isstring(L, topElementIndex)) {
-            e.append(lua_tostring(L, topElementIndex));
+            e = lua_tostring(L, topElementIndex);
+        } else {
+            e = "No error message available from Lua";
         }
     }
     lua_pop(L, topElementIndex);
