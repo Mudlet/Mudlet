@@ -814,24 +814,13 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (!mUserAgreedToCloseConsole) {
     ASK:
-        QMessageBox messageBox = QMessageBox(this);
-        messageBox.setIcon(QMessageBox::Question);
-        messageBox.setWindowTitle(tr("Save profile?"));
-        messageBox.setText(tr("Do you want to save the profile %1?").arg(mProfileName));
-        messageBox.addButton(QMessageBox::Yes);
-        QPushButton* alwaysButton = messageBox.addButton(tr("Yes, &always"), QMessageBox::YesRole);
-        messageBox.addButton(QMessageBox::No);
-        messageBox.addButton(QMessageBox::Cancel);
-        int choice = messageBox.exec();
+        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
             return;
         }
-        if (messageBox.clickedButton() == alwaysButton) {
-            mpHost->mFORCE_SAVE_ON_EXIT = true;
-        }
-        if (choice == QMessageBox::Yes || messageBox.clickedButton() == alwaysButton) {
+        if (choice == QMessageBox::Yes) {
             mudlet::self()->saveWindowLayout();
 
             mpHost->modulesToWrite.clear();
