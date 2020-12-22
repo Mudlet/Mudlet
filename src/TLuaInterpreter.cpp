@@ -8243,7 +8243,10 @@ int TLuaInterpreter::permKey(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
+        lua_pushfstring(L, "permKey: bad argument #%d (invalid Lua code: %s)", argIndex, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
     int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
@@ -13833,7 +13836,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 
     lua_State* L = pIndenterState.get();
 
-    if (!validLuaCode(code)) {
+    if (!validLuaCode(code).first) {
         return code;
     }
 
@@ -13934,15 +13937,23 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// returns true if the given Lua code is valid, false otherwise
-bool TLuaInterpreter::validLuaCode(const QString &code)
+// returns pair where first is bool stating true the given Lua code is valid, false otherwise
+// second is empty if code is valid, error message if not valid
+std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-
-    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
-    lua_pop(L, lua_gettop(L));
-
-    return error == 0;
+    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
+    int topElementIndex = lua_gettop(L);
+    QString e = "";
+    if (error) {
+        if (lua_isstring(L, topElementIndex)) {
+            e = lua_tostring(L, topElementIndex);
+        } else {
+            e = "No error message available from Lua";
+        }
+    }
+    lua_pop(L, topElementIndex);
+    return std::make_pair(!error, e);
 }
 
 // No documentation available in wiki - internal function
