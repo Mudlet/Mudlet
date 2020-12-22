@@ -218,14 +218,14 @@ private slots:
     void testAttrDefinition()
     {
         QString tagLine = R"(<!ATTLIST boldtext 'color=red background=white flags'>)";
+		
         TMxpTagParser::parseToList(tagLine);
     }
 
     void testSimpleElementDefition()
     {
-        TMxpTagParser parser;
-
         QString tagLine = "!EL RExit FLAG=RoomExit";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list.size(), 3);
         QCOMPARE(list[0], "!EL");
@@ -235,9 +235,8 @@ private slots:
 
     void testSimpleQuotedElementDefition()
     {
-        TMxpTagParser parser;
-
         QString tagLine = "!EL RExit 'FLAG=RoomExit'";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list[0], "!EL");
         QCOMPARE(list[1], "RExit");
@@ -246,9 +245,8 @@ private slots:
 
     void testElementDefitionWithExtraSpaces()
     {
-        TMxpTagParser parser;
-
         QString tagLine = "!EL RExit   FLAG=RoomExit";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list[0], "!EL");
         QCOMPARE(list[1], "RExit");
@@ -257,9 +255,8 @@ private slots:
 
     void testDoubleQuotedElementDefition()
     {
-        TMxpTagParser parser;
-
         QString tagLine = R"(!EL RExit "FLAG=RoomExit")";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list[0], "!EL");
         QCOMPARE(list[1], "RExit");
@@ -268,9 +265,8 @@ private slots:
 
     void testElementDefitionQuotedAttributeSpaces()
     {
-        TMxpTagParser parser;
-
         QString tagLine = "!EL sHp FLAG='Set Hp'";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list[0], "!EL");
         QCOMPARE(list[1], "sHp");
@@ -291,9 +287,8 @@ private slots:
 
     void testElementDefitionQuotesInQuotes()
     {
-        TMxpTagParser parser;
-
         QString tagLine = "!EL x FLAG='Quote \" ex'";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
         QCOMPARE(list[0], "!EL");
         QCOMPARE(list[1], "x");
@@ -302,11 +297,9 @@ private slots:
 
     void testElementComplet1()
     {
-        TMxpTagParser parser;
-
         QString tagLine = R"(FRAME Name="Map" Left="-20c" Top="0" Width="20c" Height="20c")";
+		
         QStringList list = TMxpTagParser::parseToList(tagLine);
-
         QCOMPARE(list[0], "FRAME");
         QCOMPARE(list[1], "Name=\"Map\"");
         QCOMPARE(list[2], "Left=\"-20c\"");
@@ -339,8 +332,8 @@ private slots:
     void testStartTagClosed()
     {
         TMxpTagParser parser;
+		
         MxpTag* tag = parser.parseTag("<RNum 212 />");
-
         QVERIFY(tag->isStartTag());
         QVERIFY(tag->asStartTag()->isEmpty());
         QCOMPARE(tag->getName(), "RNum");

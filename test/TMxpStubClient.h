@@ -5,6 +5,7 @@
 #ifndef MUDLET_TEST_TMXPSTUBCLIENT_H
 #define MUDLET_TEST_TMXPSTUBCLIENT_H
 
+#include <QDebug>
 #include "TMxpContext.h"
 #include "TMxpClient.h"
 
@@ -52,7 +53,12 @@ public:
     QString sentToServer;
 
     QString fgColor, bgColor;
-
+	
+    // These are also a kind of stack for parameters as fg/bgColours, but here a
+    // simple counter suffices:
+    int boldCtr, italicCtr, underlineCtr, strikeOutCtr;
+    QString mxpStyle;
+	
     QStringList mHrefs, mHints;
 
     QString getVersion() override
@@ -91,20 +97,18 @@ public:
 
     }
 
-    bool isBold, isItalic, isUnderline;
+    void setBold(bool bold) override;
+    void setItalic(bool italic) override;
+    void setUnderline(bool underline) override;
+    void setStrikeOut(bool strikeOut) override;
 
-    void setBold(bool bold) override
-    {
-        isBold = bold;
-    }
-    void setItalic(bool italic) override
-    {
-        isItalic = italic;
-    }
-    void setUnderline(bool underline) override
-    {
-        isUnderline = underline;
-    }
+    bool isBold() override { return boldCtr > 0; }
+    bool isItalic() override { return italicCtr > 0; }
+    bool isUnderline() override { return underlineCtr > 0; }
+    bool isStrikeOut() override { return strikeOutCtr > 0; }
+	
+    void setStyle(const QString& val) override {mxpStyle = val; }
+    const QString &getStyle() override {return mxpStyle;}
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {

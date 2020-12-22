@@ -47,3 +47,12 @@ Makefile_TMxpTagParserTest {
 	LIBS += \
 		$$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o $$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TStringUtils.o
 }
+
+Makefile_TMxpSendTagHandlerTest {
+	SOURCES += TMxpSendTagHandlerTest.cpp TMxpStubClient.cpp
+	TARGET = TMxpSendTagHandlerTest
+	LIBS += \
+		$$MUDLETBUILD/TMxpSendTagHandler.o $$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o \
+		$$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TMxpTagProcessor.o $$MUDLETBUILD/TStringUtils.o $$MUDLETBUILD/TEntityResolver.o \
+		$$files($$MUDLETBUILD/TMxp*Handler.o, true) $$MUDLETBUILD/TMxpElementRegistry.o
+}

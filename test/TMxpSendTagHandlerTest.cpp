@@ -147,9 +147,10 @@ private slots:
         QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
         QCOMPARE(stub.mHrefs[1], "send([[BUY SUSPENDERS30901]])");
 
-        QCOMPARE(stub.mHints.size(), 2);
-        QCOMPARE(stub.mHints[0], "PROBE SUSPENDERS30901");
-        QCOMPARE(stub.mHints[1], "BUY SUSPENDERS30901");
+        QCOMPARE(stub.mHints.size(), 3);
+		QCOMPARE(stub.mHints[0], "Click to see command menu");
+        QCOMPARE(stub.mHints[1], "PROBE SUSPENDERS30901");
+        QCOMPARE(stub.mHints[2], "BUY SUSPENDERS30901");
     }
 
 };
