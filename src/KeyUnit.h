@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,8 +35,10 @@ class Host;
 class TKey;
 
 
-class KeyUnit
+class KeyUnit : public QObject
 {
+    Q_OBJECT // Needed for a couple of translations
+
     friend class XMLexport;
     friend class XMLimport;
 
@@ -60,11 +62,11 @@ public:
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     QString assembleReport();
     int getNewID();
-    QString getKeyName(int keyCode, int modifier);
+    QString getKeyName(const Qt::Key, const Qt::KeyboardModifiers) const;
     void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
-    bool processDataStream(int, int);
+    bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     void markCleanup( TKey * pT );
     void doCleanup();
     void stopAllTriggers();

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,7 +71,7 @@ void TKey::setName(const QString& name)
     mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
 
-bool TKey::match(int key, int modifier, const bool isToMatchAll)
+bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const bool isToMatchAll)
 {
     bool isAMatch = false;
     if (isActive()) {
