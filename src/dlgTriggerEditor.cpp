@@ -3566,8 +3566,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     }
 
     pT->setName(name);
-    pT->setKeyCode(-1);
-    pT->setKeyModifiers(-1);
+    pT->setKeyCode(Qt::Key_unknown);
+    pT->setKeyModifiers(Qt::NoModifier);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -8378,7 +8378,7 @@ bool dlgTriggerEditor::event(QEvent* event)
             auto * ke = static_cast<QKeyEvent*>(event);
             QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
-            case 0x01000000:
+            case Qt::Key_Escape:
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
@@ -8390,14 +8390,20 @@ bool dlgTriggerEditor::event(QEvent* event)
                 QCoreApplication::instance()->removeEventFilter(this);
                 ke->accept();
                 return true;
-            case 0x01000020:
-            case 0x01000021:
-            case 0x01000022:
-            case 0x01000023:
-            case 0x01001103:
+
+            case Qt::Key_Shift:
+                [[fallthrough]];
+            case Qt::Key_Control:
+                [[fallthrough]];
+            case Qt::Key_Meta:
+                [[fallthrough]];
+            case Qt::Key_Alt:
+                [[fallthrough]];
+            case Qt::Key_AltGr:
                 break;
+
             default:
-                key_grab_callback(ke->key(), ke->modifiers());
+                key_grab_callback(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()));
                 mIsGrabKey = false;
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
@@ -8412,6 +8418,7 @@ bool dlgTriggerEditor::event(QEvent* event)
             }
         }
     }
+
     return QMainWindow::event(event);
 }
 
@@ -8437,7 +8444,7 @@ void dlgTriggerEditor::slot_key_grab()
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-void dlgTriggerEditor::key_grab_callback(int key, int modifier)
+void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {

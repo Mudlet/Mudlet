@@ -44,10 +44,12 @@ public:
     void compileAll();
     QString getName() { return mName; }
     void setName(const QString & name);
-    int getKeyCode() { return mKeyCode; }
-    void setKeyCode(int code) { mKeyCode = code; }
-    int getKeyModifiers() { return mKeyModifier; }
-    void setKeyModifiers(int code) { mKeyModifier = code; }
+    Qt::Key getKeyCode() const { return mKeyCode; }
+    void setKeyCode(const Qt::Key code) { mKeyCode = code; }
+    void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
+    Qt::KeyboardModifiers getKeyModifiers() { return mKeyModifier; }
+    void setKeyModifiers(const Qt::KeyboardModifiers code) { mKeyModifier = code; }
+    void setKeyModifiers(const int codeNumber) { setKeyModifiers(static_cast<Qt::KeyboardModifiers>(codeNumber)); }
     void enableKey(const QString& name);
     void disableKey(const QString& name);
     void compile();
@@ -58,7 +60,7 @@ public:
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
 
-    bool match(int, int, const bool);
+    bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
 
     bool exportItem;
@@ -80,8 +82,8 @@ private:
      * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
      */
 
-    int mKeyCode;
-    int mKeyModifier;
+    Qt::Key mKeyCode;
+    Qt::KeyboardModifiers mKeyModifier;
 
     QString mRegexCode;
     QString mScript;

@@ -1588,9 +1588,9 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "keyCode") {
-                pT->mKeyCode = readElementText().toInt();
+                pT->setKeyCode(readElementText().toInt());
             } else if (name() == "keyModifier") {
-                pT->mKeyModifier = readElementText().toInt();
+                pT->setKeyModifiers(readElementText().toInt());
             } else if (name() == "KeyGroup" || name() == "Key") {
                 readKeyGroup(pT);
             } else {
