@@ -321,13 +321,10 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
     if (modifierCode == Qt::NoModifier) {
         name = tr("no modifiers + ",
                   // Intentional comment to separate arguments
-                  "This text is prepended onto the name of the key in a keybinding when there is "
-                  "NO modifiers (other keys like shift or control) held down to alter the "
-                  "behaviour. If there are any of them used then the English name of each, "
-                  "separated with \" + \" is prepended instead. If the names of them: \"shift\", "
-                  "\"control\", \"alt\", \"meta\", \"keypad\" and \"groupswitch\" are NOT suitable "
-                  "to be used like this in your locale please raise it with the Mudlet developers "
-                  "so that we can add them to the list of things to be translated... 8-)");
+                  "This text is added before the name of the key in a keybinding when there is "
+                  "NO modifiers. If any modifier (\"control\", etc.) is used they will be added "
+                  "instead; but they are not included in the translations. If they need to be "
+                  "translated in your language tell the Mudlet developers so that we can add them.");
     } else {
         name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
                % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
