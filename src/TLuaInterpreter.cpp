@@ -5379,7 +5379,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
     if (!pR->setSpecialExitLock(dir, b)) {
         lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir, fromRoomID);
+        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
         return 2;
     }
 
