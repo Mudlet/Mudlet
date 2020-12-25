@@ -1317,7 +1317,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="376"/>
       <source>Show Time Stamps.</source>
-      <translation>显示时间戳.</translation>
+      <translation>顯示時間戳記。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="388"/>
@@ -1992,7 +1992,7 @@ imported at user request.</source>
     <message>
       <location filename="../src/TMap.cpp" line="2293"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation>导入XML地图文件, 该文件用于%1...</translation>
+      <translation>正載匯入用於 %1 的 XML 地圖檔案……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2321"/>
@@ -7939,7 +7939,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="258"/>
       <source>Show map</source>
-      <translation>显示地图</translation>
+      <translation>顯示地圖</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="266"/>
@@ -9388,7 +9388,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="344"/>
       <source>Show and edit triggers</source>
-      <translation>显示并编辑触发器</translation>
+      <translation>顯示及編輯觸發</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
@@ -9408,7 +9408,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Show and edit timers</source>
-      <translation>顯示和編輯時計</translation>
+      <translation>顯示及編輯時計</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -9438,7 +9438,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="376"/>
       <source>Show and edit keys</source>
-      <translation>显示并编辑按键</translation>
+      <translation>顯示及編輯熱鍵</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="381"/>
@@ -9448,7 +9448,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="382"/>
       <source>Show and edit Lua variables</source>
-      <translation>显示并编辑 Lua 变量</translation>
+      <translation>顯示及編輯 Lua 變數</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="408"/>
@@ -9458,7 +9458,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="409"/>
       <source>Show/hide the map</source>
-      <translation>顯示/隱藏地圖</translation>
+      <translation>顯示／隱藏地圖</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
@@ -10034,7 +10034,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="139"/>
       <source>Show main toolbar</source>
-      <translation>显示主工具栏</translation>
+      <translation>顯示主工具列</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
@@ -10125,7 +10125,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="494"/>
       <source>Show the text you sent</source>
-      <translation>显示你送出的文本</translation>
+      <translation>顯示您發送的內容</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="484"/>
@@ -10271,7 +10271,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1105"/>
       <source>Show Spaces/Tabs</source>
-      <translation>顯示空白（space）/制表符（tab）</translation>
+      <translation>顯示空白（space）／制表符（tab）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1115"/>
@@ -10281,7 +10281,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1125"/>
       <source>Show Line/Paragraphs</source>
-      <translation>显示行/段落</translation>
+      <translation>顯示行／段落</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1135"/>
@@ -10551,7 +10551,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Allow server to download and play media</source>
-      <translation type="unfinished"/>
+      <translation>允許伺服器下載和播放媒體</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
