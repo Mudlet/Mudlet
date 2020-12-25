@@ -476,7 +476,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>No map or no valid position.</source>
-      <translation>无地图或无有效位置。</translation>
+      <translation>沒有地圖或沒有有效位置。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2330"/>
@@ -747,7 +747,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2927"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation>建立新地圖</translation>
+      <translation>創建地圖</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2930"/>
@@ -1868,7 +1868,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1609"/>
       <source>Download the map</source>
-      <translation>下载地图</translation>
+      <translation>下載地圖</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1610"/>
@@ -1883,7 +1883,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2081"/>
       <source>Map issues</source>
-      <translation>地图问题</translation>
+      <translation>地圖問題</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2088"/>
@@ -1964,13 +1964,13 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2231"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation>地图下载</translation>
+      <translation>下載地圖</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2294"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation>地图导入</translation>
+      <translation>匯入地圖</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2230"/>
@@ -1981,7 +1981,7 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="2228"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation>正載下載用於 %1 的地圖檔案…</translation>
+      <translation>正載下載用於 %1 的地圖檔案……</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2262"/>
@@ -6991,7 +6991,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5865"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>別名 - 輸入觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5877"/>
@@ -9398,7 +9398,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="352"/>
       <source>Show and edit aliases</source>
-      <translation>显示并编辑别名</translation>
+      <translation>顯示及編輯別名</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
@@ -9488,7 +9488,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="430"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation>打开记事本保存笔记</translation>
+      <translation>開啟記事本</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="436"/>
@@ -10190,12 +10190,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="726"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation>在字体上使用抗锯齿。要是你使用的是高分辨率且是大字体时，可以用来平滑字体。注意用在低分辨率和小字号上的话，字体会变得模糊。 </translation>
+      <translation>在字體上使用抗鋸齒（anti-aliasing）效果。當螢幕解析度較高，並且使用較大的字體時，可以使字體平滑化。需要注意的是在螢幕解析度較低，並且使用較小的字體時，字體將更為模糊。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="729"/>
       <source>Enable anti-aliasing</source>
-      <translation>使用平滑字型</translation>
+      <translation>使用平滑字型（anti-aliasing）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="758"/>
