@@ -99,13 +99,13 @@ Bitte warten...</translation>
       <location filename="../src/KeyUnit.cpp" line="322"/>
       <source>no modifiers + </source>
       <comment>This text is added before the name of the key in a keybinding when there is NO modifiers. If any modifier (&quot;control&quot;, etc.) is used they will be added instead; but they are not included in the translations. If they need to be translated in your language tell the Mudlet developers so that we can add them.</comment>
-      <translation type="unfinished"/>
+      <translation>keine Modifikatoren + </translation>
     </message>
     <message>
       <location filename="../src/KeyUnit.cpp" line="341"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1unbekannte Taste (Code: 0x%2)</translation>
     </message>
   </context>
   <context>
@@ -1287,7 +1287,8 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TAlias.cpp" line="192"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Alias-Fehler:] %1 Limit für erfasste Gruppen überschritten. Erfasse weniger Gruppen.
+</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="261"/>
@@ -3452,7 +3453,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="375"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
-      <translation type="unfinished"/>
+      <translation>[Trigger-Fehler:] %1 Limit für erfasste Gruppen überschritten. Erfasse weniger Gruppen.
+</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1127"/>
