@@ -1736,6 +1736,18 @@ local function check_room(roomID, name, exits)
     return table.is_empty(t_exits) or check_doors(roomID,t_exits)
 end
 
+local function check_room_only_name(roomID, name)
+   -- check to see if room name and exits match expecations
+    if not roomID then
+        error("Check Room Error: No ID",2)
+    end
+    if name ~= getRoomName(roomID) then 
+        return false
+    else        
+        return true
+    end
+end
+
 local function stretch_map(dir,x,y,z)
     -- stretches a map to make room for just added room that would overlap with existing room
     local dx,dy,dz
