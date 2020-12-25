@@ -1140,7 +1140,13 @@ map.help.config = [[
 
         &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and may be
             "simple", "normal", or "complex".
-
+        
+        &lt;yellow&gt;lazy_room_detect&lt;reset&gt; - When this is set, an adiacent room is detected
+            checking only the room name and not the room exits in the
+            starting/destinatation room. Is useful if your game don't
+            provide a clear method of detecting opened/closed door.
+            This may be true or false.
+            
         &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
             This may be any web address where the versions.lua and
             generic_mapper.xml files can be downloaded from.
@@ -1260,6 +1266,7 @@ profilePath = profilePath:gsub("\\","/")
 
 map.defaults = {
     mode = "normal", -- can be simple, normal, or complex
+    lazy_room_detect = false,
     stretch_map = true,
     search_on_look = true,
     speedwalk_delay = 1,
@@ -1448,7 +1455,7 @@ function map.show_help(cmd)
     echo("\n")
 end
 
-local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
+local bool_configs = {'lazy_room_detect', 'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
     'clear_lines_on_send', 'debug', 'custom_name_search', 'use_translation'}
 -- function intended to be used by an alias to change config values and save them to a file for later
 function map.setConfigs(key, val, sub_key)
@@ -1903,6 +1910,8 @@ local function move_map()
                 set_room(exits[move])
             elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits)) then
                 set_room(special[move])
+            elseif map.configs.lazy_room_detect and exits[move] and (vision_fail or check_room_only_name(exits[move], map.currentName)) then
+                set_room(exits[move])
             elseif not vision_fail then
                 if map.mapping and move then
                     find_link(map.currentName, map.currentExits, move, map.configs.max_search_distance)
