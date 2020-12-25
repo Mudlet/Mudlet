@@ -589,7 +589,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation>名称</translation>
+      <translation>名稱</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
@@ -633,7 +633,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2405"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation>渲染时间: %1S mO: (%2,%3,%4)</translation>
+      <translation>渲染時間：%1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2469"/>
@@ -645,13 +645,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2470"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>文本标签</translation>
+      <translation>文字標籤</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2471"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>圖片標籤</translation>
+      <translation>影像標籤</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2475"/>
@@ -675,7 +675,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2487"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation>选择图像</translation>
+      <translation>選擇影像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2494"/>
@@ -705,13 +705,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2891"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation>撤消</translation>
+      <translation>復原</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2892"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation>撤销上一个点</translation>
+      <translation>復原最後一點</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2899"/>
@@ -741,7 +741,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2906"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation>完成绘制这条线</translation>
+      <translation>完成繪製此線</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2927"/>
@@ -789,7 +789,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2957"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>颜色</translation>
+      <translation>顏色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2958"/>
@@ -801,7 +801,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2961"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>展开</translation>
+      <translation>展開</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2962"/>
@@ -813,7 +813,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2965"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>收缩</translation>
+      <translation>縮小</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2966"/>
@@ -825,7 +825,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2969"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>锁定</translation>
+      <translation>鎖定</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -3897,7 +3897,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2618"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ] - 重播已結束。</translation>
+      <translation>[  OK  ] - 記錄回放結束。</translation>
     </message>
   </context>
   <context>
@@ -7925,7 +7925,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="229"/>
       <source>Load replay</source>
-      <translation>载入回放</translation>
+      <translation>載入回放記錄</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
@@ -9347,7 +9347,7 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="240"/>
       <source>hh:mm:ss</source>
       <comment>Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&amp;) for the gory details...!</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="282"/>
@@ -9507,7 +9507,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="462"/>
       <source>Replay</source>
-      <translation>回放</translation>
+      <translation>記錄回放</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="467"/>
@@ -9878,7 +9878,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="2726"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>選取回放紀錄</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2728"/>
