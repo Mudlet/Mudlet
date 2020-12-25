@@ -5426,13 +5426,13 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>Buttons</source>
-      <translation>按钮</translation>
+      <translation>按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="78"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation>导出</translation>
+      <translation>匯出</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="88"/>
@@ -6445,12 +6445,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5871"/>
       <source>Buttons</source>
-      <translation>按钮</translation>
+      <translation>按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="424"/>
       <source>Show Buttons</source>
-      <translation>显示按钮</translation>
+      <translation>顯示按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
@@ -6599,12 +6599,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="517"/>
       <source>Import</source>
-      <translation>导入</translation>
+      <translation>匯入</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="521"/>
       <source>Export</source>
-      <translation>导出</translation>
+      <translation>匯出</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="525"/>
@@ -6652,7 +6652,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="547"/>
       <source>Debug</source>
-      <translation>调试</translation>
+      <translation>偵錯</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="548"/>
@@ -7443,7 +7443,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2324"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2385"/>
       <source>Button</source>
-      <translation>按钮</translation>
+      <translation>按鈕</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1629"/>
@@ -7863,7 +7863,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation>中斷連線</translation>
+      <translation>中斷</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
@@ -9363,7 +9363,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Disconnect</source>
-      <translation>断开连接</translation>
+      <translation>中斷</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="395"/>
@@ -9516,7 +9516,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="468"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation>从游戏中断开，然后再连接一次</translation>
+      <translation>中斷您與遊戲的連線，並再次連線</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="473"/>
