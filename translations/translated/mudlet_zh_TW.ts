@@ -3394,7 +3394,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
       <source>Loading update information …</source>
-      <translation>載入更新資訊…</translation>
+      <translation>載入更新資訊……</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="87"/>
@@ -3405,7 +3405,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="113"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% 已有最新的版本 %UPDATE_VERSION%（當前版本為 %CURRENT_VERSION%）。
+請問您是否要立即更新版本？</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="151"/>
@@ -3475,7 +3476,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../src/updater.cpp" line="352"/>
       <source>Restart to apply update</source>
-      <translation>重新启动使更新生效</translation>
+      <translation>重新啟動以套用更新</translation>
     </message>
   </context>
   <context>
@@ -7928,7 +7929,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="245"/>
       <source>Check for updates...</source>
-      <translation>检查更新……</translation>
+      <translation>檢查更新版本</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="250"/>
@@ -9936,7 +9937,9 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/mudlet.cpp" line="3818"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>檢查 %n 更新……</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3823"/>
@@ -9947,7 +9950,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="3848"/>
       <source>Update installed - restart to apply</source>
-      <translation type="unfinished"/>
+      <translation>已安裝更新版本 – 重新啟動以套用</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3884"/>
