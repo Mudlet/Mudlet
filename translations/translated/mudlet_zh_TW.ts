@@ -7131,22 +7131,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8339"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>備份使用者設定文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8339"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>觸發文件（*.trigger *.xml）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8469"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>選擇圖示</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8469"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>圖片文件（*.png *.jpg *.jpeg）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8478"/>
@@ -7156,17 +7156,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8499"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>選擇要套用於匹配項的前景顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8525"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>選擇要套用於匹配項的背景顏色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8543"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>選擇音效檔</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8547"/>
@@ -7187,7 +7187,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8713"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>正在儲存……</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8872"/>
@@ -7198,13 +7198,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8875"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8881"/>
       <source>Cut</source>
-      <translation>剪切</translation>
+      <translation>剪下</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8879"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8885"/>
       <source>Select All</source>
-      <translation>选择全部</translation>
+      <translation>全選</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9041"/>
@@ -7214,7 +7214,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="780"/>
       <source>substring</source>
-      <translation>子字符串</translation>
+      <translation>子字串</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="103"/>
@@ -7260,12 +7260,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="543"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>錯誤</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="682"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>精確匹配大小寫</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="686"/>
@@ -7275,22 +7275,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="689"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>搜尋變數（較慢）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="781"/>
       <source>perl regex</source>
-      <translation>perl正则</translation>
+      <translation>Perl 正規表達式</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="783"/>
       <source>exact match</source>
-      <translation>完全匹配</translation>
+      <translation>完全符合</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="784"/>
       <source>lua function</source>
-      <translation>Lua函数</translation>
+      <translation>Lua 函數</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="785"/>
@@ -7300,12 +7300,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="786"/>
       <source>color trigger</source>
-      <translation>颜色触发器</translation>
+      <translation>顏色觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="787"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>提示</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1910"/>
@@ -7334,7 +7334,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2417"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2491"/>
       <source>Name</source>
-      <translation>名称</translation>
+      <translation>名稱</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1485"/>
@@ -7358,7 +7358,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2503"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2508"/>
       <source>Command</source>
-      <translation>命令</translation>
+      <translation>指令</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1950"/>
@@ -7366,7 +7366,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2051"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2056"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>模式 {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1515"/>
@@ -7394,7 +7394,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2533"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2538"/>
       <source>Lua code (%1:%2)</source>
-      <translation>Lua 代码 (%1:%2)</translation>
+      <translation>Lua 代碼（%1：%2）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1823"/>
@@ -7414,7 +7414,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2145"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2150"/>
       <source>Pattern</source>
-      <translation>匹配</translation>
+      <translation>模式</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1739"/>
@@ -7432,7 +7432,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2229"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2234"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>事件處理</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1617"/>
@@ -7474,7 +7474,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2353"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2358"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>樣式表 {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1545"/>
@@ -7494,7 +7494,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2503"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2533"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1430"/>
@@ -7568,7 +7568,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="569"/>
       <source>Cut</source>
-      <translation>剪切</translation>
+      <translation>剪下</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="570"/>
@@ -7583,7 +7583,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="573"/>
       <source>Select All</source>
-      <translation>选择全部</translation>
+      <translation>全選</translation>
     </message>
   </context>
   <context>
@@ -7742,7 +7742,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="95"/>
       <source>Toolbox</source>
-      <translation>工具箱</translation>
+      <translation>工具</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
@@ -12002,7 +12002,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="590"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
