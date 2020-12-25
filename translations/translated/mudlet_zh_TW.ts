@@ -6594,7 +6594,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="502"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="503"/>
       <source>Paste triggers/scripts/aliases/etc from the clipboard</source>
-      <translation>从剪贴板粘贴 触发器/脚本/别名/其他</translation>
+      <translation>貼上觸發／腳本／別名……等</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="517"/>
@@ -6610,7 +6610,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="525"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8720"/>
       <source>Save Profile</source>
-      <translation>保存配置</translation>
+      <translation>儲存配置</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="527"/>
@@ -6632,7 +6632,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="535"/>
       <source>Save Profile As</source>
-      <translation>配置另存为</translation>
+      <translation>另存設定</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="539"/>
@@ -6642,7 +6642,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation>生成统计结果并显示在主配置控制台。</translation>
+      <translation>生成統計結果並顯示在控制台。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="544"/>
@@ -6680,24 +6680,24 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="672"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="675"/>
       <source>Search Options</source>
-      <translation>搜索选项</translation>
+      <translation>搜尋選項</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="679"/>
       <source>Case sensitive</source>
-      <translation>区分大小写</translation>
+      <translation>區分大小寫</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="732"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation>类型</translation>
+      <translation>類型</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="733"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation>名称</translation>
+      <translation>名稱</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="734"/>
@@ -6971,7 +6971,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5620"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8482"/>
       <source>Command:</source>
-      <translation>命令:</translation>
+      <translation>命令：</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5659"/>
@@ -6996,7 +6996,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5877"/>
       <source>Key Bindings</source>
-      <translation>按键绑定</translation>
+      <translation>熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7615"/>
@@ -7052,7 +7052,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7875"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7880"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>您必須先選擇要匯出的項目。 請選取樹狀結構中的項目，然後再按一下匯出。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7624"/>
@@ -7062,7 +7062,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7720"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7745"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>套件 %1 已儲存</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7769"/>
@@ -7072,12 +7072,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7861"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>項目 %1 已複製到剪貼簿</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7895"/>
       <source>Export Triggers</source>
-      <translation>导出触发器</translation>
+      <translation>匯出觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7895"/>
@@ -7098,34 +7098,35 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8180"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>匯入 Mudlet 套件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8187"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>匯入 Mudlet 套件：</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8187"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>無法讀取檔案 %1：
+%2。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>套件 %1 已安裝。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8332"/>
       <source>Couldn&apos;t save profile</source>
-      <translation>无法保存用户配置文件</translation>
+      <translation>無法儲存使用者設定文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8332"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
+      <translation>抱歉，以下錯誤導致無法儲存使用者設定文件：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8339"/>
