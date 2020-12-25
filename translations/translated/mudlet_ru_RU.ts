@@ -99,7 +99,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="322"/>
       <source>no modifiers + </source>
       <comment>This text is added before the name of the key in a keybinding when there is NO modifiers. If any modifier (&quot;control&quot;, etc.) is used they will be added instead; but they are not included in the translations. If they need to be translated in your language tell the Mudlet developers so that we can add them.</comment>
-      <translation type="unfinished"/>
+      <translation>без модификаторов + </translation>
     </message>
     <message>
       <location filename="../src/KeyUnit.cpp" line="341"/>
