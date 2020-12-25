@@ -5411,7 +5411,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
       <source>Timers</source>
-      <translation>計時</translation>
+      <translation>時計</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="60"/>
@@ -6466,12 +6466,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5853"/>
       <source>Timers</source>
-      <translation>計時</translation>
+      <translation>時計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
       <source>Show Timers</source>
-      <translation>显示定时器</translation>
+      <translation>顯示時計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -6482,7 +6482,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Show Scripts</source>
-      <translation>显示脚本</translation>
+      <translation>顯示腳本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -7483,7 +7483,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2429"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2459"/>
       <source>Timer</source>
-      <translation>計時器</translation>
+      <translation>時計</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1473"/>
@@ -9403,12 +9403,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
       <source>Timers</source>
-      <translation>計時器</translation>
+      <translation>時計</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Show and edit timers</source>
-      <translation>显示并编辑定时器</translation>
+      <translation>顯示和編輯時計</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -9418,17 +9418,17 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="364"/>
       <source>Show and edit easy buttons</source>
-      <translation>显示和编辑快捷按钮</translation>
+      <translation>顯示及編輯按鈕</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="369"/>
       <source>Scripts</source>
-      <translation>脚本</translation>
+      <translation>腳本</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="370"/>
       <source>Show and edit scripts</source>
-      <translation>显示并编辑脚本</translation>
+      <translation>顯示及編輯腳本</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="375"/>
@@ -10044,7 +10044,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="239"/>
       <source>Allow server to install script packages</source>
-      <translation>允许服务器安装脚本包</translation>
+      <translation>允許伺服器安裝腳本套件</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="266"/>
@@ -11209,7 +11209,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
       <source>Hide timer</source>
-      <translation>隱藏計時</translation>
+      <translation>隱藏時計</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
