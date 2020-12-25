@@ -6439,7 +6439,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="420"/>
       <source>Show Triggers</source>
-      <translation>显示触发器</translation>
+      <translation>顯示觸發</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="423"/>
@@ -6455,12 +6455,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="428"/>
       <source>Aliases</source>
-      <translation>别名</translation>
+      <translation>別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="429"/>
       <source>Show Aliases</source>
-      <translation>显示别名</translation>
+      <translation>顯示別名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="433"/>
@@ -6487,12 +6487,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
       <source>Keys</source>
-      <translation>按键</translation>
+      <translation>熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <source>Show Keybindings</source>
-      <translation>显示按键绑定</translation>
+      <translation>顯示熱鍵</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
@@ -6508,7 +6508,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="449"/>
       <source>Activate</source>
-      <translation>启用</translation>
+      <translation>啟動／停止啟用</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="450"/>
@@ -6518,38 +6518,38 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="460"/>
       <source>Add Item</source>
-      <translation>添加条目</translation>
+      <translation>新增項目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="461"/>
       <source>Add new Trigger, Script, Alias or Filter</source>
-      <translation>添加新的触发器、脚本、别名或过滤器</translation>
+      <translation>新增觸發、腳本、別名或篩選</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="464"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
       <source>Delete Item</source>
-      <translation>删除条目</translation>
+      <translation>删除項目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="465"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation>删除触发器、脚本、别名或过滤器</translation>
+      <translation>刪除觸發、腳本、別名或篩選</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="472"/>
       <source>Add Group</source>
-      <translation>添加组</translation>
+      <translation>新增群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="473"/>
       <source>Add new Group</source>
-      <translation>添加新的组</translation>
+      <translation>建立新的群組</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="476"/>
       <source>Save Item</source>
-      <translation>保存条目</translation>
+      <translation>儲存項目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="477"/>
@@ -6568,7 +6568,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="481"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation>保存选定的触发器、脚本、别名等，会使更改生效，但不会保存到磁盘...</translation>
+      <translation>儲存選取的觸發、腳本或別名…等，使其變更生效，但不會儲存至硬碟……</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
@@ -6581,14 +6581,14 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="488"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="489"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>複製觸發／腳本／別名……等</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="498"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8877"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8883"/>
       <source>Paste</source>
-      <translation>粘贴</translation>
+      <translation>貼上</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="502"/>
@@ -10296,7 +10296,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1176"/>
       <source>Editor</source>
-      <translation>编辑器</translation>
+      <translation>編輯器</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1182"/>
@@ -10583,7 +10583,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>在程式碼編輯器中自動補全 Lua 函數</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1311"/>
