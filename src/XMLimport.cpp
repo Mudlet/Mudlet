@@ -772,11 +772,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
-    if (attributes().hasAttribute("HighlightHistory")) {
-        pHost->mHighlightHistory = attributes().value("HighlightHistory") == "yes";
-    } else {
-        pHost->mHighlightHistory = true;
-    }
+    pHost->mHighlightHistory = readDefaultTrueBool("HighlightHistory");
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringRef ambiguousWidthSetting(attributes().value("AmbigousWidthGlyphsToBeWide"));
         if (ambiguousWidthSetting == QStringLiteral("yes")) {
@@ -810,12 +806,8 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
-    if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
-        pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
-    }
-    if (attributes().hasAttribute(QLatin1String("mEnableMSP"))) {
-        pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == "yes");
-    }
+    pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
+    pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == "yes");
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
@@ -824,27 +816,14 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
-    if (attributes().hasAttribute(QLatin1String("mAcceptServerMedia"))) {
-        pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
-    }
+    pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
-    pHost->mMapperShowRoomBorders = attributes().value("mMapperShowRoomBorders") == "yes" || !attributes().hasAttribute("mMapperShowRoomBorders");
-    if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
-        pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
-    }
-    if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
-        pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
-    }
-    if (attributes().hasAttribute(QLatin1String("mEditorThemeFile"))) {
-        pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
-    }
-    if (attributes().hasAttribute(QLatin1String("mThemePreviewItemID"))) {
-        pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
-    }
-    if (attributes().hasAttribute(QLatin1String("mThemePreviewType"))) {
-        pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
-    }
-
+    pHost->mMapperShowRoomBorders = readDefaultTrueBool("mMapperShowRoomBorders");
+    pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
+    pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
+    pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
     } else {
@@ -872,18 +851,8 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
-
-    if (attributes().hasAttribute(QLatin1String("mSGRCodeHasColSpaceId"))) {
-        pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
-    } else {
-        pHost->setHaveColorSpaceId(false);
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mServerMayRedefineColors"))) {
-        pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
-    } else {
-        pHost->setMayRedefineColors(false);
-    }
+    pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
+    pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
@@ -935,9 +904,7 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
         pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value("EditorSearchOptions").toInt()));
     }
-    if (attributes().hasAttribute(QLatin1String("DebugShowAllProblemCodepoints"))) {
-        pHost->setDebugShowAllProblemCodepoints(attributes().value("DebugShowAllProblemCodepoints") == "yes");
-    }
+    pHost->setDebugShowAllProblemCodepoints(attributes().value("DebugShowAllProblemCodepoints") == "yes");
     pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
     pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
@@ -952,10 +919,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
     pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
-    bool compactInputLine = false;
-    if (attributes().hasAttribute(QLatin1String("CompactInputLine"))) {
-        compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == "yes";
-    }
+    bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == "yes";
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
@@ -1129,8 +1093,10 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+}
 
-
+bool XMLimport::readDefaultTrueBool(QString name) {
+    return attributes().value(name) == "yes" || !attributes().hasAttribute(name);
 }
 
 // returns the ID of the root imported trigger/group
