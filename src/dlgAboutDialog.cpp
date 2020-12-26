@@ -138,6 +138,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     setSupportersTab(htmlHead);
     setLicenseTab(htmlHead);
     setThirdPartyTab(htmlHead);
+    setAboutPtbTab(htmlHead);
 }
 
 void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
@@ -1061,4 +1062,27 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
     textBrowser_supporters->setOpenExternalLinks(true);
+}
+
+void dlgAboutDialog::setAboutPtbTab(const QString htmlHead)
+{
+    int ptbTabIndex = tabWidget->indexOf(tab_ptb);
+    if (!mudlet::scmIsPublicTestVersion && !mudlet::scmIsDevelopmentVersion) {
+        tabWidget->removeTab(ptbTabIndex);
+        return;
+    }
+
+    QString ptbInfo = QStringLiteral(R"(
+        <p>Mudlet build: %1</p>
+        <p>OS: %2</p>
+        <p>CPU architecure: %4</p>
+        )").arg(mudlet::self()->version, QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture());
+
+    tabWidget->setCurrentIndex(ptbTabIndex);
+
+    textBrowser_ptb->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, ptbInfo));
+
+    connect(pushButton_copy_ptb_info, &QPushButton::released, [=]() {
+        QGuiApplication::clipboard()->setText(textBrowser_ptb->toPlainText());
+    });
 }

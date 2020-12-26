@@ -50,6 +50,7 @@ private:
     void setLicenseTab(const QString& htmlHead) const;
     void setThirdPartyTab(const QString& htmlHead) const;
     void setSupportersTab(const QString &htmlHead);
+    void setAboutPtbTab(const QString htmlHead);
     QString createMakerHTML(const aboutMaker&) const;
 };
 
