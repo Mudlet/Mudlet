@@ -255,25 +255,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     }
 #endif
 
-    mRegularPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, QColor(Qt::white));
-
-    mReadOnlyPalette.setColor(QPalette::Base, QColor(212, 212, 212));
-    mReadOnlyPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-
-    mOKPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mOKPalette.setColor(QPalette::Base, QColor(235, 255, 235));
-
-    mErrorPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
+    mRegularPalette.setColor(QPalette::Base, QColor(Qt::transparent));
+    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::transparent));
+    mOKPalette.setColor(QPalette::Base, QColor(200, 255, 200, 50));
+    mErrorPalette.setColor(QPalette::Base, QColor(255, 200, 200, 50));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
 
