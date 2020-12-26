@@ -283,7 +283,7 @@
       <attribute name="title">
        <string>PTB details</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="verticalLayout_ptb">
        <property name="spacing">
         <number>0</number>
        </property>
@@ -300,7 +300,7 @@
         <number>0</number>
        </property>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_12">
+        <layout class="QHBoxLayout" name="horizontalLayout_ptb">
          <property name="topMargin">
           <number>0</number>
          </property>
