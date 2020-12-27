@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,7 +29,9 @@
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
+#include <QBuffer>
 #include <QElapsedTimer>
+#include <QProgressDialog>
 #include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
@@ -40,7 +43,10 @@
 // FIXME: Modify mapper "painter" code to use "exits" rather than deriving the
 // same information each time it is run ???
 
-TArea::TArea(TMap * map , TRoomDB * pRDB )
+static const QColor defaultLabelForeground(QColor(0, 0, 0));
+static const QColor defaultLabelBackground(QColor(0, 0, 0));
+
+TArea::TArea(TMap * map , TRoomDB * pRDB)
 : min_x(0)
 , min_y(0)
 , min_z(0)
@@ -164,69 +170,69 @@ void TArea::determineAreaExitsOfRoom(int id)
         return;
     }
 
-    exits.remove(id);
+    mAreaExits.remove(id);
     int exitId = pR->getNorth();
     // The second term in the ifs below looks for exit room id in TArea
     // instance's own list of rooms which will fail (with a -1 if it is NOT in
     // the list and hence the area.
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTH);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getNortheast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHEAST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getEast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_EAST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getSoutheast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHEAST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getSouth();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTH);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getSouthwest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHWEST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getWest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_WEST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getNorthwest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHWEST);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getUp();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_UP);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getDown();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_DOWN);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getIn();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_IN);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     exitId = pR->getOut();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
-        exits.insert(id, p);
+        mAreaExits.insert(id, p);
     }
     const QMap<int, QString> otherMap = pR->getOtherMap();
     QMapIterator<int, QString> it(otherMap);
@@ -237,7 +243,7 @@ void TArea::determineAreaExitsOfRoom(int id)
         if (pO) {
             if (pO->getArea() != getAreaID()) {
                 QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
-                exits.insert(id, p);
+                mAreaExits.insert(id, p);
             }
         }
     }
@@ -245,7 +251,7 @@ void TArea::determineAreaExitsOfRoom(int id)
 
 void TArea::determineAreaExits()
 {
-    exits.clear();
+    mAreaExits.clear();
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
         int id = itRoom.next();
@@ -257,73 +263,73 @@ void TArea::determineAreaExits()
         int exitId = pR->getNorth();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTH);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getNortheast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHEAST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getEast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_EAST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getSoutheast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHEAST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getSouth();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTH);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getSouthwest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHWEST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getWest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_WEST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getNorthwest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHWEST);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getUp();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_UP);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getDown();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_DOWN);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getIn();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_IN);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         exitId = pR->getOut();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
-            exits.insert(id, p);
+            mAreaExits.insert(id, p);
         }
         const QMap<int, QString> otherMap = pR->getOtherMap();
         QMapIterator<int, QString> it(otherMap);
         while (it.hasNext()) {
             it.next();
-            int _exit = it.key();
-            TRoom* pO = mpRoomDB->getRoom(_exit);
+            int exitId = it.key();
+            TRoom* pO = mpRoomDB->getRoom(exitId);
             if (pO) {
                 if (pO->getArea() != getAreaID()) {
                     QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
-                    exits.insert(id, p);
+                    mAreaExits.insert(id, p);
                 }
             }
         }
@@ -506,7 +512,7 @@ void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
         }
     }
     rooms.remove(room);
-    exits.remove(room);
+    mAreaExits.remove(room);
     if (isOnExtreme) {
         calcSpan();
     }
@@ -525,7 +531,7 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     QMultiMap<int, QPair<QString, int>> results;
     QSet<int> roomsWithOtherAreaSpecialExits;
 
-    QMapIterator<int, QPair<int, int>> itAreaExit = exits;
+    QMapIterator<int, QPair<int, int>> itAreaExit = mAreaExits;
     // First parse the normal exits and also find the rooms where there is at
     // least one special area exit
     while (itAreaExit.hasNext()) {
@@ -581,4 +587,209 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         }
     }
     return results;
+}
+
+void TArea::writeArea(QJsonArray& obj) const
+{
+    QJsonObject areaObj;
+    const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
+    areaObj.insert(QStringLiteral("id"), static_cast<double>(id));
+
+    areaObj.insert(QStringLiteral("name"), mpRoomDB->getAreaNamesMap().value(id));
+
+    if (gridMode) {
+        areaObj.insert(QStringLiteral("gridMode"), true);
+    }
+
+    writeUserData(areaObj);
+
+    QList<int> roomList{rooms.begin(), rooms.end()};
+    int roomCount = roomList.count();
+    if (roomCount > 1) {
+        std::sort(roomList.begin(), roomList.end());
+    }
+    areaObj.insert(QStringLiteral("roomCount"), roomCount);
+
+    QJsonArray roomsArray;
+    int currentRoomCount = 0;
+    for (auto roomId : roomList) {
+        auto pR = mpRoomDB->getRoom(roomId);
+        if (pR) {
+            ++currentRoomCount;
+            pR->writeRoom(roomsArray);
+            if (currentRoomCount % 10 == 0) {
+                mpMap->incrementProgressDialog(true, 10);
+            }
+        }
+    }
+    if(currentRoomCount % 10 != 0) {
+        // Must add on any remainder otherwise the total will be wrong:
+        mpMap->incrementProgressDialog(true, currentRoomCount % 10);
+    }
+    areaObj.insert(QStringLiteral("rooms"), roomsArray);
+    mpMap->getCurrentProgressRoomCount();
+
+    // Process the labels after the rooms so that the first area shows something
+    // quickly (from the rooms) even if it has a number of labels to do.
+
+    writeLabels(areaObj);
+
+    obj.append(areaObj);
+}
+
+void TArea::writeUserData(QJsonObject& obj) const
+{
+    QJsonObject userDataObj;
+    if (mUserData.isEmpty()) {
+        // Skip creating a user data array if it will be empty:
+        return;
+    }
+    QMapIterator<QString, QString> itDataItem(mUserData);
+    while (itDataItem.hasNext()) {
+        itDataItem.next();
+        userDataObj.insert(itDataItem.key(), itDataItem.value());
+    }
+    obj.insert(QStringLiteral("userData"), userDataObj);
+}
+
+void TArea::writeLabels(QJsonObject& obj) const
+{
+    const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
+    if (mpMap->mapLabels.isEmpty() || mpMap->mapLabels.value(static_cast<qint32>(id)).isEmpty()) {
+        // No labels at all - or none in this area - so nothing to do
+        return;
+    }
+
+    QJsonArray labelArray;
+    QMapIterator<qint32, TMapLabel> itLabel(mpMap->mapLabels.value(static_cast<qint32>(id)));
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        writeLabel(labelArray, itLabel.key(), &itLabel.value());
+        mpMap->incrementProgressDialog(false, 1);
+    }
+
+    obj.insert(QStringLiteral("labels"), labelArray);
+}
+
+void TArea::writeLabel(QJsonArray& array, const int id, const TMapLabel* pLabel) const
+{
+    QJsonObject labelObj;
+
+    labelObj.insert(QStringLiteral("id"), static_cast<double>(id));
+
+    writeTripleValues(labelObj, QLatin1String("pos"), pLabel->pos);
+
+    writeTwinValues(labelObj, QLatin1String("size"), pLabel->size);
+
+    if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text", "Default text if a label is created in mapper with no text")))) {
+        // Don't include the text if it is am image:
+        labelObj.insert(QStringLiteral("text"), pLabel->text);
+    }
+
+    if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
+          && pLabel->fgColor.green() == defaultLabelForeground.green()
+          && pLabel->fgColor.blue() == defaultLabelForeground.blue()
+          && pLabel->bgColor.red() == defaultLabelBackground.red()
+          && pLabel->bgColor.red() == defaultLabelBackground.green()
+          && pLabel->bgColor.red() == defaultLabelBackground.blue())) {
+
+        // For an image the colors are not used and tend to be set to black, if
+        // so skip them. Ufortunately because of the way QColour s are assembled
+        // the operator== is too picky for our purposes as even the way the
+        // colour was put together (color spec type) can make them NOT seem to
+        // be the same when we'd think they were...
+        QJsonArray colorsArray;
+        QJsonObject foregroundColorObj;
+        QJsonObject backgroundColorObj;
+        writeColor(foregroundColorObj, pLabel->fgColor);
+        writeColor(backgroundColorObj, pLabel->bgColor);
+        colorsArray.append(foregroundColorObj);
+        colorsArray.append(backgroundColorObj);
+        labelObj.insert(QStringLiteral("colors"), colorsArray);
+    }
+
+    QList<QByteArray> pixmapData = convertImageToBase64Data(pLabel->pix);
+    QJsonArray imageArray;
+    for (auto imageLine : pixmapData) {
+        imageArray.append(imageLine.data());
+    }
+    labelObj.insert(QStringLiteral("image"), imageArray);
+
+    // (bool) pLabal->highlight is not saved as it is only used during editing
+    labelObj.insert(QStringLiteral("showOnTop"), pLabel->showOnTop);
+    // Invert the logic here as we are saying "scaled" rather than "unscaled":
+    labelObj.insert(QStringLiteral("scaled"), !pLabel->noScaling);
+
+    array.append(labelObj);
+}
+
+void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPointF& point) const
+{
+    QJsonArray valueArray;
+    valueArray.append(static_cast<double>(point.x()));
+    valueArray.append(static_cast<double>(point.y()));
+    obj.insert(title, valueArray);
+}
+
+void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QSizeF& size) const
+{
+    QJsonArray valueArray;
+    valueArray.append(static_cast<double>(size.width()));
+    valueArray.append(static_cast<double>(size.height()));
+    obj.insert(title, valueArray);
+}
+
+void TArea::writeTripleValues(QJsonObject& obj, const QString& title, const QVector3D& vector) const
+{
+    QJsonArray valueArray;
+    valueArray.append(static_cast<double>(vector.x()));
+    valueArray.append(static_cast<double>(vector.y()));
+    valueArray.append(static_cast<double>(vector.z()));
+    obj.insert(title, valueArray);
+}
+
+void TArea::writeColor(QJsonObject& obj, const QColor& color) const
+{
+    QJsonArray colorRGBAArray;
+    colorRGBAArray.append(static_cast<double>(color.red()));
+    colorRGBAArray.append(static_cast<double>(color.green()));
+    colorRGBAArray.append(static_cast<double>(color.blue()));
+    if (color.alpha() < 255) {
+        colorRGBAArray.append(static_cast<double>(color.alpha()));
+    }
+    obj.insert(QStringLiteral("colorRGBA"), colorRGBAArray);
+}
+
+// Serialize a QPixmap in a format that can be conveyed in a text file...
+QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
+{
+    QBuffer imageInputBuffer;
+    const int lineSize = 64;
+    imageInputBuffer.open(QIODevice::WriteOnly);
+    // Go for maximum compresssion - for the smallest amount of data:
+    pixmap.save(&imageInputBuffer, "PNG", 0);
+    QBuffer imageOutputBuffer;
+    QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
+    imageInputBuffer.close();
+    imageOutputBuffer.setBuffer(&encodedImageArray);
+    imageOutputBuffer.open(QIODevice::ReadOnly);
+
+    QList<QByteArray> pixmapArray;
+    // Extract the image into lines of bytes (unsigned chars):
+    char lineBuffer[lineSize + 1];
+    qint64 bytesRead = lineSize;
+    for (int i = 0, total = imageOutputBuffer.size(); bytesRead == lineSize && i < total; i += lineSize) {
+        bytesRead = imageOutputBuffer.read(lineBuffer, lineSize);
+        if (bytesRead) {
+            lineBuffer[bytesRead] = '\0';
+            pixmapArray.append(lineBuffer);
+        }
+    }
+
+    return pixmapArray;
+}
+
+QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) const
+{
+    // TODO:
 }

@@ -16257,6 +16257,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17968,4 +17969,34 @@ int TLuaInterpreter::showNotification(lua_State* L)
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
+}
+
+int TLuaInterpreter::exportJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        lua_pushnil(L);
+        lua_pushstring(L, "exportJsonMap: no map present or loaded!");
+        return 2;
+    }
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "exportJsonMap: bad argument #1 type (export pathFileName as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString dest = lua_tostring(L, 1);
+    if (dest.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "a non-empty path and file name to save to must be provided");
+        return 2;
+    }
+
+    if (auto [result, message] = pHost->mpMap->writeJsonMap(dest); !result) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }

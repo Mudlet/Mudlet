@@ -83,6 +83,7 @@ public:
     void restoreSingleArea(int, TArea*);
     void restoreSingleRoom(int, TRoom*);
     const QString getDefaultAreaName() { return mDefaultAreaName; }
+    const QString getUnnamedAreaName() { return mUnnamedAreaName; }
 
     // This is for muds that provide hashes to rooms instead of IDs.
     // If it exists, we delete the info when deleting a room.

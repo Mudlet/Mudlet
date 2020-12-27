@@ -29,6 +29,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 #include <QStringBuilder>
 #include "post_guard.h"
@@ -59,6 +61,20 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     return ds;
 }
 
+static const QColor defaultHighlightForeground(QColor(255, 150, 0));
+static const QColor defaultHighlightBackground(QColor(0, 0, 0));
+// Strings that are used more than once so make sense to predefine:
+static const QString DOOR{QStringLiteral("door")};
+static const QString OPEN{QStringLiteral("open")};
+static const QString CLOSED{QStringLiteral("closed")};
+static const QString LOCKED{QStringLiteral("locked")};
+static const QString STYLE{QStringLiteral("style")};
+static const QString DOT_LINE{QStringLiteral("dot line")};
+static const QString DASH_LINE{QStringLiteral("dash line")};
+static const QString DASH_DOT_LINE{QStringLiteral("dash dot line")};
+static const QString DASH_DOT_DOT_LINE{QStringLiteral("dash dot dot line")};
+static const QString NAME{QStringLiteral("name")};
+
 TRoom::TRoom(TRoomDB* pRDB)
 : x(0)
 , y(0)
@@ -71,7 +87,8 @@ TRoom::TRoom(TRoomDB* pRDB)
 , max_y(0)
 , mSymbol(QString())
 , highlight(false)
-, highlightColor(QColor(255, 150, 0))
+, highlightColor(defaultHighlightForeground)
+, highlightColor2(defaultHighlightBackground)
 , highlightRadius()
 , rendered(false)
 , id(0)
@@ -100,7 +117,7 @@ TRoom::~TRoom()
     }
 }
 
-const QString TRoom::dirCodeToDisplayName(const int dirCode)
+QString TRoom::dirCodeToDisplayName(const int dirCode) const
 {
     switch (dirCode) {
     case DIR_NORTH:     return tr("North");       break;
@@ -118,6 +135,46 @@ const QString TRoom::dirCodeToDisplayName(const int dirCode)
     case DIR_OTHER:     return tr("Other");       break;
     default:
         return tr("Unknown");
+    }
+}
+
+QString TRoom::dirCodeToString(const int dirCode) const
+{
+    switch (dirCode) {
+    case DIR_NORTH:     return QStringLiteral("north");
+    case DIR_NORTHEAST: return QStringLiteral("northeast");
+    case DIR_NORTHWEST: return QStringLiteral("northwest");
+    case DIR_EAST:      return QStringLiteral("east");
+    case DIR_WEST:      return QStringLiteral("west");
+    case DIR_SOUTH:     return QStringLiteral("south");
+    case DIR_SOUTHEAST: return QStringLiteral("southeast");
+    case DIR_SOUTHWEST: return QStringLiteral("southwest");
+    case DIR_UP:        return QStringLiteral("up");
+    case DIR_DOWN:      return QStringLiteral("down");
+    case DIR_IN:        return QStringLiteral("in");
+    case DIR_OUT:       return QStringLiteral("out");
+    default:
+        Q_UNREACHABLE();
+    }
+}
+
+QString TRoom::dirCodeToKey(const int dirCode) const
+{
+    switch (dirCode) {
+    case DIR_NORTH:     return QStringLiteral("n");
+    case DIR_NORTHEAST: return QStringLiteral("ne");
+    case DIR_NORTHWEST: return QStringLiteral("nw");
+    case DIR_EAST:      return QStringLiteral("e");
+    case DIR_WEST:      return QStringLiteral("w");
+    case DIR_SOUTH:     return QStringLiteral("s");
+    case DIR_SOUTHEAST: return QStringLiteral("se");
+    case DIR_SOUTHWEST: return QStringLiteral("sw");
+    case DIR_UP:        return QStringLiteral("up");
+    case DIR_DOWN:      return QStringLiteral("down");
+    case DIR_IN:        return QStringLiteral("in");
+    case DIR_OUT:       return QStringLiteral("out");
+    default:
+        Q_UNREACHABLE();
     }
 }
 
@@ -386,7 +443,7 @@ bool TRoom::hasExitOrSpecialExit(const QString& text) const
     return false;
 }
 
-int TRoom::getExit(int direction)
+int TRoom::getExit(int direction) const
 {
     switch (direction) {
     case DIR_NORTH:
@@ -913,13 +970,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     direction = direction.toLower();
                 }
 
-                if (itCustomLineStyle.value() == QLatin1String("dot line")) {
+                if (itCustomLineStyle.value() == DOT_LINE) {
                     customLinesStyle.insert(direction, Qt::DotLine);
-                } else if (itCustomLineStyle.value() == QLatin1String("dash line")) {
+                } else if (itCustomLineStyle.value() == DASH_LINE) {
                     customLinesStyle.insert(direction, Qt::DashLine);
-                } else if (itCustomLineStyle.value() == QLatin1String("dash dot line")) {
+                } else if (itCustomLineStyle.value() == DASH_DOT_LINE) {
                     customLinesStyle.insert(direction, Qt::DashDotLine);
-                } else if (itCustomLineStyle.value() == QLatin1String("dash dot dot line")) {
+                } else if (itCustomLineStyle.value() == DASH_DOT_DOT_LINE) {
                     customLinesStyle.insert(direction, Qt::DashDotDotLine);
                 } else {
                     customLinesStyle.insert(direction, Qt::SolidLine);
@@ -1737,4 +1794,328 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         customLinesStylePool.remove(exitKey);
         customLinesArrowPool.remove(exitKey);
     }
+}
+
+void TRoom::writeRoom(QJsonArray& obj) const
+{
+    QJsonObject roomObj;
+    // Static casts are used as reminders of what value types are actually used:
+    roomObj.insert(QStringLiteral("roomId"), static_cast<double>(id));
+
+    if (!name.isEmpty()) {
+        roomObj.insert(NAME, name);
+    }
+
+    QJsonArray coordinateArray;
+    coordinateArray.append(static_cast<double>(x));
+    coordinateArray.append(static_cast<double>(y));
+    coordinateArray.append(static_cast<double>(z));
+    roomObj.insert(QStringLiteral("coordinates"), coordinateArray);
+
+    // Remove once rooms are done via areas:
+    // roomObj.insert(QStringLiteral("areaId"), static_cast<double>(area));
+
+    if (isLocked) {
+        roomObj.insert(QStringLiteral("locked"), true);
+    }
+
+    if (weight != 1) {
+        roomObj.insert(QStringLiteral("weight"), static_cast<double>(weight));
+    }
+
+    if (!mSymbol.isEmpty()) {
+        roomObj.insert(QStringLiteral("symbol"), mSymbol);
+    }
+
+    roomObj.insert(QStringLiteral("environment"), static_cast<double>(environment));
+
+    const QString hashForRoomID{mpRoomDB->roomIDToHash.value(id)};
+    if (!hashForRoomID.isEmpty()) {
+        roomObj.insert(QStringLiteral("hash"), hashForRoomID);
+    }
+
+    writeHighlight(roomObj);
+
+    writeExits(roomObj);
+
+    writeExitStubs(roomObj);
+
+    writeUserData(roomObj);
+
+    obj.append(roomObj);
+}
+
+// This inserts an array of exits into the provided QJsonObject container
+// under the key "exits":
+void TRoom::writeExits(QJsonObject& obj) const
+{
+    QJsonArray exitArray;
+    if (north > 0) {
+        writeNormalExit(exitArray, DIR_NORTH);
+    }
+    if (northeast > 0) {
+        writeNormalExit(exitArray, DIR_NORTHEAST);
+    }
+    if (northwest > 0) {
+        writeNormalExit(exitArray, DIR_NORTHWEST);
+    }
+    if (east > 0) {
+        writeNormalExit(exitArray, DIR_EAST);
+    }
+    if (west > 0) {
+        writeNormalExit(exitArray, DIR_WEST);
+    }
+    if (south > 0) {
+        writeNormalExit(exitArray, DIR_SOUTH);
+    }
+    if (southeast > 0) {
+        writeNormalExit(exitArray, DIR_SOUTHEAST);
+    }
+    if (southwest > 0) {
+        writeNormalExit(exitArray, DIR_SOUTHWEST);
+    }
+    if (up > 0) {
+        writeNormalExit(exitArray, DIR_UP);
+    }
+    if (down > 0) {
+        writeNormalExit(exitArray, DIR_DOWN);
+    }
+    if (in > 0) {
+        writeNormalExit(exitArray, DIR_IN);
+    }
+    if (out > 0) {
+        writeNormalExit(exitArray, DIR_OUT);
+    }
+    QMapIterator<int, QString> itSpecialExit(other);
+    while (itSpecialExit.hasNext()) {
+        itSpecialExit.next();
+        writeSpecialExit(exitArray, itSpecialExit.value(), itSpecialExit.key());
+    }
+    obj[QStringLiteral("exits")] = exitArray;
+}
+
+// This inserts a newly constructed QJsonObject into the provided QJsonArray
+// container for the specified normal exit:
+void TRoom::writeNormalExit(QJsonArray& obj, const int dir) const
+{
+    QJsonObject exitObj;
+    QString directionString = dirCodeToString(dir);
+    int exitId = getExit(dir);
+    QString directionKey = dirCodeToKey(dir);
+    // Skip any unreal exits:
+    if (exitId < 1) {
+        return;
+    }
+
+    exitObj.insert(NAME, directionString);
+    exitObj.insert(QStringLiteral("exitId"), static_cast<double>(exitId));
+
+    writeDoor(exitObj, directionKey);
+
+    if (exitWeights.contains(directionString)) {
+        exitObj.insert(QStringLiteral("weight"), static_cast<double>(exitWeights.value(directionString)));
+    }
+
+    if (exitLocks.contains(dir)) {
+        // We won't bother to include this item for unlocked exits but we will
+        // check that it is true when reading in case the file gets edited:
+        exitObj.insert(QStringLiteral("locked"), true);
+    }
+
+    if (customLines.contains(directionKey)) {
+        writeCustomExitLine(exitObj, directionKey);
+    }
+
+    obj.append(exitObj);
+}
+
+void TRoom::writeDoor(QJsonObject& obj, const QString& key) const
+{
+
+    switch (doors.value(key)) {
+        // We won't bother to include this item for exits without doors but we
+        // will check that it is one of these values (and not "none") when
+        // reading in case the file gets edited:
+    case 1:
+        obj.insert(DOOR, OPEN);
+        break;
+    case 2:
+        obj.insert(DOOR, CLOSED);
+        break;
+    case 3:
+        obj.insert(DOOR, LOCKED);
+        break;
+    default:
+        {} // Best option to use for "no-op"
+    }
+}
+
+// Temporarily uses the exit room id until PR #4526 goes in and simplifies
+// accessing special exits by command/name:
+void TRoom::writeSpecialExit(QJsonArray& obj, const QString& dir, const int exitId) const
+{
+    QJsonObject exitObj;
+    QString directionString = dir;
+    bool exitLocked = false;
+    if (dir.startsWith(QStringLiteral("1"))) {
+        directionString = dir.mid(1);
+        exitLocked = true;
+    } else if (dir.startsWith(QStringLiteral("0"))) {
+        directionString = dir.mid(1);
+    }
+
+    // Safety step to avoid insertion of any unreal exits:
+    if (exitId < 1 || directionString.isEmpty()) {
+        return;
+    }
+
+    exitObj.insert(NAME, directionString);
+    exitObj.insert(QStringLiteral("exitId"), static_cast<double>(exitId));
+
+    writeDoor(exitObj, directionString);
+
+    if (exitWeights.contains(directionString)) {
+        exitObj.insert(QStringLiteral("weight"), static_cast<double>(exitWeights.value(directionString)));
+    }
+
+    if (exitLocked) {
+        // We won't bother to include this item for unlocked exits but we will
+        // check that it is true when reading in case the file gets edited:
+        exitObj.insert(QStringLiteral("locked"), true);
+    }
+
+    if (customLines.contains(directionString)) {
+        writeCustomExitLine(exitObj, directionString);
+    }
+
+    obj.append(exitObj);
+}
+
+void TRoom::writeColor(QJsonObject& obj, const QColor& color) const
+{
+    QJsonArray colorRGBAArray;
+    colorRGBAArray.append(static_cast<double>(color.red()));
+    colorRGBAArray.append(static_cast<double>(color.green()));
+    colorRGBAArray.append(static_cast<double>(color.blue()));
+    if (color.alpha() < 255) {
+        colorRGBAArray.append(static_cast<double>(color.alpha()));
+    }
+    obj.insert(QStringLiteral("colorRGBA"), colorRGBAArray);
+}
+
+// This tacks on extra details onto the calling exitObj if there IS a custom line:
+void TRoom::writeCustomExitLine(QJsonObject& exitObj, const QString& directionString) const
+{
+    // Safety step to not insert anything for an empty custom line
+    if (!customLines.contains(directionString) || customLines.value(directionString).isEmpty()) {
+        return;
+    }
+
+    QJsonObject customLineObj;
+    QJsonArray customLinePointsArray;
+    const QList<QPointF> points{customLines.value(directionString)};
+    for (int i = 0, total = points.count(); i < total; ++i) {
+        QJsonArray customLinePointCoordinateArray;
+        const QPointF point{points.at(i)};
+        customLinePointCoordinateArray.append(static_cast<double>(point.x()));
+        customLinePointCoordinateArray.append(static_cast<double>(point.y()));
+        // We might wish to consider storing a z in the future to accomodate 3D
+        // custom lines...!
+        customLinePointsArray.append(customLinePointCoordinateArray);
+    }
+    customLineObj.insert(QStringLiteral("coordinates"), customLinePointsArray);
+
+    writeColor(customLineObj, customLinesColor.value(directionString));
+
+    customLineObj.insert(QStringLiteral("endsInArrow"), customLinesArrow.value(directionString));
+
+    switch (customLinesStyle.value(directionString)) {
+    case Qt::DotLine:
+        customLineObj.insert(STYLE, DOT_LINE);
+        break;
+    case Qt::DashDotLine:
+        customLineObj.insert(STYLE, DASH_DOT_LINE);
+        break;
+    case Qt::DashDotDotLine:
+        customLineObj.insert(STYLE, DASH_DOT_DOT_LINE);
+        break;
+    case Qt::DashLine:
+        customLineObj.insert(STYLE, DASH_LINE);
+        break;
+    default:
+        {} // Use this (nothing) for Solid but will also convert anything else we do not handle to it as well
+    }
+
+    exitObj.insert(QStringLiteral("customLine"), customLineObj);
+}
+
+void TRoom::writeUserData(QJsonObject& obj) const
+{
+    QJsonObject userDataObj;
+    if (userData.isEmpty()) {
+        // Skip creating a user data array if it will be empty:
+        return;
+    }
+    QMapIterator<QString, QString> itDataItem(userData);
+    while (itDataItem.hasNext()) {
+        itDataItem.next();
+        userDataObj.insert(itDataItem.key(), itDataItem.value());
+    }
+    obj.insert(QStringLiteral("userData"), userDataObj);
+}
+
+void TRoom::writeExitStubs(QJsonObject& obj) const
+{
+    QJsonArray exitStubsArray;
+    if (exitStubs.isEmpty()) {
+        // Don't add an empty stub array
+        return;
+    }
+
+    // Given a forecast that we might eventually allow special exit stubs, use
+    // strings not numbers for the identifiers:
+    QList<QString> exitStubsList;
+    for (auto stub : exitStubs) {
+        exitStubsList.append(dirCodeToString(stub));
+    }
+
+    if (exitStubsList.count() > 1) {
+        std::sort(exitStubsList.begin(), exitStubsList.end());
+    }
+
+    for (auto stubName : exitStubsList) {
+        QJsonObject exitStubObj;
+        exitStubObj.insert(NAME, stubName);
+        writeDoor(exitStubObj, stubName);
+        exitStubsArray.append(exitStubObj);
+    }
+
+    obj.insert(QStringLiteral("stubExits"), exitStubsArray);
+}
+
+void TRoom::writeHighlight(QJsonObject& obj) const
+{
+    bool noColor = (highlightColor == defaultHighlightForeground) && (highlightColor2 == defaultHighlightBackground);
+    if (!highlight && qFuzzyCompare(1.0f + highlightRadius, 1.0f) && noColor) {
+        // The default case so no need to include it:
+        return;
+    }
+
+    QJsonObject highlightObj;
+    highlightObj.insert(QStringLiteral("active"), highlight);
+
+    if (!noColor) {
+        QJsonArray highlightColorArray;
+        QJsonObject highlightColorObj1;
+        QJsonObject highlightColorObj2;
+        writeColor(highlightColorObj1, highlightColor);
+        writeColor(highlightColorObj2, highlightColor2);
+        highlightColorArray.append(highlightColorObj1);
+        highlightColorArray.append(highlightColorObj2);
+        highlightObj.insert(QStringLiteral("colors"), highlightColorArray);
+    }
+
+    highlightObj.insert(QStringLiteral("radius"), static_cast<double>(highlightRadius));
+
+    obj.insert(QStringLiteral("highlight"), highlightObj);
 }

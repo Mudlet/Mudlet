@@ -580,6 +580,7 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
+    static int exportJsonMap(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

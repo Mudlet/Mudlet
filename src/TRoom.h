@@ -4,8 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015, 2018 by Stephen Lyons                        *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2015, 2018, 2020 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,6 +51,9 @@
 class XMLimport;
 class XMLexport;
 class TRoomDB;
+class QJsonArray;
+class QJsonObject;
+
 
 class TRoom
 {
@@ -61,7 +64,7 @@ public:
     ~TRoom();
     void setId(int);
     bool setExit(int to, int direction);
-    int getExit(int direction);
+    int getExit(int direction) const;
     QHash<int, int> getExits();
     bool hasExit(int direction) const;
     void setWeight(int);
@@ -128,9 +131,11 @@ public:
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    QHash<int, int>);
-    const QString dirCodeToDisplayName(int dirCode);
+    QString dirCodeToDisplayName(int) const;
+    inline QString dirCodeToString(const int) const;
+    inline QString dirCodeToKey(const int) const;
     bool hasExitOrSpecialExit(const QString&) const;
-
+    void writeRoom(QJsonArray&) const;
 
     int x;
     int y;
@@ -161,6 +166,16 @@ public:
 
 
 private:
+    void writeColor(QJsonObject&, const QColor&) const;
+    void writeExits(QJsonObject&) const;
+    void writeExitStubs(QJsonObject& obj) const;
+    void writeNormalExit(QJsonArray&, const int) const;
+    void writeSpecialExit(QJsonArray&, const QString&, const int) const;
+    void writeCustomExitLine(QJsonObject&, const QString&) const;
+    void writeUserData(QJsonObject&) const;
+    void writeDoor(QJsonObject&, const QString&) const;
+    void writeHighlight(QJsonObject&) const;
+
     int id;
     int area;
     int weight;

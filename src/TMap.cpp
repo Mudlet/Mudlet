@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -73,10 +73,10 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mPlayerRoomInnerDiameterPercentage(70)
 , mIsFileViewingRecommended(false)
 , mpNetworkAccessManager(Q_NULLPTR)
-, mpProgressDialog(Q_NULLPTR)
 , mpNetworkReply(Q_NULLPTR)
 , mExpectedFileSize(0)
 , mImportRunning(false)
+, mpProgressDialog(Q_NULLPTR)
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
@@ -1095,7 +1095,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << _oldList;
         }
         ofs << pA->zLevels;
-        ofs << pA->exits;
+        ofs << pA->mAreaExits;
         ofs << pA->gridMode;
         ofs << pA->max_x;
         ofs << pA->max_y;
@@ -1472,7 +1472,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
                 ifs >> pA->zLevels;
-                ifs >> pA->exits;
+                ifs >> pA->mAreaExits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
                 ifs >> pA->max_y;
@@ -1748,7 +1748,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> areaID;
             ifs >> pA.rooms;
             ifs >> pA.zLevels;
-            ifs >> pA.exits;
+            ifs >> pA.mAreaExits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
             ifs >> pA.max_y;
@@ -2584,3 +2584,217 @@ void TMap::update()
     }
 }
 
+std::pair<bool, QString> TMap::writeJsonMap(const QString& dest)
+{
+    QString destination{dest};
+    if (!dest.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
+        destination.append(QLatin1String(".json"));
+    }
+
+    if (mpProgressDialog) {
+        return {false, QStringLiteral("import or export already in progress")};
+    }
+
+    mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
+    mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
+    QList<qint32> areaWithLabelsKeys = mapLabels.keys();
+    mProgressDialogLabelsTotal = 0;
+    for (int index = 0, total = areaWithLabelsKeys.count(); index < total; ++index) {
+        mProgressDialogLabelsTotal += mapLabels.value(areaWithLabelsKeys.at(index)).count();
+    }
+
+    mpProgressDialog = new QProgressDialog(tr("Exporting JSON map data from %1\n"
+                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                           .arg(mProfileName,
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogAreasTotal),
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogRoomsTotal),
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogLabelsTotal)),
+                                           tr("Abort"),
+                                           0,
+                                           mProgressDialogRoomsTotal,
+                                           mpHost->mpConsole);
+    mpProgressDialog->setValue(0);
+    mpProgressDialog->setWindowModality(Qt::NonModal);
+    mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
+    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setMinimumWidth(500);
+    mpProgressDialog->setAutoClose(false);
+    mpProgressDialog->setAutoReset(false);
+    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    qApp->processEvents();
+    QFile file(destination);
+    if (!file.open(QFile::Text|QFile::WriteOnly)) {
+        qWarning().noquote().nospace() << "TMap::writeJsonMap(...) WARNING - Could not open save file \"" << destination << "\".";
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+        mpProgressDialog->close();
+        mpProgressDialog = nullptr;
+        return {false, QStringLiteral("could not open save file \"%1\"").arg(destination)};
+    }
+
+    QJsonObject mapObj;
+    // Use this to track any changes. in a major.minor number format, minor
+    // is to be three digits long.
+    mapObj.insert(QStringLiteral("formatVersion"), static_cast<double>(0.001));
+
+    writeUserData(mapObj);
+
+    QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
+    QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
+    QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
+    areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
+
+    QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
+    if (areaIdsList.count() > 1) {
+        std::sort(areaIdsList.begin(), areaIdsList.end());
+    }
+    mapObj.insert(QStringLiteral("areaCount"), static_cast<double>(areaIdsList.count()));
+
+    mProgressDialogAreasCount = 0;
+    mProgressDialogRoomsCount = 0;
+    mProgressDialogLabelsCount = 0;
+    bool abort = false;
+    QJsonArray areasArray;
+    for (auto areaId : areaIdsList) {
+        auto pA = mpRoomDB->getArea(areaId);
+        if (pA) {
+            pA->writeArea(areasArray);
+        }
+        ++mProgressDialogAreasCount;
+        incrementProgressDialog(true, 0);
+        if (mpProgressDialog->wasCanceled()) {
+            abort = true;
+            break;
+        }
+    }
+    if (abort) {
+        file.close();
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+        mpProgressDialog->close();
+        mpProgressDialog = nullptr;
+        return {false, QStringLiteral("aborted by user")};
+    }
+
+    mapObj.insert(QStringLiteral("areas"), areasArray);
+
+    mapObj.insert(QStringLiteral("roomCount"), static_cast<double>(mProgressDialogRoomsCount));
+
+    mapObj.insert(QStringLiteral("defaultAreaName"), mpRoomDB->getDefaultAreaName());
+
+    mapObj.insert(QStringLiteral("anonymousAreaName"), mpRoomDB->getUnnamedAreaName());
+
+    if (!envColors.isEmpty()) {
+        QJsonArray envColorsArray;
+        QMapIterator<int, int> itEnvColor(envColors);
+        while (itEnvColor.hasNext()) {
+            itEnvColor.next();
+            QJsonObject envColorObj;
+            envColorObj.insert(QString::number(itEnvColor.key()), static_cast<double>(itEnvColor.value()));
+            envColorsArray.append(envColorObj);
+        }
+        mapObj.insert(QStringLiteral("envColorsMap"), envColorsArray);
+    }
+
+    QJsonArray playerRoomIdHashArray;
+    QHashIterator<QString, int> itplayerRoomIdHash(mRoomIdHash);
+    while (itplayerRoomIdHash.hasNext()) {
+        itplayerRoomIdHash.next();
+        QJsonObject playerRoomIdHashObj;
+        playerRoomIdHashObj.insert(itplayerRoomIdHash.key(), static_cast<double>(itplayerRoomIdHash.value()));
+        playerRoomIdHashArray.append(playerRoomIdHashObj);
+    }
+    mapObj.insert(QStringLiteral("playerRoomIds"), playerRoomIdHashArray);
+
+    QJsonArray customEnvColorArray;
+    QMapIterator<int, QColor> itCustomEnvColor(customEnvColors);
+    while (itCustomEnvColor.hasNext()) {
+        itCustomEnvColor.next();
+        QJsonObject customEnvColorObj;
+        customEnvColorObj.insert(QStringLiteral("id"), QString::number(itCustomEnvColor.key()));
+        writeColor(customEnvColorObj, itCustomEnvColor.value());
+    }
+    mapObj.insert(QStringLiteral("customEnvColors"), customEnvColorArray);
+
+    mapObj.insert(QStringLiteral("mapSymbolFontDetails"), mMapSymbolFont.toString());
+    mapObj.insert(QStringLiteral("mapSymbolFontFudgeFactor"), static_cast<double>(mMapSymbolFontFudgeFactor));
+    mapObj.insert(QStringLiteral("onlyMapSymbolFontToBeUsed"), mIsOnlyMapSymbolFontToBeUsed);
+
+    QJsonArray playerRoomColorArray;
+    QJsonObject playerRoomOuterColorObj;
+    QJsonObject playerRoomInnerColorObj;
+    writeColor(playerRoomOuterColorObj, mPlayerRoomOuterColor);
+    writeColor(playerRoomInnerColorObj, mPlayerRoomInnerColor);
+    playerRoomColorArray.append(playerRoomOuterColorObj);
+    playerRoomColorArray.append(playerRoomInnerColorObj);
+    mapObj.insert(QStringLiteral("playerRoomColors"), playerRoomColorArray);
+    mapObj.insert(QStringLiteral("playerRoomStyle"), static_cast<double>(mPlayerRoomStyle));
+    mapObj.insert(QStringLiteral("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
+    mapObj.insert(QStringLiteral("playerRoomInnerDiameterPercentage"), static_cast<double>(mPlayerRoomInnerDiameterPercentage));
+
+    mpProgressDialog->setLabelText(tr("Exporting JSON map file from %1 - writing data to file:\n"
+                                      "%2 ...").arg(mProfileName, destination));
+    mpProgressDialog->setValue(0);
+    // Hide the cancel button as we can't stop now:
+    mpProgressDialog->setCancelButton(nullptr);
+    file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
+    file.close();
+
+    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    mpProgressDialog->close();
+    mpProgressDialog = nullptr;
+
+    return {file.error() == QFileDevice::NoError,
+                (file.error() == QFileDevice::NoError)
+                ? QString()
+                : QStringLiteral("could not export file, reason: %1").arg(file.errorString())};
+}
+
+void TMap::writeUserData(QJsonObject& obj) const
+{
+    QJsonObject userDataObj;
+    if (mUserData.isEmpty()) {
+        // Skip creating a user data array if it will be empty:
+        return;
+    }
+    QMapIterator<QString, QString> itDataItem(mUserData);
+    while (itDataItem.hasNext()) {
+        itDataItem.next();
+        userDataObj.insert(itDataItem.key(), itDataItem.value());
+    }
+    obj.insert(QStringLiteral("userData"), userDataObj);
+}
+
+void TMap::writeColor(QJsonObject& obj, const QColor& color) const
+{
+    QJsonArray colorRGBAArray;
+    colorRGBAArray.append(static_cast<double>(color.red()));
+    colorRGBAArray.append(static_cast<double>(color.green()));
+    colorRGBAArray.append(static_cast<double>(color.blue()));
+    if (color.alpha() < 255) {
+        colorRGBAArray.append(static_cast<double>(color.alpha()));
+    }
+    obj.insert(QStringLiteral("colorRGBA"), colorRGBAArray);
+}
+
+void TMap::incrementProgressDialog(const bool isRoomNotLabel, const int increment)
+{
+    if (isRoomNotLabel) {
+        mProgressDialogRoomsCount += increment;
+    } else {
+        mProgressDialogLabelsCount += increment;
+    }
+
+    mpProgressDialog->setValue(mProgressDialogRoomsCount);
+    mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
+                                      "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                   .arg(mProfileName,
+                                        QString::number(mProgressDialogAreasCount),
+                                        QString::number(mProgressDialogAreasTotal),
+                                        QString::number(mProgressDialogRoomsCount),
+                                        QString::number(mProgressDialogRoomsTotal),
+                                        QString::number(mProgressDialogLabelsCount),
+                                        QString::number(mProgressDialogLabelsTotal)));
+    qApp->processEvents();
+}

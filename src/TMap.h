@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -33,6 +33,9 @@
 #include <QApplication>
 #include <QColor>
 #include <QFont>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMap>
 #include <QNetworkReply>
 #include <QPixmap>
@@ -60,10 +63,12 @@ class TMapLabel
 {
 public:
     TMapLabel()
+    : fgColor(Qt::black)
+    , bgColor(Qt::black)
+    , highlight(false)
+    , showOnTop(false)
+    , noScaling(false)
     {
-        highlight = false;
-        showOnTop = false;
-        noScaling = false;
     }
 
     QVector3D pos;
@@ -152,6 +157,16 @@ public:
     void setMmpMapLocation(const QString &location);
     QString getMmpMapLocation() const;
 
+    // has setRoomNamesShown ever been called on this map?
+    bool getRoomNamesPresent();
+    // show room labels on the map?
+    bool getRoomNamesShown();
+    void setRoomNamesShown(bool shown);
+
+    std::pair<bool, QString> writeJsonMap(const QString&);
+    int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
+    void incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
+
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
@@ -231,12 +246,6 @@ public:
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
 
-    // has setRoomNamesShown ever been called on this map?
-    bool getRoomNamesPresent();
-    // show room labels on the map?
-    bool getRoomNamesShown();
-    void setRoomNamesShown(bool shown);
-
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 
@@ -255,6 +264,7 @@ public:
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
 
+
 public slots:
     // Moved and revised from dlgMapper:
     void slot_setDownloadProgress(qint64, qint64);
@@ -265,6 +275,8 @@ public slots:
 
 private:
     const QString createFileHeaderLine(QString, QChar);
+    void writeUserData(QJsonObject&) const;
+    void writeColor(QJsonObject&, const QColor&) const;
 
     QStringList mStoredMessages;
 
@@ -283,11 +295,20 @@ private:
     // Moved and revised from dlgMapper:
     QNetworkAccessManager* mpNetworkAccessManager;
 
-    QProgressDialog* mpProgressDialog;
     QNetworkReply* mpNetworkReply;
     QString mLocalMapFileName;
     int mExpectedFileSize;
     bool mImportRunning;
+
+    QProgressDialog* mpProgressDialog = nullptr;
+    // Using during updates of text in progress dialog partially from other
+    // classes:
+    int mProgressDialogAreasTotal = 0;
+    int mProgressDialogAreasCount = 0;
+    int mProgressDialogRoomsTotal = 0;
+    int mProgressDialogRoomsCount = 0;
+    int mProgressDialogLabelsTotal = 0;
+    int mProgressDialogLabelsCount = 0;
 };
 
 #endif // MUDLET_TMAP_H

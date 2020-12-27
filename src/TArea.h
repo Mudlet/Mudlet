@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2016, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,7 +34,7 @@
 #include "post_guard.h"
 
 class TRoomDB;
-
+class QProgressDialog;
 
 class TArea
 {
@@ -49,7 +50,7 @@ public:
     int getAreaID();
     void addRoom(int id);
     const QSet<int>& getAreaRooms() const { return rooms; }
-    const QList<int> getAreaExitRoomIds() const { return exits.uniqueKeys(); }
+    const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
     void calcSpan();
     void fast_calcSpan(int);
@@ -59,9 +60,12 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
+    void writeArea(QJsonArray&) const;
 
 
     QSet<int> rooms; // rooms of this area
+    // TODO: These next 2 members have not been used for some time - if at all
+    // - maybe they can go?
     QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
     int min_x;
@@ -86,10 +90,19 @@ public:
 
 private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
-    // QMap<int, TMapLabel> labelMap;
+    void writeUserData(QJsonObject&) const;
+    void writeLabels(QJsonObject&) const;
+    void writeLabel(QJsonArray&, const int, const TMapLabel*) const;
+    void writeColor(QJsonObject&, const QColor&) const;
+    void writeTwinValues(QJsonObject&, const QString&, const QSizeF&) const;
+    void writeTwinValues(QJsonObject&, const QString&, const QPointF&) const;
+    void writeTripleValues(QJsonObject&, const QString&, const QVector3D&) const;
+    QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
+    QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
+
 
     TMap* mpMap; // Supplied by C'tor and now needed to pass an error message upwards
-    QMultiMap<int, QPair<int, int>> exits;
+    QMultiMap<int, QPair<int, int>> mAreaExits;
     // rooms that border on this area:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implementation detail
