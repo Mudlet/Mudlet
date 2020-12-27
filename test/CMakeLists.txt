@@ -32,7 +32,7 @@ link_libraries(
 		
 find_package(Lua51 REQUIRED)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/edbee-lib/edbee-lib" "/usr/include/lua51")
 
 add_executable(TEntityResolverTest TEntityResolverTest.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TEntityResolverTest COMMAND TEntityResolverTest)
