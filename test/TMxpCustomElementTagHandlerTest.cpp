@@ -1,3 +1,23 @@
+/***************************************************************************
+ *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020 by Michael Weller - michael.weller@t-online.de     *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 #include <QTest>
 #include <TMxpSendTagHandler.h>
@@ -15,29 +35,29 @@
  * I want to include only the handlers needed by this file into the module
  * for a sensible link time and executable size
  */
- 
+
 class TMxpStubHandlerContext : public TMxpStubContext {
-	TMxpSendTagHandler sendTagHandler;
-	TMxpFormattingTagsHandler formattingTagsHandler;
-	TMxpColorTagHandler colorTagHandler;
+    TMxpSendTagHandler sendTagHandler;
+    TMxpFormattingTagsHandler formattingTagsHandler;
+    TMxpColorTagHandler colorTagHandler;
 
 public:
     virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
     {
-		TMxpTagHandler *tagHandler;
-		
-		if (sendTagHandler.supports(ctx, client, tag)) {
-			tagHandler = &sendTagHandler;
-		} else if (formattingTagsHandler.supports(ctx, client, tag)) {
-			tagHandler = &formattingTagsHandler;
-		} else if (colorTagHandler.supports(ctx, client, tag)) {
-			tagHandler = &colorTagHandler;
-		} else {
-			qDebug() << QString("unhandled Tag: [%1%2]").arg(tag->isEndTag() ? "/" : "").arg(tag->getName());
-			return MXP_TAG_HANDLED;
-		}
-		qDebug() << QString("handleTag([%1%2])").arg(tag->isEndTag() ? "/" : "").arg(tag->getName());
-		return tag->isStartTag() ? tagHandler->handleStartTag(ctx, client, tag->asStartTag()) : tagHandler->handleEndTag(ctx, client, tag->asEndTag());
+        TMxpTagHandler *tagHandler;
+
+        if (sendTagHandler.supports(ctx, client, tag)) {
+            tagHandler = &sendTagHandler;
+        } else if (formattingTagsHandler.supports(ctx, client, tag)) {
+            tagHandler = &formattingTagsHandler;
+        } else if (colorTagHandler.supports(ctx, client, tag)) {
+            tagHandler = &colorTagHandler;
+        } else {
+            qDebug() << QString("unhandled Tag: [%1%2]").arg(tag->isEndTag() ? "/" : "").arg(tag->getName());
+            return MXP_TAG_HANDLED;
+        }
+        qDebug() << QString("handleTag([%1%2])").arg(tag->isEndTag() ? "/" : "").arg(tag->getName());
+        return tag->isStartTag() ? tagHandler->handleStartTag(ctx, client, tag->asStartTag()) : tagHandler->handleEndTag(ctx, client, tag->asEndTag());
     }
 };
 
@@ -47,32 +67,32 @@ Q_OBJECT
 private:
 
 private slots:
-	
-	void testCustomItemCmd() {
+
+    void testCustomItemCmd() {
         // Complex Example: Aldebaran defines a profile with definitions like this:
-		// <!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>
-		// Then uses <ITI inv##N>a rock</ITI> for brevity all over the mud (here plain ITem in Inventory)
-		// Note the use of positional parameter ID (first arg)
-		// Mudlet, up to version 4.10, made the hints ALL UPPER in this context
+        // <!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>
+        // Then uses <ITI inv##N>a rock</ITI> for brevity all over the mud (here plain ITem in Inventory)
+        // Note the use of positional parameter ID (first arg)
+        // Mudlet, up to version 4.10, made the hints ALL UPPER in this context
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
         TMxpTagParser parser;
-		
-		ctx.getEntityResolver().registerEntity("&CMDH;", "Right-click for options|");
+
+        ctx.getEntityResolver().registerEntity("&CMDH;", "Right-click for options|");
 
         MxpStartTag* defTag = parser.parseStartTag(R"(<!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>)");
-        
-		TMxpElementDefinitionHandler definitionHandler;
- 		definitionHandler.handleTag(ctx, stub, defTag);
-		
-		MxpStartTag* startTag = parser.parseStartTag(R"(<ITI inv##10>)");
+
+        TMxpElementDefinitionHandler definitionHandler;
+        definitionHandler.handleTag(ctx, stub, defTag);
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<ITI inv##10>)");
         MxpEndTag* endTag = parser.parseEndTag("</ITI>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
-        
-		tagHandler.handleTag(ctx, stub, startTag);
+
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("a rock");
         tagHandler.handleTag(ctx, stub, endTag);
 
@@ -81,40 +101,40 @@ private slots:
         QCOMPARE(stub.mHrefs[1], "send([[drop inv##10]])");
 
         QCOMPARE(stub.mHints.size(), 3);
-    	// previous Mudlet made these ALL UPPER:
-		QCOMPARE(stub.mHints[0], "Right-click for options");
-		QCOMPARE(stub.mHints[1], "examine");
+        // previous Mudlet made these ALL UPPER:
+        QCOMPARE(stub.mHints[0], "Right-click for options");
+        QCOMPARE(stub.mHints[1], "examine");
         QCOMPARE(stub.mHints[2], "drop");
     }
-	
-	void testCustomElementDynamicEntity() {
+
+    void testCustomElementDynamicEntity() {
         // Complex Example: Aldebaran has a global custom element MAP used in maps printed for
-		// the player to click onto it and then follow the map.
-		// However, it uses the id of the map currently looked at in an entity redefined for
-		// each map you look at.
-		// <!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>
-		// Then uses <ITI inv##N>a rock</ITI> for brevity all over the mud (here plain ITem in Inventory)
-		// Note the use of positional parameter ID (first arg)
-		// Mudlet, up to version 4.10, made the hints ALL UPPER in this context
+        // the player to click onto it and then follow the map.
+        // However, it uses the id of the map currently looked at in an entity redefined for
+        // each map you look at.
+        // <!EL ITI '<SEND "examine &ID;|drop &ID;" HINT="&CMDH;examine|drop">' ATT='ID'>
+        // Then uses <ITI inv##N>a rock</ITI> for brevity all over the mud (here plain ITem in Inventory)
+        // Note the use of positional parameter ID (first arg)
+        // Mudlet, up to version 4.10, made the hints ALL UPPER in this context
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
         TMxpTagParser parser;
-		
-		ctx.getEntityResolver().registerEntity("&MID;", "map of the newbie jungle");
+
+        ctx.getEntityResolver().registerEntity("&MID;", "map of the newbie jungle");
 
         MxpStartTag* defTag = parser.parseStartTag(R"(<!EL MAP '<SEND "follow &MID; to &ID;" HINT="go here">' ATT='ID'>)");
-        
-		TMxpElementDefinitionHandler definitionHandler;
- 		definitionHandler.handleTag(ctx, stub, defTag);
-		
-		MxpStartTag* startTag = parser.parseStartTag(R"(<MAP P8x7>)");
+
+        TMxpElementDefinitionHandler definitionHandler;
+        definitionHandler.handleTag(ctx, stub, defTag);
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<MAP P8x7>)");
         MxpEndTag* endTag = parser.parseEndTag("</MAP>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
-        
-		tagHandler.handleTag(ctx, stub, startTag);
+
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("*");
         tagHandler.handleTag(ctx, stub, endTag);
 
@@ -122,15 +142,15 @@ private slots:
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the newbie jungle to P8x7]])");
 
         QCOMPARE(stub.mHints.size(), 1);
-		QCOMPARE(stub.mHints[0], "go here");
-		
-		// Now player looks at another map and gets an MXP button to go to another place.
-		// Note the MAP element is NOT redefined, only the entity.
-		ctx.getEntityResolver().registerEntity("&MID;", "map of the south forest");
-		startTag = parser.parseStartTag(R"(<MAP P42>)");
+        QCOMPARE(stub.mHints[0], "go here");
+
+        // Now player looks at another map and gets an MXP button to go to another place.
+        // Note the MAP element is NOT redefined, only the entity.
+        ctx.getEntityResolver().registerEntity("&MID;", "map of the south forest");
+        startTag = parser.parseStartTag(R"(<MAP P42>)");
         endTag = parser.parseEndTag("</MAP>");
-		
-		tagHandler.handleTag(ctx, stub, startTag);
+
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("*");
         tagHandler.handleTag(ctx, stub, endTag);
 
@@ -138,128 +158,128 @@ private slots:
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the south forest to P42]])");
 
         QCOMPARE(stub.mHints.size(), 1);
-		QCOMPARE(stub.mHints[0], "go here");
+        QCOMPARE(stub.mHints[0], "go here");
     }
-	
-	void testCustomElementDefaultAttributes() {
-		// This example literally taken from the MXP definition at https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
-		//
+
+    void testCustomElementDefaultAttributes() {
+        // This example literally taken from the MXP definition at https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
+        //
         // <!ELEMENT boldtext '<COLOR &col;><B>' ATT='col=red'>
-		//
-		// Then you could use it on the MUD like this:
-		//
-		// <boldtext>This is bold red</boldtext>
-		// <boldtext col=blue>This is bold blue text</boldtext>
-		// <boldtext blue>This is also bold blue text</boldtext>
+        //
+        // Then you could use it on the MUD like this:
+        //
+        // <boldtext>This is bold red</boldtext>
+        // <boldtext col=blue>This is bold blue text</boldtext>
+        // <boldtext blue>This is also bold blue text</boldtext>
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
         TMxpTagParser parser;
 
         MxpStartTag* defTag = parser.parseStartTag(R"(<!ELEMENT boldtext '<COLOR &col;><B>' ATT='col=red'>)");
-        
-		TMxpElementDefinitionHandler definitionHandler;
- 		definitionHandler.handleTag(ctx, stub, defTag);
-		
-		MxpStartTag* startTag = parser.parseStartTag(R"(<boldtext>)");
+
+        TMxpElementDefinitionHandler definitionHandler;
+        definitionHandler.handleTag(ctx, stub, defTag);
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<boldtext>)");
         MxpEndTag* endTag = parser.parseEndTag("</boldtext>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
-        
-		tagHandler.handleTag(ctx, stub, startTag);
+
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("This is bold red");
-		// is it?
-		QCOMPARE(stub.isBold(), true);
-		QCOMPARE(stub.fgColor, "red");
+        // is it?
+        QCOMPARE(stub.isBold(), true);
+        QCOMPARE(stub.fgColor, "red");
         tagHandler.handleTag(ctx, stub, endTag);
 
-		// back to defaults:
-		QCOMPARE(stub.isBold(), false);
-		QCOMPARE(stub.fgColor, "");
-		
-		startTag = parser.parseStartTag(R"(<boldtext COL=blue>)");
-		tagHandler.handleTag(ctx, stub, startTag);
+        // back to defaults:
+        QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.fgColor, "");
+
+        startTag = parser.parseStartTag(R"(<boldtext COL=blue>)");
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("This is bold blue text");
-		// is it?
-		QCOMPARE(stub.isBold(), true);
-		QCOMPARE(stub.fgColor, "blue");
+        // is it?
+        QCOMPARE(stub.isBold(), true);
+        QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag);
 
-		// back to defaults:
-		QCOMPARE(stub.isBold(), false);
-		QCOMPARE(stub.fgColor, "");
+        // back to defaults:
+        QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.fgColor, "");
 
-		startTag = parser.parseStartTag(R"(<boldtext blue>)");
-		tagHandler.handleTag(ctx, stub, startTag);
+        startTag = parser.parseStartTag(R"(<boldtext blue>)");
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("This is also bold blue text");
-		// is it?
+        // is it?
 
-		QCOMPARE(stub.isBold(), true);
-		QCOMPARE(stub.fgColor, "blue");
+        QCOMPARE(stub.isBold(), true);
+        QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag);
 
-		// back to defaults:
-		QCOMPARE(stub.isBold(), false);
-		QCOMPARE(stub.fgColor, "");
+        // back to defaults:
+        QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.fgColor, "");
     }
-	
-	void testCustomElementPlayer() {
-		// Real life example from Aldebaran: (there are more sensible ones with EXPIRE which Mudlet does not yet support)
-		//
-		// <!EL WH '<SEND "whisper &NAME; |finger &NAME; |tell &NAME; " HINT="whisper &NAME;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAME=someone'>
+
+    void testCustomElementPlayer() {
+        // Real life example from Aldebaran: (there are more sensible ones with EXPIRE which Mudlet does not yet support)
+        //
+        // <!EL WH '<SEND "whisper &NAME; |finger &NAME; |tell &NAME; " HINT="whisper &NAME;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAME=someone'>
         // 
-		// Used like <WH playerid>Player</WH> says: Hello!
-		// However, if player is invisible, playerid is empty, like <WH >Someone</WH> says: Hello!
-		//
-		// Upper and lower case are mixed in the entity name to make this a more severe test case
+        // Used like <WH playerid>Player</WH> says: Hello!
+        // However, if player is invisible, playerid is empty, like <WH >Someone</WH> says: Hello!
+        //
+        // Upper and lower case are mixed in the entity name to make this a more severe test case
 
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
         TMxpTagParser parser;
-		
+
         MxpStartTag* defTag = parser.parseStartTag(R"(<!EL WH '<SEND "whisper &Name; |finger &NAme; |tell &namE; " HINT="whisper &name;|finger &NAME;|tell &NAME;" PROMPT>' ATT='NAme=someone'>)");
-        
-		TMxpElementDefinitionHandler definitionHandler;
- 		definitionHandler.handleTag(ctx, stub, defTag);
-		
-		MxpStartTag* startTag = parser.parseStartTag(R"(<WH playerid>)");
+
+        TMxpElementDefinitionHandler definitionHandler;
+        definitionHandler.handleTag(ctx, stub, defTag);
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<WH playerid>)");
         MxpEndTag* endTag = parser.parseEndTag("</WH>");
 
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
-        
-		tagHandler.handleTag(ctx, stub, startTag);
+
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("Player");
-		tagHandler.handleTag(ctx, stub, endTag);
-		
-		QCOMPARE(stub.mHrefs.size(), 3);
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper playerid ]])");
         QCOMPARE(stub.mHrefs[1], "printCmdLine([[finger playerid ]])");
         QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell playerid ]])");
 
         QCOMPARE(stub.mHints.size(), 4);
-		// default mouse over text for send menu is implementation dependent, thus not checked.
-		QCOMPARE(stub.mHints[1], "whisper playerid");
-		QCOMPARE(stub.mHints[2], "finger playerid");
-		QCOMPARE(stub.mHints[3], "tell playerid");
-		
-		// Now w/o a NAME parameter given:
-		startTag = parser.parseStartTag(R"(<WH>)");
-		tagHandler.handleTag(ctx, stub, startTag);
+        // default mouse over text for send menu is implementation dependent, thus not checked.
+        QCOMPARE(stub.mHints[1], "whisper playerid");
+        QCOMPARE(stub.mHints[2], "finger playerid");
+        QCOMPARE(stub.mHints[3], "tell playerid");
+
+        // Now w/o a NAME parameter given:
+        startTag = parser.parseStartTag(R"(<WH>)");
+        tagHandler.handleTag(ctx, stub, startTag);
         tagHandler.handleContent("Invisible SuperAdmin");
-		tagHandler.handleTag(ctx, stub, endTag);
-		
-				QCOMPARE(stub.mHrefs.size(), 3);
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 3);
         QCOMPARE(stub.mHrefs[0], "printCmdLine([[whisper someone ]])");
         QCOMPARE(stub.mHrefs[1], "printCmdLine([[finger someone ]])");
         QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell someone ]])");
 
         QCOMPARE(stub.mHints.size(), 4);
-		// default mouse over text for send menu is implementation dependent, thus not checked.
-		QCOMPARE(stub.mHints[1], "whisper someone");
-		QCOMPARE(stub.mHints[2], "finger someone");
-		QCOMPARE(stub.mHints[3], "tell someone");
+        // default mouse over text for send menu is implementation dependent, thus not checked.
+        QCOMPARE(stub.mHints[1], "whisper someone");
+        QCOMPARE(stub.mHints[2], "finger someone");
+        QCOMPARE(stub.mHints[3], "tell someone");
     }
 };
 

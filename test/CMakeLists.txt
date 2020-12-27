@@ -45,10 +45,10 @@ add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
 add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
 
-add_executable(TMxpEntityTagTest TMxpEntityTagTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagHandler.cpp ../src/TEntityResolver.cpp)
+add_executable(TMxpEntityTagTest TMxpEntityTagTest.cpp TMxpStubClient.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagHandler.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TMxpEntityTagTest COMMAND TMxpEntityTagTest)
 
-add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagHandler.cpp)
+add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp TMxpStubClient.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagHandler.cpp)
 add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
 
 
