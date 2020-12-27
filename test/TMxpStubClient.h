@@ -44,12 +44,12 @@ public:
         return mSupportedElements;
     }
 
-    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
+    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
     {
         return MXP_TAG_HANDLED;
     }
 
-    virtual void handleContent(char ch)
+    virtual void handleContent(char ch) override
     {
 
     }
