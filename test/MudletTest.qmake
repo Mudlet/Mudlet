@@ -48,9 +48,34 @@ Makefile_TMxpTagParserTest {
 		$$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o $$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TStringUtils.o
 }
 
+Makefile_TMxpEntityTagTest {
+	SOURCES += TMxpEntityTagTest.cpp TMxpStubClient.cpp
+	TARGET = TMxpEntityTagTest
+	LIBS += \
+		$$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o $$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TStringUtils.o \
+		$$MUDLETBUILD/TMxpEntityTagHandler.o $$MUDLETBUILD/TMxpTagHandler.o $$MUDLETBUILD/TEntityResolver.o 
+}
+
+Makefile_TMxpVersionTagTest {
+	SOURCES += TMxpVersionTagTest.cpp TMxpStubClient.cpp
+	TARGET = TMxpVersionTagTest
+	LIBS += \
+		$$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o $$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TStringUtils.o \
+		$$MUDLETBUILD/TMxpVersionTagHandler.o $$MUDLETBUILD/TMxpTagHandler.o 
+}
+
 Makefile_TMxpSendTagHandlerTest {
 	SOURCES += TMxpSendTagHandlerTest.cpp TMxpStubClient.cpp
 	TARGET = TMxpSendTagHandlerTest
+	LIBS += \
+		$$MUDLETBUILD/TMxpSendTagHandler.o $$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o \
+		$$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TMxpTagProcessor.o $$MUDLETBUILD/TStringUtils.o $$MUDLETBUILD/TEntityResolver.o \
+		$$files($$MUDLETBUILD/TMxp*Handler.o, true) $$MUDLETBUILD/TMxpElementRegistry.o
+}
+
+Makefile_TMxpCustomElementTagHandlerTest {
+	SOURCES += TMxpCustomElementTagHandlerTest.cpp TMxpStubClient.cpp
+	TARGET = TMxpCustomElementTagHandlerTest
 	LIBS += \
 		$$MUDLETBUILD/TMxpSendTagHandler.o $$MUDLETBUILD/TMxpTagParser.o $$MUDLETBUILD/TMxpNodeBuilder.o \
 		$$MUDLETBUILD/MxpTag.o $$MUDLETBUILD/TMxpTagProcessor.o $$MUDLETBUILD/TStringUtils.o $$MUDLETBUILD/TEntityResolver.o \

@@ -42,13 +42,22 @@ add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
 add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
+add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
+add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
+
+add_executable(TMxpEntityTagTest TMxpEntityTagTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpEntityTagHandler.cpp ../src/TMxpTagHandler.cpp ../src/TEntityResolver.cpp)
+add_test(NAME TMxpEntityTagTest COMMAND TMxpEntityTagTest)
+
+add_executable(TMxpVersionTagTest TMxpVersionTagTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp ../src/TMxpVersionTagHandler.cpp ../src/TMxpTagHandler.cpp)
+add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
+
 
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
 
-add_executable(TMxpTagParserTest TMxpTagParserTest.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp ../src/MxpTag.cpp ../src/TStringUtils.cpp)
-add_test(NAME TMxpTagParserTest COMMAND TMxpTagParserTest)
-
-# https://github.com/Mudlet/Mudlet/issues/4021 added an include that made this test fail.  Entering issue to inspect the test separately; re-enable when complete.
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp TMxpStubClient.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
+
+add_executable(TMxpCustomElementTagHandlerTest TMxpCustomElementTagHandlerTest.cpp TMxpStubClient.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
+add_test(NAME TMxpCustomElementTagHandlerTest COMMAND TMxpCustomElementTagHandlerTest)
+

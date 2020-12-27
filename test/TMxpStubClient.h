@@ -47,7 +47,7 @@ public:
 
 class TMxpStubClient : public TMxpClient {
 public:
-    QString version;
+    QString version = "Stub-1.0";
     bool linkMode;
 
     QString sentToServer;
@@ -56,7 +56,7 @@ public:
 	
     // These are also a kind of stack for parameters as fg/bgColours, but here a
     // simple counter suffices:
-    int boldCtr, italicCtr, underlineCtr, strikeOutCtr;
+    int boldCtr = 0, italicCtr = 0, underlineCtr = 0, strikeOutCtr = 0;
     QString mxpStyle;
 	
     QStringList mHrefs, mHints;

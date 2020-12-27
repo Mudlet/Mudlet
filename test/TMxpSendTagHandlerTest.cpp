@@ -1,9 +1,10 @@
 
 #include <QTest>
-#include "TMxpSendTagHandler.h"
-#include "TMxpStubClient.h"
+#include <TMxpSendTagHandler.h>
 #include <TMxpTagParser.h>
 #include <TMxpTagProcessor.h>
+
+#include "TMxpStubClient.h"
 
 
 class TMxpSendTagHandlerTest : public QObject {
@@ -153,6 +154,155 @@ private slots:
         QCOMPARE(stub.mHints[2], "BUY SUSPENDERS30901");
     }
 
+    void testSendHrefHintTooFew() {
+        // For Send Menus, if there is more than 1 hint but not enough for per command hints,
+		// fill them up with HREF texts
+        // <SEND HREF="say a|say b|say c" hint="Talk about A|Talk about B">telling nonsense</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        TMxpTagParser parser;
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="say a|say b|say c" hint="Talk about A|Talk about B">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("telling nonsense");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 3);
+        QCOMPARE(stub.mHrefs[0], "send([[say a]])");
+        QCOMPARE(stub.mHrefs[1], "send([[say b]])");
+        QCOMPARE(stub.mHrefs[2], "send([[say c]])");
+
+        QCOMPARE(stub.mHints.size(), 4);
+		// MouseOver for SEND Menu is MXP implementation dependent and thus not literally checked:
+		// QCOMPARE(stub.mHints[0], "Click to see command menu");
+		QCOMPARE(stub.mHints[1], "Talk about A");
+        QCOMPARE(stub.mHints[2], "Talk about B");
+        QCOMPARE(stub.mHints[3], "say c");
+    }
+
+
+    void testSendHrefHintTooMany() {
+        // If there are too many hints for HREFS and SEND MENU Mouse over: Ignore them
+		// for historical reasons in the source, the first hints are ignored (this originates from a time were the send menu mouse over could
+		// not be set)
+        // <SEND HREF="say a|say b|say c" hint="Right-click for options|Talk about A|Talk about B|Talk about C|Talk about D">telling nonsense</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        TMxpTagParser parser;
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="say a|say b|say c" hint="Right-click for options|Talk about A|Talk about B|Talk about C|Talk about D">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("telling nonsense");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 3);
+        QCOMPARE(stub.mHrefs[0], "send([[say a]])");
+        QCOMPARE(stub.mHrefs[1], "send([[say b]])");
+        QCOMPARE(stub.mHrefs[2], "send([[say c]])");
+
+        QCOMPARE(stub.mHints.size(), 4);
+		// MouseOver for SEND Menu is MXP implementation dependent and thus not literally checked:
+		QCOMPARE(stub.mHints[0], "Talk about A");
+		QCOMPARE(stub.mHints[1], "Talk about B");
+        QCOMPARE(stub.mHints[2], "Talk about C");
+        QCOMPARE(stub.mHints[3], "Talk about D");
+    }
+
+	void testSendCustomMenuHint() {
+        // Example: Everywhere in Aldebaran
+        // <SEND HREF="wield item##2|drop item##2" hint="wield|drop">sword</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+        TMxpTagParser parser;
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="wield item##2|drop item##2" hint="wield|drop">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("sword");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 2);
+        QCOMPARE(stub.mHrefs[0], "send([[wield item##2]])");
+        QCOMPARE(stub.mHrefs[1], "send([[drop item##2]])");
+
+        QCOMPARE(stub.mHints.size(), 3);
+		// MouseOver for SEND Menu is MXP implementation dependent and thus not literally checked:
+		// QCOMPARE(stub.mHints[0], "Click to see command menu");
+        QCOMPARE(stub.mHints[1], "wield");
+        QCOMPARE(stub.mHints[2], "drop");
+    }
+
+	void testSendCustomMenuHintMouseOver() {
+        // Example: Everywhere in Aldebaran
+        // <SEND HREF="wield item##2|drop item##2" hint="Right-click for options|wield|drop">sword</SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+        TMxpTagParser parser;
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="wield item##2|drop item##2" hint="Right-click for options|wield|drop">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("sword");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 2);
+        QCOMPARE(stub.mHrefs[0], "send([[wield item##2]])");
+        QCOMPARE(stub.mHrefs[1], "send([[drop item##2]])");
+
+        QCOMPARE(stub.mHints.size(), 3);
+		// MouseOver is now explicitly set:
+		QCOMPARE(stub.mHints[0], "Right-click for options");
+        QCOMPARE(stub.mHints[1], "wield");
+        QCOMPARE(stub.mHints[2], "drop");
+    }
+	
+	void testSendEntityWithPipeOptMouseOver() {
+        // Example: Aldebaran: Prompt Menu containing aliases, Send Menu Mouse Over Hint provided for clients that
+		// support and need it (mushclient) (&HD is empty for clients that cannot deal with it (z/cmud))
+        // <SEND HREF="&CMDS;who|inventory" hint="&HD;&CMDH;Who is online|Your inventory">Aldebaran&gt; </SEND>
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+        TMxpTagParser parser;
+		
+		ctx.getEntityResolver().registerEntity("&CMDS;", "gc|");
+		ctx.getEntityResolver().registerEntity("&CMDH;", "get all from corpse|");
+		ctx.getEntityResolver().registerEntity("&HD;", "Right-click for options|");
+
+        MxpStartTag* startTag = parser.parseStartTag(R"(<SEND HREF="&CMDS;who|inventory" hint="&HD;&CMDH;Who is online?|show inventory">)");
+        MxpEndTag* endTag = parser.parseEndTag("</SEND>");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+        tagHandler.handleTag(ctx, stub, startTag);
+        tagHandler.handleContent("Aldebaran&gt; ");
+        tagHandler.handleTag(ctx, stub, endTag);
+
+        QCOMPARE(stub.mHrefs.size(), 3);
+        QCOMPARE(stub.mHrefs[0], "send([[gc]])");
+        QCOMPARE(stub.mHrefs[1], "send([[who]])");
+		QCOMPARE(stub.mHrefs[2], "send([[inventory]])");
+
+        QCOMPARE(stub.mHints.size(), 4);
+    	// MouseOver is now explicitly set:
+		QCOMPARE(stub.mHints[0], "Right-click for options");
+		QCOMPARE(stub.mHints[1], "get all from corpse");
+        QCOMPARE(stub.mHints[2], "Who is online?");
+		QCOMPARE(stub.mHints[3], "show inventory");
+    }
 };
 
 #include "TMxpSendTagHandlerTest.moc"

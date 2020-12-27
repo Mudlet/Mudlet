@@ -1,4 +1,4 @@
-all: Makefile_TEntityHandlerTest Makefile_TEntityResolverTest Makefile_TLinkStoreTest Makefile_TMxpTagParserTest Makefile_TMxpSendTagHandlerTest
+all: Makefile_TEntityHandlerTest Makefile_TEntityResolverTest Makefile_TLinkStoreTest Makefile_TMxpTagParserTest Makefile_TMxpSendTagHandlerTest Makefile_TMxpEntityTagTest Makefile_TMxpVersionTagTest Makefile_TMxpCustomElementTagHandlerTest
 	$(MAKE) -f Makefile_TEntityHandlerTest.Debug
 	debug/TEntityHandlerTest
 	$(MAKE) -f Makefile_TEntityResolverTest.Debug
@@ -9,6 +9,12 @@ all: Makefile_TEntityHandlerTest Makefile_TEntityResolverTest Makefile_TLinkStor
 	debug/TMxpTagParserTest
 	$(MAKE) -f Makefile_TMxpSendTagHandlerTest.Debug
 	debug/TMxpSendTagHandlerTest
+	$(MAKE) -f Makefile_TMxpEntityTagTest.Debug
+	debug/TMxpEntityTagTest
+	$(MAKE) -f Makefile_TMxpVersionTagTest.Debug
+	debug/TMxpVersionTagTest
+	$(MAKE) -f Makefile_TMxpCustomElementTagHandlerTest.Debug
+	debug/TMxpCustomElementTagHandlerTest
 
 Makefile_%:
 	qmake -o $@ MudletTest.qmake CONFIG+=$@
