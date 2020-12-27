@@ -135,15 +135,15 @@ public:
     int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
-    int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
-    int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
+    QPair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    QPair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
+    QPair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    QPair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     QPair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
     QPair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
-    int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, int&, int&, QString&);
+    QPair<int, QString> startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
+    QPair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);

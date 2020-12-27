@@ -7128,6 +7128,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         return lua_error(L);
     }
 
+
     if (lua_isstring(L, 1)) {
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(lua_tostring(L, 1)), expiryCount);
     } else if (lua_isfunction(L, 1)) {
@@ -7972,7 +7973,12 @@ int TLuaInterpreter::permAlias(lua_State* L)
     }
 
     QString script{lua_tostring(L, 4)};
-    lua_pushnumber(L, pLuaInterpreter->startPermAlias(name, parent, regex, script));
+    auto [aliasId, message] = pLuaInterpreter->startPermAlias(name, parent, regex, script);
+    if (aliasId == -1) {
+        lua_pushfstring(L, "permAlias: cannot create alias (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, aliasId);
     return 1;
 }
 
@@ -8042,9 +8048,10 @@ int TLuaInterpreter::setScript(lua_State* L)
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
     lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
+        lua_pushfstring(L, "permScript: cannot set script (%s)", message.toUtf8().constData());
+        return lua_error(L);
     }
+    lua_pushnumber(L, id);
 
     return 1;
 }
@@ -8074,12 +8081,11 @@ int TLuaInterpreter::permScript(lua_State* L)
 
     QString luaCode{lua_tostring(L, 3)};
     auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
-    lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
+        lua_pushfstring(L, "permScript: cannot create script (%s)", message.toUtf8().constData());
+        return lua_error(L);
     }
-
+    lua_pushnumber(L, id);
     return 1;
 }
 
@@ -8113,8 +8119,11 @@ int TLuaInterpreter::permTimer(lua_State* L)
 
     QString luaCode{lua_tostring(L, 4)};
     auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
+    if (id == -1) {
+        lua_pushfstring(L, "permTimer: cannot create timer (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
     lua_pushnumber(L, id);
-
     return 1;
 }
 
@@ -8159,7 +8168,12 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     }
 
     QString script{lua_tostring(L, 4)};
-    lua_pushnumber(L, pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script));
+    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
+    if(triggerID == - 1) {
+        lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerID);
     return 1;
 }
 
@@ -8168,7 +8182,6 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int triggerID;
     QString triggerName, parentName, luaFunction;
 
     if (!lua_isstring(L, 1)) {
@@ -8190,7 +8203,11 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 
     luaFunction = lua_tostring(L, 3);
 
-    triggerID = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
+    auto [triggerID, message] = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
+    if(triggerID == - 1) {
+        lua_pushfstring(L, "permPromptTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
     lua_pushnumber(L, triggerID);
     return 1;
 }
@@ -8235,7 +8252,11 @@ int TLuaInterpreter::permKey(lua_State* L)
     }
 
     QString luaFunction{lua_tostring(L, argIndex)};
-    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+    auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+    if(keyID == - 1) {
+        lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
     lua_pushnumber(L, keyID);
     return 1;
 }
@@ -8334,8 +8355,12 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
     }
 
     QString script{lua_tostring(L, 4)};
-
-    lua_pushnumber(L, pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script));
+    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerId);
     return 1;
 }
 
@@ -8380,7 +8405,12 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
     }
 
     QString script{lua_tostring(L, 4)};
-    lua_pushnumber(L, pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script));
+    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerId);
     return 1;
 }
 
@@ -16763,7 +16793,7 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
         // API to handle more than one potential parent with the same name:
         auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
         if (!pParentTimer) {
-            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTimer(pParentTimer, mpHost);
     }
@@ -16783,10 +16813,9 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
         return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
     }
 
-    int id = pT->getID();
     pT->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return qMakePair(id, QString());
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -16814,7 +16843,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function)
 {
     TAlias* pT;
 
@@ -16823,7 +16852,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     } else {
         TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TAlias(pP, mpHost);
     }
@@ -16833,10 +16862,9 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     pT->setTemporary(false);
     pT->registerAlias();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -16856,7 +16884,7 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
+QPair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
 {
     TKey* pT;
 
@@ -16865,7 +16893,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TKey(pP, mpHost);
     }
@@ -16877,10 +16905,9 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -17045,7 +17072,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17057,7 +17084,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17067,16 +17094,13 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    //pT->setName( name );
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17088,7 +17112,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17098,15 +17122,13 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17118,7 +17140,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17128,15 +17150,13 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList = {REGEX_PROMPT};
@@ -17147,7 +17167,7 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17157,10 +17177,9 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return qMakePair(pT->getID(), QString());
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
