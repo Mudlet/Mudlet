@@ -54,6 +54,7 @@ add_test(NAME TMxpVersionTagTest COMMAND TMxpVersionTagTest)
 
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
+list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMusicTagHandler.cpp")
 
 add_executable(TMxpSendTagHandlerTest TMxpSendTagHandlerTest.cpp TMxpStubClient.cpp ${MXP_SOURCE} ../src/TMxpSendTagHandler.cpp ../src/TMxpTagParser.cpp ../src/TMxpNodeBuilder.cpp )
 add_test(NAME TMxpSendTagHandlerTest COMMAND TMxpSendTagHandlerTest)
