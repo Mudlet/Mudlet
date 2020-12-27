@@ -771,7 +771,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->getKeyUnit()->mRunAllKeyMatches = attributes().value(QStringLiteral("runAllKeyMatches")) == YES;
     pHost->mNoAntiAlias = attributes().value(QStringLiteral("mNoAntiAlias")) == YES;
     pHost->mEchoLuaErrors = attributes().value(QStringLiteral("mEchoLuaErrors")) == YES;
-    pHost->mHighlightHistory = readDefaultTrueBool("HighlightHistory");
+    pHost->mHighlightHistory = readDefaultTrueBool(QStringLiteral("HighlightHistory"));
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringRef ambiguousWidthSetting(attributes().value(QStringLiteral("AmbigousWidthGlyphsToBeWide")));
         if (ambiguousWidthSetting == YES) {
@@ -817,7 +817,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAcceptServerGUI = attributes().value(QStringLiteral("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(QStringLiteral("mAcceptServerMedia")) == YES;
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
-    pHost->mMapperShowRoomBorders = readDefaultTrueBool("mMapperShowRoomBorders");
+    pHost->mMapperShowRoomBorders = readDefaultTrueBool(QStringLiteral("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == YES);
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
