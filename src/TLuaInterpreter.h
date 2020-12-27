@@ -597,6 +597,7 @@ private:
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);

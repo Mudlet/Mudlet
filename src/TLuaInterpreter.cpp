@@ -7964,15 +7964,14 @@ int TLuaInterpreter::permAlias(lua_State* L)
     }
     QString regex{lua_tostring(L, 3)};
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permAlias: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permAlias: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
     lua_pushnumber(L, pLuaInterpreter->startPermAlias(name, parent, regex, script));
     return 1;
 }
@@ -8023,10 +8022,13 @@ int TLuaInterpreter::setScript(lua_State* L)
     }
     QString name{lua_tostring(L, 1)};
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setScript: bad argument #2 type (script lua code as string expected, got %s!)", luaL_typename(L, 2));
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(2); !validationResult) {
+        lua_pushfstring(L, "setScript: bad argument #%d (%s)", 2, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
+
     QString luaCode{lua_tostring(L, 2)};
 
     if (n > 2) {
@@ -8036,9 +8038,6 @@ int TLuaInterpreter::setScript(lua_State* L)
         }
         pos = lua_tonumber(L, 3);
     }
-
-    Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
     lua_pushnumber(L, id);
@@ -8066,15 +8065,14 @@ int TLuaInterpreter::permScript(lua_State* L)
     }
     QString parent{lua_tostring(L, 2)};
 
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permScript: bad argument #3 type (script as string expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString luaCode{lua_tostring(L, 3)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
+        lua_pushfstring(L, "permScript: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
 
+    QString luaCode{lua_tostring(L, 3)};
     auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
     lua_pushnumber(L, id);
     if (id == -1) {
@@ -8106,21 +8104,16 @@ int TLuaInterpreter::permTimer(lua_State* L)
     }
     double time = lua_tonumber(L, 3);
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permTimer: bad argument #4 type (script as string expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString luaCode{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permTimer: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
 
+    QString luaCode{lua_tostring(L, 4)};
     auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
     lua_pushnumber(L, id);
-    if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
-    }
 
     return 1;
 }
@@ -8158,15 +8151,14 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
     lua_pushnumber(L, pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script));
     return 1;
 }
@@ -8191,10 +8183,11 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
     }
     parentName = lua_tostring(L, 2);
 
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permPromptTrigger: bad argument #3 type (code to run as string expected, got %s!)", luaL_typename(L, 3));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
+        lua_pushfstring(L, "permPromptTrigger: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
+
     luaFunction = lua_tostring(L, 3);
 
     triggerID = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
@@ -8234,18 +8227,14 @@ int TLuaInterpreter::permKey(lua_State* L)
     }
     int keyCode = lua_tointeger(L, argIndex);
 
-    if (!lua_isstring(L, ++argIndex)) {
-        lua_pushfstring(L, "permKey: bad argument #%d type (lua script as string expected, got %s!)", argIndex, luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    QString luaFunction{lua_tostring(L, argIndex)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
-        lua_pushfstring(L, "permKey: bad argument #%d (invalid Lua code: %s)", argIndex, validationMessage.toUtf8().constData());
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(++argIndex); !validationResult) {
+        lua_pushfstring(L, "permKey: bad argument #%d (%s)", argIndex, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
+
+    QString luaFunction{lua_tostring(L, argIndex)};
     int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
@@ -8337,15 +8326,15 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
+
     lua_pushnumber(L, pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script));
     return 1;
 }
@@ -8383,15 +8372,14 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permRegexTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
     lua_pushnumber(L, pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script));
     return 1;
 }
@@ -13938,17 +13926,30 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 // No documentation available in wiki - internal function
 // returns pair where first is bool stating true the given Lua code is valid, false otherwise
 // second is empty if code is valid, error message if not valid
+std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
+{
+    lua_State* L = pGlobalLua;
+    if (!lua_isstring(L, index)) {
+        return std::make_pair(false, QStringLiteral("lua script as string expected, got %1!").arg(luaL_typename(L, index)));
+    }
+    QString script{lua_tostring(L, index)};
+    return validLuaCode(script);
+}
+
+// No documentation available in wiki - internal function
+// returns pair where first is bool stating true the given Lua code is valid, false otherwise
+// second is empty if code is valid, error message if not valid
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
     int topElementIndex = lua_gettop(L);
-    QString e = "";
+    QString e = "invalid Lua code: ";
     if (error) {
         if (lua_isstring(L, topElementIndex)) {
-            e = lua_tostring(L, topElementIndex);
+            e += lua_tostring(L, topElementIndex);
         } else {
-            e = "No error message available from Lua";
+            e += "No error message available from Lua";
         }
     }
     lua_pop(L, topElementIndex);
