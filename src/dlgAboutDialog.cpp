@@ -1074,8 +1074,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 QString dlgAboutDialog::createBuildInfo() const {
 
     QString buildInfo = tr("<table border=\"0\" style=\"margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                           "<tr><td colspan=\"2\" style=\"font-style:italic;\">It would be useful to copy and include information below when reporting an issue!<br></td></tr>"
-    );
+                           "<tr><td colspan=\"2\" style=\"font-style:italic;\">It would be useful to copy and include information below when reporting an issue!<br></td></tr>");
 
     buildInfo.append(tr("<tr><td style=\"font-weight: 800\">Build information:</td><td>Build: %1</td></tr>").arg(mudlet::self()->version));
     buildInfo.append(tr("<tr><td></td><td>OS: %1</td></tr>").arg(QSysInfo::prettyProductName()));
