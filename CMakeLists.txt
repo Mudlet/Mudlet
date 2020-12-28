@@ -183,7 +183,7 @@ endif()
 
 # Get the current working branch
 execute_process(
-        COMMAND git rev-parse --abbrev-ref HEAD
+        COMMAND git describe --all --dirty
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_BRANCH
         OUTPUT_STRIP_TRAILING_WHITESPACE)
