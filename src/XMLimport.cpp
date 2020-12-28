@@ -776,7 +776,7 @@ void XMLimport::readHostPackage(Host* pHost)
         const QStringRef ambiguousWidthSetting(attributes().value(QStringLiteral("AmbigousWidthGlyphsToBeWide")));
         if (ambiguousWidthSetting == YES) {
             pHost->setWideAmbiguousEAsianGlyphs(Qt::Checked);
-        } else if (ambiguousWidthSetting == YES) {
+        } else if (ambiguousWidthSetting == QStringLiteral("auto")) {
             pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
         } else {
             pHost->setWideAmbiguousEAsianGlyphs(Qt::Unchecked);
