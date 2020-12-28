@@ -255,7 +255,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     }
 #endif
 
-    mRegularPalette.setColor(QPalette::Base, QColor(Qt::transparent));
     mReadOnlyPalette.setColor(QPalette::Base, QColor(125, 125, 125, 25));
     mOKPalette.setColor(QPalette::Base, QColor(150, 255, 150, 50));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 150, 150, 50));
