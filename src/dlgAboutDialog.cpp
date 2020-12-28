@@ -1079,7 +1079,7 @@ QString dlgAboutDialog::createBuildInfo() const {
     QString branch = GIT_BRANCH != QString() ? QStringLiteral(GIT_BRANCH) : QUESTION_MARK;
     return QStringLiteral("<table border=\"0\" style=\"margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
         .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-style:italic;\">%1<br></td></tr>").arg(tr("It would be useful to copy and include information below when reporting an issue!")))
-        .append(QStringLiteral("<tr><td style=\"font-weight: 800\">%1</td><td>%2: %3</td></tr>").arg(tr("Build information:"), tr("Build"), mudlet::self()->version))
+        .append(QStringLiteral("<tr><td style=\"font-weight: 800\">%1</td><td>%2%3</td></tr>").arg(tr("Build information:"), tr("Build: "), mudlet::self()->version))
         .append(QStringLiteral("<tr><td></td><td>%1%2</td></tr>").arg(tr("OS: "), QSysInfo::prettyProductName()))
         .append(QStringLiteral("<tr><td></td><td>%1%2</td></tr>").arg(tr("CPU Architecture: "), QSysInfo::currentCpuArchitecture()))
         .append(QStringLiteral("<tr><td></td><td>%1%2</td></tr>").arg(tr("Branch: "), branch))
