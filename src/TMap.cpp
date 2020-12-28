@@ -2585,11 +2585,10 @@ void TMap::update()
     }
 }
 
-QString TMapLabel::base64EncodePixmap()
+QByteArray TMapLabel::base64EncodePixmap() const
 {
     QBuffer buffer;
     buffer.open(QIODevice::WriteOnly);
     pix.save(&buffer, "PNG");
-    auto const encoded = buffer.data().toBase64();
-    return QString(encoded);
+    return buffer.data().toBase64();
 }

@@ -77,7 +77,7 @@ public:
     bool showOnTop;
     bool noScaling;
 
-    QString base64EncodePixmap();
+    QByteArray base64EncodePixmap() const;
 };
 
 

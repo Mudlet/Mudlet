@@ -9991,7 +9991,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     return 1;
 }
 
-void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, TMapLabel& label)
+void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label)
 {
     int x = label.pos.x();
     int y = label.pos.y();
@@ -10018,7 +10018,7 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, TMapLabel& label
     lua_pushstring(L, text.toUtf8().constData());
     lua_settable(L, -3);
     lua_pushstring(L, "Pixmap");
-    lua_pushstring(L, label.base64EncodePixmap().toUtf8().constData());
+    lua_pushstring(L, label.base64EncodePixmap().constData());
     lua_settable(L, -3);
     lua_pushstring(L, "FgColor");
     lua_newtable(L);
