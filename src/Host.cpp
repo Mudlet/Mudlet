@@ -221,7 +221,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMxpProcessor(&mMxpClient)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
-, mFORCE_SAVE_ON_EXIT(false)
+, mFORCE_SAVE_ON_EXIT(true)
 , mSslTsl(false)
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
