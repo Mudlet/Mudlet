@@ -104,6 +104,41 @@ isEmpty( BUILD ) {
    BUILD = "-dev"
 }
 
+$$system(git --version, blob, GIT_STATUS)
+isEqual(GIT_STATUS, 0) {
+    # Git command appeared to work - so get a description of the current
+    # repository state
+    GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
+    GIT_COMMITHASH=$$system(git rev-parse --short HEAD)
+    GIT_COMMITHASH=$$upper($${GIT_COMMITHASH})
+    # remove the leading "head/"
+    GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "heads/", "")
+    # Split it on hyphens
+    SPLIT_GIT_DESCRIPTION=$$split(GIT_DESCRIPTION, -)
+    # Get the last part so we can check if it is "broken" or "dirty"
+    LAST_GIT_DESCRIPTION=$$last(SPLIT_GIT_DESCRIPTION)
+    contains(LAST_GIT_DESCRIPTION, "broken" ) {
+        warning( "Main Git repository has a problem." )
+        MAIN_STATUS = BROKEN
+        GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", "")
+    } else {
+        contains(LAST_GIT_DESCRIPTION, "dirty" ) {
+            MAIN_STATUS = DIRTY
+            GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", "")
+        } else {
+            MAIN_STATUS = CLEAN
+        }
+    }
+    contains( MAIN_STATUS, "CLEAN") {
+        DEFINES += GIT_BRANCH=\\\"$${GIT_DESCRIPTION}\\\"
+        !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")
+    } else {
+        DEFINES += GIT_BRANCH=\\\"$${GIT_DESCRIPTION}\\\($${MAIN_STATUS}\\\)\\\"
+        !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH} ($${MAIN_STATUS})")
+    }
+    DEFINES += GIT_COMMIT_HASH=\\\"$${GIT_COMMITHASH}\\\"
+}
+
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
 # want to set the environmental variable WITH_VARIABLE_SPLASH_SCREEN to NO so
