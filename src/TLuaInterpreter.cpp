@@ -4638,7 +4638,8 @@ int TLuaInterpreter::getImageSize(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
-int TLuaInterpreter::setCmdLineAction(lua_State* L){
+int TLuaInterpreter::setCmdLineAction(lua_State* L)
+{
     Host& host = getHostFromLua(L);
 
     if (!lua_isstring(L, 1)) {
@@ -4648,7 +4649,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L){
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+        lua_pushfstring(L, "setCmdLineAction: bad argument #1 value (command line name cannot be an empty string.)");
         return 2;
     }
     lua_remove(L, 1);
@@ -4659,17 +4660,15 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L){
         return lua_error(L);
     }
     func = luaL_ref(L, LUA_REGISTRYINDEX);
-    bool lua_result = false;
-    lua_result = host.setCmdLineAction(name, func);
 
-    if (lua_result) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
+    if (!host.setCmdLineAction(name, func)) {
         lua_pushnil(L);
         lua_pushfstring(L, R"("setCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
         return 2;
     }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction

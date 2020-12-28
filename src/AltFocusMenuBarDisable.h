@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,28 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QProxyStyle>
 
-#include "pre_guard.h"
-#include "ui_trigger_pattern_edit.h"
-#include "post_guard.h"
-
-class QAction;
-
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
+class AltFocusMenuBarDisable : public QProxyStyle
 {
-    Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    dlgTriggerPatternEdit(QWidget*);
-
-    int mRow;
-
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
+    int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
 
 };
-
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
