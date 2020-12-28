@@ -807,7 +807,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
-    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
+    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes") || !attributes().hasAttribute("mFORCE_SAVE_ON_EXIT");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
