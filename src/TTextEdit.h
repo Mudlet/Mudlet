@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2015, 2018, 2020 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -29,9 +30,9 @@
 #include "TBuffer.h"
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QMap>
 #include <QPointer>
-#include <QTime>
 #include <QWidget>
 #include <chrono>
 #include "post_guard.h"
@@ -175,7 +176,7 @@ private:
     int mScreenWidth;
     int mScreenOffset;
     int mMaxHRange;
-    QTime mLastClickTimer;
+    QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
@@ -192,7 +193,23 @@ private:
     // making this a const value for the moment:
     const int mTimeStampWidth;
     bool mShowAllCodepointIssues;
+    // Marked mutable so that it is permissable to change this in class methods
+    // that are otherwise const!
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
+    // We scroll on the basis that one vertical mouse wheel click is one line
+    // (vertically, not really concerned about horizontal stuff at present).
+    // According to Qt: "Most mouse types work in steps of 15 degrees, in which
+    // case the delta value is a multiple of 120;
+    // i.e., 120 units * 1/8 = 15 degrees.
+    // However, some mice have finer-resolution wheels and send delta values
+    // that are less than 120 units (less than 15 degrees). To support this
+    // possibility, you can either cumulatively add the delta values from events
+    // until the value of 120 is reached, then scroll the widget, or you can
+    // partially scroll the widget in response to each wheel event. But to
+    // provide a more native feel, you should prefer pixelDelta() on platforms
+    // where it's available."
+    // We use the following to store the remainder (modulus 120):
+    QPoint mMouseWheelRemainder;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

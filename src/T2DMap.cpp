@@ -322,8 +322,11 @@ void T2DMap::shiftZdown()
     update();
 }
 
-
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+void T2DMap::switchArea(const QString& newAreaName)
+#else
 void T2DMap::slot_switchArea(const QString& newAreaName)
+#endif
 {
     Host* pHost = mpHost;
     if (!pHost || !mpMap) {
@@ -711,6 +714,8 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     QRectF roomRectangle;
     QRectF roomNameRectangle;
     double realHeight;
+    int borderWidth = 1 / eSize * mRoomWidth * rSize;
+    bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
     if (isGridMode) {
         realHeight = mRoomHeight;
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
@@ -788,6 +793,10 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
+    if (shouldDrawBorder && !mBubbleMode) {
+        painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
+    }
+
     if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
         || mMultiSelectionSet.contains(currentRoomId)) {
 
@@ -832,10 +841,11 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
             QRadialGradient gradient(roomCenter, roomRadius);
             gradient.setColorAt(0.85, roomColor);
             gradient.setColorAt(0, Qt::white);
-            QPen transparentPen(Qt::transparent);
+            QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
+            borderPen.setWidth(borderWidth);
             QPainterPath diameterPath;
             painter.setBrush(gradient);
-            painter.setPen(transparentPen);
+            painter.setPen(borderPen);
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
         } else {
@@ -2472,7 +2482,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
         label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
         label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
     } else if (textOrImageDialog.clickedButton() == imageButton) {
-       label.bgColor = QColor(50, 50, 150, 100);
+        label.bgColor = QColor(50, 50, 150, 100);
         label.text.clear();
         imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
     } else {
@@ -4217,7 +4227,7 @@ void T2DMap::slot_setRoomWeight()
                                                           0,                                                                // int current = 0, last value in list
                                                           true,                                                             // bool editable = true
                                                           &isOk,                                                            // bool * ok = 0
-                                                          nullptr,                                                                // Qt::WindowFlags flags = 0
+                                                          Qt::WindowFlags(),                                                // Qt::WindowFlags flags = 0
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
@@ -4687,7 +4697,11 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     // to use "globalPos()" instead and see how it lies in relation to the child
     // widget:
     QRect selectionListWidgetGlobalRect = QRect(mapToGlobal(mMultiSelectionListWidget.frameRect().topLeft()), mapToGlobal(mMultiSelectionListWidget.frameRect().bottomRight()));
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+    if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPosition().toPoint())) {
+#else
     if (mMultiSelectionListWidget.isVisible() && selectionListWidgetGlobalRect.contains(e->globalPos())) {
+#endif
         e->accept();
         return;
     }
@@ -4696,17 +4710,16 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         return;
     }
 
-    // int delta = e->delta() / 8 / 15; // Deprecated in Qt 5.x ...!
-    int delta = e->angleDelta().y() / (8 * 15);
-    if (e->modifiers() & Qt::ControlModifier) { // Increase rate if control key down - it makes scrolling through
-                                                // a large number of items in a listwidget's contents easier AND this make it
-                                                // easier to zoom in and out on LARGE area maps
-        delta *= 5;
-    }
-    if (delta != 0) {
+    // Increase rate if control key down - it makes scrolling through
+    // a large number of items in a listwidget's contents easier (that happens
+    // automagically) AND this make it easier to zoom in and out on LARGE area
+    // maps
+    const QPoint delta{e->angleDelta()};
+    const int yDelta = qRound(delta.y() * (e->modifiers() & Qt::ControlModifier ? 5.0 : 1.0) / (8.0 * 15.0));
+    if (yDelta) {
         mPick = false;
         qreal oldZoom = xyzoom;
-        xyzoom = qMax(3.0, xyzoom * pow(1.07, delta));
+        xyzoom = qMax(3.0, xyzoom * pow(1.07, yDelta));
 
         if (oldZoom != xyzoom) {
             const float widgetWidth = width();
@@ -4714,10 +4727,11 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             float xs = 1.0;
             float ys = 1.0;
             if (widgetWidth > 10 && widgetHeight > 10) {
-                if (widgetWidth > widgetHeight)
+                if (widgetWidth > widgetHeight) {
                     xs = (widgetWidth / widgetHeight);
-                else
+                } else {
                     ys = (widgetHeight / widgetWidth);
+                }
             }
 
             // mouse pos within the widget
@@ -4743,8 +4757,8 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         e->accept();
         return;
     }
+
     e->ignore();
-    return;
 }
 
 void T2DMap::setMapZoom(qreal zoom)

@@ -1,9 +1,5 @@
-#ifndef MUDLET_TMXPTAGPARSER_H
-#define MUDLET_TMXPTAGPARSER_H
-
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,30 +17,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QProxyStyle>
 
-#include "MxpTag.h"
-
-#include "pre_guard.h"
-#include <QString>
-#include <QList>
-#include <QSharedPointer>
-#include "post_guard.h"
-
-class TMxpTagParser
+class AltFocusMenuBarDisable : public QProxyStyle
 {
-    static int readTextBlock(QStringView str, const int start, const int end, const QChar terminatingChar);
 
 public:
-    static QStringList parseToList(const QStringView tagText);
-    static QStringList parseToList(const QString& tagText);
+    int styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const;
 
-    QList<QSharedPointer<MxpNode>> parseToMxpNodeList(const QString& tagText, bool ignoreText = false) const;
-
-    MxpTag* parseTag(const QString& tagText) const;
-    MxpStartTag* parseStartTag(const QString& tagText) const;
-    MxpEndTag* parseEndTag(const QString& tagText) const;
-
-    MxpTagAttribute parseAttribute(const QString& attr) const;
 };
-
-#endif //MUDLET_TMXPTAGPARSER_H

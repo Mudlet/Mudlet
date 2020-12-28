@@ -54,7 +54,6 @@ XMLimport::XMLimport(Host* pH)
 , gotScript(false)
 , module(0)
 , mMaxRoomId(0)
-, mMaxAreaId(-1)
 , mVersionMajor(1) // 0 to 255
 , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
@@ -616,7 +615,7 @@ void XMLimport::readUnknownPackage()
         }
 
         if (isStartElement()) {
-            auto result = readPackage();
+            readPackage();
         }
     }
 }
@@ -808,7 +807,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
-    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
+    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes") || !attributes().hasAttribute("mFORCE_SAVE_ON_EXIT");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
@@ -829,6 +828,7 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
     }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    pHost->mMapperShowRoomBorders = attributes().value("mMapperShowRoomBorders") == "yes" || !attributes().hasAttribute("mMapperShowRoomBorders");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
     }
@@ -1075,6 +1075,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == "mBgColor2") {
                 pHost->mBgColor_2.setNamedColor(readElementText());
+            } else if (name() == "mRoomBorderColor") {
+                pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1586,9 +1588,9 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "keyCode") {
-                pT->mKeyCode = readElementText().toInt();
+                pT->setKeyCode(readElementText().toInt());
             } else if (name() == "keyModifier") {
-                pT->mKeyModifier = readElementText().toInt();
+                pT->setKeyModifiers(readElementText().toInt());
             } else if (name() == "KeyGroup" || name() == "Key") {
                 readKeyGroup(pT);
             } else {

@@ -42,7 +42,6 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
@@ -388,7 +387,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     replayButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Record a replay.")));
     replayButton->setIcon(QIcon(QStringLiteral(":/icons/media-tape.png")));
-    connect(replayButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleReplayRecording);
+    connect(replayButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
     logButton->setMinimumSize(QSize(30, 30));
@@ -402,7 +401,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads.png")), QIcon::Normal, QIcon::Off);
     logIcon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-downloads-red-cross.png")), QIcon::Normal, QIcon::On);
     logButton->setIcon(logIcon);
-    connect(logButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleLogging);
+    connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
     mpLineEdit_networkLatency->setReadOnly(true);
     mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
@@ -638,9 +637,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
-     // do nothing for SubConsole or UserWindows
-    } else if (mType & (!SubConsole|!UserWindow)) {
-        //layerCommandLine->move(0,mpMainFrame->height()-layerCommandLine->height());
+    } else if (mType & ~(SubConsole|UserWindow)) {
+        // does nothing for SubConsole or UserWindows
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
@@ -2021,7 +2019,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     switch (event->button()) {
     case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
     case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
-    case Qt::MidButton:     mudletEvent.mArgumentList.append(QString::number(3));   break;
+    case Qt::MiddleButton:  mudletEvent.mArgumentList.append(QString::number(3));   break;
     case Qt::BackButton:    mudletEvent.mArgumentList.append(QString::number(4));   break;
     case Qt::ForwardButton: mudletEvent.mArgumentList.append(QString::number(5));   break;
     case Qt::TaskButton:    mudletEvent.mArgumentList.append(QString::number(6));   break;

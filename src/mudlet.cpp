@@ -661,6 +661,8 @@ mudlet::mudlet()
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
     loadMaps();
+
+    setupTrayIcon();
 }
 
 QSettings* mudlet::getQSettings()
@@ -792,7 +794,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
-                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -2660,12 +2662,16 @@ void mudlet::updateMudletDiscordInvite()
     QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
+#else
+    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+#endif
         qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
         getReply->deleteLater();
     });
@@ -2927,12 +2933,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->mLuaInterpreter.loadGlobal();
     pHost->hideMudletsVariables();
 
-    pHost->mBlockStopWatchCreation = false;
-    pHost->getScriptUnit()->compileAll();
-    pHost->mIsProfileLoadingSequence = false;
-
-    pHost->updateAnsi16ColorsInTable();
-
     //do modules here
     QMapIterator<QString, int> it(pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
@@ -2942,17 +2942,25 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
         moduleEntry << it.key();
         moduleOrder[it.value()] = moduleEntry;
     }
+
+    //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
+    while (it2.hasNext() && it2.peekNext().key() < 0) {
+        it2.next();
+        mudlet::installModulesList(pHost, it2.value());
+    }
+
+    pHost->mBlockStopWatchCreation = false;
+    pHost->getScriptUnit()->compileAll();
+    pHost->mIsProfileLoadingSequence = false;
+
+    pHost->updateAnsi16ColorsInTable();
+
+    //Load rest of modules after scripts
     while (it2.hasNext()) {
         it2.next();
         QStringList modules = it2.value();
-        for (int i = 0; i < modules.size(); i++) {
-            QStringList entry = pHost->mInstalledModules[modules[i]];
-            pHost->installPackage(entry[0], 1);
-            //we repeat this step here b/c we use the same installPackage method for initial loading,
-            //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-            pHost->mInstalledModules[modules[i]] = entry;
-        }
+        mudlet::installModulesList(pHost, modules);
     }
 
     // install default packages
@@ -2976,6 +2984,17 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     } else {
         QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+    }
+}
+
+void mudlet::installModulesList(Host* pHost, QStringList modules)
+{
+    for (int i = 0; i < modules.size(); i++) {
+        QStringList entry = pHost->mInstalledModules[modules[i]];
+        pHost->installPackage(entry[0], 1);
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        pHost->mInstalledModules[modules[i]] = entry;
     }
 }
 
@@ -3302,7 +3321,8 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
 {
-    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0) | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0));
+    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : QTextOption::Flag())
+                                           |(isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : QTextOption::Flag()));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
@@ -3423,14 +3443,13 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
-    QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
-    if (!jsonFile->open(QFile::ReadOnly)) {
+    auto jsonFile = QFile(QStringLiteral(":/lua-function-list.json"));
+    if (!jsonFile.open(QFile::ReadOnly)) {
         return false;
     }
 
-    const QByteArray data = jsonFile->readAll();
-
-    jsonFile->close();
+    const QByteArray data = jsonFile.readAll();
+    jsonFile.close();
 
     auto json_doc = QJsonDocument::fromJson(data);
 
@@ -4657,3 +4676,17 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     menuBar()->setStyleSheet(styleSheet);
 }
 
+void mudlet::setupTrayIcon()
+{
+    mTrayIcon.setIcon(windowIcon());
+    auto menu = new QMenu(this);
+    auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
+    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+       mTrayIcon.hide();
+    });
+    menu->addAction(hideTrayAction);
+    auto exitAction = new QAction(tr("Exit"), this);
+    connect(exitAction, &QAction::triggered, this, &mudlet::close);
+    menu->addAction(exitAction);
+    mTrayIcon.setContextMenu(menu);
+}
