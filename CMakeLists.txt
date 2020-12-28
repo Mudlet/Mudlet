@@ -181,19 +181,35 @@ if(USE_UPDATER)
 
 endif()
 
-# Get the current working branch
-execute_process(
-        COMMAND git describe --all --dirty
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
 # Get the latest commit hash
 execute_process(
-        COMMAND git rev-parse HEAD
+        COMMAND git rev-parse --short HEAD
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
+if(GIT_COMMIT_HASH)
+  STRING(TOUPPER ${GIT_COMMIT_HASH} GIT_COMMIT_HASH)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
+endif()
+
+# Get the current working branch
+execute_process(
+        COMMAND git describe --all --dirty --broken
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(GIT_BRANCH)
+  STRING(REGEX REPLACE "heads/" "" GIT_BRANCH ${GIT_BRANCH})
+
+  if(GIT_BRANCH MATCHES ".*-dirty$")
+    STRING(REGEX REPLACE "-dirty$" " (DIRTY)" GIT_BRANCH ${GIT_BRANCH})
+  endif()
+
+  if(GIT_BRANCH MATCHES ".*-broken")
+    STRING(REGEX REPLACE "-broken" " (BROKEN)" GIT_BRANCH ${GIT_BRANCH})
+  endif()
+
+  target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")
+endif()
