@@ -9967,7 +9967,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
         if (labelId != -1) {
             if (host.mpMap->mapLabels[area].contains(labelId)) {
                 TMapLabel label = host.mpMap->mapLabels[area][labelId];
-                pushLabelPropertiesToLua(L, label);
+                pushMapLabelPropertiesToLua(L, label);
             } else {
                 lua_pushstring(L, "getMapLabel: labelId doesn't exist");
                 return lua_error(L);
@@ -9980,7 +9980,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
                     lua_newtable(L);
                     TMapLabel label = it.value();
                     int id = it.key();
-                    pushLabelPropertiesToLua(L, label);
+                    pushMapLabelPropertiesToLua(L, label);
                     lua_pushnumber(L, id);
                     lua_insert(L, -2);
                     lua_settable(L, -3);
