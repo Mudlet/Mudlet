@@ -802,11 +802,11 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAlertOnNewData = attributes().value(QStringLiteral("mAlertOnNewData")) == YES;
     pHost->mFORCE_NO_COMPRESSION = attributes().value(QStringLiteral("mFORCE_NO_COMPRESSION")) == YES;
     pHost->mFORCE_GA_OFF = attributes().value(QStringLiteral("mFORCE_GA_OFF")) == YES;
-    pHost->mFORCE_SAVE_ON_EXIT = attributes().value(QStringLiteral("mFORCE_SAVE_ON_EXIT")) == YES;
+    pHost->mFORCE_SAVE_ON_EXIT = readDefaultTrueBool(QStringLiteral("mFORCE_SAVE_ON_EXIT"));
     pHost->mEnableGMCP = attributes().value(QStringLiteral("mEnableGMCP")) == YES;
     pHost->mEnableMSDP = attributes().value(QStringLiteral("mEnableMSDP")) == YES;
-    pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == YES);
-    pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == YES);
+    pHost->mEnableMSSP = attributes().value(QStringLiteral("mEnableMSSP")) == YES;
+    pHost->mEnableMSP = attributes().value(QStringLiteral("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(QStringLiteral("mMapStrongHighlight")) == YES;
     pHost->mLogStatus = attributes().value(QStringLiteral("mLogStatus")) == YES;
     pHost->mEnableSpellCheck = attributes().value(QStringLiteral("mEnableSpellCheck")) == YES;
