@@ -4638,7 +4638,8 @@ int TLuaInterpreter::getImageSize(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
-int TLuaInterpreter::setCmdLineAction(lua_State* L){
+int TLuaInterpreter::setCmdLineAction(lua_State* L)
+{
     Host& host = getHostFromLua(L);
 
     if (!lua_isstring(L, 1)) {
@@ -4648,7 +4649,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L){
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
+        lua_pushfstring(L, "setCmdLineAction: bad argument #1 value (command line name cannot be an empty string.)");
         return 2;
     }
     lua_remove(L, 1);
@@ -4659,17 +4660,15 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L){
         return lua_error(L);
     }
     func = luaL_ref(L, LUA_REGISTRYINDEX);
-    bool lua_result = false;
-    lua_result = host.setCmdLineAction(name, func);
 
-    if (lua_result) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
+    if (!host.setCmdLineAction(name, func)) {
         lua_pushnil(L);
         lua_pushfstring(L, R"("setCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
         return 2;
     }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
@@ -6031,7 +6030,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#gotoRoom
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomWeight 
 int TLuaInterpreter::getRoomWeight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7037,7 +7036,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             return 2;
         }
     } else if (!lua_isnoneornil(L, 3)) {
-        lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
@@ -8243,7 +8242,10 @@ int TLuaInterpreter::permKey(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
+        lua_pushfstring(L, "permKey: bad argument #%d (invalid Lua code: %s)", argIndex, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
     int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
@@ -13833,7 +13835,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 
     lua_State* L = pIndenterState.get();
 
-    if (!validLuaCode(code)) {
+    if (!validLuaCode(code).first) {
         return code;
     }
 
@@ -13934,15 +13936,23 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// returns true if the given Lua code is valid, false otherwise
-bool TLuaInterpreter::validLuaCode(const QString &code)
+// returns pair where first is bool stating true the given Lua code is valid, false otherwise
+// second is empty if code is valid, error message if not valid
+std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
-
-    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), "Lua code validation");
-    lua_pop(L, lua_gettop(L));
-
-    return error == 0;
+    int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
+    int topElementIndex = lua_gettop(L);
+    QString e = "";
+    if (error) {
+        if (lua_isstring(L, topElementIndex)) {
+            e = lua_tostring(L, topElementIndex);
+        } else {
+            e = "No error message available from Lua";
+        }
+    }
+    lua_pop(L, topElementIndex);
+    return std::make_pair(!error, e);
 }
 
 // No documentation available in wiki - internal function
@@ -16860,8 +16870,8 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     }
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
-    pT->setIsFolder(false);
-    pT->setIsActive(true);
+    pT->setIsFolder(keycode == -1);
+    pT->setIsActive(keycode != -1); // Folders (keycode == -1) start as inactive
     pT->setTemporary(false);
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
@@ -17376,7 +17386,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "spellCheckWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
         useUserDictionary = lua_toboolean(L, 2);

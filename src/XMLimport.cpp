@@ -807,7 +807,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mAlertOnNewData = (attributes().value("mAlertOnNewData") == "yes");
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
-    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
+    pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes") || !attributes().hasAttribute("mFORCE_SAVE_ON_EXIT");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
@@ -1588,9 +1588,9 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "keyCode") {
-                pT->mKeyCode = readElementText().toInt();
+                pT->setKeyCode(readElementText().toInt());
             } else if (name() == "keyModifier") {
-                pT->mKeyModifier = readElementText().toInt();
+                pT->setKeyModifiers(readElementText().toInt());
             } else if (name() == "KeyGroup" || name() == "Key") {
                 readKeyGroup(pT);
             } else {
