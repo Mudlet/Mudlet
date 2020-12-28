@@ -24,6 +24,13 @@
 // Debugging value to display ALL licences in the dialog
 // #define DEBUG_SHOWALL
 
+#ifndef GIT_COMMIT_HASH
+#define GIT_COMMIT_HASH "?"
+#endif
+
+#ifndef GIT_BRANCH
+#define GIT_BRANCH "?"
+#endif
 
 #include "dlgAboutDialog.h"
 
@@ -138,7 +145,6 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     setSupportersTab(htmlHead);
     setLicenseTab(htmlHead);
     setThirdPartyTab(htmlHead);
-    setAboutPtbTab(htmlHead);
 }
 
 void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
@@ -258,8 +264,9 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     textBrowser_mudlet->setHtml(
             QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                            "%2</table>\n"
-                           "%3</body></html>")
-                    .arg(htmlHead, aboutMudletHeader, aboutMudletBody));
+                           "%3"
+                           "%4</body></html>")
+                    .arg(htmlHead, aboutMudletHeader, createBuildInfo(), aboutMudletBody));
     // clang-format on
 }
 
@@ -1064,25 +1071,18 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     textBrowser_supporters->setOpenExternalLinks(true);
 }
 
-void dlgAboutDialog::setAboutPtbTab(const QString htmlHead)
-{
-    int ptbTabIndex = tabWidget->indexOf(tab_ptb);
-    if (!mudlet::scmIsPublicTestVersion && !mudlet::scmIsDevelopmentVersion) {
-        tabWidget->removeTab(ptbTabIndex);
-        return;
-    }
+QString dlgAboutDialog::createBuildInfo() const {
 
-    QString ptbInfo = QStringLiteral(R"(
-        <p>Mudlet build: %1</p>
-        <p>OS: %2</p>
-        <p>CPU architecure: %4</p>
-        )").arg(mudlet::self()->version, QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture());
+    QString buildInfo = tr("<table border=\"0\" style=\"margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+                           "<tr><td colspan=\"2\" style=\"font-style:italic;\">It would be useful to copy and include information below when reporting an issue!<br></td></tr>"
+    );
 
-    tabWidget->setCurrentIndex(ptbTabIndex);
-
-    textBrowser_ptb->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, ptbInfo));
-
-    connect(pushButton_copy_ptb_info, &QPushButton::released, [=]() {
-        QGuiApplication::clipboard()->setText(textBrowser_ptb->toPlainText());
-    });
+    buildInfo.append(tr("<tr><td style=\"font-weight: 800\">Build information:</td><td>Build: %1</td></tr>").arg(mudlet::self()->version));
+    buildInfo.append(tr("<tr><td></td><td>OS: %1</td></tr>").arg(QSysInfo::prettyProductName()));
+    buildInfo.append(tr("<tr><td></td><td>CPU Architecture: %1</td></tr>").arg(QSysInfo::currentCpuArchitecture()));
+    buildInfo.append(tr("<tr><td></td><td>Branch: %1</td></tr>").arg(GIT_BRANCH));
+    QString commitHash = GIT_COMMIT_HASH;
+    buildInfo.append(tr("<tr><td></td><td>Commit: %1</td></tr>").arg(commitHash.mid(0, 8)));
+    buildInfo.append("</table>");
+    return buildInfo;
 }
