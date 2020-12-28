@@ -2482,7 +2482,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
         label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
         label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
     } else if (textOrImageDialog.clickedButton() == imageButton) {
-       label.bgColor = QColor(50, 50, 150, 100);
+        label.bgColor = QColor(50, 50, 150, 100);
         label.text.clear();
         imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
     } else {
