@@ -1079,9 +1079,9 @@ QString dlgAboutDialog::createBuildInfo() const {
     buildInfo.append(tr("<tr><td style=\"font-weight: 800\">Build information:</td><td>Build: %1</td></tr>").arg(mudlet::self()->version));
     buildInfo.append(tr("<tr><td></td><td>OS: %1</td></tr>").arg(QSysInfo::prettyProductName()));
     buildInfo.append(tr("<tr><td></td><td>CPU Architecture: %1</td></tr>").arg(QSysInfo::currentCpuArchitecture()));
-    buildInfo.append(tr("<tr><td></td><td>Branch: %1</td></tr>").arg(QByteArray(GIT_BRANCH)));
+    buildInfo.append(tr("<tr><td></td><td>Branch: %1</td></tr>").arg(QStringLiteral(GIT_BRANCH)));
     QString commitHash = GIT_COMMIT_HASH;
-    buildInfo.append(tr("<tr><td></td><td>Commit: %1</td></tr>").arg(QByteArray(GIT_COMMIT_HASH).left(8)));
+    buildInfo.append(tr("<tr><td></td><td>Commit: %1</td></tr>").arg(QStringLiteral(GIT_COMMIT_HASH).left(8)));
     buildInfo.append("</table>");
     return buildInfo;
 }
