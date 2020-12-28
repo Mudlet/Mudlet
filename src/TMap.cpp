@@ -38,6 +38,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
+#include <QBuffer>
 #include "post_guard.h"
 
 TMap::TMap(Host* pH, const QString& profileName)
