@@ -35,6 +35,7 @@
 #include <QScreen>
 #include <QSplashScreen>
 #include "post_guard.h"
+#include "AltFocusMenuBarDisable.h"
 
 using namespace std::chrono_literals;
 
@@ -499,6 +500,7 @@ int main(int argc, char* argv[])
     });
 
     app->restoreOverrideCursor();
+    app->setStyle(new AltFocusMenuBarDisable());
 
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application
     // without doing/reaching this restore - it can be quite hard to accurately
