@@ -808,6 +808,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
     }
@@ -3968,12 +3969,11 @@ void dlgTriggerEditor::saveTrigger()
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
         int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
-        if (pattern.isEmpty() && patternType != REGEX_PROMPT) {
+        if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
         }
-        regexList << pattern;
 
-        switch (mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex()) {
+        switch (patternType) {
         case 0:
             regexPropertyList << REGEX_SUBSTRING;
             break;
@@ -3991,6 +3991,7 @@ void dlgTriggerEditor::saveTrigger()
             break;
         case 5:
             regexPropertyList << REGEX_LINE_SPACER;
+            pattern = mTriggerPatternEdit.at(i)->spinBox_lineSpacer->text();
             break;
         case 6:
             regexPropertyList << REGEX_COLOR_PATTERN;
@@ -3999,6 +4000,7 @@ void dlgTriggerEditor::saveTrigger()
             regexPropertyList << REGEX_PROMPT;
             break;
         }
+        regexList << pattern;
     }
 
     QString script = mpSourceEditorEdbeeDocument->text();
@@ -4859,40 +4861,22 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
 {
     switch (type) {
     case REGEX_SUBSTRING:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_PERL:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_EXACT_MATCH:
-        pItem->lineEdit_pattern->show();
-        pItem->pushButton_fgColor->hide();
-        pItem->pushButton_bgColor->hide();
-        pItem->pushButton_prompt->hide();
-        break;
     case REGEX_LUA_CODE:
         pItem->lineEdit_pattern->show();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_LINE_SPACER:
-        pItem->lineEdit_pattern->show();
+        pItem->lineEdit_pattern->hide();
         pItem->pushButton_fgColor->hide();
         pItem->pushButton_bgColor->hide();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->show();
         break;
     case REGEX_COLOR_PATTERN:
         // CHECKME: Do we need to regenerate (hidden patter text) and button texts/colors?
@@ -4900,6 +4884,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->pushButton_fgColor->show();
         pItem->pushButton_bgColor->show();
         pItem->pushButton_prompt->hide();
+        pItem->spinBox_lineSpacer->hide();
         break;
     case REGEX_PROMPT:
         pItem->lineEdit_pattern->hide();
@@ -4913,6 +4898,7 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
             pItem->pushButton_prompt->setToolTip(tr("A Go-Ahead (GA) signal from the game is required to make this feature work"));
         }
         pItem->pushButton_prompt->show();
+        pItem->spinBox_lineSpacer->hide();
         break;
     }
 }
@@ -5107,7 +5093,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                     pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                     pPatternItem->pushButton_fgColor->setText(tr("fault"));
                 }
-
+            } else if (pType == REGEX_LINE_SPACER) {
+                pPatternItem->spinBox_lineSpacer->setValue(patternList.at(i).toInt());
             } else {
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
@@ -5122,6 +5109,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
             mTriggerPatternEdit[i]->pushButton_prompt->hide();
+            mTriggerPatternEdit[i]->spinBox_lineSpacer->hide();
             // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);

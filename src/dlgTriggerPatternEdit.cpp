@@ -32,14 +32,10 @@ dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF)
 {
     // init generated dialog
     setupUi(this);
-
-    mAction_typeIndication = new QAction(this);
-    lineEdit_pattern->addAction(mAction_typeIndication, QLineEdit::LeadingPosition);
-
     connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged);
 }
 
 void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
-    mAction_typeIndication->setIcon(comboBox_patternType->itemIcon(index));
+    label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
 }
