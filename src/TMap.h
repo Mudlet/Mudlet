@@ -76,6 +76,8 @@ public:
     bool highlight;
     bool showOnTop;
     bool noScaling;
+
+    QString base64EncodePixmap();
 };
 
 
