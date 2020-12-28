@@ -75,9 +75,6 @@ public:
     QMap<int, int> xmaxForZ;
     QMap<int, int> yminForZ;
     QMap<int, int> ymaxForZ;
-// Pointless:
-//    QMap<int, int> zminForZ;
-//    QMap<int, int> zmaxForZ;
     QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
     bool gridMode;
     bool isZone;

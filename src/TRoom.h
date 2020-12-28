@@ -31,7 +31,6 @@
 #include <QColor>
 #include <QHash>
 #include <QMap>
-#include <QVector3D>
 #include "post_guard.h"
 
 
@@ -145,7 +144,7 @@ public:
     qreal max_y;
     QString mSymbol;
     QString name;
-    QVector3D v;
+
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
