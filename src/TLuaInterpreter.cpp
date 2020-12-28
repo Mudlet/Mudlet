@@ -9991,7 +9991,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     return 1;
 }
 
-void TLuaInterpreter::pushLabelPropertiesToLua(lua_State* L, TMapLabel label)
+void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, TMapLabel label)
 {
     int x = label.pos.x();
     int y = label.pos.y();
