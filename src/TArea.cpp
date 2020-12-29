@@ -607,7 +607,7 @@ void TArea::writeArea(QJsonArray& obj) const
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> roomList{rooms.begin(), rooms.end()};
 #else
-    QList<int> roomList.toList();
+    QList<int> roomList = rooms.toList();
 #endif
     int roomCount = roomList.count();
     if (roomCount > 1) {
