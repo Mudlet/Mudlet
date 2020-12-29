@@ -189,7 +189,6 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if(GIT_COMMIT_HASH)
-  STRING(TOUPPER ${GIT_COMMIT_HASH} GIT_COMMIT_HASH)
   target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
 endif()
 
@@ -204,11 +203,11 @@ if(GIT_BRANCH)
   STRING(REGEX REPLACE "heads/" "" GIT_BRANCH ${GIT_BRANCH})
 
   if(GIT_BRANCH MATCHES ".*-dirty$")
-    STRING(REGEX REPLACE "-dirty$" " (DIRTY)" GIT_BRANCH ${GIT_BRANCH})
+    STRING(REGEX REPLACE "-dirty$" " (modified)" GIT_BRANCH ${GIT_BRANCH})
   endif()
 
   if(GIT_BRANCH MATCHES ".*-broken")
-    STRING(REGEX REPLACE "-broken" " (BROKEN)" GIT_BRANCH ${GIT_BRANCH})
+    STRING(REGEX REPLACE "-broken" " (broken)" GIT_BRANCH ${GIT_BRANCH})
   endif()
 
   target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_BRANCH=\"${GIT_BRANCH}\"")

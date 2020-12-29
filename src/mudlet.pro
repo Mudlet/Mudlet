@@ -110,7 +110,6 @@ isEqual(GIT_STATUS, 0) {
     # repository state
     GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
     GIT_COMMITHASH=$$system(git rev-parse --short HEAD)
-    GIT_COMMITHASH=$$upper($${GIT_COMMITHASH})
     # remove the leading "head/"
     GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "heads/", "")
     # Split it on hyphens
@@ -119,14 +118,12 @@ isEqual(GIT_STATUS, 0) {
     LAST_GIT_DESCRIPTION=$$last(SPLIT_GIT_DESCRIPTION)
     contains(LAST_GIT_DESCRIPTION, "broken" ) {
         warning( "Main Git repository has a problem." )
-        MAIN_STATUS = BROKEN
+        MAIN_STATUS = broken
         GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", "")
     } else {
         contains(LAST_GIT_DESCRIPTION, "dirty" ) {
-            MAIN_STATUS = DIRTY
+            MAIN_STATUS = modified
             GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", "")
-        } else {
-            MAIN_STATUS = CLEAN
         }
     }
     contains( MAIN_STATUS, "CLEAN") {
