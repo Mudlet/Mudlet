@@ -1075,12 +1075,12 @@ QString dlgAboutDialog::createBuildInfo() const {
 
     QString commitHash = !QByteArray(GIT_COMMIT_HASH).isEmpty() ? QStringLiteral(GIT_COMMIT_HASH) : QStringLiteral("?");
     QString branch = !QByteArray(GIT_BRANCH).isEmpty() ? QStringLiteral(GIT_BRANCH) : QStringLiteral("?");
-    return QStringLiteral("<table border=\"0\" style=\"margin-bottom:36px; margin-left:36px; margin-right:36px;\" cellspacing=\"2\" cellpadding=\"0\">\n")
+    return QStringLiteral("<table border=\"0\" style=\"margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
         .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version:"), mudlet::self()->version))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS:"), QSysInfo::prettyProductName()))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU:"), QSysInfo::currentCpuArchitecture()))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Branch:"), branch))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Commit:"), commitHash))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Branch"), branch))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Commit"), commitHash))
         .append(QStringLiteral("</table>"));
 }
