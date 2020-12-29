@@ -2642,13 +2642,15 @@ std::pair<bool, QString> TMap::writeJsonMap(const QString& dest)
     writeUserData(mapObj);
 
     QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
-    QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
     QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
-    areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
+    areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
     QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
 #else
+    QSet<int> areaIdsSet = areaRawIdsList.toSet();
+    areaIdsSet.unite(areaNameRawIdsList.toSet());
     QList<int> areaIdsList = areaIdsSet.toList();
 #endif
     if (areaIdsList.count() > 1) {
