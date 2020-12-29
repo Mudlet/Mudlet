@@ -58,6 +58,8 @@ public:
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
+    const QString YES = QStringLiteral("yes");
+
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
 
@@ -105,6 +107,8 @@ private:
     QString readScriptElement();
 
     void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
+
+    bool readDefaultTrueBool(QString name);
 
     QPointer<Host> mpHost;
     QString mPackageName;
