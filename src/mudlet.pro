@@ -124,8 +124,9 @@ isEqual(GIT_STATUS, 0) {
             GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", " (modified)")
         }
     }
-    !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")q
+    !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")
     DEFINES += GIT_COMMIT_HASH=\\\"$${GIT_COMMITHASH}\\\"
+    DEFINES += GIT_BRANCH=\\\"\"$${GIT_DESCRIPTION}\"\\\"
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
