@@ -7128,6 +7128,7 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         return lua_error(L);
     }
 
+
     if (lua_isstring(L, 1)) {
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(lua_tostring(L, 1)), expiryCount);
     } else if (lua_isfunction(L, 1)) {
@@ -7964,16 +7965,20 @@ int TLuaInterpreter::permAlias(lua_State* L)
     }
     QString regex{lua_tostring(L, 3)};
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permAlias: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    lua_pushnumber(L, pLuaInterpreter->startPermAlias(name, parent, regex, script));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permAlias: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
+    auto [aliasId, message] = pLuaInterpreter->startPermAlias(name, parent, regex, script);
+    if (aliasId == -1) {
+        lua_pushfstring(L, "permAlias: cannot create alias (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, aliasId);
     return 1;
 }
 
@@ -8023,10 +8028,13 @@ int TLuaInterpreter::setScript(lua_State* L)
     }
     QString name{lua_tostring(L, 1)};
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setScript: bad argument #2 type (script lua code as string expected, got %s!)", luaL_typename(L, 2));
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(2); !validationResult) {
+        lua_pushfstring(L, "setScript: bad argument #%d (%s)", 2, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
+
     QString luaCode{lua_tostring(L, 2)};
 
     if (n > 2) {
@@ -8037,15 +8045,13 @@ int TLuaInterpreter::setScript(lua_State* L)
         pos = lua_tonumber(L, 3);
     }
 
-    Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
     lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
+        lua_pushfstring(L, "permScript: cannot set script (%s)", message.toUtf8().constData());
+        return lua_error(L);
     }
+    lua_pushnumber(L, id);
 
     return 1;
 }
@@ -8066,22 +8072,20 @@ int TLuaInterpreter::permScript(lua_State* L)
     }
     QString parent{lua_tostring(L, 2)};
 
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permScript: bad argument #3 type (script as string expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString luaCode{lua_tostring(L, 3)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-
-    auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
-    lua_pushnumber(L, id);
-    if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
+        lua_pushfstring(L, "permScript: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
+        return lua_error(L);
     }
 
+    QString luaCode{lua_tostring(L, 3)};
+    auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
+    if (id == -1) {
+        lua_pushfstring(L, "permScript: cannot create script (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, id);
     return 1;
 }
 
@@ -8106,22 +8110,20 @@ int TLuaInterpreter::permTimer(lua_State* L)
     }
     double time = lua_tonumber(L, 3);
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permTimer: bad argument #4 type (script as string expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString luaCode{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-
-    auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
-    lua_pushnumber(L, id);
-    if (id == -1) {
-        lua_pushstring(L, message.toUtf8().constData());
-        return 2;
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permTimer: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
     }
 
+    QString luaCode{lua_tostring(L, 4)};
+    auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
+    if (id == -1) {
+        lua_pushfstring(L, "permTimer: cannot create timer (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, id);
     return 1;
 }
 
@@ -8158,16 +8160,20 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    lua_pushnumber(L, pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permSubstringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
+    auto [triggerID, message] = pLuaInterpreter->startPermSubstringTrigger(name, parent, regList, script);
+    if(triggerID == - 1) {
+        lua_pushfstring(L, "permSubstringTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerID);
     return 1;
 }
 
@@ -8176,7 +8182,6 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int triggerID;
     QString triggerName, parentName, luaFunction;
 
     if (!lua_isstring(L, 1)) {
@@ -8191,13 +8196,18 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
     }
     parentName = lua_tostring(L, 2);
 
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permPromptTrigger: bad argument #3 type (code to run as string expected, got %s!)", luaL_typename(L, 3));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
+        lua_pushfstring(L, "permPromptTrigger: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
+
     luaFunction = lua_tostring(L, 3);
 
-    triggerID = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
+    auto [triggerID, message] = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
+    if(triggerID == - 1) {
+        lua_pushfstring(L, "permPromptTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
     lua_pushnumber(L, triggerID);
     return 1;
 }
@@ -8234,19 +8244,19 @@ int TLuaInterpreter::permKey(lua_State* L)
     }
     int keyCode = lua_tointeger(L, argIndex);
 
-    if (!lua_isstring(L, ++argIndex)) {
-        lua_pushfstring(L, "permKey: bad argument #%d type (lua script as string expected, got %s!)", argIndex, luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    QString luaFunction{lua_tostring(L, argIndex)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    if (auto [validationResult, validationMessage] = pLuaInterpreter->validLuaCode(luaFunction); !validationResult) {
-        lua_pushfstring(L, "permKey: bad argument #%d (invalid Lua code: %s)", argIndex, validationMessage.toUtf8().constData());
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(++argIndex); !validationResult) {
+        lua_pushfstring(L, "permKey: bad argument #%d (%s)", argIndex, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
-    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+
+    QString luaFunction{lua_tostring(L, argIndex)};
+    auto [keyID, message] = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+    if(keyID == - 1) {
+        lua_pushfstring(L, "permKey: cannot create key (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
     lua_pushnumber(L, keyID);
     return 1;
 }
@@ -8337,16 +8347,20 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    lua_pushnumber(L, pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
+    auto [triggerId, message] = pLuaInterpreter->startPermBeginOfLineStringTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerId);
     return 1;
 }
 
@@ -8383,16 +8397,20 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #4 type (lua script as string expected, got %s!)",
-                        luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString script{lua_tostring(L, 4)};
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    lua_pushnumber(L, pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script));
+    if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
+        lua_pushfstring(L, "permRegexTrigger: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
+        return lua_error(L);
+    }
+
+    QString script{lua_tostring(L, 4)};
+    auto [triggerId, message] = pLuaInterpreter->startPermRegexTrigger(name, parent, regList, script);
+    if (triggerId == -1) {
+        lua_pushfstring(L, "permRegexTrigger: cannot create trigger (%s)", message.toUtf8().constData());
+        return lua_error(L);
+    }
+    lua_pushnumber(L, triggerId);
     return 1;
 }
 
@@ -13938,17 +13956,30 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 // No documentation available in wiki - internal function
 // returns pair where first is bool stating true the given Lua code is valid, false otherwise
 // second is empty if code is valid, error message if not valid
+std::pair<bool, QString> TLuaInterpreter::validateLuaCodeParam(int index)
+{
+    lua_State* L = pGlobalLua;
+    if (!lua_isstring(L, index)) {
+        return std::make_pair(false, QStringLiteral("lua script as string expected, got %1!").arg(luaL_typename(L, index)));
+    }
+    QString script{lua_tostring(L, index)};
+    return validLuaCode(script);
+}
+
+// No documentation available in wiki - internal function
+// returns pair where first is bool stating true the given Lua code is valid, false otherwise
+// second is empty if code is valid, error message if not valid
 std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
 {
     lua_State* L = pGlobalLua;
     int error = luaL_loadbuffer(L, code.toUtf8().constData(), strlen(code.toUtf8().constData()), code.toUtf8().data());
     int topElementIndex = lua_gettop(L);
-    QString e = "";
+    QString e = "invalid Lua code: ";
     if (error) {
         if (lua_isstring(L, topElementIndex)) {
-            e = lua_tostring(L, topElementIndex);
+            e += lua_tostring(L, topElementIndex);
         } else {
-            e = "No error message available from Lua";
+            e += "No error message available from Lua";
         }
     }
     lua_pop(L, topElementIndex);
@@ -16693,7 +16724,7 @@ void TLuaInterpreter::loadUtf8Filenames()
 #endif
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const QString& parent, const QString& luaCode)
+std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const QString& parent, const QString& luaCode)
 {
     TScript* pS;
     if (parent.isEmpty()) {
@@ -16705,7 +16736,7 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
         auto ids = mpHost->getScriptUnit()->findScriptId(parent);
         auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
         if (!pParentScript) {
-            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
         }
         pS = new TScript(pParentScript, mpHost);
     }
@@ -16716,41 +16747,41 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         delete pS;
-        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
+        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
     }
 
     int id = pS->getID();
     pS->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return qMakePair(id, QString());
+    return std::make_pair(id, QString());
 }
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
+std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
 {
     if (name.isEmpty()) {
-        return qMakePair(-1, QStringLiteral("cannot have an empty string as name"));
+        return std::make_pair(-1, QStringLiteral("cannot have an empty string as name"));
     }
 
     auto ids = mpHost->getScriptUnit()->findScriptId(name);
     TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
     if (!pS) {
-        return qMakePair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
+        return std::make_pair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
     }
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return qMakePair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
+        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
     }
     pS->setScript(luaCode);
     int id = pS->getID();
     mpHost->mpEditorDialog->writeScript(id);
-    return qMakePair(id, QString());
+    return std::make_pair(id, QString());
 }
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
     QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     TTimer* pT;
@@ -16762,7 +16793,7 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
         // API to handle more than one potential parent with the same name:
         auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
         if (!pParentTimer) {
-            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTimer(pParentTimer, mpHost);
     }
@@ -16779,13 +16810,12 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
         QString errMsg = pT->getError();
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
-        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
+        return std::make_pair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
     }
 
-    int id = pT->getID();
     pT->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return qMakePair(id, QString());
+    return std::make_pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -16813,7 +16843,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function)
 {
     TAlias* pT;
 
@@ -16822,7 +16852,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     } else {
         TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TAlias(pP, mpHost);
     }
@@ -16832,10 +16862,9 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     pT->setTemporary(false);
     pT->registerAlias();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return std::make_pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -16855,7 +16884,7 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
 {
     TKey* pT;
 
@@ -16864,7 +16893,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TKey(pP, mpHost);
     }
@@ -16876,10 +16905,9 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     pT->registerKey();
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return std::make_pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -17044,7 +17072,7 @@ int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& 
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17056,7 +17084,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17066,16 +17094,13 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    //pT->setName( name );
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return std::pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17087,7 +17112,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17097,15 +17122,13 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return std::pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regexList, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList;
@@ -17117,7 +17140,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17127,15 +17150,13 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    //return 1;
-    return id;
+    return std::make_pair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& parent, const QString& function)
 {
     TTrigger* pT;
     QList<int> propertyList = {REGEX_PROMPT};
@@ -17146,7 +17167,7 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return -1; //parent not found
+            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -17156,10 +17177,9 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
     pT->setTemporary(false);
     pT->registerTrigger();
     pT->setScript(function);
-    int id = pT->getID();
     pT->setName(name);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return std::make_pair(pT->getID(), QString());
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#alert
