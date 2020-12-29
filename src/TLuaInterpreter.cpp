@@ -628,31 +628,40 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     // We go from the top of the stack down, because luaL_ref will
     // only reference the object at the top of the stack
     for (int i = n; i >= 1; i--) {
-        if (lua_isnumber(L, -1)) {
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1)));
+        switch (lua_type(L, -1)) {
+        case LUA_TNUMBER:
+            // https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
+            // suggests that 17 decimal digits is the most we can rely on:
+            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1), 'g', 17));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
-        } else if (lua_isstring(L, -1)) {
+            break;
+        case LUA_TSTRING:
             event.mArgumentList.prepend(lua_tostring(L, -1));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
             lua_pop(L, 1);
-        } else if (lua_isboolean(L, -1)) {
+            break;
+        case LUA_TBOOLEAN:
             event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
             lua_pop(L, 1);
-        } else if (lua_isnil(L, -1)) {
+            break;
+        case LUA_TNIL:
             event.mArgumentList.prepend(QString());
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NIL);
             lua_pop(L, 1);
-        } else if (lua_istable(L, -1)) {
+            break;
+        case LUA_TTABLE:
             event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_TABLE);
             // luaL_ref pops the object, so we don't have to
-        } else if (lua_isfunction(L, -1)) {
+            break;
+        case LUA_TFUNCTION:
             event.mArgumentList.prepend(QString::number(luaL_ref(L, LUA_REGISTRYINDEX)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_FUNCTION);
             // luaL_ref pops the object, so we don't have to
-        } else {
+            break;
+        default:
             lua_pushfstring(L,
                             "raiseEvent: bad argument #%d type (string, number, boolean, table,\n"
                             "function, or nil expected, got a %s!)",
@@ -664,7 +673,8 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 
     host.raiseEvent(event);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileName
@@ -704,19 +714,24 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         // getProfileName() as an (last) additional argument after all the
         // other so the handler can tell it is handling a local event from
         // raiseEvent(...) and not one from another profile! - Slysven
-        if (lua_isnumber(L, i)) {
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i)));
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+            event.mArgumentList.append(QString::number(lua_tonumber(L, i), 'g', 17));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        } else if (lua_isstring(L, i)) {
+            break;
+        case LUA_TSTRING:
             event.mArgumentList.append(lua_tostring(L, i));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        } else if (lua_isboolean(L, i)) {
+            break;
+        case LUA_TBOOLEAN:
             event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-        } else if (lua_isnil(L, i)) {
+            break;
+        case LUA_TNIL:
             event.mArgumentList.append(QString());
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
-        } else {
+            break;
+        default:
             lua_pushfstring(L,
                             "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
                             "expected, got a %s!)",
@@ -731,7 +746,8 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
 
     mudlet::self()->getHostManager().postInterHostEvent(&host, event);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetProfile
