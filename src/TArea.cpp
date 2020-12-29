@@ -604,7 +604,11 @@ void TArea::writeArea(QJsonArray& obj) const
 
     writeUserData(areaObj);
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> roomList{rooms.begin(), rooms.end()};
+#else
+    QList<int> roomList.toList();
+#endif
     int roomCount = roomList.count();
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
@@ -792,5 +796,7 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 
 QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) const
 {
+    Q_UNUSED(pixmapArray);
     // TODO:
+    return {};
 }

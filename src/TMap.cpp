@@ -2646,7 +2646,11 @@ std::pair<bool, QString> TMap::writeJsonMap(const QString& dest)
     QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
     areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
+#else
+    QList<int> areaIdsList = areaIdsSet.toList();
+#endif
     if (areaIdsList.count() > 1) {
         std::sort(areaIdsList.begin(), areaIdsList.end());
     }
