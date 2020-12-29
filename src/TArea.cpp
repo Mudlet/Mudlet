@@ -45,6 +45,7 @@
 
 static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
+static const int kPixmapDataLineSize = 64;
 
 TArea::TArea(TMap * map , TRoomDB * pRDB)
 : min_x(0)
@@ -622,7 +623,7 @@ void TArea::writeArea(QJsonArray& obj) const
             }
         }
     }
-    if(currentRoomCount % 10 != 0) {
+    if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
         mpMap->incrementProgressDialog(true, currentRoomCount % 10);
     }
@@ -764,7 +765,7 @@ void TArea::writeColor(QJsonObject& obj, const QColor& color) const
 QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 {
     QBuffer imageInputBuffer;
-    const int lineSize = 64;
+
     imageInputBuffer.open(QIODevice::WriteOnly);
     // Go for maximum compresssion - for the smallest amount of data:
     pixmap.save(&imageInputBuffer, "PNG", 0);
@@ -776,10 +777,10 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 
     QList<QByteArray> pixmapArray;
     // Extract the image into lines of bytes (unsigned chars):
-    char lineBuffer[lineSize + 1];
-    qint64 bytesRead = lineSize;
-    for (int i = 0, total = imageOutputBuffer.size(); bytesRead == lineSize && i < total; i += lineSize) {
-        bytesRead = imageOutputBuffer.read(lineBuffer, lineSize);
+    char lineBuffer[kPixmapDataLineSize + 1];
+    qint64 bytesRead = kPixmapDataLineSize;
+    for (int i = 0, total = imageOutputBuffer.size(); bytesRead == kPixmapDataLineSize && i < total; i += kPixmapDataLineSize) {
+        bytesRead = imageOutputBuffer.read(lineBuffer, kPixmapDataLineSize);
         if (bytesRead) {
             lineBuffer[bytesRead] = '\0';
             pixmapArray.append(lineBuffer);
