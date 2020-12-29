@@ -118,21 +118,13 @@ isEqual(GIT_STATUS, 0) {
     LAST_GIT_DESCRIPTION=$$last(SPLIT_GIT_DESCRIPTION)
     contains(LAST_GIT_DESCRIPTION, "broken" ) {
         warning( "Main Git repository has a problem." )
-        MAIN_STATUS = broken
-        GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", "")
+        GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", " (broken)")
     } else {
         contains(LAST_GIT_DESCRIPTION, "dirty" ) {
-            MAIN_STATUS = modified
-            GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", "")
+            GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", " (modified)")
         }
     }
-    contains( MAIN_STATUS, "CLEAN") {
-        DEFINES += GIT_BRANCH=\\\"$${GIT_DESCRIPTION}\\\"
-        !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")
-    } else {
-        DEFINES += GIT_BRANCH=\\\"$${GIT_DESCRIPTION}\\\($${MAIN_STATUS}\\\)\\\"
-        !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH} ($${MAIN_STATUS})")
-    }
+    !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")q
     DEFINES += GIT_COMMIT_HASH=\\\"$${GIT_COMMITHASH}\\\"
 }
 
