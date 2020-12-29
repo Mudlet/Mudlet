@@ -135,15 +135,15 @@ public:
     int startTempRegexTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempColorTrigger(int, int, const QString&, int expiryCount = -1);
     int startTempPromptTrigger(const QString& function, int expiryCount = -1);
-    int startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
-    int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
-    int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
-    QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
-    QPair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    QPair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
-    int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, int&, int&, QString&);
+    std::pair<int, QString> startPermRegexTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    std::pair<int, QString> startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
+    std::pair<int, QString> startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
+    std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
+    std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
+    std::pair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
+    std::pair<int, QString> startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
+    std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
@@ -597,6 +597,7 @@ private:
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
     std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validateLuaCodeParam(int index);
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
