@@ -51,6 +51,7 @@ private:
     void setThirdPartyTab(const QString& htmlHead) const;
     void setSupportersTab(const QString &htmlHead);
     QString createMakerHTML(const aboutMaker&) const;
+    QString createBuildInfo() const;
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H
