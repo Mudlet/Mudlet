@@ -10001,30 +10001,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
         if (labelId != -1) {
             if (host.mpMap->mapLabels[area].contains(labelId)) {
                 TMapLabel label = host.mpMap->mapLabels[area][labelId];
-                int x = label.pos.x();
-                int y = label.pos.y();
-                int z = label.pos.z();
-                float height = label.size.height();
-                float width = label.size.width();
-                QString text = label.text;
-                lua_pushstring(L, "X");
-                lua_pushnumber(L, x);
-                lua_settable(L, -3);
-                lua_pushstring(L, "Y");
-                lua_pushnumber(L, y);
-                lua_settable(L, -3);
-                lua_pushstring(L, "Z");
-                lua_pushnumber(L, z);
-                lua_settable(L, -3);
-                lua_pushstring(L, "Height");
-                lua_pushnumber(L, height);
-                lua_settable(L, -3);
-                lua_pushstring(L, "Width");
-                lua_pushnumber(L, width);
-                lua_settable(L, -3);
-                lua_pushstring(L, "Text");
-                lua_pushstring(L, text.toUtf8().constData());
-                lua_settable(L, -3);
+                pushMapLabelPropertiesToLua(L, label);
             } else {
                 lua_pushstring(L, "getMapLabel: labelId doesn't exist");
                 return lua_error(L);
@@ -10034,33 +10011,10 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
             while (it.hasNext()) {
                 it.next();
                 if (it.value().text == labelText) {
-                    TMapLabel label = it.value();
                     lua_newtable(L);
+                    TMapLabel label = it.value();
                     int id = it.key();
-                    int x = label.pos.x();
-                    int y = label.pos.y();
-                    int z = label.pos.z();
-                    float height = label.size.height();
-                    float width = label.size.width();
-                    QString text = label.text;
-                    lua_pushstring(L, "X");
-                    lua_pushnumber(L, x);
-                    lua_settable(L, -3);
-                    lua_pushstring(L, "Y");
-                    lua_pushnumber(L, y);
-                    lua_settable(L, -3);
-                    lua_pushstring(L, "Z");
-                    lua_pushnumber(L, z);
-                    lua_settable(L, -3);
-                    lua_pushstring(L, "Height");
-                    lua_pushnumber(L, height);
-                    lua_settable(L, -3);
-                    lua_pushstring(L, "Width");
-                    lua_pushnumber(L, width);
-                    lua_settable(L, -3);
-                    lua_pushstring(L, "Text");
-                    lua_pushstring(L, text.toUtf8().constData());
-                    lua_settable(L, -3);
+                    pushMapLabelPropertiesToLua(L, label);
                     lua_pushnumber(L, id);
                     lua_insert(L, -2);
                     lua_settable(L, -3);
@@ -10069,6 +10023,61 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
         }
     }
     return 1;
+}
+
+void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label)
+{
+    int x = label.pos.x();
+    int y = label.pos.y();
+    int z = label.pos.z();
+    float height = label.size.height();
+    float width = label.size.width();
+    QString text = label.text;
+    lua_pushstring(L, "X");
+    lua_pushnumber(L, x);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Y");
+    lua_pushnumber(L, y);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Z");
+    lua_pushnumber(L, z);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Height");
+    lua_pushnumber(L, height);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Width");
+    lua_pushnumber(L, width);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Text");
+    lua_pushstring(L, text.toUtf8().constData());
+    lua_settable(L, -3);
+    lua_pushstring(L, "Pixmap");
+    lua_pushstring(L, label.base64EncodePixmap().constData());
+    lua_settable(L, -3);
+    lua_pushstring(L, "FgColor");
+    lua_newtable(L);
+    lua_pushstring(L, "r");
+    lua_pushinteger(L, label.fgColor.red());
+    lua_settable(L, -3);
+    lua_pushstring(L, "g");
+    lua_pushinteger(L, label.fgColor.green());
+    lua_settable(L, -3);
+    lua_pushstring(L, "b");
+    lua_pushinteger(L, label.fgColor.blue());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+    lua_pushstring(L, "BgColor");
+    lua_newtable(L);
+    lua_pushstring(L, "r");
+    lua_pushinteger(L, label.bgColor.red());
+    lua_settable(L, -3);
+    lua_pushstring(L, "g");
+    lua_pushinteger(L, label.bgColor.green());
+    lua_settable(L, -3);
+    lua_pushstring(L, "b");
+    lua_pushinteger(L, label.bgColor.blue());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addSpecialExit

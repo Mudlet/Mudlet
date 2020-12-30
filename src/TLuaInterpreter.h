@@ -43,6 +43,7 @@
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
+#include "TMap.h"
 
 extern "C" {
 #include <lauxlib.h>
@@ -615,7 +616,7 @@ private:
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
     void insertNativeSeparatorsFunction(lua_State* L);
-
+    static void pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label);
     const int LUA_FUNCTION_MAX_ARGS = 50;
 
 

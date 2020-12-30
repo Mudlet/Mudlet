@@ -38,6 +38,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
+#include <QBuffer>
 #include "post_guard.h"
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -2584,3 +2585,10 @@ void TMap::update()
     }
 }
 
+QByteArray TMapLabel::base64EncodePixmap() const
+{
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    pix.save(&buffer, "PNG");
+    return buffer.data().toBase64();
+}
