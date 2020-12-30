@@ -165,7 +165,7 @@ public:
 
     std::pair<bool, QString> writeJsonMap(const QString&);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
-    void incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
+    bool incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
 
 
     TRoomDB* mpRoomDB;

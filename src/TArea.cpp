@@ -623,7 +623,10 @@ void TArea::writeArea(QJsonArray& obj) const
             ++currentRoomCount;
             pR->writeRoom(roomsArray);
             if (currentRoomCount % 10 == 0) {
-                mpMap->incrementProgressDialog(true, 10);
+                if (mpMap->incrementProgressDialog(true, 10)) {
+                    // Cancel has been hit - so give up straight away:
+                    return;
+                }
             }
         }
     }
@@ -670,7 +673,10 @@ void TArea::writeLabels(QJsonObject& obj) const
     while (itLabel.hasNext()) {
         itLabel.next();
         writeLabel(labelArray, itLabel.key(), &itLabel.value());
-        mpMap->incrementProgressDialog(false, 1);
+        if (mpMap->incrementProgressDialog(false, 1)) {
+            // Cancel has been hit - so give up straight away:
+            return;
+        }
     }
 
     obj.insert(QStringLiteral("labels"), labelArray);

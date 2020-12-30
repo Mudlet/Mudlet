@@ -2669,8 +2669,7 @@ std::pair<bool, QString> TMap::writeJsonMap(const QString& dest)
             pA->writeArea(areasArray);
         }
         ++mProgressDialogAreasCount;
-        incrementProgressDialog(true, 0);
-        if (mpProgressDialog->wasCanceled()) {
+        if (incrementProgressDialog(true, 0)) {
             abort = true;
             break;
         }
@@ -2784,7 +2783,7 @@ void TMap::writeColor(QJsonObject& obj, const QColor& color) const
     obj.insert(QStringLiteral("colorRGBA"), colorRGBAArray);
 }
 
-void TMap::incrementProgressDialog(const bool isRoomNotLabel, const int increment)
+bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int increment)
 {
     if (isRoomNotLabel) {
         mProgressDialogRoomsCount += increment;
@@ -2803,4 +2802,7 @@ void TMap::incrementProgressDialog(const bool isRoomNotLabel, const int incremen
                                         QString::number(mProgressDialogLabelsCount),
                                         QString::number(mProgressDialogLabelsTotal)));
     qApp->processEvents();
+    return mpProgressDialog->wasCanceled();
+}
+
 }
