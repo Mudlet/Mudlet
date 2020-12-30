@@ -2805,4 +2805,3 @@ bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int incremen
     return mpProgressDialog->wasCanceled();
 }
 
-}
