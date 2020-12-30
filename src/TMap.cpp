@@ -1424,16 +1424,36 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
                 ifs >> mMapSymbolFont;
+                if (mVersion < 21 && mMapSymbolFont.toString().split(QLatin1Char(',')).count() > 15) {
+                    // We need to clean up the effects of using QFont(string)
+                    // for a format 17 or 18 below - as this fix went in before
+                    // 21 was used it only has to be used for map formats 19 and
+                    // 20:
+                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1Char(',')).mid(0, 10).join(QLatin1Char(',')));
+                }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
-                QString fontString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFont"));
+                // BUGFIX: Using QFont::toString() and then using that to
+                // construct a font again afterwards via a QFont(string) was
+                // incorrect as it seemed to cause the last to duplicated the
+                // last nine elements each time. The details of the ::toString()
+                // ::fromString() methods are not currently documented so the
+                // only details are documented in the source:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
+                // and:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
+                // this suggests that only one or ten elements are accepted so
+                // we CAN fix past mistakes by only considering the first ten
+                // elements:
+                QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
                 QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
                 QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
-                    mMapSymbolFont = QFont(fontString);
+                    mMapSymbolFont.fromString(fontString);
                 }
                 if (!fontFudgeFactorString.isEmpty()) {
                     mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
