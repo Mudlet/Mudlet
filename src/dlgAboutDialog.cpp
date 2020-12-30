@@ -262,7 +262,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
 
     textBrowser_mudlet->setHtml(
-            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin:18px 36px; width: 100%;\" cellspacing=\"2\" cellpadding=\"0\">\n"
+            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin:18px 36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                            "%2</table>\n"
                            "%3"
                            "%4</body></html>")
