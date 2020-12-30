@@ -235,7 +235,7 @@ bool AliasUnit::processDataStream(const QString& data)
     Lua->set_lua_string(QStringLiteral("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
-    std::list<TAlias*> copyOfNodeList = mAliasRootNodeList;
+    auto copyOfNodeList = mAliasRootNodeList;
     for (auto alias : copyOfNodeList) {
         // = data.replace( "\n", "" );
         if (alias->match(data)) {
