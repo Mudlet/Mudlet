@@ -380,7 +380,7 @@ void GLWidget::paintGL()
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-            auto message = mpMap->mpRoomDB->size() == 0 ? tr("Map not preset. Load map or start mapping.") : tr("Your map has %1 rooms, but you have no position set.").arg(mpMap->mpRoomDB->size()); 
+            auto message = mpMap->mpRoomDB->size() == 0 ? tr("You don't have a map yet - load one, or start mapping from scratch to begin.") : tr("You have a map loaded (%1 rooms), but we don't know where you are at the moment.").arg(mpMap->mpRoomDB->size()); 
             painter.drawText(width() / 3, height() / 2, message);
             painter.end();
 
