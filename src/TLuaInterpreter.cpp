@@ -3205,7 +3205,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         lua_pushnil(L);
         lua_pushstring(L, message.toUtf8().constData());
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << message << "\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: saveProfile: " << message << "\n" >> 0;
         }
         return 2;
     }
