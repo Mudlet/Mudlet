@@ -3272,7 +3272,7 @@ void T2DMap::slot_customLineProperties()
             } else if (room->getSpecialExits().contains(exit)) {
                 le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
             } else {
-                qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing command \"" << exit << "\" from custom lines for room id " << room->getId();
+                qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
             }
 
             mpCurrentLineStyle->setIconSize(QSize(48, 24));
