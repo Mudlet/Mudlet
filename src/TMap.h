@@ -164,12 +164,13 @@ public:
     void setRoomNamesShown(bool shown);
 
     std::pair<bool, QString> writeJsonMap(const QString&);
+    std::pair<bool, QString> readJsonMap(const QString&);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
 
 
     TRoomDB* mpRoomDB;
-    QMap<int, int> envColors;
+    QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
     QString mProfileName;
 
@@ -185,7 +186,7 @@ public:
     QList<int> mPathList;
     QList<QString> mDirList;
     QList<int> mWeightList;
-    QMap<int, QColor> customEnvColors;
+    QMap<int, QColor> mCustomEnvColors;
     QMap<int, QVector3D> unitVectors;
 
     // contains complementary directions of dirs on TRoom.h
@@ -276,7 +277,9 @@ public slots:
 private:
     const QString createFileHeaderLine(QString, QChar);
     void writeUserData(QJsonObject&) const;
+    QMap<QString, QString> readUserData(const QJsonObject&) const;
     void writeColor(QJsonObject&, const QColor&) const;
+    QColor readColor(const QJsonObject&) const;
 
     QStringList mStoredMessages;
 

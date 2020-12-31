@@ -404,7 +404,7 @@ void XMLimport::readEnvColor()
     int id = attributes().value("id").toString().toInt();
     int color = attributes().value("color").toString().toInt();
 
-    mpHost->mpMap->envColors[id] = color;
+    mpHost->mpMap->mEnvColors[id] = color;
 }
 
 void XMLimport::readAreas()

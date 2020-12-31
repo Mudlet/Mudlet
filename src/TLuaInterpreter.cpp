@@ -8575,7 +8575,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = lua_tointeger(L, 5);
 
     Host& host = getHostFromLua(L);
-    host.mpMap->customEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
     return 0;
 }
 
@@ -11733,31 +11733,37 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mpMap->customEnvColors.empty()) {
+    if (!host.mpMap->mCustomEnvColors.empty()) {
         lua_newtable(L);
-        QList<int> colorList = host.mpMap->customEnvColors.keys();
-        for (int& idx : colorList) {
+        QList<int> colorList = host.mpMap->mCustomEnvColors.keys();
+        for (auto idx : colorList) {
             lua_pushnumber(L, idx);
             lua_newtable(L);
             // red component
             {
                 lua_pushnumber(L, 1);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].red());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).red());
+                lua_settable(L, -3);
             }
             // green component
             {
                 lua_pushnumber(L, 2);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].green());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).green());
+                lua_settable(L, -3);
             }
             // blue component
             {
                 lua_pushnumber(L, 3);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].blue());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).blue());
+                lua_settable(L, -3);
             }
-            lua_settable(L, -3); //matches in regex
+            // alpha component
+            {
+                lua_pushnumber(L, 4);
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).alpha());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
         }
     } else {
         lua_newtable(L);
@@ -16258,6 +16264,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
+    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17987,11 +17994,41 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     QString dest = lua_tostring(L, 1);
     if (dest.isEmpty()) {
         lua_pushnil(L);
-        lua_pushstring(L, "a non-empty path and file name to save to must be provided");
+        lua_pushstring(L, "a non-empty path and file name to write to must be provided");
         return 2;
     }
 
     if (auto [result, message] = pHost->mpMap->writeJsonMap(dest); !result) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::importJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        lua_pushnil(L);
+        lua_pushstring(L, "importJsonMap: no map present or loaded!");
+        return 2;
+    }
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "importJsonMap: bad argument #1 type (import pathFileName as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString source = lua_tostring(L, 1);
+    if (source.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "a non-empty path and file name to read to must be provided");
+        return 2;
+    }
+
+    if (auto [result, message] = pHost->mpMap->readJsonMap(source); !result) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
