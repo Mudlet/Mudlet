@@ -469,6 +469,10 @@ Host::~Host()
 
 void Host::saveModules(int sync, bool backup)
 {
+    if (mIsProfileLoadingSequence) {
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        return;
+    }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
     QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
