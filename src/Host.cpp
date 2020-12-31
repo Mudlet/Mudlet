@@ -469,10 +469,6 @@ Host::~Host()
 
 void Host::saveModules(int sync, bool backup)
 {
-    if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
-        return;
-    }
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
     QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
@@ -713,6 +709,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
+    }
+
+
+    if (mIsProfileLoadingSequence) {
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        return std::make_tuple(false, filename_xml, QStringLiteral("profile loading is in progress"));
     }
 
     QDir dir_xml;

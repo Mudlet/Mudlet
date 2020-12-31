@@ -2952,7 +2952,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 
     pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
-    
     pHost->updateAnsi16ColorsInTable();
 
     //Load rest of modules after scripts
