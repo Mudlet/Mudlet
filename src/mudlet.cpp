@@ -1539,7 +1539,7 @@ void mudlet::slot_uninstall_package()
     }
     auto selectedPackages = packageList->selectedItems();
     if (!selectedPackages.empty()) {
-        for(auto package : selectedPackages) {
+        for (auto package : selectedPackages) {
             pH->uninstallPackage(package->text(), 0);
         }
     }
