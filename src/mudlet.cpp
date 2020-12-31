@@ -3780,7 +3780,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Removes the normal click to activate "About Mudlet" action and move it
     // to a new menu which also contains a "goto updater" option
 
-    if(mpActionAboutWithUpdates) {
+    if (mpActionAboutWithUpdates) {
         mpMainToolBar->removeAction(mpActionAboutWithUpdates);
     }
 
