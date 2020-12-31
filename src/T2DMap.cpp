@@ -1729,19 +1729,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             } else if (mCustomLineSelectedExit == key_out) {
                 customLineDestinationTarget = pSR->getOut();
             } else {
-                QMapIterator<int, QString> otherExitIt = pSR->getOtherMap();
-                while (otherExitIt.hasNext()) {
-                    otherExitIt.next();
-                    if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                        if (otherExitIt.value().mid(1) == mCustomLineSelectedExit) {
-                            customLineDestinationTarget = otherExitIt.key();
-                            break;
-                        }
-                    } else if (otherExitIt.value() == mCustomLineSelectedExit) {
-                        customLineDestinationTarget = otherExitIt.key();
-                        break;
-                    }
-                }
+                customLineDestinationTarget = pSR->getSpecialExits().value(mCustomLineSelectedExit);
             }
         }
     }
@@ -3282,27 +3270,10 @@ void T2DMap::slot_customLineProperties()
                 le_toId->setText(QString::number(room->getIn()));
             } else if (exit == key_out) {
                 le_toId->setText(QString::number(room->getOut()));
+            } else if (room->getSpecialExits().contains(exit)) {
+                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
             } else {
-                bool isFound = false;
-                QMapIterator<int, QString> otherExitIt = room->getOtherMap();
-                while (otherExitIt.hasNext()) {
-                    otherExitIt.next();
-                    if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                        if (otherExitIt.value().mid(1) == exit) {
-                            le_toId->setText(QString::number(otherExitIt.key()));
-                            isFound = true;
-                            break;
-                        }
-                    } else if (otherExitIt.value() == exit) {
-                        le_toId->setText(QString::number(otherExitIt.key()));
-                        isFound = true;
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    qWarning(R"(T2DMap::slot_customLineProperties() - WARNING: missing command "%s" from custom lines for room id %i)",
-                             qPrintable(exit), room->getId());
-                }
+                qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
             }
 
             mpCurrentLineStyle->setIconSize(QSize(48, 24));
@@ -4980,16 +4951,11 @@ void T2DMap::slot_setCustomLine()
         connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
-    QMapIterator<int, QString> it(room->getOtherMap());
+    QMapIterator<QString, int> it(room->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int id_to = it.key();
-        QString dir = it.value();
-        if (dir.size() > 1) {
-            if (dir.startsWith('0') || dir.startsWith('1')) {
-                dir = dir.mid(1);
-            }
-        }
+        int id_to = it.value();
+        QString dir = it.key();
         auto pI = new QTreeWidgetItem(specialExits);
         if (room->customLines.contains(dir)) {
             pI->setCheckState(0, Qt::Checked);

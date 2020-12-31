@@ -225,9 +225,9 @@ int TRoom::getDoor(const QString& cmd)
     // Second argument is the result if cmd is not in the doors QMap
 }
 
-void TRoom::setId(int _id)
+void TRoom::setId(const int roomId)
 {
-    id = _id;
+    id = roomId;
 }
 
 // The second optional argument delays area related recaluclations when true
@@ -294,7 +294,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
     return true;
 }
 
-bool TRoom::setExit(int to, int direction)
+bool TRoom::setExit(const int to, const int direction)
 {
     // FIXME: This along with TRoom->setExit need to be unified to a controller.
     switch (direction) {
@@ -317,7 +317,7 @@ bool TRoom::setExit(int to, int direction)
     return true;
 }
 
-bool TRoom::hasExit(int direction) const
+bool TRoom::hasExit(const int direction) const
 {
     switch (direction) {
     case DIR_NORTH:     if (north     != -1) { return true; } break;
@@ -368,25 +368,13 @@ bool TRoom::hasExitOrSpecialExit(const QString& text) const
         return hasExit(DIR_OUT);
     } else {
         // Then check the special exits:
-        QMapIterator<int, QString> itSpecialExit(other);
-        while (itSpecialExit.hasNext()) {
-            itSpecialExit.next();
-            QString exitCmd(itSpecialExit.value());
-            if (exitCmd.startsWith(QLatin1Char('0')) || exitCmd.startsWith(QLatin1Char('1'))) {
-                exitCmd.remove(0, 1);
-            }
-
-            if (exitCmd == text) {
-                // We have a special exit which matches the given text
-                return true;
-            }
-        }
+        return mSpecialExits.contains(text);
     }
 
     return false;
 }
 
-int TRoom::getExit(int direction)
+int TRoom::getExit(const int direction) const
 {
     switch (direction) {
     case DIR_NORTH:
@@ -417,7 +405,7 @@ int TRoom::getExit(int direction)
     return -1;
 }
 
-QHash<int, int> TRoom::getExits()
+QHash<int, int> TRoom::getExits() const
 {
     // key is room id we exit to, value is type of exit. 0 is normal, 1 is special
     QHash<int, int> exitList;
@@ -457,10 +445,10 @@ QHash<int, int> TRoom::getExits()
     if (out != -1) {
         exitList[out] = 0;
     }
-    QMapIterator<int, QString> it(other);
+    QMapIterator<QString, int> it(mSpecialExits);
     while (it.hasNext()) {
         it.next();
-        exitList[it.key()] = 1;
+        exitList[it.value()] = 1;
     }
     return exitList;
 }
@@ -476,172 +464,54 @@ void TRoom::setExitLock(int exit, bool state)
     }
 }
 
-// The need for "to" seems superfluous here, cmd is the decisive factor
-void TRoom::setSpecialExitLock(int to, const QString& cmd, bool doLock)
+bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
-    QMapIterator<int, QString> it(other);
-    while (it.hasNext()) {
-        it.next();
-        if (it.key() != to) {
-            continue;
-        }
-        if (it.value().size() < 1) {
-            continue;
-        }
-        if (it.value().mid(1) != cmd) {
-            if (it.value() != cmd) {
-                continue;
-            }
-        }
-        if (doLock) {
-            QString _cmd = it.value();
-            _cmd.replace(0, 1, '1');
-            other.replace(to, _cmd);
-        } else {
-            QString _cmd = it.value();
-            _cmd.replace(0, 1, '0');
-            other.replace(to, _cmd);
-        }
-        return;
-    }
-}
-
-bool TRoom::setSpecialExitLock(const QString& cmd, bool doLock)
-{
-    QMutableMapIterator<int, QString> it(other);
-    while (it.hasNext()) {
-        it.next();
-
-        if (!it.value().size()) {
-            continue;
-        }
-
-        if (it.value().mid(1) != cmd) { // This value doesn't match, just check the old (obsolete) form without a lock state prefix
-            if (it.value() != cmd) {    // No match with or WITHOUT lock prefix, so move on to next value
-                continue;
-            } else { // Got a match WITHOUT a '0'|'1' prefix (used now to encode lock state) so add it on
-                QString _cmd = it.value();
-                if (doLock) {
-                    _cmd.prepend('1');
-                } else {
-                    _cmd.prepend('0');
-                }
-                it.setValue(_cmd); // We can change the value as we are using the Mutable iterator...
-                return true;
-            }
-        } else { // Found it!
-            QString _cmd = it.value();
-            if (doLock) {
-                _cmd.replace(0, 1, '1');
-            } else {
-                _cmd.replace(0, 1, '0');
-            }
-            it.setValue(_cmd);
-            return true;
-        }
-    }
-    return false;
-}
-
-bool TRoom::hasExitLock(int exit)
-{
-    return exitLocks.contains(exit);
-}
-
-// 0=offen 1=zu
-bool TRoom::hasSpecialExitLock(int to, const QString& cmd)
-{
-    Q_UNUSED(cmd)
-    if (other.contains(to)) {
-        QMapIterator<int, QString> it(other);
-        while (it.hasNext()) {
-            it.next();
-            if (it.key() != to) {
-                continue;
-            }
-            if (it.value().size() < 2) {
-                continue;
-            }
-            return it.value().mid(0, 1) == "1";
-        }
+    if (!mSpecialExits.contains(cmd)) {
         return false;
+    }
+
+    if (doLock) {
+        mSpecialExitLocks.insert(cmd);
     } else {
-        return false;
+        mSpecialExitLocks.remove(cmd);
     }
+
+    return true;
+}
+
+bool TRoom::hasExitLock(const int dir) const
+{
+    return exitLocks.contains(dir);
+}
+
+bool TRoom::hasSpecialExitLock(const QString& cmd) const
+{
+    return mSpecialExitLocks.contains(cmd);
 }
 
 // Original addSpecialExit...() code had limitation that it used the "to" room
 // as part of the things to look for to identify a particular special exit
 // indeed the use of the "to" room as the key for the "other" exit map does seem
 // a poorer choice than the "command" which is currently the value item...
-// FIXME: swap key/value items in (TRoom *)->other<int, QString> map?
 // Changing to setSpecialExit(), "to" values less than 1 remove exit...
-void TRoom::setSpecialExit(int to, const QString& cmd)
+void TRoom::setSpecialExit(const int to, const QString& cmd)
 {
-    QString _strippedCmd;
-    QString _prefix = "";
-
-    if (cmd.startsWith('0') || cmd.startsWith('1')) {
-        _strippedCmd = cmd.mid(1);
-        _prefix = cmd.mid(0, 1);
-    } else {
-        _strippedCmd = cmd;
-    }
-
-    if (_strippedCmd.isEmpty()) {
+    if (cmd.isEmpty()) {
         return; // Refuse to create an unnamed special exit!!!
     }
-    // replace if this special exit exists, otherwise add
-    QMutableMapIterator<int, QString> it(other);
-    while (it.hasNext()) {
-        it.next();
-        if (!it.value().size()) {
-            continue;
-        }
-
-        if (Q_LIKELY(it.value().startsWith('0') || it.value().startsWith('1'))) {
-            if (it.value().mid(1) != _strippedCmd) {
-                continue;
-            } else { // Found the matching command, preserve the existing lock state
-                     // unless overriden in command and also the old destination to
-                     // note which areas are affected
-                if (_prefix.isEmpty()) {
-                    _prefix = it.value().mid(0, 1);
-                }
-                it.remove(); // Despite this being a "Mutable" iterator it does
-                             // NOT allow us to change the KEY - we only can
-                             // remove the entry to add-in a new one later.
-                break;
-            }
-        } else {
-            if (it.value() != _strippedCmd) {
-                continue;
-            } else { // Found the matching command, but this is an old one with no lock state prefix
-                if (_prefix.isEmpty()) {
-                    _prefix = '0'; // Assume default unlock case if not set
-                }
-                it.remove();
-                break;
-            }
-        }
-    }
-    // Have definitely removed the existing case of this command
-    // Now add it to map if wanted
 
     if (to > 0) {
-        if (_prefix.isEmpty()) {
-            _prefix = '0';
-        }
-
-        QString finalCmd = _prefix % _strippedCmd;
-        other.insert(to, finalCmd);
-    } else { // Clean up related data:
-        customLinesArrow.remove(_strippedCmd);
-        customLinesColor.remove(_strippedCmd);
-        customLinesStyle.remove(_strippedCmd);
-        customLines.remove(_strippedCmd);
-        exitWeights.remove(_strippedCmd);
-        doors.remove(_strippedCmd);
+        mSpecialExits[cmd] = to;
+    } else {
+        // Clean up related data:
+        customLinesArrow.remove(cmd);
+        customLinesColor.remove(cmd);
+        customLinesStyle.remove(cmd);
+        customLines.remove(cmd);
+        exitWeights.remove(cmd);
+        doors.remove(cmd);
+        mSpecialExitLocks.remove(cmd);
+        mSpecialExits.remove(cmd);
     }
 
     TArea* pA = mpRoomDB->getArea(area);
@@ -655,27 +525,58 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
 
 void TRoom::clearSpecialExits()
 {
-    other.clear();
+    if (mSpecialExits.isEmpty()) {
+        // Nothing to do:
+        return;
+    }
+
+    QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
+    while (itSpecialExit.hasNext()) {
+        itSpecialExit.next();
+        // Clean up related elements first:
+        mSpecialExitLocks.remove(itSpecialExit.key());
+        doors.remove(itSpecialExit.key());
+        customLines.remove(itSpecialExit.key());
+        customLinesColor.remove(itSpecialExit.key());
+        customLinesStyle.remove(itSpecialExit.key());
+        customLinesArrow.remove(itSpecialExit.key());
+        // Then remove the exit itself from the QMap:
+        itSpecialExit.remove();
+    }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
 }
 
-void TRoom::removeAllSpecialExitsToRoom(int _id)
+void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 {
-    QList<int> keyList = other.keys();
-    QList<QString> valList = other.values();
-    for (int i = 0; i < keyList.size(); i++) {
-        if (keyList[i] == _id) {
-            // guaranteed to be in synch according to Qt docs
-            other.remove(keyList[i], valList[i]);
+    QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
+    bool exitFound = false;
+    while (itSpecialExit.hasNext()) {
+        itSpecialExit.next();
+        if (itSpecialExit.value() != roomId) {
+            continue;
         }
+
+        exitFound = true;
+        // Clean up related elements first:
+        mSpecialExitLocks.remove(itSpecialExit.key());
+        doors.remove(itSpecialExit.key());
+        customLines.remove(itSpecialExit.key());
+        customLinesColor.remove(itSpecialExit.key());
+        customLinesStyle.remove(itSpecialExit.key());
+        customLinesArrow.remove(itSpecialExit.key());
+        // Then remove the exit itself from the QMap:
+        itSpecialExit.remove();
     }
-    TArea* pA = mpRoomDB->getArea(area);
-    if (pA) {
-        pA->determineAreaExitsOfRoom(id);
+
+    if (exitFound) {
+        TArea* pA = mpRoomDB->getArea(area);
+        if (pA) {
+            pA->determineAreaExitsOfRoom(id);
+        }
+        mpRoomDB->updateEntranceMap(this);
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
     }
-    mpRoomDB->updateEntranceMap(this);
-    mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
 }
 
 void TRoom::calcRoomDimensions()
@@ -760,8 +661,30 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     }
     ifs >> name;
     ifs >> isLocked;
-    if (version >= 6) {
-        ifs >> other;
+    if (version >= 21) {
+        ifs >> mSpecialExits;
+    } else if (version >= 6) {
+        // Before version 21 the special exits were stored as a QMultiMap<int, QString>
+        // with the lock information prepended as a '1' locked or '0' unlocked
+        // from version 11-ish:
+        QMultiMap<int, QString> oldSpecialExits;
+        ifs >> oldSpecialExits;
+        QMapIterator<int, QString> itOldSpecialExit(oldSpecialExits);
+        while (itOldSpecialExit.hasNext()) {
+            itOldSpecialExit.next();
+            QString cmd{itOldSpecialExit.value()};
+            if (cmd.startsWith(QLatin1Char('1'))) {
+                // Is locked:
+                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+                mSpecialExitLocks.insert(cmd);
+            } else if (Q_LIKELY(cmd.startsWith(QLatin1Char('1')))) {
+                // Is not locked:
+                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+            } else {
+                // Has no lock prefix at all
+                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+            }
+        }
     }
 
     qint8 oldCharacterCode = 0;
@@ -925,6 +848,9 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     customLinesStyle.insert(direction, Qt::SolidLine);
                 }
             }
+        }
+        if (version >= 21) {
+            ifs >> mSpecialExitLocks;
         }
         ifs >> exitLocks;
     }
@@ -1146,56 +1072,21 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
     // If we use the Mutable iterator we don't have to restart after a deletion
     { // Block code to limit scope of iterator
-        QMutableMapIterator<int, QString> it(other);
-        QMultiMap<int, QString> replacements;
+        QMutableMapIterator<QString, int> it(mSpecialExits);
         while (it.hasNext()) {
             it.next();
-            QString _cmd = it.value();
-            if (_cmd.size() <= 0) {
+            QString exitName = it.key();
+            int exitRoomId = it.value();
+            if (exitName.isEmpty()) {
                 if (mudlet::self()->showMapAuditErrors()) {
-                    QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, QLatin1Char('0')).arg(it.key(), 6, QLatin1Char('0'));
+                    QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, QLatin1Char('0')).arg(exitRoomId, 6, QLatin1Char('0'));
                     // If size is less than or equal to 0 then there is nothing to print!!!
                     mpRoomDB->mpMap->postMessage(warnMsg);
                 }
-                mpRoomDB->mpMap->appendRoomErrorMsg(id, tr("[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.").arg(it.key(), 6, QLatin1Char('0')));
+                mpRoomDB->mpMap->appendRoomErrorMsg(id, tr("[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.").arg(exitRoomId, 6, QLatin1Char('0')));
                 it.remove();
-            } else if (!(_cmd.startsWith('1') || _cmd.startsWith('0'))) {
-                QString _nc = it.value();
-                int _nk = it.key();
-                _nc.prepend('0');
-                // Old, prepatched special exit could not have a lock
-                replacements.insert(_nk, _nc);
-                it.remove();
-                if (mudlet::self()->showMapAuditErrors()) {
-                    QString warnMsg = tr("[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to\n"
-                                         "%2, was: \"%3\" now: \"%4\".")
-                                              .arg(id, 6, QLatin1Char('0'))
-                                              .arg(_nk, 6, QLatin1Char('0'))
-                                              .arg(_cmd, _nc);
-                    mpRoomDB->mpMap->postMessage(warnMsg);
-                }
-                mpRoomDB->mpMap->appendRoomErrorMsg(
-                        id, tr(R"([ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: "%2" now: "%3".)").arg(_nk, 6, QLatin1Char('0')).arg(_cmd, _nc));
+                continue;
             }
-        }
-        // Now finished with (mutable) iterator, can re-insert changed things
-        if (!replacements.isEmpty()) {
-            other.unite(replacements);
-            // unite() is OK to use here as we have already removed the
-            // key/value pairs that are to be replaced (otherwise they'd be
-            // duplicated!)
-        }
-    }
-
-    // Now do the exit room ids if there is any remapping
-    if (!roomRemapping.isEmpty()) {
-        QMutableMapIterator<int, QString> it(other);
-        QMultiMap<int, QString> replacements;
-        while (it.hasNext()) {
-            it.next();
-            int exitRoomId = it.key();
-            QString exitText = it.value();
-            QString exitName = exitText.mid(1);
 
             if (roomRemapping.contains(exitRoomId)) {
                 QString auditKey = QStringLiteral("audit.remapped_special_exit.%1").arg(exitName);
@@ -1215,13 +1106,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                                                             .arg(exitName)
                                                             .arg(exitRoomId)
                                                             .arg(roomRemapping.value(exitRoomId)));
-                replacements.insert(roomRemapping.value(exitRoomId), exitText);
-                it.remove();
-                exitRoomId = roomRemapping.value(exitRoomId);
+                it.setValue(roomRemapping.value(exitRoomId));
             }
-        }
-        if (!replacements.isEmpty()) {
-            other.unite(replacements);
         }
     }
 
@@ -1229,12 +1115,11 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         // Now check for the validity of the special exit room destinations after
         // remapping - and clean up any exit elements related to the invalid or
         // missing ones
-        QMutableMapIterator<int, QString> it(other);
+        QMutableMapIterator<QString, int> it(mSpecialExits);
         while (it.hasNext()) {
             it.next();
-            int exitRoomId = it.key();
-            QString exitText = it.value();
-            QString exitName = exitText.mid(1);
+            int exitRoomId = it.value();
+            QString exitName = it.key();
 
             if (exitRoomId > 0) {
                 // A real exit - should have a real destination

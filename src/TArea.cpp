@@ -228,12 +228,10 @@ void TArea::determineAreaExitsOfRoom(int id)
         QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
         exits.insert(id, p);
     }
-    const QMap<int, QString> otherMap = pR->getOtherMap();
-    QMapIterator<int, QString> it(otherMap);
+    QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int _exit = it.key();
-        TRoom* pO = mpRoomDB->getRoom(_exit);
+        TRoom* pO = mpRoomDB->getRoom(it.value());
         if (pO) {
             if (pO->getArea() != getAreaID()) {
                 QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
@@ -314,12 +312,10 @@ void TArea::determineAreaExits()
             QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
             exits.insert(id, p);
         }
-        const QMap<int, QString> otherMap = pR->getOtherMap();
-        QMapIterator<int, QString> it(otherMap);
-        while (it.hasNext()) {
-            it.next();
-            int _exit = it.key();
-            TRoom* pO = mpRoomDB->getRoom(_exit);
+        QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+        while (itSpecialExit.hasNext()) {
+            itSpecialExit.next();
+            TRoom* pO = mpRoomDB->getRoom(itSpecialExit.value());
             if (pO) {
                 if (pO->getArea() != getAreaID()) {
                     QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
@@ -560,19 +556,15 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         int fromRoomId = itRoomWithOtherAreaSpecialExit.next();
         TRoom* pFromRoom = mpRoomDB->getRoom(fromRoomId);
         if (pFromRoom) {
-            QMapIterator<int, QString> itOtherExit = pFromRoom->getOtherMap();
-            while (itOtherExit.hasNext()) {
-                itOtherExit.next();
+            QMapIterator<QString, int> itSpecialExit(pFromRoom->getSpecialExits());
+            while (itSpecialExit.hasNext()) {
+                itSpecialExit.next();
                 QPair<QString, int> exitData;
-                exitData.second = itOtherExit.key();
+                exitData.first = itSpecialExit.key();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    if (itOtherExit.value().mid(0, 1) == QStringLiteral("0") || itOtherExit.value().mid(0, 1) == QStringLiteral("1")) {
-                        exitData.first = itOtherExit.value().mid(1);
-                    } else {
-                        exitData.first = itOtherExit.value();
-                    }
+                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }

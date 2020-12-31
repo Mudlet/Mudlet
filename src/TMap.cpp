@@ -61,6 +61,16 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
+/*
+ * WARNING: There is new code that will be activated when this is incremented
+ * above 20:
+ * * The room special exits (QMap<QString, int>) and special exit locks data
+ *   QSet<QString> will be stored directly in those new container elements
+ *   replacing the backwards compatible combination (a QMultiMap<int, QString>)
+ *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
+ *   special exit name (stored in the VALUE) in the old format.
+ * It has been tested and *seems* to work. SlySven - 2020/12
+ */
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
@@ -803,24 +813,20 @@ void TMap::initGraph()
             }
         }
 
-        QMapIterator<int, QString> itSpecialExit(pSourceR->getOtherMap());
+        QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
-            if ((itSpecialExit.value()).startsWith(QStringLiteral("1"))) {
+            if (pSourceR->hasSpecialExitLock(itSpecialExit.key())) {
                 continue; // Is a locked exit so forget it...
             }
 
-            target = itSpecialExit.key();
+            target = itSpecialExit.value();
             direction = DIR_OTHER;
             if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target)) {
                 pTargetR = mpRoomDB->getRoom(target);
                 if (pTargetR && !pTargetR->isLocked) {
                     route r;
-                    if (Q_LIKELY((itSpecialExit.value()).startsWith(QStringLiteral("0")))) {
-                        r.specialExitName = itSpecialExit.value().mid(1);
-                    } else {
-                        r.specialExitName = itSpecialExit.value();
-                    }
+                    r.specialExitName = itSpecialExit.value();
                     r.cost = exitWeights.value(r.specialExitName, pTargetR->getWeight());
                     if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                         r.direction = direction;
@@ -919,9 +925,9 @@ bool TMap::findPath(int from, int to)
     }
     if (!hasUsableExit) {
         // No available normal exits from this room so check the special ones
-        QStringList specialExitCommands = pFrom->getOtherMap().values();
+        QStringList specialExitCommands = pFrom->getSpecialExits().keys();
         while (!specialExitCommands.isEmpty()) {
-            if (specialExitCommands.at(0).mid(0, 1) == "0") {
+            if (pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
                 hasUsableExit = true;
                 break;
             }
@@ -1184,7 +1190,21 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        ofs << pR->getOtherMap();
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExits();
+        } else {
+            QMultiMap<int, QString> oldSpecialExits;
+            QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+            while (itSpecialExit.hasNext()) {
+                itSpecialExit.next();
+                oldSpecialExits.insert(itSpecialExit.value(),
+                                       (pR->hasSpecialExitLock(itSpecialExit.key())
+                                                ? QLatin1Char('1')
+                                                : QLatin1Char('0'))
+                                               % itSpecialExit.key());
+            }
+            ofs << oldSpecialExits;
+        }
         if (mSaveVersion >= 19) {
             ofs << pR->mSymbol;
         } else {
@@ -1311,6 +1331,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
             }
             ofs << oldLineStyleData;
+        }
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExitLocks();
         }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;

@@ -31,6 +31,8 @@
 #include <QColor>
 #include <QHash>
 #include <QMap>
+#include <QSet>
+#include <QVector3D>
 #include "post_guard.h"
 
 
@@ -57,23 +59,24 @@ class TRoom
     Q_DECLARE_TR_FUNCTIONS(TRoom) // Needed so we can use tr() even though TRoom is NOT derived from QObject
 
 public:
-    TRoom(TRoomDB* pRDB);
+    explicit TRoom(TRoomDB* pRDB);
     ~TRoom();
-    void setId(int);
-    bool setExit(int to, int direction);
-    int getExit(int direction);
-    QHash<int, int> getExits();
-    bool hasExit(int direction) const;
+
+    void setId(const int);
+    bool setExit(const int to, const int direction);
+    int getExit(const int) const;
+    QHash<int, int> getExits() const;
+    bool hasExit(const int) const;
     void setWeight(int);
-    void setExitLock(int, bool);
-    void setSpecialExitLock(int to, const QString& cmd, bool doLock);
-    bool setSpecialExitLock(const QString& cmd, bool doLock);
-    bool hasExitLock(int to);
-    bool hasSpecialExitLock(int, const QString&);
-    void removeAllSpecialExitsToRoom(int _id);
-    void setSpecialExit(int to, const QString& cmd);
+    void setExitLock(const int, const bool);
+    bool setSpecialExitLock(const QString&, const bool);
+    bool hasExitLock(const int to) const;
+    bool hasSpecialExitLock(const QString&) const;
+    void removeAllSpecialExitsToRoom(const int);
+    void setSpecialExit(const int, const QString&);
     void clearSpecialExits();
-    const QMultiMap<int, QString>& getOtherMap() const { return other; }
+    const QMap<QString, int>& getSpecialExits() const { return mSpecialExits; }
+    const QSet<QString>& getSpecialExitLocks() const { return mSpecialExitLocks; }
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
@@ -178,11 +181,8 @@ private:
     int in;
     int out;
 
-    // FIXME: This should be a map of String->room id because there can be multiple special exits to the same room
-    // Also, move the special exit being locked OUT of being a prefix on the
-    // QString part:
-    QMultiMap<int, QString> other; // es knnen mehrere exits zum gleichen raum verlaufen
-                                   //verbotene exits werden mit 0 geprefixed, offene mit 1
+    QMap<QString, int> mSpecialExits;
+    QSet<QString> mSpecialExitLocks;
 
     TRoomDB* mpRoomDB;
     friend class XMLimport;
