@@ -250,6 +250,7 @@ int main(int argc, char* argv[])
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        // PLACEMARKER: Date-stamp needing annual update
         texts << QCoreApplication::translate("main", "Copyright © 2008-2021  Mudlet developers\n");
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
