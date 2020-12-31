@@ -5,11 +5,10 @@
     <name>GLWidget</name>
     <message numerus="yes">
         <location filename="../../src/glwidget.cpp" line="383"/>
-        <source>You have a map loaded with single room, but Mudlet does not know where you are at the moment.</source>
-        <comment>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</comment>
+        <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
-            <numerusform>You have a map loaded with single room, but Mudlet does not know where you are at the moment.</numerusform>
-            <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (one room), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
 </context>
@@ -17,11 +16,10 @@
     <name>T2DMap</name>
     <message numerus="yes">
         <location filename="../../src/T2DMap.cpp" line="1328"/>
-        <source>You have a map loaded with single room, but Mudlet does not know where you are at the moment.</source>
-        <comment>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</comment>
+        <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded with single room, but Mudlet does not know where you are at the moment.</numerusform>
-            <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
