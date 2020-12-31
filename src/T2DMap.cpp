@@ -1325,7 +1325,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, tr("No map or no valid position."));
+        auto message = mpMap->mpRoomDB->size() == 0 ? tr("Map not preset. Load map or start mapping.") : tr("Your map has %1 rooms, but you have no position set.").arg(mpMap->mpRoomDB->size()); 
+        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
         painter.restore();
         return;
     }
