@@ -201,7 +201,7 @@
     "getSelection": "getSelection([windowName])",
     "getServerEncoding": "getServerEncoding()",
     "getServerEncodingsList": "getServerEncodingsList()",
-    "getSpecialExits": "exits = getSpecialExits(roomID)",
+    "getSpecialExits": "exits = getSpecialExits(roomID[, listAllSpecialExitsToSameExitRoom])",
     "getSpecialExitsSwap": "getSpecialExitsSwap(roomID)",
     "getStopWatchBrokenDownTime": "brokenDownTimeTable = getStopWatchBrokenDownTime(watchID or watchName)",
     "getStopWatches": "table = getStopWatches()",
