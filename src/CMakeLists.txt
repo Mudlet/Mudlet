@@ -441,6 +441,13 @@ if(APPLE)
   endif(USE_UPDATER)
   set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
                                           MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
+
+#  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
+  set_source_files_properties(
+      "mudlet-lua"
+          PROPERTIES
+              MACOSX_PACKAGE_LOCATION Resources
+  )
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
