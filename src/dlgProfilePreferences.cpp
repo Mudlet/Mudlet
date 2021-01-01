@@ -2004,7 +2004,7 @@ void dlgProfilePreferences::loadMap()
     QString fileName = QFileDialog::getOpenFileName(
                            this,
                            tr("Load Mudlet map"),
-                           mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()),
+                           mapSaveLoadDirectory(pHost),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
                               "Do not change extensions (in braces) as they are used programmatically"));
     if (fileName.isEmpty()) {
@@ -2051,7 +2051,7 @@ void dlgProfilePreferences::saveMap()
     }
 
     QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), QDir::homePath(), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
+            QFileDialog::getSaveFileName(this, tr("Save Mudlet map"), mapSaveLoadDirectory(pHost), tr("Mudlet map (*.dat)", "Do not change the extension text (in braces) - it is needed programmatically!"));
     if (fileName.isEmpty()) {
         return;
     }
@@ -2078,6 +2078,12 @@ void dlgProfilePreferences::saveMap()
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+}
+
+QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
+    QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
+    QDir mapsDir = QDir(mapsPath);
+    return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
 }
 
 void dlgProfilePreferences::hideActionLabel()
