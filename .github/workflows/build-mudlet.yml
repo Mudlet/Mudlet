@@ -172,6 +172,12 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
+      # don't install from apt/brew as it is severely outdated in the former
+    # - name: (Linux/macOS) Install modern Luarocks
+    #   uses: leafo/gh-actions-luarocks@v4.0.0
+    #   with:
+    #     luarocksVersion: "3.5.0"
+
     - name: (Linux/macOS) restore Luarocks for packaging
       uses: actions/cache@v2
       with:
@@ -187,18 +193,17 @@ jobs:
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         lua -v
 
-        # if [ "${RUNNER_OS}" = "macOS" ]; then
-        #   echo "Aliasing..."
-        #   alias luarocks="luarocks --lua-dir='${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}'"
-        # fi
-        
-        luarocks --help
+        if [ "${RUNNER_OS}" = "macOS" ]; then
+          alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
+        else
+          alias run-luarocks="luarocks"
+        fi
 
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaFileSystem
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local luautf8
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-zip
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
+        run-luarocks install --local LuaFileSystem
+        run-luarocks install --local luautf8
+        run-luarocks install --local lua-zip
+        run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+        run-luarocks install --local lrexlib-pcre
 
         # workaround https://github.com/lloyd/yajl/issues/209
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
