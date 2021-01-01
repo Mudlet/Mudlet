@@ -32,12 +32,15 @@
     <message>
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Du hast noch keine Karte - lade eine oder beginne neu zu kartographieren.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Du hast eine Karte geladen (mit einem Raum), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
+        <numerusform>Du hast eine Karte geladen (mit %n Räumen), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -618,12 +621,15 @@ einem neuen Symbol für diesen Raum:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Du hast noch keine Karte - lade eine oder beginne neu zu kartographieren.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Du hast eine Karte geladen (mit einem Raum), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
+        <numerusform>Du hast eine Karte geladen (mit %n Räumen), aber Mudlet weiß nicht, wo du gerade bist.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2296"/>
@@ -5042,32 +5048,32 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1079"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Technische Informationen:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1080"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Version</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1081"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>Betriebssystem</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1082"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>Prozessor</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1083"/>
       <source>Branch</source>
-      <translation type="unfinished"/>
+      <translation>Versionszweig</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
       <source>Commit</source>
-      <translation type="unfinished"/>
+      <translation>Stand (commit)</translation>
     </message>
   </context>
   <context>
@@ -10730,7 +10736,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch speichern beim Beenden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
