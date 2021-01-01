@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>You do not have a map yet - load one, or start mapping from scratch to begin.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
