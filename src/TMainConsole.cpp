@@ -1219,6 +1219,8 @@ bool TMainConsole::loadMap(const QString& location)
         pHost->mpMap->pushErrorMessagesToFile(tr(R"(Loading map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)), true);
     }
 
+    pHost->mpMap->update();
+
     return result;
 }
 
@@ -1315,6 +1317,8 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
         }
         return false;
     }
+
+    pHost->mpMap->update();
 
     return result;
 }
