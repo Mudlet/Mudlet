@@ -1618,7 +1618,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);
-            } else if (payload.startsWith(QByteArray("Client.GUI"), Qt::CaseInsensitive)) {
+            } else if (payload.toLower().startsWith(QByteArray("client.gui"))) {
                 if (!mpHost->mAcceptServerGUI) {
                     return;
                 }
