@@ -67,7 +67,6 @@ public:
     }
 
     QVector3D pos;
-    QPointF pointer;
     QSizeF size;
     QSizeF clickSize;
     QString text;
@@ -77,6 +76,8 @@ public:
     bool highlight;
     bool showOnTop;
     bool noScaling;
+
+    QByteArray base64EncodePixmap() const;
 };
 
 

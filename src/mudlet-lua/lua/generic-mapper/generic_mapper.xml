@@ -646,8 +646,8 @@ end</script>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
--- 12/11/2020
-local version = "2.0.19"
+-- 22/12/2020
+local version = "2.0.20"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2986,6 +2986,8 @@ function map.eventHandler(event, ...)
         map.set("mapping", false)
         walking = false
         map.echo("Mapping and speedwalking stopped.")
+    elseif event == "sysManualLocationSetEvent" then
+      set_room(arg[1])
     end
 end
 
@@ -3003,6 +3005,7 @@ registerAnonymousEventHandler("onNewLine", "map.eventHandler")
 registerAnonymousEventHandler("mapOpenEvent", "map.eventHandler")
 registerAnonymousEventHandler("mapStop", "map.eventHandler")
 registerAnonymousEventHandler("onPrompt", "map.eventHandler")
+registerAnonymousEventHandler("sysManualLocationSetEvent", "map.eventHandler")
 </script>
 			<eventHandlerList />
 		</Script>

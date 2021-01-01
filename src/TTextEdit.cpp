@@ -1723,9 +1723,11 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     QPointF delta = e->angleDelta();
     // Convert to degrees:
     delta /= 8.0;
-    // Allow the control key to introduce a speed up!:
-    delta.rx() *= (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 1.0);
-    delta.ry() *= (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 1.0);
+    // Allow the control key to introduce a speed up - but also allow it to be
+    // overriden by a shift key to slow the scroll down to one line/character
+    // per click:
+    delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
+    delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
     // Add on any previously stored (integer) remainder:
     delta += mMouseWheelRemainder;
     // Convert to 15 degree steps and record them:
