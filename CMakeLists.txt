@@ -182,7 +182,7 @@ if(USE_UPDATER)
 endif()
 
 if(DEFINED ENV{GITHUB_SHA})
-  set(GIT_COMMIT_HASH, $ENV{GITHUB_SHA})
+  set(GIT_COMMIT_HASH, ENV{GITHUB_SHA})
 else()
   # Get the latest commit hash
   execute_process(
