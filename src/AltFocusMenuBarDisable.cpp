@@ -23,7 +23,7 @@
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return 1;
+        return 0;
     }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
