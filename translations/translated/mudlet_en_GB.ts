@@ -37,7 +37,10 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -616,12 +619,15 @@ it with a new symbol for this room:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>You do not have a map yet - load one, or start mapping from scratch to begin.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+        <numerusform>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2296"/>
@@ -4982,32 +4988,32 @@ Count</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1079"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Technical information:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1080"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Version</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1081"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>OS</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1082"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>CPU</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1083"/>
       <source>Branch</source>
-      <translation type="unfinished"/>
+      <translation>Branch</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
       <source>Commit</source>
-      <translation type="unfinished"/>
+      <translation>Commit</translation>
     </message>
   </context>
   <context>
@@ -10645,7 +10651,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Auto save on exit</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
