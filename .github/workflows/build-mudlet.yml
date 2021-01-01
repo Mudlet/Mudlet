@@ -200,6 +200,7 @@ jobs:
           alias run_luarocks="luarocks"
         fi
 
+        alias
         run_luarocks install --local LuaFileSystem
         run_luarocks install --local luautf8
         run_luarocks install --local lua-zip
