@@ -195,44 +195,31 @@ jobs:
         lua -v
         luarocks --help
 
-        # could not get 'alias' to work, so, duplicated
+        shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
-          luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install --local LuaFileSystem
-          luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install --local luautf8
-          luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install --local lua-zip
-          luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-          luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install --local lrexlib-pcre
-
-          # workaround https://github.com/lloyd/yajl/issues/209
-          mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-          mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
-          # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-          export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-          # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-          luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
-
-          # CI changelog generation dependencies
-          luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local argparse
-          luarocks install --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lunajson
-        else          
-          luarocks install --local LuaFileSystem
-          luarocks install --local luautf8
-          luarocks install --local lua-zip
-          luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-          luarocks install --local lrexlib-pcre
-
-          # workaround https://github.com/lloyd/yajl/issues/209
-          mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-          mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
-          # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-          export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
-          # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-          luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
-
-          # CI changelog generation dependencies
-          luarocks install --local argparse
-          luarocks install --local lunajson
+          alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
+        else
+          alias run-luarocks="luarocks"
         fi
+
+        run-luarocks install --local LuaFileSystem
+        run-luarocks install --local luautf8
+        run-luarocks install --local lua-zip
+        run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+        run-luarocks install --local lrexlib-pcre
+
+        # workaround https://github.com/lloyd/yajl/issues/209
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
+        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
+        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+        run-luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+
+        # CI changelog generation dependencies
+        run-luarocks install --local argparse
+        run-luarocks install --local lunajson
+
 
         # necessary for Qt multimedia
         if [ "${RUNNER_OS}" = "Linux" ]; then
