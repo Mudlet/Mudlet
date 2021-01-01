@@ -5360,66 +5360,86 @@ int TLuaInterpreter::lockExit(lua_State* L)
 int TLuaInterpreter::lockSpecialExit(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "lockSpecialExit: wrong argument type");
+        lua_pushfstring(L, "lockSpecialExit: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    int id = lua_tonumber(L, 1);
+    int fromRoomID = lua_tonumber(L, 1);
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "lockSpecialExit: wrong argument type");
-        return lua_error(L);
-    }
-    int to = lua_tonumber(L, 2);
+    // The second argument (was the toRoomID) is now ignored as it is not
+    // required/considered in any way
 
     if (!lua_isstring(L, 3)) {
-        lua_pushstring(L, "lockSpecialExit: wrong argument type");
+        lua_pushfstring(L, "lockSpecialExit: bad argument #3 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     QString dir = lua_tostring(L, 3);
+    if (dir.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the special exit name/command cannot be empty");
+        return 2;
+    }
 
     if (!lua_isboolean(L, 4)) {
-        lua_pushstring(L, "lockSpecialExit: wrong argument type");
+        lua_pushfstring(L, "lockSpecialExit: bad argument #4 type (special exit lock state as boolean expected, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
     bool b = lua_toboolean(L, 4);
 
     Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->setSpecialExitLock(to, dir, b);
-        host.mpMap->mMapGraphNeedsUpdate = true;
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
+        return 2;
     }
-    return 0;
+    if (!pR->setSpecialExitLock(dir, b)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    host.mpMap->mMapGraphNeedsUpdate = true;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasSpecialExitLock
 int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
+        lua_pushfstring(L, "hasSpecialExitLock: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    int id = lua_tonumber(L, 1);
+    int fromRoomID = lua_tonumber(L, 1);
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
-        return lua_error(L);
-    }
-    int to = lua_tonumber(L, 2);
+    // Second argument was the entrance room id but it is not needed any more
+    // and is ignored
 
     if (!lua_isstring(L, 3)) {
-        lua_pushstring(L, "hasSpecialExitLock: wrong argument type");
+        lua_pushfstring(L, "hasSpecialExitLock: bad argument #3 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     QString dir = lua_tostring(L, 3);
+    if (dir.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the special exit name/command cannot be empty");
+    }
 
     Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        lua_pushboolean(L, pR->hasSpecialExitLock(to, dir));
-        return 1;
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
+        return 2;
     }
-    return 0;
+    if (!pR->getSpecialExits().contains(dir)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
+        return 2;
+    }
+
+    lua_pushboolean(L, pR->hasSpecialExitLock(dir));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasExitLock
@@ -9399,8 +9419,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // One of the above WILL BE ZERO if the exitCmd is ONE of the above QStringLiterals
         // So the above will be TRUE if NONE of above strings match - which
         // means we must treat the exitCmd as a SPECIAL exit
-        if (!(pR->getOtherMap().values().contains(exitCmd) || pR->getOtherMap().values().contains(QStringLiteral("0%1").arg(exitCmd))
-                || pR->getOtherMap().values().contains(QStringLiteral("1%1").arg(exitCmd)))) {
+        if (!(pR->getSpecialExits().contains(exitCmd))) {
             // And NOT a special one either
             lua_pushnil(L);
             lua_pushfstring(L,
@@ -10083,55 +10102,82 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addSpecialExit
 int TLuaInterpreter::addSpecialExit(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "addSpecialExit: wrong argument type");
+        lua_pushfstring(L, "addSpecialExit: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    int id_from = lua_tointeger(L, 1);
+    int fromRoomID = lua_tointeger(L, 1);
+    TRoom* pR_from = host.mpMap->mpRoomDB->getRoom(fromRoomID);
+    if (!pR_from) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
+        return 2;
+    }
 
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "addSpecialExit: wrong argument type");
+        lua_pushfstring(L, "addSpecialExit: bad argument #2 type (entrance room id as number expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    int id_to = lua_tointeger(L, 2);
+    int toRoomID = lua_tointeger(L, 2);
+    TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoomID);
+    if (!pR_to) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "entrance room id %d does not exist)", toRoomID);
+        return 2;
+    }
 
     if (!lua_isstring(L, 3)) {
-        lua_pushstring(L, "addSpecialExit: wrong argument type");
+        lua_pushfstring(L, "addSpecialExit: bad argument #3 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     QString dir = lua_tostring(L, 3);
-
-    Host& host = getHostFromLua(L);
-    TRoom* pR_from = host.mpMap->mpRoomDB->getRoom(id_from);
-    TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
-    if (pR_from && pR_to) {
-        pR_from->setSpecialExit(id_to, dir);
-        pR_from->setSpecialExitLock(id_to, dir, false);
+    if (dir.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the special exit name/command cannot be empty");
+        return 2;
     }
-    return 0;
+
+    pR_from->setSpecialExit(toRoomID, dir);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeSpecialExit
 int TLuaInterpreter::removeSpecialExit(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "removeSpecialExit: wrong argument type");
+        lua_pushfstring(L, "removeSpecialExit: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    int id = lua_tointeger(L, 1);
+    int fromRoomID = lua_tointeger(L, 1);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
+        return 2;
+    }
 
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "removeSpecialExit: wrong argument type");
+        lua_pushfstring(L, "removeSpecialExit: bad argument #2 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString dir = lua_tostring(L, 2);
-
-    Host& host = getHostFromLua(L);
-    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->setSpecialExit(-1, dir);
+    if (dir.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the exit command cannot be empty");
+        return 2;
     }
-    return 0;
+
+    if (!pR->getSpecialExits().contains(dir)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
+        return 2;
+    }
+    pR->setSpecialExit(-1, dir);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomUserData
@@ -10346,86 +10392,131 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSpecialExits
+// This function was slightly borked - the version in place from 2011 to 2020
+// did not handle the corner case of multiple special exits that go to the same
+// room, it would only show one of them at random. Each special exit was listed
+// in its own table (against the key of the exit room id) and it is a key to a
+// "1" or "0" depending on whether the exit is locked or not. This was not
+// documented in the wiki!
 int TLuaInterpreter::getSpecialExits(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getSpecialExits: wrong argument type");
+        lua_pushfstring(L, "getSpecialExits: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int id_from = lua_tointeger(L, 1);
-
-    Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
-    if (pR) {
-        QMapIterator<int, QString> it(pR->getOtherMap());
-        lua_newtable(L);
-        while (it.hasNext()) {
-            it.next();
-            lua_newtable(L);
-            int id_to = it.key();
-            QString dir = it.value();
-            QString exitStatus;
-            if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
-                exitStatus = dir.left(1);
-            } else {
-                exitStatus = "0";
-            }
-            QString exit;
-            if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
-                exit = dir.remove(0, 1);
-            } else {
-                exit = dir;
-            }
-            lua_pushstring(L, exit.toUtf8().constData());       //done to remove the prepended special exit status
-            lua_pushstring(L, exitStatus.toUtf8().constData()); //done to remove the prepended special exit status
-            lua_settable(L, -3);
-            lua_pushnumber(L, id_to);
-            lua_insert(L, -2);
-            lua_settable(L, -3);
-        }
-        return 1;
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id_from);
+        return 2;
     }
-    return 0;
+
+    bool showAllExits = false;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "getSpecialExits: bad argument #2 type (show every exit to same exit room id as boolean is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        showAllExits = lua_toboolean(L, 2);
+    }
+
+    QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+    QMultiMap<int, QString> specialExitsByExitId;
+    while (itSpecialExit.hasNext()) {
+        itSpecialExit.next();
+        specialExitsByExitId.insert(itSpecialExit.value(), itSpecialExit.key());
+    }
+
+    QList<int> exitRoomIdList = specialExitsByExitId.keys();
+    lua_newtable(L);
+    for (int i = 0, exitRoomIdCount = exitRoomIdList.count(); i < exitRoomIdCount; ++i) {
+        lua_pushnumber(L, exitRoomIdList.at(i));
+        lua_newtable(L);
+        {
+            QStringList exitCommandsToThisRoomId = specialExitsByExitId.values(exitRoomIdList.at(i));
+            int bestUnlockedExitIndex = -1;
+            int bestUnlockedExitWeight = -1;
+            int bestLockedExitIndex = -1;
+            int bestLockedExitWeight = -1;
+            int exitCommandsCount = exitCommandsToThisRoomId.count();
+            for (int j = 0; j < exitCommandsCount; ++j) {
+                if (showAllExits || exitCommandsCount == 1) {
+                    // The simpler case - show all exits (or the only exit) to
+                    // this room:
+                    lua_pushstring(L, exitCommandsToThisRoomId.at(j).toUtf8().constData());
+                    lua_pushstring(L, pR->hasSpecialExitLock(exitCommandsToThisRoomId.at(j)) ? "1" : "0");
+                    lua_settable(L, -3);
+                    // Go on to next exit to this room:
+                    continue;
+                }
+
+                // The more complex (but highly unlikely in most MUDs) case
+                // - find the best exit to this room when there are more than
+                // one:
+                int thisExitWeight = pR->getExitWeight(exitCommandsToThisRoomId.at(j));
+                if (pR->hasSpecialExitLock(exitCommandsToThisRoomId.at(j))) {
+                    if (bestLockedExitIndex == -1) {
+                        bestLockedExitIndex = j;
+                        bestLockedExitWeight = thisExitWeight;
+                    } else if (thisExitWeight < bestLockedExitWeight) {
+                        bestLockedExitIndex = j;
+                        bestLockedExitWeight = thisExitWeight;
+                    }
+
+                } else {
+                    if (bestUnlockedExitIndex == -1) {
+                        bestUnlockedExitIndex = j;
+                        bestUnlockedExitWeight = thisExitWeight;
+                    } else if (thisExitWeight < bestUnlockedExitWeight) {
+                        bestUnlockedExitIndex = j;
+                        bestUnlockedExitWeight = thisExitWeight;
+                    }
+
+                }
+            }
+
+            if (!showAllExits && (exitCommandsCount > 1)) {
+                // Produce the best exit to this room given that there IS more
+                // than one and we haven't been asked to show them all:
+                int bestExitIndex = (bestUnlockedExitIndex != -1) ? bestUnlockedExitIndex : bestLockedExitIndex;
+                lua_pushstring(L, exitCommandsToThisRoomId.at(bestExitIndex).toUtf8().constData());
+                lua_pushstring(L, pR->hasSpecialExitLock(exitCommandsToThisRoomId.at(bestExitIndex)) ? "1" : "0");
+                lua_settable(L, -3);
+            }
+        }
+        lua_settable(L, -3);
+    }
+
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSpecialExitsSwap
 int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getSpecialExitsSwap: wrong argument type");
+        lua_pushfstring(L, "getSpecialExitsSwap: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int id_from = lua_tointeger(L, 1);
-
-    Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
-    if (pR) {
-        QMapIterator<int, QString> it(pR->getOtherMap());
-        lua_newtable(L);
-        while (it.hasNext()) {
-            it.next();
-            int id_to = it.key();
-            QString dir = it.value();
-            QString exitStatus;
-            QString exit;
-            if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
-                exitStatus = dir.left(1);
-            } else {
-                exitStatus = "0";
-            }
-
-            if (dir.size() > 0 && (dir.startsWith('0') || dir.startsWith('1'))) {
-                exit = dir.remove(0, 1);
-            } else {
-                exit = dir;
-            }
-            lua_pushstring(L, exit.toUtf8().constData());
-            lua_pushnumber(L, id_to);
-            lua_settable(L, -3);
-        }
-        return 1;
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id_from);
+        return 2;
     }
-    return 0;
+
+    QMapIterator<QString, int> it(pR->getSpecialExits());
+    lua_newtable(L);
+    while (it.hasNext()) {
+        it.next();
+        lua_pushstring(L, it.key().toUtf8().constData());
+        lua_pushnumber(L, it.value());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomEnv
