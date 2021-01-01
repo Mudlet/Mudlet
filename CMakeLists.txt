@@ -182,7 +182,7 @@ if(USE_UPDATER)
 endif()
 
 if(DEFINED ENV{GITHUB_SHA})
-  set(GIT_COMMIT_HASH, ENV{GITHUB_SHA})
+  set(GIT_COMMIT_HASH, $ENV{GITHUB_SHA})
 else()
   # Get the latest commit hash
   execute_process(
@@ -196,12 +196,16 @@ if(GIT_COMMIT_HASH)
   target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
 endif()
 
-# Get the current working branch
-execute_process(
-        COMMAND git describe --all --dirty --broken
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(DEFINED ENV{GITHUB_PR_BRANCH})
+  set(GIT_BRANCH, $ENV{GITHUB_PR_BRANCH})
+else()
+  # Get the current working branch
+  execute_process(
+          COMMAND git describe --all --dirty --broken
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          OUTPUT_VARIABLE GIT_BRANCH
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
 
 if(GIT_BRANCH)
   STRING(REGEX REPLACE "heads/" "" GIT_BRANCH ${GIT_BRANCH})
