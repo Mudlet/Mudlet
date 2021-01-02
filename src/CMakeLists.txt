@@ -443,7 +443,7 @@ if(APPLE)
                                           MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
 
 #  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
-  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua")
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
   target_sources(mudlet PRIVATE "mudlet-lua" ${MUDLET_LUA_FILES} ${DIC_FILES} ${AFF_FILES})
