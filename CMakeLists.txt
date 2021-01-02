@@ -182,7 +182,8 @@ if(USE_UPDATER)
 endif()
 
 if(DEFINED ENV{GITHUB_SHA})
-  set(GIT_COMMIT_HASH, $ENV{GITHUB_SHA})
+  message("GITHUB SHA DEFINED?")
+  set(GIT_COMMIT_HASH $ENV{GITHUB_SHA})
 else()
   # Get the latest commit hash
   execute_process(
@@ -197,7 +198,7 @@ if(GIT_COMMIT_HASH)
 endif()
 
 if(DEFINED ENV{GITHUB_PR_BRANCH})
-  set(GIT_BRANCH, $ENV{GITHUB_PR_BRANCH})
+  set(GIT_BRANCH $ENV{GITHUB_PR_BRANCH})
 else()
   # Get the current working branch
   execute_process(
