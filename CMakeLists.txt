@@ -182,7 +182,7 @@ if(USE_UPDATER)
 endif()
 
 if(DEFINED ENV{GITHUB_SHA})
-  set(GIT_COMMIT $ENV{GITHUB_SHA}^2)
+  set(GIT_COMMIT "$ENV{GITHUB_SHA}^2")
 else()
   set(GIT_COMMIT HEAD)
 endif()
