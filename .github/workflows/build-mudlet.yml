@@ -100,6 +100,8 @@ jobs:
         eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
+
+        brew install tree && tree /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx
         
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
