@@ -3932,7 +3932,13 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Errore interno, nessun codec trovato con le impostazioni attuali
+{&quot;%1&quot;}. Mudlet non è in grado di inviare dati in questo formato
+al server di gioco. Verifica se è presente un codec alternativo che il tuo gioco
+e Mudlet possano utilizzare. Mudlet proverà ad inviare i dati in codifica ASCII,
+ma sarà limitato ai soli caratteri non accentati dell'inglese base.
+Nota: questo avviso sarà mostrato una sola volta, fintanto che la codifica
+non sarà variata nuovamente.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2319"/>
