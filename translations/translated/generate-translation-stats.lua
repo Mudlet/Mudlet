@@ -22,12 +22,9 @@
  ############################################################################
 ]]
 
-print(package.path)
-print(package.cpath)
-
 local status, result = pcall(require, 'yajl')
 if not status then
-  print("warning: lua-yajl not available - translation statistics in settings won't be shown. Searched in: ".. result)
+  print("warning: lua-yajl not available - translation statistics in settings won't be shown.\nError loading yajl was: ".. result)
   io.output("translation-stats.json")
   io.write("{}")
 
