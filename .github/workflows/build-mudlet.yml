@@ -152,6 +152,10 @@ jobs:
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
 
+    - name: check ccache stats prior to build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
+
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
@@ -166,6 +170,10 @@ jobs:
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: check ccache stats post build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
