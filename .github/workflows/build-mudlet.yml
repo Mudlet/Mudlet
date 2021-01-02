@@ -98,6 +98,8 @@ jobs:
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local)"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
         
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
@@ -126,6 +128,8 @@ jobs:
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local)"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Windows) Install non-vcpkg dependencies
       if: runner.os == 'Windows'
