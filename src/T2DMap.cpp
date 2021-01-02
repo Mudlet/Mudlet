@@ -1325,7 +1325,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, tr("No map or no valid position."));
+        auto message = mpMap->mpRoomDB->size() == 0 ? tr("You do not have a map yet - load one, or start mapping from scratch to begin.") : tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size()); 
+        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
         painter.restore();
         return;
     }
@@ -1728,19 +1729,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             } else if (mCustomLineSelectedExit == key_out) {
                 customLineDestinationTarget = pSR->getOut();
             } else {
-                QMapIterator<int, QString> otherExitIt = pSR->getOtherMap();
-                while (otherExitIt.hasNext()) {
-                    otherExitIt.next();
-                    if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                        if (otherExitIt.value().mid(1) == mCustomLineSelectedExit) {
-                            customLineDestinationTarget = otherExitIt.key();
-                            break;
-                        }
-                    } else if (otherExitIt.value() == mCustomLineSelectedExit) {
-                        customLineDestinationTarget = otherExitIt.key();
-                        break;
-                    }
-                }
+                customLineDestinationTarget = pSR->getSpecialExits().value(mCustomLineSelectedExit);
             }
         }
     }
@@ -2482,7 +2471,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
         label.bgColor = QColorDialog::getColor(QColor(50, 50, 150, 100), nullptr, tr("Background color", "2D Mapper create label color dialog title"));
         label.fgColor = QColorDialog::getColor(QColor(255, 255, 50, 255), nullptr, tr("Foreground color", "2D Mapper create label color dialog title"));
     } else if (textOrImageDialog.clickedButton() == imageButton) {
-       label.bgColor = QColor(50, 50, 150, 100);
+        label.bgColor = QColor(50, 50, 150, 100);
         label.text.clear();
         imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
     } else {
@@ -3281,27 +3270,10 @@ void T2DMap::slot_customLineProperties()
                 le_toId->setText(QString::number(room->getIn()));
             } else if (exit == key_out) {
                 le_toId->setText(QString::number(room->getOut()));
+            } else if (room->getSpecialExits().contains(exit)) {
+                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
             } else {
-                bool isFound = false;
-                QMapIterator<int, QString> otherExitIt = room->getOtherMap();
-                while (otherExitIt.hasNext()) {
-                    otherExitIt.next();
-                    if (otherExitIt.value().startsWith(QLatin1String("0")) || otherExitIt.value().startsWith(QLatin1String("1"))) {
-                        if (otherExitIt.value().mid(1) == exit) {
-                            le_toId->setText(QString::number(otherExitIt.key()));
-                            isFound = true;
-                            break;
-                        }
-                    } else if (otherExitIt.value() == exit) {
-                        le_toId->setText(QString::number(otherExitIt.key()));
-                        isFound = true;
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    qWarning(R"(T2DMap::slot_customLineProperties() - WARNING: missing command "%s" from custom lines for room id %i)",
-                             qPrintable(exit), room->getId());
-                }
+                qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
             }
 
             mpCurrentLineStyle->setIconSize(QSize(48, 24));
@@ -4979,16 +4951,11 @@ void T2DMap::slot_setCustomLine()
         connect(button, &QAbstractButton::clicked, this, &T2DMap::slot_setCustomLine2);
     }
 
-    QMapIterator<int, QString> it(room->getOtherMap());
+    QMapIterator<QString, int> it(room->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int id_to = it.key();
-        QString dir = it.value();
-        if (dir.size() > 1) {
-            if (dir.startsWith('0') || dir.startsWith('1')) {
-                dir = dir.mid(1);
-            }
-        }
+        int id_to = it.value();
+        QString dir = it.key();
         auto pI = new QTreeWidgetItem(specialExits);
         if (room->customLines.contains(dir)) {
             pI->setCheckState(0, Qt::Checked);
