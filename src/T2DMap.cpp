@@ -436,7 +436,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
     }
 }
 
-// key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
+// key format: <QColor.name()><QString of one or more QChars>
 void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Some constants used to prevent small, unreadable symbols:
@@ -470,13 +470,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
 
     QString symbolString = text;
     QPainter symbolPainter(pixmap);
-    if (key.startsWith(QLatin1String("W_"))) {
-        symbolPainter.setPen(Qt::white);
-    } else if (key.startsWith(QLatin1String("B_"))) {
-        symbolPainter.setPen(Qt::black);
-    } else {
-        symbolPainter.setPen(symbolColor);
-    }
+    symbolPainter.setPen(symbolColor);
     symbolPainter.setFont(mpMap->mMapSymbolFont);
     symbolPainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform, true);
 
@@ -761,16 +755,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
         // Do we need to draw the room symbol:
         if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-            QString pixmapKey;
+            QColor symbolColor;
             if (pRoom->mSymbolColor != nullptr) {
-                pixmapKey = QStringLiteral("%1_%2").arg(pRoom->mSymbolColor.name(), pRoom->mSymbol);
+                symbolColor = pRoom->mSymbolColor;
             } else if (roomColor.lightness() > 127) {
-                pixmapKey = QStringLiteral("B_%1").arg(pRoom->mSymbol);
+                symbolColor = Qt::black;
             } else {
-                pixmapKey = QStringLiteral("W_%1").arg(pRoom->mSymbol);
+                symbolColor = Qt::white;
             }
+            auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, pRoom->mSymbolColor, isGridMode);
+                addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
             }
 
             painter.save();
