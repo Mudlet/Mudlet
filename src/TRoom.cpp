@@ -697,6 +697,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> oldCharacterCode;
     }
 
+    if (version >= 21) {
+        ifs >> mSymbolColor;
+    }
+
     if (version >= 10) {
         ifs >> userData;
         if (version < 19) {
@@ -710,6 +714,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 // ASCII or ISO 8859-1 (Latin1) character:
                 mSymbol = QChar(oldCharacterCode);
             }
+        }
+    }
+
+    if (version < 21) {
+        QString symbolColor = userData.take(QLatin1String("system.fallback_symbol_color"));
+        if (!symbolColor.isEmpty()) {
+            mSymbolColor = QColor(symbolColor);
         }
     }
 

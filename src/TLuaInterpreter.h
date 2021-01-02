@@ -199,6 +199,9 @@ public:
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
     static int getRoomChar(lua_State*);
+    static int setRoomCharColor(lua_State*);
+    static int unsetRoomCharColor(lua_State*);
+    static int getRoomCharColor(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);
