@@ -182,16 +182,15 @@ if(USE_UPDATER)
 endif()
 
 if(DEFINED ENV{GITHUB_SHA})
-  message("GITHUB SHA DEFINED?")
-  set(GIT_COMMIT_HASH $ENV{GITHUB_SHA})
+  set(GIT_COMMIT $ENV{GITHUB_SHA}^2)
 else()
-  # Get the latest commit hash
-  execute_process(
-          COMMAND git rev-parse --short HEAD
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-          OUTPUT_VARIABLE GIT_COMMIT_HASH
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(GIT_COMMIT HEAD)
 endif()
+execute_process(
+  COMMAND git rev-parse --short ${GIT_COMMIT}
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_COMMIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if(GIT_COMMIT_HASH)
   target_compile_definitions(${PROJECT_NAME} PRIVATE "-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
