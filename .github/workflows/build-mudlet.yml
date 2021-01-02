@@ -97,7 +97,7 @@ jobs:
         luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
-        eval "$(luarocks path --local)"
+        eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
         
@@ -127,7 +127,7 @@ jobs:
         luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
-        eval "$(luarocks path --local)"
+        eval "$(luarocks path --local --lua-version "5.1")"
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
