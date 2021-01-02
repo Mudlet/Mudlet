@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Non hai ancora una mappa - per iniziare caricane una o creane una nuova.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
@@ -616,7 +616,7 @@ con un nuovo simbolo per questa stanza:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1328"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Non hai ancora una mappa - per iniziare caricane una o creane una nuova.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1328"/>
@@ -5040,32 +5040,32 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1079"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Informazioni tecniche:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1080"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Versione</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1081"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>SO</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1082"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>CPU</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1083"/>
       <source>Branch</source>
-      <translation type="unfinished"/>
+      <translation>Ramo</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1084"/>
       <source>Commit</source>
-      <translation type="unfinished"/>
+      <translation>Commit</translation>
     </message>
   </context>
   <context>
@@ -10730,7 +10730,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Salva all'uscita</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
