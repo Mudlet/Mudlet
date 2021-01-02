@@ -193,7 +193,6 @@ jobs:
         set -x
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         lua -v
-        luarocks --help
 
         shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
@@ -219,7 +218,6 @@ jobs:
         # CI changelog generation dependencies
         run-luarocks install --local argparse
         run-luarocks install --local lunajson
-
 
         # necessary for Qt multimedia
         if [ "${RUNNER_OS}" = "Linux" ]; then
