@@ -89,6 +89,7 @@ jobs:
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
+        # TODO: needed on Linux, but perhaps not necessary on macOS?
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
@@ -101,7 +102,7 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-        brew install tree && tree /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx
+        brew install tree && tree /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages
         
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
