@@ -163,9 +163,8 @@ QString dlgRoomSymbol::getNewSymbol()
             // captured(0) is the whole string that matched, which is
             // not what we want:
             return match.captured(1);
-        } else {
-            return comboBox_roomSymbol->currentText();
         }
+        return comboBox_roomSymbol->currentText();
     }
 }
 
