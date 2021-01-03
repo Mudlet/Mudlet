@@ -3557,7 +3557,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3665,7 +3665,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation>名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -4056,7 +4056,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="500"/>
       <source>Profile name</source>
-      <translation>配置名称</translation>
+      <translation>設定名稱</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="503"/>
@@ -4132,7 +4132,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="678"/>
       <source>Character name:</source>
-      <translation>角色名字:</translation>
+      <translation>角色名稱：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
@@ -4142,7 +4142,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="691"/>
       <source>Character name</source>
-      <translation>角色名字</translation>
+      <translation>角色名稱</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="694"/>
@@ -5146,7 +5146,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="108"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>離線</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="131"/>
@@ -7902,7 +7902,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation>中斷</translation>
+      <translation>中斷連線</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
@@ -9402,7 +9402,7 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Disconnect</source>
-      <translation>中斷</translation>
+      <translation>中斷連線</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="395"/>
