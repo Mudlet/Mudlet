@@ -3525,7 +3525,7 @@ void T2DMap::slot_showSymbolSelection()
     // First scan and count all the different symbol used
     TRoom* room;
     bool isAtLeastOneRoom = false;
-    QHash<QString, unsigned int> usedSymbols;
+    QHash<QString, int> usedSymbols;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {

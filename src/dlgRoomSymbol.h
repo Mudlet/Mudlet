@@ -2,7 +2,7 @@
 #define MUDLET_DLGROOMSYMBOL_H
 
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,7 +34,7 @@ class dlgRoomSymbol : public QDialog, public Ui::room_symbol
 public:
     Q_DISABLE_COPY(dlgRoomSymbol)
     explicit dlgRoomSymbol(Host*, QWidget* parent = nullptr);
-    void init(QHash<QString, unsigned int>& pSymbols, QSet<TRoom*>& pRooms);
+    void init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms);
     void accept() override;
 
 signals:
@@ -48,7 +48,7 @@ private:
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;
-    QHash<QString, unsigned int> mpSymbols;
+    QHash<QString, int> mpSymbols;
     int firstRoomId;
     QColor selectedColor = nullptr;
     QColor previewColor = nullptr;

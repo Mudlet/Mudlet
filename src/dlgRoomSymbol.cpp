@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,7 +27,7 @@
 #include <QPainter>
 #include "post_guard.h"
 
-dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pF) : QDialog(pF), mpHost(pHost)
+dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget) : QDialog(pParentWidget), mpHost(pHost)
 {
     // init generated dialog
     setupUi(this);
@@ -40,9 +40,10 @@ dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pF) : QDialog(pF), mpHost(pHo
     auto font = pHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
     label_preview->setFont(font);
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomSymbol::init(QHash<QString, unsigned int>& pSymbols, QSet<TRoom*>& pRooms)
+void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
 {
     mpSymbols = pSymbols;
     if (mpSymbols.size() <= 1) {
@@ -67,7 +68,7 @@ void dlgRoomSymbol::init(QHash<QString, unsigned int>& pSymbols, QSet<TRoom*>& p
 
 void dlgRoomSymbol::initInstructionLabel()
 {
-    if (mpSymbols.size() == 0) {
+    if (mpSymbols.empty()) {
         label_instructions->hide();
         return;
     }
@@ -111,16 +112,16 @@ void dlgRoomSymbol::initInstructionLabel()
 
 QStringList dlgRoomSymbol::getComboBoxItems()
 {
-    QHashIterator<QString, unsigned int> itSymbolUsed(mpSymbols);
-    QSet<unsigned int> symbolCountsSet;
+    QHashIterator<QString, int> itSymbolUsed(mpSymbols);
+    QSet<int> symbolCountsSet;
     while (itSymbolUsed.hasNext()) {
         itSymbolUsed.next();
         symbolCountsSet.insert(itSymbolUsed.value());
     }
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QList<unsigned int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
+    QList<int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
 #else
-    QList<unsigned int> symbolCountsList{symbolCountsSet.toList()};
+    QList<int> symbolCountsList{symbolCountsSet.toList()};
 #endif
     if (symbolCountsList.size() > 1) {
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
@@ -182,6 +183,7 @@ void dlgRoomSymbol::updatePreview()
 void dlgRoomSymbol::openColorSelector()
 {
     auto* dialog = selectedColor != nullptr ? new QColorDialog(selectedColor, this) : new QColorDialog(defaultColor(), this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(colorSelected(const QColor&)));
     connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomSymbol::currentColorChanged);
