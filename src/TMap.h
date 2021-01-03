@@ -27,6 +27,7 @@
 #include "TAstar.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
+#include "TMapLabel.h"
 #endif
 
 #include "pre_guard.h"
@@ -59,43 +60,21 @@ class QNetworkAccessManager;
 class QProgressDialog;
 
 
-class TMapLabel
-{
-public:
-    TMapLabel()
-    : fgColor(Qt::black)
-    , bgColor(Qt::black)
-    , highlight(false)
-    , showOnTop(false)
-    , noScaling(false)
-    {
-    }
-
-    QVector3D pos;
-    QSizeF size;
-    QSizeF clickSize;
-    QString text;
-    QColor fgColor;
-    QColor bgColor;
-    QPixmap pix;
-    bool highlight;
-    bool showOnTop;
-    bool noScaling;
-
-    QByteArray base64EncodePixmap() const;
-};
-
-
 class TMap : public QObject
 {
     Q_OBJECT
+
+    // Moved from TRoomDB - but as one is used in the TRoomDB constructor they
+    // must be defined before the TRoomDB instance with this TMap on creation
+    // is created:
+    QString mDefaultAreaName;
+    QString mUnnamedAreaName;
 
 public:
     Q_DISABLE_COPY(TMap)
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapLabelID(int area);
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling);
     int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 15.0, int fontSize = 15);
     void deleteMapLabel(int area, int labelID);
@@ -165,10 +144,12 @@ public:
     bool getRoomNamesShown();
     void setRoomNamesShown(bool shown);
 
-    std::pair<bool, QString> writeJsonMap(const QString&);
-    std::pair<bool, QString> readJsonMap(const QString&);
+    std::pair<bool, QString> writeJsonMapFile(const QString&);
+    std::pair<bool, QString> readJsonMapFile(const QString&);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
+    QString getDefaultAreaName() const { return mDefaultAreaName; }
+    QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
 
     TRoomDB* mpRoomDB;
@@ -179,12 +160,12 @@ public:
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
-    bool m2DPanMode;
-    bool mLeftDown;
-    bool mRightDown;
-    float m2DPanXStart;
-    float m2DPanYStart;
-    int mTargetID;
+    bool m2DPanMode = false;
+    bool mLeftDown = false;
+    bool mRightDown = false;
+    float m2DPanXStart = 0.0f;
+    float m2DPanYStart = 0.0f;
+    int mTargetID = 0;
     QList<int> mPathList;
     QList<QString> mDirList;
     QList<int> mWeightList;
@@ -195,7 +176,7 @@ public:
     QMap<int, int> reverseDirections;
 
 #if defined(INCLUDE_3DMAPPER)
-    QPointer<GLWidget> mpM;
+    QPointer<GLWidget> mpM = nullptr;
 #endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
@@ -207,9 +188,8 @@ public:
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
-    bool mMapGraphNeedsUpdate;
-    bool mNewMove;
-    QMap<qint32, QMap<qint32, TMapLabel>> mapLabels;
+    bool mMapGraphNeedsUpdate = true;
+    bool mNewMove = true;
 
     // loaded map file format version
     int mVersion;
@@ -245,9 +225,9 @@ public:
     // different users could have differing requirement for symbol sizing
     // depending on font usage, language, symbol choice, etc. but this has not
     // (yet) made (user) adjustable:
-    qreal mMapSymbolFontFudgeFactor;
+    qreal mMapSymbolFontFudgeFactor = 1.0;
     // Disables font substitution if set:
-    bool mIsOnlyMapSymbolFontToBeUsed;
+    bool mIsOnlyMapSymbolFontToBeUsed = false;
 
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
@@ -255,17 +235,19 @@ public:
     // Base color(s) for the player room in the mappers:
     QColor mPlayerRoomOuterColor;
     QColor mPlayerRoomInnerColor;
+    // These three are actually set to values from the Host class but initialising
+    // them to the same defaults here keeps Coverity happy:
     // Mode selected - 0 is closest to original style:
-    quint8 mPlayerRoomStyle;
+    quint8 mPlayerRoomStyle = 0;
     // Percentage of the room size (actually width) for the outer diameter of
     // the circular marking, integer percentage clamped in the preferences
     // between 200 and 50 - default 120:
-    quint8 mPlayerRoomOuterDiameterPercentage;
+    quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
     // marking, integer percentage clamped in the preferences between 83 and 0,
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
+    quint8 mPlayerRoomInnerDiameterPercentage = 70;
 
 
 public slots:
@@ -278,10 +260,10 @@ public slots:
 
 private:
     const QString createFileHeaderLine(QString, QChar);
-    void writeUserData(QJsonObject&) const;
-    QMap<QString, QString> readUserData(const QJsonObject&) const;
-    void writeColor(QJsonObject&, const QColor&) const;
-    QColor readColor(const QJsonObject&) const;
+    void writeJsonUserData(QJsonObject&) const;
+    QMap<QString, QString> readJsonUserData(const QJsonObject&) const;
+    void writeJsonColor(QJsonObject&, const QColor&) const;
+    QColor readJsonColor(const QJsonObject&) const;
 
     QStringList mStoredMessages;
 
@@ -295,15 +277,15 @@ private:
     QList<QString> mMapAuditErrors;
 
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
-    bool mIsFileViewingRecommended;
+    bool mIsFileViewingRecommended = false;;
 
     // Moved and revised from dlgMapper:
-    QNetworkAccessManager* mpNetworkAccessManager;
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
 
-    QNetworkReply* mpNetworkReply;
+    QNetworkReply* mpNetworkReply = nullptr;
     QString mLocalMapFileName;
-    int mExpectedFileSize;
-    bool mImportRunning;
+    int mExpectedFileSize = 0;
+    bool mImportRunning = false;
 
     QProgressDialog* mpProgressDialog = nullptr;
     // Using during updates of text in progress dialog partially from other

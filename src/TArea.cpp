@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -46,9 +46,24 @@
 static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
-const QString USER_DATA{QStringLiteral("userData")};
 
-TArea::TArea(TMap * map , TRoomDB * pRDB)
+static const QString COLORS {QStringLiteral("colors")};
+static const QString COLOR_RGBA{QStringLiteral("colorRGBA")};
+static const QString COORDINATES{QLatin1String("coordinates")};
+static const QString GRID_MODE{QStringLiteral("gridMode")};
+static const QString ID{QStringLiteral("id")};
+static const QString IMAGE{QStringLiteral("image")};
+static const QString LABELS{QStringLiteral("labels")};
+static const QString NAME{QStringLiteral("name")};
+static const QString ROOM_COUNT{QStringLiteral("roomCount")};
+static const QString ROOMS{QStringLiteral("rooms")};
+static const QString SCALED{QStringLiteral("scaled")};
+static const QString SHOW_ON_TOP{QStringLiteral("showOnTop")};
+static const QString SIZE{QLatin1String("size")};
+static const QString TEXT{QStringLiteral("text")};
+static const QString USER_DATA{QStringLiteral("userData")};
+
+TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : min_x(0)
 , min_y(0)
 , min_z(0)
@@ -60,14 +75,14 @@ TArea::TArea(TMap * map , TRoomDB * pRDB)
 , zoneAreaRef( 0 )
 , mpRoomDB( pRDB )
 , mIsDirty( false )
-, mpMap( map )
+, mpMap( pMap )
 {
 }
 
 TArea::~TArea()
 {
     if (mpRoomDB) {
-        mpRoomDB->removeArea((TArea*)this);
+        mpRoomDB->removeArea(this);
     } else {
         qDebug() << "ERROR: In TArea::~TArea(), instance has no mpRoomDB";
     }
@@ -584,19 +599,20 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     return results;
 }
 
-void TArea::writeArea(QJsonArray& obj) const
+void TArea::writeJsonArea(QJsonArray& array) const
 {
     QJsonObject areaObj;
     const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
-    areaObj.insert(QStringLiteral("id"), static_cast<double>(id));
+    areaObj.insert(ID, static_cast<double>(id));
 
-    areaObj.insert(QStringLiteral("name"), mpRoomDB->getAreaNamesMap().value(id));
+    const QJsonValue areaNameValue{mpRoomDB->getAreaNamesMap().value(id)};
+    areaObj.insert(NAME, areaNameValue);
 
     if (gridMode) {
-        areaObj.insert(QStringLiteral("gridMode"), true);
+        areaObj.insert(GRID_MODE, true);
     }
 
-    writeUserData(areaObj);
+    writeJsonUserData(areaObj);
 
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> roomList{rooms.begin(), rooms.end()};
@@ -607,7 +623,7 @@ void TArea::writeArea(QJsonArray& obj) const
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
     }
-    areaObj.insert(QStringLiteral("roomCount"), roomCount);
+    areaObj.insert(ROOM_COUNT, roomCount);
 
     QJsonArray roomsArray;
     int currentRoomCount = 0;
@@ -615,7 +631,7 @@ void TArea::writeArea(QJsonArray& obj) const
         auto pR = mpRoomDB->getRoom(roomId);
         if (pR) {
             ++currentRoomCount;
-            pR->writeRoom(roomsArray);
+            pR->writeJsonRoom(roomsArray);
             if (currentRoomCount % 10 == 0) {
                 if (mpMap->incrementProgressDialog(true, 10)) {
                     // Cancel has been hit - so give up straight away:
@@ -628,18 +644,51 @@ void TArea::writeArea(QJsonArray& obj) const
         // Must add on any remainder otherwise the total will be wrong:
         mpMap->incrementProgressDialog(true, currentRoomCount % 10);
     }
-    areaObj.insert(QStringLiteral("rooms"), roomsArray);
+    QJsonValue roomsValue{roomsArray};
+    areaObj.insert(ROOMS, roomsValue);
     mpMap->getCurrentProgressRoomCount();
 
     // Process the labels after the rooms so that the first area shows something
     // quickly (from the rooms) even if it has a number of labels to do.
 
-    writeLabels(areaObj);
-
-    obj.append(areaObj);
+    writeJsonLabels(areaObj);
+    QJsonValue areaValue{areaObj};
+    array.append(areaValue);
 }
 
-void TArea::writeUserData(QJsonObject& obj) const
+std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex)
+{
+    const QJsonObject areaObj{array.at(areaIndex).toObject()};
+    const int id = areaObj.value(ID).toInt();
+    const QString name{areaObj.value(NAME).toString()};
+    gridMode = areaObj.value(GRID_MODE).toBool();
+    mUserData = readJsonUserData(areaObj.value(USER_DATA).toObject());
+    int roomCount = 0;
+    for (int roomIndex = 0, total = areaObj.value(ROOMS).toArray().count(); roomIndex < total; ++roomIndex) {
+        TRoom* pR = new TRoom(mpRoomDB);
+        int roomId = pR->readJsonRoom(areaObj.value(ROOMS).toArray(), roomIndex, id);
+        rooms.insert(roomId);
+        // This also sets the room id for the TRoom:
+        mpRoomDB->addRoom(roomId, pR, true);
+        if (++roomCount % 10 == 0) {
+            if (mpMap->incrementProgressDialog(true, 10)) {
+                // Cancel has been hit - so give up straight away:
+                return {0, {}};
+            }
+        }
+    }
+    if (roomCount % 10 != 0) {
+        // Must add on any remainder otherwise the total will be wrong:
+        mpMap->incrementProgressDialog(true, roomCount % 10);
+    }
+
+    if (areaObj.contains(LABELS) && areaObj.value(LABELS).isArray()) {
+        readJsonLabels(areaObj);
+    }
+    return {id, name};
+}
+
+void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
     if (mUserData.isEmpty()) {
@@ -649,46 +698,85 @@ void TArea::writeUserData(QJsonObject& obj) const
     QMapIterator<QString, QString> itDataItem(mUserData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
-        userDataObj.insert(itDataItem.key(), itDataItem.value());
+        QJsonValue userDataValue{itDataItem.value()};
+        userDataObj.insert(itDataItem.key(), userDataValue);
     }
-    obj.insert(QStringLiteral("userData"), userDataObj);
+    const QJsonValue userDatasValue{userDataObj};
+    obj.insert(USER_DATA, userDatasValue);
 }
 
-void TArea::writeLabels(QJsonObject& obj) const
+// Takes a userData object and parses all its elements
+QMap<QString, QString> TArea::readJsonUserData(const QJsonObject& obj) const
 {
-    const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
-    if (mpMap->mapLabels.isEmpty() || mpMap->mapLabels.value(static_cast<qint32>(id)).isEmpty()) {
-        // No labels at all - or none in this area - so nothing to do
+    QMap<QString, QString> results;
+    if (obj.isEmpty()) {
+        // Skip doing anything more if there is nothing to do:
+        return results;
+    }
+
+    QStringList keys = obj.keys();
+    for (int i = 0, total = keys.count(); i < total; ++i) {
+        if (obj.value(keys.at(i)).isString()) {
+            results.insert(keys.at(i), obj.value(keys.at(i)).toString());
+        }
+    }
+    return results;
+}
+
+void TArea::writeJsonLabels(QJsonObject& obj) const
+{
+    if (mMapLabels.isEmpty()) {
+        // No labels in this area - so nothing to do
         return;
     }
 
     QJsonArray labelArray;
-    QMapIterator<qint32, TMapLabel> itLabel(mpMap->mapLabels.value(static_cast<qint32>(id)));
-    while (itLabel.hasNext()) {
-        itLabel.next();
-        writeLabel(labelArray, itLabel.key(), &itLabel.value());
+    QMapIterator<int, TMapLabel> itMapLabel(mMapLabels);
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
         if (mpMap->incrementProgressDialog(false, 1)) {
             // Cancel has been hit - so give up straight away:
             return;
         }
     }
-
-    obj.insert(QStringLiteral("labels"), labelArray);
+    QJsonValue labelsValue{labelArray};
+    obj.insert(LABELS, labelsValue);
 }
 
-void TArea::writeLabel(QJsonArray& array, const int id, const TMapLabel* pLabel) const
+// obj is the (area) container that contains the label array
+void TArea::readJsonLabels(const QJsonObject& obj)
+{
+    const QJsonArray labelsArray = obj.value(LABELS).toArray();
+
+    if (labelsArray.isEmpty()) {
+        // No labels at all in this area
+        return;
+    }
+
+    for (int index = 0, total = labelsArray.count(); index < total; ++index) {
+        readJsonLabel(labelsArray.at(index).toObject());
+        if (mpMap->incrementProgressDialog(false, 1)) {
+            // Cancel has been hit - so give up straight away:
+            return;
+        }
+    }
+}
+
+void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLabel) const
 {
     QJsonObject labelObj;
 
-    labelObj.insert(QStringLiteral("id"), static_cast<double>(id));
+    labelObj.insert(ID, static_cast<double>(id));
 
-    writeTripleValues(labelObj, QLatin1String("pos"), pLabel->pos);
+    writeJson3DCoordinates(labelObj, COORDINATES, pLabel->pos);
 
-    writeTwinValues(labelObj, QLatin1String("size"), pLabel->size);
+    writeJsonSize(labelObj, SIZE, pLabel->size);
 
     if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text", "Default text if a label is created in mapper with no text")))) {
         // Don't include the text if it is am image:
-        labelObj.insert(QStringLiteral("text"), pLabel->text);
+        QJsonValue textValue{pLabel->text};
+        labelObj.insert(TEXT, textValue);
     }
 
     if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
@@ -706,26 +794,74 @@ void TArea::writeLabel(QJsonArray& array, const int id, const TMapLabel* pLabel)
         QJsonArray colorsArray;
         QJsonObject foregroundColorObj;
         QJsonObject backgroundColorObj;
-        writeColor(foregroundColorObj, pLabel->fgColor);
-        writeColor(backgroundColorObj, pLabel->bgColor);
-        colorsArray.append(foregroundColorObj);
-        colorsArray.append(backgroundColorObj);
-        labelObj.insert(QStringLiteral("colors"), colorsArray);
+        writeJsonColor(foregroundColorObj, pLabel->fgColor);
+        writeJsonColor(backgroundColorObj, pLabel->bgColor);
+        QJsonValue foregroundColorValue{foregroundColorObj};
+        QJsonValue backgroundColorValue{backgroundColorObj};
+        colorsArray.append(foregroundColorValue);
+        colorsArray.append(backgroundColorValue);
+        QJsonValue colorsValue{colorsArray};
+        labelObj.insert(COLORS, colorsValue);
     }
 
     QList<QByteArray> pixmapData = convertImageToBase64Data(pLabel->pix);
     QJsonArray imageArray;
     for (auto imageLine : pixmapData) {
-        imageArray.append(imageLine.data());
+        const QJsonValue imageLineValue{imageLine.data()};
+        imageArray.append(imageLineValue);
     }
-    labelObj.insert(QStringLiteral("image"), imageArray);
+    const QJsonValue imageValue{imageArray};
+    labelObj.insert(IMAGE, imageValue);
 
     // (bool) pLabal->highlight is not saved as it is only used during editing
-    labelObj.insert(QStringLiteral("showOnTop"), pLabel->showOnTop);
+    labelObj.insert(SHOW_ON_TOP, pLabel->showOnTop);
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
-    labelObj.insert(QStringLiteral("scaled"), !pLabel->noScaling);
+    labelObj.insert(SCALED, !pLabel->noScaling);
 
-    array.append(labelObj);
+    const QJsonValue labelValue{labelObj};
+    array.append(labelValue);
+}
+
+void TArea::readJsonLabel(const QJsonObject& labelObj)
+{
+    TMapLabel label;
+
+    int labelId = labelObj.value(ID).toInt();
+
+    label.pos = readJson3DCoordinates(labelObj, COORDINATES);
+
+    label.size = readJsonSize(labelObj, SIZE);
+
+    if (labelObj.contains(TEXT) && labelObj.value(TEXT).isString()) {
+        label.text = labelObj.value(TEXT).toString();
+    }
+
+    if (labelObj.contains(COLORS) && labelObj.value(COLORS).isArray() && labelObj.value(COLORS).toArray().size() == 2) {
+        // For an image the colors are not used and tend to be set to black, if
+        // so skip them. Ufortunately because of the way QColour s are assembled
+        // the operator== is too picky for our purposes as even the way the
+        // colour was put together (color spec type) can make them NOT seem to
+        // be the same when we'd think they were...
+        QJsonArray colorsArray = labelObj.value(COLORS).toArray();
+        label.fgColor = readJsonColor(colorsArray.at(0).toObject());
+        label.bgColor = readJsonColor(colorsArray.at(1).toObject());
+    } else {
+        label.fgColor = defaultLabelForeground;
+        label.bgColor = defaultLabelBackground;
+    }
+
+    QJsonArray imageArray = labelObj.value(IMAGE).toArray();
+    QList<QByteArray> pixmapData;
+    for (int i = 0, total = imageArray.size(); i < total; ++i) {
+        pixmapData.append(imageArray.at(i).toString().toLatin1());
+    }
+    label.pix = convertBase64DataToImage(pixmapData);
+
+    label.showOnTop = labelObj.value(SHOW_ON_TOP).toBool();
+
+    label.noScaling = !labelObj.value(SCALED).toBool(true);
+
+    mMapLabels.insert(labelId, label);
 }
 
 void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPointF& point) const
@@ -733,27 +869,67 @@ void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QPoint
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(point.x()));
     valueArray.append(static_cast<double>(point.y()));
-    obj.insert(title, valueArray);
+    const QJsonValue valuesValue{valueArray};
+    obj.insert(title, valuesValue);
 }
 
-void TArea::writeTwinValues(QJsonObject& obj, const QString& title, const QSizeF& size) const
+void TArea::writeJsonSize(QJsonObject& obj, const QString& title, const QSizeF& size) const
 {
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(size.width()));
     valueArray.append(static_cast<double>(size.height()));
-    obj.insert(title, valueArray);
+    const QJsonValue valuesValue{valueArray};
+    obj.insert(title, valuesValue);
 }
 
-void TArea::writeTripleValues(QJsonObject& obj, const QString& title, const QVector3D& vector) const
+QSizeF TArea::readJsonSize(const QJsonObject& obj, const QString& title) const
+{
+    QSizeF size;
+    if (!obj.value(title).isArray() || obj.value(title).toArray().size() != 2) {
+        return size;
+    }
+
+    QJsonArray valueArray = obj.value(title).toArray();
+    if (valueArray.at(0).isDouble()) {
+        size.setWidth(valueArray.at(0).toDouble());
+    }
+    if (valueArray.at(1).isDouble()) {
+        size.setHeight(valueArray.at(1).toDouble());
+    }
+    return size;
+}
+
+void TArea::writeJson3DCoordinates(QJsonObject& obj, const QString& title, const QVector3D& vector) const
 {
     QJsonArray valueArray;
     valueArray.append(static_cast<double>(vector.x()));
     valueArray.append(static_cast<double>(vector.y()));
     valueArray.append(static_cast<double>(vector.z()));
-    obj.insert(title, valueArray);
+    const QJsonValue valuesValue{valueArray};
+    obj.insert(title, valuesValue);
 }
 
-void TArea::writeColor(QJsonObject& obj, const QColor& color) const
+QVector3D TArea::readJson3DCoordinates(const QJsonObject& obj, const QString& title) const
+{
+    QVector3D position;
+    if (!obj.value(title).isArray() || obj.value(title).toArray().size() != 3) {
+        return position;
+    }
+
+    QJsonArray valueArray = obj.value(title).toArray();
+    if (valueArray.at(0).isDouble()) {
+        position.setX(valueArray.at(0).toDouble());
+    }
+    if (valueArray.at(1).isDouble()) {
+        position.setY(valueArray.at(1).toDouble());
+    }
+    if (valueArray.at(2).isDouble()) {
+        position.setZ(valueArray.at(2).toDouble());
+    }
+    return position;
+}
+
+void TArea::writeJsonColor(QJsonObject& obj, const QColor& color) const
 {
     QJsonArray colorRGBAArray;
     colorRGBAArray.append(static_cast<double>(color.red()));
@@ -762,7 +938,40 @@ void TArea::writeColor(QJsonObject& obj, const QColor& color) const
     if (color.alpha() < 255) {
         colorRGBAArray.append(static_cast<double>(color.alpha()));
     }
-    obj.insert(QStringLiteral("colorRGBA"), colorRGBAArray);
+    QJsonValue colorRGBAValue{colorRGBAArray};
+    obj.insert(COLOR_RGBA, colorRGBAValue);
+}
+
+QColor TArea::readJsonColor(const QJsonObject& obj) const
+{
+    if (!obj.contains(COLOR_RGBA) || !obj.value(COLOR_RGBA).isArray()) {
+        // Return a null color if one was not found
+        return QColor();
+    }
+
+    QJsonArray colorRGBAArray = obj.value(COLOR_RGBA).toArray();
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+    int alpha = 255;
+    int size = colorRGBAArray.size();
+    if ((size == 3 || size == 4)
+            && colorRGBAArray.at(0).isDouble()
+            && colorRGBAArray.at(1).isDouble()
+            && colorRGBAArray.at(2).isDouble()) {
+
+        red = qRound(colorRGBAArray.at(0).toDouble());
+        green = qRound(colorRGBAArray.at(1).toDouble());
+        blue = qRound(colorRGBAArray.at(2).toDouble());
+        return QColor(red, green, blue);
+    }
+
+    if (size == 4 && colorRGBAArray.at(3).isDouble()) {
+        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        return QColor(red, green, blue, alpha);
+    }
+
+    return QColor();
 }
 
 // Serialize a QPixmap in a format that can be conveyed in a text file...
@@ -771,7 +980,8 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
     QBuffer imageInputBuffer;
 
     imageInputBuffer.open(QIODevice::WriteOnly);
-    // Go for maximum compresssion - for the smallest amount of data:
+    // Go for maximum compresssion - for the smallest amount of data, the second
+    // argument is a const char[] so does not require a QString wrapper:
     pixmap.save(&imageInputBuffer, "PNG", 0);
     QBuffer imageOutputBuffer;
     QByteArray encodedImageArray{imageInputBuffer.buffer().toBase64()};
@@ -796,7 +1006,9 @@ QList<QByteArray> TArea::convertImageToBase64Data(const QPixmap& pixmap) const
 
 QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) const
 {
-    Q_UNUSED(pixmapArray);
-    // TODO:
-    return {};
+    QByteArray decodedImageArray = QByteArray::fromBase64(pixmapArray.join());
+    QPixmap pixmap;
+    pixmap.loadFromData(decodedImageArray);
+
+    return pixmap;
 }

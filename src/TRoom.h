@@ -135,70 +135,86 @@ public:
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
     inline QString dirCodeToString(const int) const;
-    inline QString dirCodeToKey(const int) const;
+    inline QString dirCodeToShortString(const int) const;
+    inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
-    void writeRoom(QJsonArray&) const;
+    void writeJsonRoom(QJsonArray&) const;
+    int readJsonRoom(const QJsonArray&, const int, const int);
 
-    int x;
-    int y;
-    int z;
-    int environment;
 
-    bool isLocked;
-    qreal min_x;
-    qreal min_y;
-    qreal max_x;
-    qreal max_y;
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int environment = -1;
+
+    bool isLocked = false;
+    qreal min_x = 0.0;
+    qreal min_y = 0.0;
+    qreal max_x = 0.0;
+    qreal max_y = 0.0;
     QString mSymbol;
     QString name;
 
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)
     QMap<QString, QString> userData;
     QList<int> exitLocks;
+    // Uses "shortstrings" for normal exit directions:
     QMap<QString, QList<QPointF>> customLines;
     QMap<QString, QColor> customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
-    bool highlight;
+
+    bool highlight= false;
     QColor highlightColor;
     QColor highlightColor2;
-    float highlightRadius;
-    bool rendered;
+    float highlightRadius = 0.0f;
+    bool rendered = false;
+    // Uses "shortstrings" for normal exit directions:
     QMap<QString, int> doors; //0=no door 1=open 2=closed 3=locked
 
 
 private:
-    void writeColor(QJsonObject&, const QColor&) const;
-    void writeExits(QJsonObject&) const;
-    void writeExitStubs(QJsonObject& obj) const;
-    void writeNormalExit(QJsonArray&, const int) const;
-    void writeSpecialExit(QJsonArray&, const QString&, const int) const;
-    void writeCustomExitLine(QJsonObject&, const QString&) const;
-    void writeUserData(QJsonObject&) const;
-    void writeDoor(QJsonObject&, const QString&) const;
-    void writeHighlight(QJsonObject&) const;
+    QColor readJsonColor(const QJsonObject&) const;
+    bool readJsonExits(const QJsonObject&);
+    void readJsonExitStubs(const QJsonObject&);
+    bool readJsonNormalExit(const QJsonObject&, const int);
+    bool readJsonSpecialExit(const QJsonObject&, const QString&);
+    void readJsonCustomExitLine(const QJsonObject&, const QString&);
+    void readJsonUserData(const QJsonObject&);
+    void readJsonDoor(const QJsonObject&, const QString&);
+    void readJsonHighlight(const QJsonObject&);
+    void writeJsonColor(QJsonObject&, const QColor&) const;
+    void writeJsonExits(QJsonObject&) const;
+    void writeJsonExitStubs(QJsonObject&) const;
+    void writeJsonNormalExit(QJsonArray&, const int) const;
+    void writeJsonSpecialExit(QJsonArray&, const QString&, const int) const;
+    void writeJsonCustomExitLine(QJsonObject&, const QString&) const;
+    void writeJsonUserData(QJsonObject&) const;
+    void writeJsonDoor(QJsonObject&, const QString&) const;
+    void writeJsonHighlight(QJsonObject&) const;
 
-    int id;
-    int area;
-    int weight;
+    int id = 0;
+    int area = -1;
+    int weight = 1;
+    // Uses "shortStrings" as keys for normal exits:
     QMap<QString, int> exitWeights;
-    int north;
-    int northeast;
-    int east;
-    int southeast;
-    int south;
-    int southwest;
-    int west;
-    int northwest;
-    int up;
-    int down;
-    int in;
-    int out;
+    int north = -1;
+    int northeast = -1;
+    int east = -1;
+    int southeast = -1;
+    int south = -1;
+    int southwest = -1;
+    int west = -1;
+    int northwest =-1;
+    int up = -1;
+    int down = -1;
+    int in = -1;
+    int out = -1;
 
     QMap<QString, int> mSpecialExits;
     QSet<QString> mSpecialExitLocks;
 
-    TRoomDB* mpRoomDB;
+    TRoomDB* mpRoomDB = nullptr;
     friend class XMLimport;
     friend class XMLexport;
 };

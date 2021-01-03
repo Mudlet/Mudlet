@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,8 @@
 
 
 #include "TMap.h"
+
+#include "TMapLabel.h"
 
 #include "pre_guard.h"
 #include <QList>
@@ -60,7 +62,8 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
-    void writeArea(QJsonArray&) const;
+    void writeJsonArea(QJsonArray&) const;
+    std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
 
 
     QSet<int> rooms; // rooms of this area
@@ -86,17 +89,34 @@ public:
     TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
+    // This has been moved from the TMap class:
+    QMap<int, TMapLabel> mMapLabels;
 
 
 private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
-    void writeUserData(QJsonObject&) const;
-    void writeLabels(QJsonObject&) const;
-    void writeLabel(QJsonArray&, const int, const TMapLabel*) const;
-    void writeColor(QJsonObject&, const QColor&) const;
-    void writeTwinValues(QJsonObject&, const QString&, const QSizeF&) const;
+
+
+    QMap<QString, QString> readJsonUserData(const QJsonObject& obj) const;
+    void writeJsonUserData(QJsonObject&) const;
+
+    void readJsonLabels(const QJsonObject&);
+    void writeJsonLabels(QJsonObject&) const;
+
+    void writeJsonLabel(QJsonArray&, const int, const TMapLabel*) const;
+    void readJsonLabel(const QJsonObject&);
+
+    QColor readJsonColor(const QJsonObject&) const;
+    void writeJsonColor(QJsonObject&, const QColor&) const;
+
+    QSizeF readJsonSize(const QJsonObject&, const QString&) const;
+    void writeJsonSize(QJsonObject&, const QString&, const QSizeF&) const;
+
     void writeTwinValues(QJsonObject&, const QString&, const QPointF&) const;
-    void writeTripleValues(QJsonObject&, const QString&, const QVector3D&) const;
+
+    QVector3D readJson3DCoordinates(const QJsonObject&, const QString&) const;
+    void writeJson3DCoordinates(QJsonObject&, const QString&, const QVector3D&) const;
+
     QList<QByteArray> convertImageToBase64Data(const QPixmap&) const;
     QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
 
