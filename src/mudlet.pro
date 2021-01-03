@@ -108,13 +108,15 @@ $$system(git --version, blob, GIT_STATUS)
 isEqual(GIT_STATUS, 0) {
     # Git command appeared to work - so get a description of the current
     # repository state
-    isEmpty($$(GITHUB_PR_BRANCH)) {
+    GH_PR_BRANCH = $$(GITHUB_PR_BRANCH)
+    isEmpty(GH_PR_BRANCH) {
         GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
     } else {
-        GIT_DESCRIPTION = $$(GITHUB_PR_BRANCH)
+        GIT_DESCRIPTION = GH_PR_BRANCH
     }
-    isEmpty($$(GITHUB_SHA)) {
-        GIT_COMMIT = $${GITHUB_SHA}^2
+    GH_SHA = $$(GITHUB_SHA)
+    isEmpty(GH_SHA) {
+        GIT_COMMIT = ${{GH_SHA}}^2
     } else {
         GIT_COMMIT = HEAD  
     }
