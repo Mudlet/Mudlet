@@ -3225,8 +3225,9 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString font{lua_tostring(L, s)};
 
     if (!mudlet::self()->getAvailableFonts().contains(font)) {
-        lua_pushfstring(L, "setFont: bad argument #%d type (font '%s' is not available)", s, font.toUtf8().constData());
-        return lua_error(L);
+        lua_pushnil(L);
+        lua_pushfstring(L, "Font '%s' is not available)", font.toUtf8().constData());
+        return 2;
     }
 
 #if defined(Q_OS_LINUX)
@@ -3245,7 +3246,6 @@ int TLuaInterpreter::setFont(lua_State* L)
             lua_pushstring(L, result.second.toUtf8().constData());
             return 2;
         }
-        //console->refresh();
         console->refreshView();
     } else {
         console->setFont(font);
