@@ -3224,6 +3224,11 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
     QString font{lua_tostring(L, s)};
 
+    if (!mudlet::self()->getAvailableFonts().contains(font)) {
+        lua_pushfstring(L, "setFont: bad argument #%d type (font '%s' is not available)", s, font.toUtf8().constData());
+        return lua_error(L);
+    }
+
 #if defined(Q_OS_LINUX)
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
@@ -3234,7 +3239,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         // apply changes to main console and its while-scrolling component too.
-        auto result = host.setDisplayFont(font);
+        auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
         if (!result.first) {
             lua_pushboolean(L, false);
             lua_pushstring(L, result.second.toUtf8().constData());
