@@ -109,7 +109,7 @@
             <item>
              <widget class="QLineEdit" name="lineEdit_roomSymbol">
               <property name="inputMethodHints">
-               <set>Qt::ImhUrlCharactersOnly</set>
+               <set>Qt::ImhNone</set>
               </property>
               <property name="placeholderText">
                <string>Room symbol</string>
@@ -140,6 +140,9 @@
               </property>
               <property name="autoFillBackground">
                <bool>true</bool>
+              </property>
+              <property name="inputMethodHints">
+               <set>Qt::ImhNone</set>
               </property>
               <property name="text">
                <string/>
