@@ -83,15 +83,15 @@ public:
 private:
     int mMediaProtocol;
     int mMediaType;
-    QString mMediaFileName;
+    QString mMediaFileName {};
     int mMediaVolume;
     int mMediaLoops;
     int mMediaPriority;
     bool mMediaContinue;
-    QString mMediaTag;
-    QString mMediaUrl;
-    QString mMediaKey;
-    QString mMediaAbsolutePathFileName;
+    QString mMediaTag {};
+    QString mMediaUrl {};
+    QString mMediaKey {};
+    QString mMediaAbsolutePathFileName {};
 };
 
 class TMediaPlayer
