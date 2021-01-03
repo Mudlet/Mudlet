@@ -11157,8 +11157,7 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
 int TLuaInterpreter::setRoomCharColor(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
+        lua_pushfstring(L, "setRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int id = lua_tointeger(L, 1);
@@ -11196,8 +11195,9 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushfstring(L, "setRoomCharColor: room with id %d does not exist", id);
-        return lua_error(L);
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
         pR->mSymbolColor = QColor(r, g, b);
         lua_pushboolean(L, true);
@@ -11211,8 +11211,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "unsetRoomCharColor: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
+        lua_pushfstring(L, "unsetRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int id = lua_tointeger(L, 1);
@@ -11220,8 +11219,9 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushfstring(L, "unsetRoomCharColor: room with id %d does not exist", id);
-        return lua_error(L);
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
         pR->mSymbolColor = nullptr;
         lua_pushboolean(L, true);
@@ -11244,8 +11244,9 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushfstring(L, "getRoomCharColor: room with id %d does not exist", id);
-        return lua_error(L);
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
     } else {
         lua_pushnumber(L, pR->mSymbolColor.red());
         lua_pushnumber(L, pR->mSymbolColor.green());
