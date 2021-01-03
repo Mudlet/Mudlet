@@ -3224,7 +3224,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
     QString font{lua_tostring(L, s)};
 
-    if (!mudlet::self()->getAvailableFonts().contains(font)) {
+    if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
         lua_pushnil(L);
         lua_pushfstring(L, "Font '%s' is not available)", font.toUtf8().constData());
         return 2;
