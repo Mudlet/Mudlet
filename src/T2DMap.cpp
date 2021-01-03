@@ -3551,7 +3551,6 @@ void T2DMap::slot_showSymbolSelection()
     }
 
     if (isAtLeastOneRoom) {
-        QString inputSymbol = QString();
         auto symbolDialog = new dlgRoomSymbol(mpHost, this);
         symbolDialog->init(usedSymbols, roomPtrsSet);
         symbolDialog->show();
