@@ -29,7 +29,9 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
-    mediaData.setMediaFileName(tag->getAttributeValue("FName"));
+    if (tag->hasAttribute("FName")) {
+        mediaData.setMediaFileName(tag->getAttributeValue("FName"));
+    }
 
     if (tag->hasAttribute("V")) {
         QString volume = tag->getAttributeValue("V");
