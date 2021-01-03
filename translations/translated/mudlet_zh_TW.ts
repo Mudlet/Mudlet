@@ -11446,7 +11446,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>一般出口：</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
@@ -11542,7 +11542,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>沒有路線</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -11884,7 +11884,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>命令或 Lua 腳本</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
@@ -11922,7 +11922,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -11937,7 +11937,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -11945,12 +11945,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>將房間移動到另一個區域</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation type="unfinished"/>
+      <translation>您想要將房間移動至哪個區域？</translation>
     </message>
   </context>
   <context>
@@ -11958,7 +11958,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="26"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>表單</translation>
     </message>
   </context>
   <context>
@@ -12095,7 +12095,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="263"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>僅傳遞相符項目</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="299"/>
@@ -12160,7 +12160,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="689"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>保留</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="650"/>
@@ -12258,7 +12258,7 @@ or LUA script</source>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <location filename="../src/ui/vars_main_area.ui" line="145"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>自動類型</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
@@ -12273,20 +12273,21 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="155"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>索引（整數）</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
       <location filename="../src/ui/vars_main_area.ui" line="160"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>表格</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="165"/>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>函數
+（無法從圖形界面創建資料）</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
