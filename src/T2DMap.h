@@ -23,6 +23,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgRoomSymbol.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -261,6 +262,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
+    dlgRoomSymbol* mDlgRoomSymbol;
 
 private slots:
     void slot_createRoom();
