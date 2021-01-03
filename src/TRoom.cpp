@@ -673,16 +673,16 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         while (itOldSpecialExit.hasNext()) {
             itOldSpecialExit.next();
             QString cmd{itOldSpecialExit.value()};
-            if (cmd.startsWith(QLatin1Char('1'))) {
+            if (cmd.startsWith(QLatin1String("1"))) {
                 // Is locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
                 mSpecialExitLocks.insert(cmd);
-            } else if (Q_LIKELY(cmd.startsWith(QLatin1Char('1')))) {
+            } else if (Q_LIKELY(cmd.startsWith(QLatin1String("0")))) {
                 // Is not locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
             } else {
                 // Has no lock prefix at all
-                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+                mSpecialExits.insert(cmd, itOldSpecialExit.key());
             }
         }
     }
