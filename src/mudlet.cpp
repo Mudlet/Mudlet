@@ -3780,6 +3780,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Removes the normal click to activate "About Mudlet" action and move it
     // to a new menu which also contains a "goto updater" option
 
+    if (mpActionAboutWithUpdates) {
+        mpMainToolBar->removeAction(mpActionAboutWithUpdates);
+    }
+
     // First change the existing button:
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         mpActionAbout->setIcon(QIcon(":/icons/mudlet_information.png"));
@@ -3806,7 +3810,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
-    mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
+    mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
 
