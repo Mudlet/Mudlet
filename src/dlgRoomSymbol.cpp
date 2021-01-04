@@ -37,15 +37,13 @@ dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget) : QDialog(pPar
     connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomSymbol::resetColor);
     connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomSymbol::updatePreview);
 
-    auto font = pHost->mpMap->mMapSymbolFont;
-    font.setPointSize(font.pointSize() * 0.9);
-    label_preview->setFont(font);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
 void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
 {
     mpSymbols = pSymbols;
+    mpRooms = pRooms;
     if (mpSymbols.size() <= 1) {
         lineEdit_roomSymbol->setText(!mpSymbols.isEmpty() ? mpSymbols.keys().first() : QString());
         comboBox_roomSymbol->hide();
@@ -62,7 +60,6 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
         previewColor = room->mSymbolColor;
         roomColor = mpHost->mpMap->getColor(firstRoomId);
     }
-    mpRooms = pRooms;
     updatePreview();
 }
 
@@ -85,8 +82,7 @@ void dlgRoomSymbol::initInstructionLabel()
                               "and some have the SAME symbol (others may have none) at present, "
                               "%n is the total number of rooms involved and is at least two. "
                               "Use line feeds to format text into a reasonable rectangle.",
-                              mpRooms.size())
-                                   .arg(mpSymbols.keys().first());
+                              mpRooms.size()).arg(mpSymbols.keys().first());
         } else {
             instructions = tr("The symbol is \"%1\" in the selected room,\n"
                               "delete this to clear the symbol or replace\n"
@@ -104,8 +100,7 @@ void dlgRoomSymbol::initInstructionLabel()
                           "for all of the %n selected room(s):",
                           // Intentional comment to separate arguments!
                           "Use line feeds to format text into a reasonable rectangle if needed, "
-                          "%n is the number of rooms involved.",
-                          mpRooms.size());
+                          "%n is the number of rooms involved.", mpRooms.size());
     }
     label_instructions->setText(instructions);
 }
@@ -161,8 +156,6 @@ QString dlgRoomSymbol::getNewSymbol()
         QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-            // captured(0) is the whole string that matched, which is
-            // not what we want:
             return match.captured(1);
         }
         return comboBox_roomSymbol->currentText();
@@ -172,12 +165,33 @@ QString dlgRoomSymbol::getNewSymbol()
 void dlgRoomSymbol::updatePreview()
 {
     auto realColor = selectedColor != nullptr ? selectedColor : defaultColor();
-    label_preview->setText(getNewSymbol());
-    auto bgStyle = QStringLiteral("background-color: %1; border: 1px solid; border-radius: 1px;").arg(realColor.name());
+    auto newSymbol = getNewSymbol();
+    label_preview->setFont(getFontForPreview(newSymbol));
+    label_preview->setText(newSymbol);
+    auto bgStyle = QStringLiteral("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realColor.name(), backgroundBasedColor(realColor).name());
     pushButton_roomSymbolColor->setStyleSheet(bgStyle);
     label_preview->setStyleSheet(
             QStringLiteral("color: %1; background-color: %2; border: %3;")
                     .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? QStringLiteral("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : QStringLiteral("none")));
+}
+
+QFont dlgRoomSymbol::getFontForPreview(QString text) {
+
+    auto font = mpHost->mpMap->mMapSymbolFont;
+    font.setPointSize(font.pointSize() * 0.9);
+    QString symbolString = text;
+    QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
+    QVector<quint32> codePoints = symbolString.toUcs4();
+    QVector<bool> isUsable;
+    for (int i = 0; i < codePoints.size(); ++i) {
+        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+    }
+    bool needToFallback = isUsable.contains(false);
+    if (needToFallback) {
+        symbolString = QString(QChar::ReplacementCharacter);
+        font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    return font;
 }
 
 void dlgRoomSymbol::openColorSelector()
@@ -215,7 +229,12 @@ void dlgRoomSymbol::resetColor()
     updatePreview();
 }
 
+QColor dlgRoomSymbol::backgroundBasedColor(QColor background)
+{
+    return background.lightness() > 127 ? Qt::black : Qt::white;
+}
+
 QColor dlgRoomSymbol::defaultColor()
 {
-    return roomColor.lightness() > 127 ? Qt::black : Qt::white;
+    return backgroundBasedColor(roomColor);
 }

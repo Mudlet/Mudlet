@@ -41,10 +41,12 @@ signals:
     void signal_save_symbol(QString symbol, QColor color, QSet<TRoom*> rooms);
 
 private:
+    QColor backgroundBasedColor(QColor);
     QColor defaultColor();
     QString getNewSymbol();
     void initInstructionLabel();
     QStringList getComboBoxItems();
+    QFont getFontForPreview(QString);
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;

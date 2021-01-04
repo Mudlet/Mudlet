@@ -132,6 +132,11 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="font">
+               <font>
+                <pointsize>9</pointsize>
+               </font>
+              </property>
               <property name="toolTip">
                <string>Color of to use for the room symbol(s)</string>
               </property>
@@ -139,7 +144,7 @@
                <bool>true</bool>
               </property>
               <property name="text">
-               <string/>
+               <string>Symbol color</string>
               </property>
              </widget>
             </item>

@@ -718,9 +718,9 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     }
 
     if (version < 21) {
-        QString symbolColor = userData.take(QLatin1String("system.fallback_symbol_color"));
-        if (!symbolColor.isEmpty()) {
-            mSymbolColor = QColor(symbolColor);
+        auto symbolColorFallbackKey = QLatin1String("system.fallback_symbol_color");
+        if (userData.contains(symbolColorFallbackKey)) {
+            mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
     }
 
