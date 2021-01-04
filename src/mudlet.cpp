@@ -1537,9 +1537,11 @@ void mudlet::slot_uninstall_package()
     if (!pH) {
         return;
     }
-    QListWidgetItem* pI = packageList->currentItem();
-    if (pI) {
-        pH->uninstallPackage(pI->text(), 0);
+    auto selectedPackages = packageList->selectedItems();
+    if (!selectedPackages.empty()) {
+        for (auto package : selectedPackages) {
+            pH->uninstallPackage(package->text(), 0);
+        }
     }
     packageList->clear();
     packageList->addItems(pH->mInstalledPackages);

@@ -21,7 +21,11 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QListWidget" name="packageList"/>
+       <widget class="QListWidget" name="packageList">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::ExtendedSelection</enum>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QWidget" name="widget_2" native="true">
