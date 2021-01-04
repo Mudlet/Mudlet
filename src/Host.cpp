@@ -711,6 +711,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
     }
 
+
+    if (mIsProfileLoadingSequence) {
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        return std::make_tuple(false, filename_xml, QStringLiteral("profile loading is in progress"));
+    }
+
     QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
