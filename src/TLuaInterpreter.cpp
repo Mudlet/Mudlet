@@ -3201,8 +3201,12 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
         return 2;
     } else {
+        auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
         lua_pushnil(L);
-        lua_pushstring(L, QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result)).toUtf8().constData());
+        lua_pushstring(L, message.toUtf8().constData());
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: saveProfile: " << message << "\n" >> 0;
+        }
         return 2;
     }
 }
