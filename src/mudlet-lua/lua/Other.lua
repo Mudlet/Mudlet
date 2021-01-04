@@ -463,7 +463,7 @@ function speedwalk(dirString, backwards, delay, show)
     end
   else
     for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
-      count = (count == "" and 1 or count)
+      count = (count == "" and 1 or count:reverse())
       for i = 1, count do
         if delay then
           walklist[#walklist + 1] = reversedir[direction]
