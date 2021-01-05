@@ -112,7 +112,7 @@ isEqual(GIT_STATUS, 0) {
     isEmpty(GH_PR_BRANCH) {
         GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
     } else {
-        GIT_DESCRIPTION = GH_PR_BRANCH
+        GIT_DESCRIPTION = ${{GH_PR_BRANCH}}
     }
     GH_SHA = $$(GITHUB_SHA)
     IS_APPVEYOR = $$(GITHUB_SHA)
