@@ -115,10 +115,15 @@ isEqual(GIT_STATUS, 0) {
         GIT_DESCRIPTION = GH_PR_BRANCH
     }
     GH_SHA = $$(GITHUB_SHA)
-    isEmpty(GH_SHA) {
+    IS_APPVEYOR = $$(GITHUB_SHA)
+    !isEmpty(GH_SHA) isEmpty(IS_APPVEYOR) {
         GIT_COMMIT = ${{GH_SHA}}^2
     } else {
-        GIT_COMMIT = HEAD  
+        !isEmpty(GH_SHA) {
+            GIT_COMMIT = ${{GH_SHA}}
+        } else {
+            GIT_COMMIT = HEAD  
+        }
     }
     GIT_COMMITHASH=$$system(git rev-parse --short $${GIT_COMMIT})
     # remove the leading "head/"

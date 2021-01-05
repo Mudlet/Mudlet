@@ -23,6 +23,14 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   }
 }
 
+if ((Test-Path env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH)) {
+   $env:GITHUB_PR_BRANCH = $Env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH
+}
+
+if ((Test-Path env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT)) {
+   $env:GITHUB_SHA = $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
+}
+
 # not all systems we deal with allow uppercase ascii characters
 $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
 
