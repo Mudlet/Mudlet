@@ -1224,6 +1224,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
             ofs << oldCharacterCode;
         }
+        if (mSaveVersion >= 21) {
+            ofs << pR->mSymbolColor;
+        } else {
+            if (pR->mSymbolColor != nullptr) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -2626,6 +2634,63 @@ void TMap::update()
             mpMapper->mp2dMap->update();
         }
     }
+}
+
+QColor TMap::getColor(int id)
+{
+    QColor color;
+
+    TRoom* room = mpRoomDB->getRoom(id);
+    if (!room) {
+        return color;
+    }
+
+    int env = room->environment;
+    if (envColors.contains(env)) {
+        env = envColors[env];
+    } else {
+        if (!customEnvColors.contains(env)) {
+            env = 1;
+        }
+    }
+    switch (env) {
+    case 1:     color = mpHost->mRed_2;             break;
+    case 2:     color = mpHost->mGreen_2;           break;
+    case 3:     color = mpHost->mYellow_2;          break;
+    case 4:     color = mpHost->mBlue_2;            break;
+    case 5:     color = mpHost->mMagenta_2;         break;
+    case 6:     color = mpHost->mCyan_2;            break;
+    case 7:     color = mpHost->mWhite_2;           break;
+    case 8:     color = mpHost->mBlack_2;           break;
+    case 9:     color = mpHost->mLightRed_2;        break;
+    case 10:    color = mpHost->mLightGreen_2;      break;
+    case 11:    color = mpHost->mLightYellow_2;     break;
+    case 12:    color = mpHost->mLightBlue_2;       break;
+    case 13:    color = mpHost->mLightMagenta_2;    break;
+    case 14:    color = mpHost->mLightCyan_2;       break;
+    case 15:    color = mpHost->mLightWhite_2;      break;
+    case 16:    color = mpHost->mLightBlack_2;      break;
+    default: //user defined room color
+        if (!customEnvColors.contains(env)) {
+            if (16 < env && env < 232) {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
+            break;
+        }
+        color = customEnvColors[env];
+    }
+    return color;
 }
 
 QByteArray TMapLabel::base64EncodePixmap() const

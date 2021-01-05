@@ -257,6 +257,8 @@ public:
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
 
+    QColor getColor(int id);
+
 public slots:
     // Moved and revised from dlgMapper:
     void slot_setDownloadProgress(qint64, qint64);
