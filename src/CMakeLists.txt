@@ -455,6 +455,8 @@ if(APPLE)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/${PATH_IN_BUNDLE})
   endforeach()
   foreach(FILE ${LUA_TRANSLATIONS})
+    # convert relative paths to absolute ones, necessary for the ../translations
+    file(REAL_PATH ${FILE} FILE)
     string(REPLACE ${CMAKE_SOURCE_DIR}/translations "" PATH_IN_BUNDLE ${FILE} )
     get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
