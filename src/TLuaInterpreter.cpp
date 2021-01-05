@@ -11157,6 +11157,108 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
+int TLuaInterpreter::setRoomCharColor(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    int id = lua_tointeger(L, 1);
+
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int r = lua_tonumber(L, 2);
+    if (r < 0 || r > 255) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
+        return lua_error(L);
+    }
+
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+    int g = lua_tonumber(L, 3);
+    if (g < 0 || g > 255) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
+        return lua_error(L);
+    }
+
+    if (!lua_isnumber(L, 4)) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (green component as number expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    }
+    int b = lua_tonumber(L, 4);
+    if (b < 0 || b > 255) {
+        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
+        return lua_error(L);
+    }
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        pR->mSymbolColor = QColor(r, g, b);
+        lua_pushboolean(L, true);
+        host.mpMap->mpMapper->mp2dMap->repaint();
+        host.mpMap->mpMapper->update();
+        return 1;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unsetRoomCharColor
+int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "unsetRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    int id = lua_tointeger(L, 1);
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        pR->mSymbolColor = nullptr;
+        lua_pushboolean(L, true);
+        host.mpMap->mpMapper->mp2dMap->repaint();
+        host.mpMap->mpMapper->update();
+        return 1;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomCharColor
+int TLuaInterpreter::getRoomCharColor(lua_State* L)
+{
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "getRoomCharColor: bad argument #1 type (room id as number expected, got %s!)",
+                       luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    int id = lua_tointeger(L, 1);
+
+    Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room with id %d does not exist", id);
+        return 2;
+    } else {
+        lua_pushnumber(L, pR->mSymbolColor.red());
+        lua_pushnumber(L, pR->mSymbolColor.green());
+        lua_pushnumber(L, pR->mSymbolColor.blue());
+        return 3;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
@@ -16243,6 +16345,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteRoom", TLuaInterpreter::deleteRoom);
     lua_register(pGlobalLua, "setRoomChar", TLuaInterpreter::setRoomChar);
     lua_register(pGlobalLua, "getRoomChar", TLuaInterpreter::getRoomChar);
+    lua_register(pGlobalLua, "setRoomCharColor", TLuaInterpreter::setRoomCharColor);
+    lua_register(pGlobalLua, "unsetRoomCharColor", TLuaInterpreter::unsetRoomCharColor);
+    lua_register(pGlobalLua, "getRoomCharColor", TLuaInterpreter::getRoomCharColor);
     lua_register(pGlobalLua, "registerAnonymousEventHandler", TLuaInterpreter::registerAnonymousEventHandler);
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);

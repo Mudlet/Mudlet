@@ -31,6 +31,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
+#include "dlgRoomSymbol.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
@@ -177,102 +178,6 @@ void T2DMap::init()
     rSize = mpMap->mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
     flushSymbolPixmapCache();
-}
-
-QColor T2DMap::getColor(int id)
-{
-    QColor color;
-
-    TRoom* room = mpMap->mpRoomDB->getRoom(id);
-    if (!room) {
-        return color;
-    }
-
-    int env = room->environment;
-    if (mpMap->envColors.contains(env)) {
-        env = mpMap->envColors[env];
-    } else {
-        if (!mpMap->customEnvColors.contains(env)) {
-            env = 1;
-        }
-    }
-    switch (env) {
-    case 1:
-        color = mpHost->mRed_2;
-        break;
-
-    case 2:
-        color = mpHost->mGreen_2;
-        break;
-    case 3:
-        color = mpHost->mYellow_2;
-        break;
-
-    case 4:
-        color = mpHost->mBlue_2;
-        break;
-
-    case 5:
-        color = mpHost->mMagenta_2;
-        break;
-    case 6:
-        color = mpHost->mCyan_2;
-        break;
-    case 7:
-        color = mpHost->mWhite_2;
-        break;
-    case 8:
-        color = mpHost->mBlack_2;
-        break;
-
-    case 9:
-        color = mpHost->mLightRed_2;
-        break;
-
-    case 10:
-        color = mpHost->mLightGreen_2;
-        break;
-    case 11:
-        color = mpHost->mLightYellow_2;
-        break;
-
-    case 12:
-        color = mpHost->mLightBlue_2;
-        break;
-
-    case 13:
-        color = mpHost->mLightMagenta_2;
-        break;
-    case 14:
-        color = mpHost->mLightCyan_2;
-        break;
-    case 15:
-        color = mpHost->mLightWhite_2;
-        break;
-    case 16:
-        color = mpHost->mLightBlack_2;
-        break;
-    default: //user defined room color
-        if (!mpMap->customEnvColors.contains(env)) {
-            if (16 < env && env < 232) {
-                quint8 base = env - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-
-                r = r * 51;
-                g = g * 51;
-                b = b * 51;
-                color = QColor(r, g, b, 255);
-            } else if (231 < env && env < 256) {
-                quint8 k = ((env - 232) * 10) + 8;
-                color = QColor(k, k, k, 255);
-            }
-            break;
-        }
-        color = mpMap->customEnvColors[env];
-    }
-    return color;
 }
 
 void T2DMap::shiftDown()
@@ -531,8 +436,8 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
     }
 }
 
-// key format: <"W_" or "B_" for White/Black><QString of one or more QChars>
-void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
+// key format: <QColor.name()><QString of one or more QChars>
+void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Some constants used to prevent small, unreadable symbols:
     static float symbolLowerSizeLimit = 8.0;
@@ -563,13 +468,9 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
         return;
     }
 
-    QString symbolString(key.mid(2));
+    QString symbolString = text;
     QPainter symbolPainter(pixmap);
-    if (key.startsWith(QLatin1String("W_"))) {
-        symbolPainter.setPen(Qt::white);
-    } else {
-        symbolPainter.setPen(Qt::black);
-    }
+    symbolPainter.setPen(symbolColor);
     symbolPainter.setFont(mpMap->mMapSymbolFont);
     symbolPainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform, true);
 
@@ -854,14 +755,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
         // Do we need to draw the room symbol:
         if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-            QString pixmapKey;
-            if (roomColor.lightness() > 127) {
-                pixmapKey = QStringLiteral("B_%1").arg(pRoom->mSymbol);
+            QColor symbolColor;
+            if (pRoom->mSymbolColor != nullptr) {
+                symbolColor = pRoom->mSymbolColor;
+            } else if (roomColor.lightness() > 127) {
+                symbolColor = Qt::black;
             } else {
-                pixmapKey = QStringLiteral("W_%1").arg(pRoom->mSymbol);
+                symbolColor = Qt::white;
             }
+            auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, isGridMode);
+                addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
             }
 
             painter.save();
@@ -2133,7 +2037,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 pen = painter.pen();
                 pen.setWidthF(exitWidth);
                 pen.setCosmetic(mMapperUseAntiAlias);
-                pen.setColor(getColor(k));
+                pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
                     _line = QLine(p2.x(), p2.y() + mRoomHeight, p2.x(), p2.y());
@@ -2180,7 +2084,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 _poly.append(_p3);
                 _poly.append(_p4);
                 QBrush brush = painter.brush();
-                brush.setColor(getColor(k));
+                brush.setColor(mpMap->getColor(k));
                 brush.setStyle(Qt::SolidPattern);
                 QPen arrowPen = painter.pen();
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
@@ -2973,7 +2877,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             auto roomSymbol = new QAction(tr("Symbol", "2D Mapper context menu (room) item"), this);
             roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
-            connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_setSymbol);
+            connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
 
             auto moveRoomXY = new QAction(tr("Move to", "2D Mapper context menu (room) item"), this);
             moveRoomXY->setToolTip(tr("Move selected group to a given position", "2D Mapper context menu (room) item tooltip"));
@@ -3608,7 +3512,7 @@ void T2DMap::slot_moveRoom()
     mNewMoveAction = true;
 }
 
-void T2DMap::slot_setSymbol()
+void T2DMap::slot_showSymbolSelection()
 {
     // Now analyses and reports the existing symbols used in ALL the selected
     // rooms if more than once (and sorts by their frequency)
@@ -3621,7 +3525,7 @@ void T2DMap::slot_setSymbol()
     // First scan and count all the different symbol used
     TRoom* room;
     bool isAtLeastOneRoom = false;
-    QHash<QString, unsigned int> usedSymbols;
+    QHash<QString, int> usedSymbols;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
@@ -3646,145 +3550,38 @@ void T2DMap::slot_setSymbol()
         }
     }
 
-    if (isAtLeastOneRoom) {
-        QString newSymbol;
-        bool isOk;
-        // TODO: Replace the static QInputDialog::getText(...) calls with
-        // one built manually - so that the font used for the QTextLinet entry
-        // part can be made to use the same as will be used on the 2DMap itself
-        // otherwise can get different glyphs being used between the two which
-        // is confusing to the user...
-        if (usedSymbols.isEmpty()) {
-            // No existing symbols
-            newSymbol = QInputDialog::getText(this,
-                                              tr("Enter room symbol",
-                                                 "Title for room symbol selection/entry dialog (used in three places)"),
-                                              tr("Enter the symbol to use\n"
-                                                 "for this/these %n room(s):",
-                                                 // Intentional comment to separate arguments!
-                                                 "this is for when applying a new room symbol to one or more rooms "
-                                                 "and none have a symbol at present; use line feeds to format text "
-                                                 "into a reasonable rectangle, %n is the number of rooms involved",
-                                                 mMultiSelectionSet.size()),
-                                              QLineEdit::Normal,
-                                              QString(),
-                                              & isOk,
-                                              Qt::Dialog);
-        } else if (usedSymbols.size() == 1) {
-            newSymbol = QInputDialog::getText(this,
-                                              tr("Enter room symbol",
-                                                 "Title for room symbol selection/entry dialog (used in three places)"),
-                                              // Intentional comment to separate arguments!
-                                              ( mMultiSelectionSet.size() > 1 )
-                                                  ? tr("The only used symbol is \"%1\" in one or\n"
-                                                       "more of the selected %n room(s), delete this to\n"
-                                                       "clear it from all selected rooms or replace\n"
-                                                       "with a new symbol to use for all the rooms:",
-                                                       // Intentional comment to separate arguments!
-                                                       "This is for when applying a new room symbol to one or more rooms "
-                                                       "and some have the SAME symbol (others may have none) at present, "
-                                                       "%n is the total number of rooms involved and is at least two. "
-                                                       "Use line feeds to format text into a reasonable rectangle.",
-                                                       mMultiSelectionSet.size())
-                                                    .arg(usedSymbols.keys().first())
-                                                  : tr("The symbol is \"%1\" in the selected room,\n"
-                                                       "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:",
-                                                       // Intentional comment to separate arguments!
-                                                       "This is for when applying a new room symbol to one room. "
-                                                       "Use line feeds to format text into a reasonable rectangle.")
-                                                       .arg(usedSymbols.keys().first()),
-                                              QLineEdit::Normal,
-                                              usedSymbols.keys().first(),
-                                              & isOk,
-                                              Qt::Dialog);
-        } else {
-            QHashIterator<QString, unsigned int> itSymbolUsed(usedSymbols);
-            QSet<unsigned int> symbolCountsSet;
-            while (itSymbolUsed.hasNext()) {
-                itSymbolUsed.next();
-                symbolCountsSet.insert(itSymbolUsed.value());
-            }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            QList<unsigned int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
-#else
-            QList<unsigned int> symbolCountsList{symbolCountsSet.toList()};
-#endif
-            if (symbolCountsList.size() > 1) {
-                std::sort(symbolCountsList.begin(), symbolCountsList.end());
-            }
-            QStringList displayStrings;
-            for (int i = symbolCountsList.size() - 1; i >= 0; --i) {
-                itSymbolUsed.toFront();
-                while (itSymbolUsed.hasNext()) {
-                    itSymbolUsed.next();
-                    if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                        displayStrings.append(tr("%1 {count:%2}",
-                                                 // Intentional comment to separate arguments
-                                                 "Everything after the first parameter (the '%1') will be removed by processing "
-                                                 "it as a QRegularExpression programmatically, ensure the translated text has "
-                                                 "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                                                 "right portion can be extracted if the user clicks on this item when it is shown "
-                                                 "in the QComboBox it is put in.")
-                                              .arg(itSymbolUsed.key())
-                                              .arg(QString::number(itSymbolUsed.value())));
-                    }
-                }
-            }
-            newSymbol = QInputDialog::getItem(this,                    // QWidget * parent
-                                              tr("Enter room symbol",
-                                                 "Title for room symbol selection/entry dialog (used in three places)"),
-                                              tr("Choose:\n"
-                                                 " • an existing symbol from the list below (sorted by most commonly used first)\n"
-                                                 " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
-                                                 " • enter a space to clear any existing symbols\n"
-                                                 "for all of the %n selected room(s):",
-                                                 // Intentional comment to separate arguments!
-                                                 "Use line feeds to format text into a reasonable rectangle if needed, "
-                                                 "%n is the number of rooms involved.",
-                                                 mMultiSelectionSet.size()), // const QString & label
-                                              displayStrings,                                                   // QStringList & items
-                                              0,                                                                // int current = 0
-                                              true,                                                             // bool editable = true
-                                              &isOk,                                                            // bool * ok = 0
-                                              Qt::Dialog);
-            if (isOk && displayStrings.contains(newSymbol)) {
-                // The user has selected one of the existing items in the form
-                // "XXXX {count:##}" and we need to chop off the stuff after the
-                // "XXXX" to get what is needed:
-
-                QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
-                QRegularExpressionMatch match = countStripper.match(newSymbol);
-                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-                    // captured(0) is the whole string that matched, which is
-                    // not what we want:
-                    newSymbol = match.captured(1);
-                }
-            }
-        }
-
-        if (!isOk) {
-            return;
-        }
-
-        if (newSymbol.isEmpty()) {
-            QSetIterator<TRoom*> itRoomPtr(roomPtrsSet);
-            while (itRoomPtr.hasNext()) {
-                itRoomPtr.next()->mSymbol = QString();
-            }
-        } else {
-            // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
-            // handle/use/allow - by normalising the symbol we can ensure that
-            // all the entered ones are decomposed and recomposed in a
-            // "standard" way and will have the same sequence of codepoints:
-            newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-            QSetIterator<TRoom*> itRoomPtr(roomPtrsSet);
-            while (itRoomPtr.hasNext()) {
-                itRoomPtr.next()->mSymbol = newSymbol;
-            }
-        }
-        repaint();
+    if (isAtLeastOneRoom && !mDlgRoomSymbol) {
+        mDlgRoomSymbol = new dlgRoomSymbol(mpHost, this);
+        mDlgRoomSymbol->init(usedSymbols, roomPtrsSet);
+        mDlgRoomSymbol->show();
+        mDlgRoomSymbol->raise();
+        connect(mDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mDlgRoomSymbol, &QDialog::finished, this, [=]() {
+            mDlgRoomSymbol = nullptr;
+        });
     }
+}
+
+void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
+    if (newSymbol.isEmpty()) {
+        QSetIterator<TRoom*> itRoomPtr(rooms);
+        while (itRoomPtr.hasNext()) {
+            itRoomPtr.next()->mSymbol = QString();
+        }
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        QSetIterator<TRoom*> itRoomPtr(rooms);
+        while (itRoomPtr.hasNext()) {
+            auto room = itRoomPtr.next();
+            room->mSymbol = newSymbol;
+            room->mSymbolColor = symbolColor;
+        }
+    }
+    repaint();
 }
 
 void T2DMap::slot_setImage()

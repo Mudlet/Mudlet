@@ -15,7 +15,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="1328"/>
+        <location filename="../../src/T2DMap.cpp" line="1237"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded with single room, but Mudlet does not know where you are at the moment.</numerusform>
@@ -23,7 +23,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="2380"/>
+        <location filename="../../src/T2DMap.cpp" line="2277"/>
         <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
         <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
@@ -36,12 +36,11 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3691"/>
         <source>Enter the symbol to use
 for this/these %n room(s):</source>
         <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
         <translatorcomment>No need to use %n in the singular case - even though Linguist doesn&apos;t like it.</translatorcomment>
-        <translation>
+        <translation type="vanished">
             <numerusform>Enter the symbol to use
 for this room:</numerusform>
             <numerusform>Enter the symbol to use
@@ -49,14 +48,13 @@ for these %n rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3708"/>
         <source>The only used symbol is &quot;%1&quot; in one or
 more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
         <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
         <translatorcomment>The singular case is never used in English as %n is always at least 2.</translatorcomment>
-        <translation>
+        <translation type="vanished">
             <numerusform>(Unused) The only used symbol is &quot;%1&quot; in one or
 more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
@@ -68,14 +66,13 @@ with a new symbol to use for all the rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3766"/>
         <source>Choose:
  • an existing symbol from the list below (sorted by most commonly used first)
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
         <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-        <translation>
+        <translation type="vanished">
             <numerusform>Choose:
  • an existing symbol from the list below (sorted by most commonly used first)
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
@@ -148,6 +145,48 @@ for all of the %n selected rooms:</numerusform>
 </numerusform>
             <numerusform>Trigger name=%1 will fire %n more times.
 </numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>dlgRoomSymbol</name>
+    <message numerus="yes">
+        <location filename="../../src/dlgRoomSymbol.cpp" line="78"/>
+        <source>The only used symbol is &quot;%1&quot; in one or
+more of the selected %n room(s), delete this to
+clear it from all selected rooms or replace
+with a new symbol to use for all the rooms:</source>
+        <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
+        <translation>
+            <numerusform>(Unused) The only used symbol is &quot;%1&quot; in one or
+more of the selected %n room(s), delete this to
+clear it from all selected rooms or replace
+with a new symbol to use for all the rooms:</numerusform>
+            <numerusform>The only used symbol is &quot;%1&quot; in one or
+more of the selected %n rooms, delete
+this to clear it from those rooms or replace
+with a new symbol to use for all the rooms:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgRoomSymbol.cpp" line="99"/>
+        <source>Choose:
+ • an existing symbol from the list below (sorted by most commonly used first)
+ • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
+ • enter a space to clear any existing symbols
+for all of the %n selected room(s):</source>
+        <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
+        <translation>
+            <numerusform>Choose:
+ • an existing symbol from the list below (sorted by most commonly used first)
+ • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
+ • enter a space to clear any existing symbols
+for the selected room:</numerusform>
+            <numerusform>Choose:
+ • an existing symbol from the list below (sorted by most commonly used first)
+ • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
+ • enter a space to clear any existing symbols
+for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
 </context>
