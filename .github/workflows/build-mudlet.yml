@@ -166,8 +166,6 @@ jobs:
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        GITHUB_SHA: ${{github.event.pull_request.head.sha}}
-        GITHUB_PR_BRANCH: ${{github.event.pull_request.head.label}}
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
