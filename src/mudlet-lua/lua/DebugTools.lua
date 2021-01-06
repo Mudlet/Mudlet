@@ -4,10 +4,7 @@
 
 
 
---- Function colorizes all matched regex capture groups on the screen.
---- This is very handy if you make complex regex and want to see what really matches in the text.
----
---- @see matches
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showCaptureGroups
 function showCaptureGroups()
   for k, v in pairs( matches ) do
     selectCaptureGroup( tonumber(k) )
@@ -17,18 +14,7 @@ function showCaptureGroups()
 end
 
 
-
---- Prints the content of the table multimatches[n][m] to the screen. This is meant
---- as a tool to help write multiline trigger scripts. This helps you to easily see
---- what your multiline trigger actually captured in all regex. You can use these values
---- directly in your script by referring to it with multimatches[regex-number][capturegroup].
----
---- @usage Just call this s function from your trigger to show the info.
----   <pre>
----   showMultimatches()
----   </pre>
----
---- @see multimatches
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showMultimatches
 function showMultimatches()
   echo("\n-------------------------------------------------------");
   echo("\nThe table multimatches[n][m] contains:");
@@ -43,11 +29,11 @@ function showMultimatches()
 end
 
 
-
+-- No documentation available in wiki - internal function
 --- get the Lua keywords as a set-like table.
 -- So <code>res["and"]</code> etc would be <code>true</code>.
 -- @return a table
-local function get_keywords ()
+local function get_keywords()
   if not lua_keyword then
     lua_keyword = {
       ["and"] = true, ["break"] = true, ["do"] = true,
@@ -62,6 +48,7 @@ local function get_keywords ()
   return lua_keyword
 end
 
+-- No documentation available in wiki - internal function
 local function quote_if_necessary (v)
   if not v then
     return ''
@@ -75,10 +62,12 @@ end
 
 local keywords
 
+-- No documentation available in wiki - internal function
 local function is_identifier (s)
   return type(s) == 'string' and s:find('^[%a_][%w_]*$') and not keywords[s]
 end
 
+-- No documentation available in wiki - internal function
 local function quote (s)
   if type(s) == 'table' then
     return prettywrite(s, '')
@@ -87,6 +76,7 @@ local function quote (s)
   end
 end
 
+-- No documentation available in wiki - internal function
 local function index (numkey, key)
   if not numkey then
     key = quote(key)
@@ -94,18 +84,7 @@ local function index (numkey, key)
   return '[' .. key .. ']'
 end
 
---- Create a string representation of a Lua table. (From Steve Donovans Penlight library)
---  This function never fails, but may complain by returning an
---  extra value. Normally puts out one item per line, using
---  the provided indent; set the second parameter to '' if
---  you want output on one line.
---  @param tbl {table} Table to serialize to a string.
---  @param space {string} (optional) The indent to use.
---  Defaults to two spaces; make it the empty string for no indentation
---  @param not_clever {bool} (optional) Use for plain output, e.g {['key']=1}.
---  Defaults to false.
---  @return a string
---  @return a possible error message
+-- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#prettywrite
 local append = table.insert
 function prettywrite (tbl, space, not_clever)
   if type(tbl) ~= 'table' then
@@ -215,6 +194,7 @@ function prettywrite (tbl, space, not_clever)
   return table.concat(lines, #space > 0 and '\n' or '')
 end
 
+-- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#display
 function display(...)
   local arg = {...}
   arg.n = table.maxn(arg)
