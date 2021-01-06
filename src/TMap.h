@@ -76,6 +76,8 @@ public:
     bool highlight;
     bool showOnTop;
     bool noScaling;
+
+    QByteArray base64EncodePixmap() const;
 };
 
 
@@ -254,6 +256,8 @@ public:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+
+    QColor getColor(int id);
 
 public slots:
     // Moved and revised from dlgMapper:

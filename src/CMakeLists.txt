@@ -61,6 +61,7 @@ set(mudlet_SRCS
     dlgPackageExporter.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
+    dlgRoomSymbol.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -161,6 +162,7 @@ set(mudlet_UIS
     ui/notes_editor.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
+    ui/room_symbol.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
     ui/source_editor_find_area.ui
@@ -190,6 +192,7 @@ set(mudlet_HDRS
     dlgPackageExporter.h
     dlgProfilePreferences.h
     dlgRoomExits.h
+    dlgRoomSymbol.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h

@@ -38,6 +38,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
+#include <QBuffer>
 #include "post_guard.h"
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -60,6 +61,16 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
+/*
+ * WARNING: There is new code that will be activated when this is incremented
+ * above 20:
+ * * The room special exits (QMap<QString, int>) and special exit locks data
+ *   QSet<QString> will be stored directly in those new container elements
+ *   replacing the backwards compatible combination (a QMultiMap<int, QString>)
+ *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
+ *   special exit name (stored in the VALUE) in the old format.
+ * It has been tested and *seems* to work. SlySven - 2020/12
+ */
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
@@ -802,24 +813,20 @@ void TMap::initGraph()
             }
         }
 
-        QMapIterator<int, QString> itSpecialExit(pSourceR->getOtherMap());
+        QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
-            if ((itSpecialExit.value()).startsWith(QStringLiteral("1"))) {
+            if (pSourceR->hasSpecialExitLock(itSpecialExit.key())) {
                 continue; // Is a locked exit so forget it...
             }
 
-            target = itSpecialExit.key();
+            target = itSpecialExit.value();
             direction = DIR_OTHER;
             if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target)) {
                 pTargetR = mpRoomDB->getRoom(target);
                 if (pTargetR && !pTargetR->isLocked) {
                     route r;
-                    if (Q_LIKELY((itSpecialExit.value()).startsWith(QStringLiteral("0")))) {
-                        r.specialExitName = itSpecialExit.value().mid(1);
-                    } else {
-                        r.specialExitName = itSpecialExit.value();
-                    }
+                    r.specialExitName = itSpecialExit.value();
                     r.cost = exitWeights.value(r.specialExitName, pTargetR->getWeight());
                     if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                         r.direction = direction;
@@ -918,9 +925,9 @@ bool TMap::findPath(int from, int to)
     }
     if (!hasUsableExit) {
         // No available normal exits from this room so check the special ones
-        QStringList specialExitCommands = pFrom->getOtherMap().values();
+        QStringList specialExitCommands = pFrom->getSpecialExits().keys();
         while (!specialExitCommands.isEmpty()) {
-            if (specialExitCommands.at(0).mid(0, 1) == "0") {
+            if (pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
                 hasUsableExit = true;
                 break;
             }
@@ -1183,7 +1190,21 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        ofs << pR->getOtherMap();
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExits();
+        } else {
+            QMultiMap<int, QString> oldSpecialExits;
+            QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+            while (itSpecialExit.hasNext()) {
+                itSpecialExit.next();
+                oldSpecialExits.insert(itSpecialExit.value(),
+                                       (pR->hasSpecialExitLock(itSpecialExit.key())
+                                                ? QLatin1Char('1')
+                                                : QLatin1Char('0'))
+                                               % itSpecialExit.key());
+            }
+            ofs << oldSpecialExits;
+        }
         if (mSaveVersion >= 19) {
             ofs << pR->mSymbol;
         } else {
@@ -1203,6 +1224,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
             ofs << oldCharacterCode;
         }
+        if (mSaveVersion >= 21) {
+            ofs << pR->mSymbolColor;
+        } else {
+            if (pR->mSymbolColor != nullptr) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -1310,6 +1339,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
             }
             ofs << oldLineStyleData;
+        }
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExitLocks();
         }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
@@ -1423,16 +1455,36 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
                 ifs >> mMapSymbolFont;
+                if (mVersion < 21 && mMapSymbolFont.toString().split(QLatin1Char(',')).count() > 15) {
+                    // We need to clean up the effects of using QFont(string)
+                    // for a format 17 or 18 below - as this fix went in before
+                    // 21 was used it only has to be used for map formats 19 and
+                    // 20:
+                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1Char(',')).mid(0, 10).join(QLatin1Char(',')));
+                }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
-                QString fontString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFont"));
+                // BUGFIX: Using QFont::toString() and then using that to
+                // construct a font again afterwards via a QFont(string) was
+                // incorrect as it seemed to cause the last to duplicated the
+                // last nine elements each time. The details of the ::toString()
+                // ::fromString() methods are not currently documented so the
+                // only details are documented in the source:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
+                // and:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
+                // this suggests that only one or ten elements are accepted so
+                // we CAN fix past mistakes by only considering the first ten
+                // elements:
+                QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
                 QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
                 QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
-                    mMapSymbolFont = QFont(fontString);
+                    mMapSymbolFont.fromString(fontString);
                 }
                 if (!fontFudgeFactorString.isEmpty()) {
                     mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
@@ -2584,3 +2636,67 @@ void TMap::update()
     }
 }
 
+QColor TMap::getColor(int id)
+{
+    QColor color;
+
+    TRoom* room = mpRoomDB->getRoom(id);
+    if (!room) {
+        return color;
+    }
+
+    int env = room->environment;
+    if (envColors.contains(env)) {
+        env = envColors[env];
+    } else {
+        if (!customEnvColors.contains(env)) {
+            env = 1;
+        }
+    }
+    switch (env) {
+    case 1:     color = mpHost->mRed_2;             break;
+    case 2:     color = mpHost->mGreen_2;           break;
+    case 3:     color = mpHost->mYellow_2;          break;
+    case 4:     color = mpHost->mBlue_2;            break;
+    case 5:     color = mpHost->mMagenta_2;         break;
+    case 6:     color = mpHost->mCyan_2;            break;
+    case 7:     color = mpHost->mWhite_2;           break;
+    case 8:     color = mpHost->mBlack_2;           break;
+    case 9:     color = mpHost->mLightRed_2;        break;
+    case 10:    color = mpHost->mLightGreen_2;      break;
+    case 11:    color = mpHost->mLightYellow_2;     break;
+    case 12:    color = mpHost->mLightBlue_2;       break;
+    case 13:    color = mpHost->mLightMagenta_2;    break;
+    case 14:    color = mpHost->mLightCyan_2;       break;
+    case 15:    color = mpHost->mLightWhite_2;      break;
+    case 16:    color = mpHost->mLightBlack_2;      break;
+    default: //user defined room color
+        if (!customEnvColors.contains(env)) {
+            if (16 < env && env < 232) {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
+            break;
+        }
+        color = customEnvColors[env];
+    }
+    return color;
+}
+
+QByteArray TMapLabel::base64EncodePixmap() const
+{
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    pix.save(&buffer, "PNG");
+    return buffer.data().toBase64();
+}
