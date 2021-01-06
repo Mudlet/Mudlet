@@ -417,8 +417,12 @@ else
   local startStr, endStr = string.match(matches[2],"(.*) ([%w%.]+)")
   local vals = {'on', 'off', 'true', 'false'}
   local modes = {'simple','normal','complex'}
-  if (table.contains(vals, endStr) or tonumber(endStr)) or (startStr == "mode" and table.contains(modes, endStr)) then
-  	map.setConfigs(startStr, endStr)
+  local modes_move = {'normal','easy','door'}
+  if (table.contains(vals, endStr) or tonumber(endStr)) 
+    or (startStr == "mode" and table.contains(modes, endStr)) 
+    or (startStr == "mode_move" and table.contains(modes_move, endStr)) 
+    then  
+    map.setConfigs(startStr, endStr)
   else
   	map.setConfigs(matches[2])
   end
@@ -596,6 +600,13 @@ end</script>
 				<regex>^map mode (\w+)$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
+				<name>Set Map Move Alias</name>
+				<script>map.set_mode_move(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map move (\w+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
 				<name>Set Room Exit Alias</name>
 				<script>map.set_exit(matches[2],matches[3])</script>
 				<command></command>
@@ -647,7 +658,7 @@ end</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- 22/12/2020
-local version = "2.0.20"
+local version = "2.0.21"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -717,7 +728,10 @@ map.help = {[[
             or the area name provided
         &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map
         &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area
-        &lt;link: mode&gt;map mode &lt;simple, normal, or complex&gt;&lt;/link&gt; - Sets the mapping mode
+        &lt;link: mode&gt;map mode &lt;simple, normal or complex&gt;&lt;/link&gt; - Sets the mapping mode, which
+            defines how new rooms are added to the map.         
+        &lt;link: move&gt;map move &lt;normal, easy, or door&gt;&lt;/link&gt; - Sets the movement mode, which
+            defines how mapper interact with rooms already mapped. Can detect and create doors automatically.        
         &lt;link: add door&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;/link&gt; -
             Creates a door in the given direction, with the given status
             (default closed), in both directions, unless a one-direction door
@@ -938,6 +952,19 @@ map.help.mode = [[
         In complex mode, none of the exits of the newly connected room are
         connected automatically when it is created.
 ]]
+map.help.mode_move = [[
+    &lt;cyan&gt;Map Move&lt;reset&gt;
+        syntax: &lt;yellow&gt;map move &lt;normal, easy, door&gt;&lt;reset&gt;
+        
+        This command changes the mapping move mode used to find rooms already mapped.
+        
+        In normal move: check the room name and exit.
+        
+        In easy move: check only the room name.
+        
+        In door move: check only the room name and automatically create doors if
+        there aren't matching exits.
+]]
 map.help.add_door = [[
     &lt;cyan&gt;Add Door&lt;reset&gt;
         syntax: &lt;yellow&gt;add door &lt;direction&gt; &lt;optional none, open, closed, or locked&gt;
@@ -1138,15 +1165,12 @@ map.help.config = [[
             any lines stored from the game used to search for the room name
             are cleared. This may be true or false.
 
-        &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and may be
-            "simple", "normal", or "complex".
-        
-        &lt;yellow&gt;lazy_room_detect&lt;reset&gt; - When this is set, an adiacent room is detected
-            checking only the room name and not the room exits in the
-            starting/destinatation room. Is useful if your game don't
-            provide a clear method of detecting opened/closed door.
-            This may be true or false.
+        &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and defines how
+            new rooms are added to the map. May be "simple", "normal", "complex".
             
+        &lt;yellow&gt;mode_move&lt;reset&gt; - This is the default movement mode on startup, and defines
+            how mapper interact with rooms already mapped. May be "normal", "easy" or "door".
+   
         &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
             This may be any web address where the versions.lua and
             generic_mapper.xml files can be downloaded from.
@@ -1266,7 +1290,7 @@ profilePath = profilePath:gsub("\\","/")
 
 map.defaults = {
     mode = "normal", -- can be simple, normal, or complex
-    lazy_room_detect = false,
+    mode_move = "normal", -- can be normal, easy or door
     stretch_map = true,
     search_on_look = true,
     speedwalk_delay = 1,
@@ -1332,7 +1356,7 @@ local function config()
 
     -- setup metatable to store sensitive values
     local protected = {"mapping", "currentRoom", "currentName", "currentExits", "currentArea",
-        "prevRoom", "prevName", "prevExits", "mode", "version"}
+        "prevRoom", "prevName", "prevExits", "mode", "mode_move", "version"}
     mt = getmetatable(map) or {}
     mt.__index = mt
     mt.__newindex = function(tbl, key, value)
@@ -1349,6 +1373,7 @@ local function config()
         end
     setmetatable(map, mt)
     map.set("mode", configs.mode)
+    map.set("mode_move", configs.mode_move)
     map.set("version", version)
 
     local saves = {}
@@ -1455,7 +1480,7 @@ function map.show_help(cmd)
     echo("\n")
 end
 
-local bool_configs = {'lazy_room_detect', 'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
+local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
     'clear_lines_on_send', 'debug', 'custom_name_search', 'use_translation'}
 -- function intended to be used by an alias to change config values and save them to a file for later
 function map.setConfigs(key, val, sub_key)
@@ -1585,6 +1610,42 @@ local function set_room(roomID)
     map.set("currentArea", getRoomArea(map.currentRoom))
     centerview(map.currentRoom)
     raiseEvent("onMoveMap", map.currentRoom)
+end
+
+function map.auto_add_door()  
+  -- called after creation of the room (not local so can be called in script)
+  -- if there is a missing exit, probabily there is a closed door
+  -- if there is a new exit, probably there is a opened door
+  local exits_seen =  map.currentExits   
+  local exits_mapper = getRoomExits(map.currentRoom)     
+  local exits_stubs = getExitStubs1(map.currentRoom)
+  -- Merge all exits saved in mapper
+  local exits_all = {}
+  if exits_mapper then 
+    for k,_ in spairs(exits_mapper) do  
+      table.insert(exits_all, k)    
+    end  
+  end  
+  if exits_stubs then 
+    for i = 1, #exits_stubs do
+      table.insert(exits_all, stubmap[exits_stubs[i]]) 
+    end
+  end
+  -- exits_all - Search missing exits that are already saved in mapper (a closed door)
+  local loc_dir = "" 
+  for i = 1, #exits_all do  
+    if not table.contains(exits_seen, exits_all[i]) then 
+      loc_dir = exits_all[i]      
+      expandAlias("add door " .. loc_dir .. " open", false)
+    end      
+  end
+  -- exits_seen - Search new exits that are not saved in mapper (an opened door)
+  for i = 1, #exits_seen do    
+    if not table.contains(exits_all, exits_seen[i]) then
+       loc_dir =  exits_seen[i]      
+       expandAlias("add door " .. loc_dir .. " open", false)    
+    end
+  end
 end
 
 local function add_door(roomID, dir, status)
@@ -1736,17 +1797,14 @@ local function check_room(roomID, name, exits)
     return table.is_empty(t_exits) or check_doors(roomID,t_exits)
 end
 
-local function check_room_only_name(roomID, name)
-   -- check to see if room name and exits match expecations
+local function check_room_name(roomID, name)
+    -- check if rooms name match
     if not roomID then
         error("Check Room Error: No ID",2)
     end
-    if name ~= getRoomName(roomID) then 
-        return false
-    else        
-        return true
-    end
-end
+    if name ~= getRoomName(roomID) then return false end    
+    return true
+end 
 
 local function stretch_map(dir,x,y,z)
     -- stretches a map to make room for just added room that would overlap with existing room
@@ -1918,12 +1976,15 @@ local function move_map()
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
-            if exits[move] and (vision_fail or check_room(exits[move], map.currentName, map.currentExits)) then
+            if exits[move] and (vision_fail or check_room(exits[move], map.currentName, map.currentExits)) then                
                 set_room(exits[move])
-            elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits)) then
-                set_room(special[move])
-            elseif map.configs.lazy_room_detect and exits[move] and (vision_fail or check_room_only_name(exits[move], map.currentName)) then
+            elseif special[move] and (vision_fail or check_room(special[move], map.currentName, map.currentExits)) then                
+                set_room(special[move])            
+            elseif map.mode_move ~= "normal" and exits[move] and ( vision_fail or check_room_name(exits[move], map.currentName)  ) then           
                 set_room(exits[move])
+                if map.mode_move == "door" then                
+                  map.auto_add_door()
+                end
             elseif not vision_fail then
                 if map.mapping and move then
                     find_link(map.currentName, map.currentExits, move, map.configs.max_search_distance)
@@ -2250,10 +2311,18 @@ end
 function map.set_mode(mode)
     -- switches mapping modes
     if not table.contains({"simple","normal","complex"},mode) then
-        show_err("Invalid Map Mode, must be 'simple', 'normal', or 'complex'.")
+        show_err("Invalid Map Mode, must be 'simple', 'normal' or 'complex'.")
     end
     map.set("mode", mode)
     map.echo("Current mode set to: " .. mode)
+end
+
+function map.set_mode_move(mode_move)
+    -- Save move modes
+    if not table.contains({"normal","easy","door"},mode_move) then
+        show_err("Invalid Map Move, must be 'normal', 'easy' or 'door'.")
+    end    
+    map.setConfigs("mode_move", mode_move)
 end
 
 function map.start_mapping(area_name)
