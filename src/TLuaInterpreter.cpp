@@ -211,7 +211,7 @@ TLuaInterpreter::~TLuaInterpreter()
 bool TLuaInterpreter::verifyBoolean(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isboolean(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "boolean");
+        announceWrongArgumentType(L, pos, functionName, publicName, "boolean", isOptional);
         return lua_error(L);
     }
     return lua_toboolean(L, pos);
@@ -222,7 +222,7 @@ bool TLuaInterpreter::verifyBoolean(L, pos, functionName, publicName, isOptional
 QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isstring(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "string");
+        announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
         return lua_error(L);
     }
     return lua_tostring(L, pos);
@@ -233,7 +233,7 @@ QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, isOption
 int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
         return lua_error(L);
     }
     return lua_tointeger(L, pos);
@@ -244,7 +244,7 @@ int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, isOptional)
 float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional;
         return lua_error(L);
     }
     return lua_tonumber(L, pos);
@@ -252,7 +252,7 @@ float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, isOptional)
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-void TLuaInterpreter::announceWrongArgumentType(L, pos, functionName, publicName, isOptional, publicType) 
+void TLuaInterpreter::announceWrongArgumentType(L, pos, functionName, publicName, publicType, isOptional) 
 { 
     if isOptional {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!", 

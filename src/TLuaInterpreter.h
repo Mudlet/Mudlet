@@ -601,7 +601,7 @@ private:
     QString verifyString(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     int verifyInt(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     float verifyFloat(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
-    void announceWrongArgumentType(lua_State*, const int, const QString&, const QString&, const bool isOptional = false, const QString&);
+    void announceWrongArgumentType(lua_State*, const int, const QString&, const QString&, const QString&, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
