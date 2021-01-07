@@ -227,7 +227,7 @@ QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const char* f
         announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return QString;
+        return QString();
     }
     return lua_tostring(L, pos);
 }
