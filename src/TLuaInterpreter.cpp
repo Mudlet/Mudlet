@@ -212,7 +212,9 @@ bool TLuaInterpreter::verifyBoolean(L, pos, functionName, publicName, isOptional
 { 
     if (!lua_isboolean(L, pos)) { 
         announceWrongArgumentType(L, pos, functionName, publicName, "boolean", isOptional);
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return false;
     }
     return lua_toboolean(L, pos);
 }
@@ -223,7 +225,9 @@ QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, isOption
 { 
     if (!lua_isstring(L, pos)) { 
         announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return QString;
     }
     return lua_tostring(L, pos);
 }
@@ -234,7 +238,9 @@ int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return -1;
     }
     return lua_tointeger(L, pos);
 }
@@ -245,7 +251,9 @@ float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional;
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return 0;
     }
     return lua_tonumber(L, pos);
 }
