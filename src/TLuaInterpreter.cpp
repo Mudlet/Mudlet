@@ -206,10 +206,10 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", true);
 //
 // See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
-bool TLuaInterpreter::verifyBool(L, functionName, pos, publicName, notOptional)
+bool TLuaInterpreter::verifyBool(L, pos, functionName, publicName, notOptional)
 { 
     if (!lua_isboolean(L, pos)) { 
-        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "boolean");
+        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "boolean");
         return lua_error(L);
     }
     return lua_toboolean(L, pos);
@@ -217,10 +217,10 @@ bool TLuaInterpreter::verifyBool(L, functionName, pos, publicName, notOptional)
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-QString TLuaInterpreter::verifyString(L, functionName, pos, publicName, notOptional)
+QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, notOptional)
 { 
     if (!lua_isstring(L, pos)) { 
-        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "string");
+        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "string");
         return lua_error(L);
     }
     return lua_tostring(L, pos);
@@ -228,10 +228,10 @@ QString TLuaInterpreter::verifyString(L, functionName, pos, publicName, notOptio
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-int TLuaInterpreter::verifyInt(L, functionName, pos, publicName, notOptional)
+int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, notOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "number");
         return lua_error(L);
     }
     return lua_tointeger(L, pos);
@@ -239,10 +239,10 @@ int TLuaInterpreter::verifyInt(L, functionName, pos, publicName, notOptional)
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-float TLuaInterpreter::verifyFloat(L, functionName, pos, publicName, notOptional)
+float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, notOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "number");
         return lua_error(L);
     }
     return lua_tonumber(L, pos);
@@ -250,7 +250,7 @@ float TLuaInterpreter::verifyFloat(L, functionName, pos, publicName, notOptional
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-void TLuaInterpreter::announceWrongArgumentType(L, functionName, pos, publicName, notOptional, publicType) 
+void TLuaInterpreter::announceWrongArgumentType(L, pos, functionName, publicName, notOptional, publicType) 
 { 
     if notOptional {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s)!", 
@@ -9275,7 +9275,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 //        lua_pushstring(L, "createMapLabel: wrong argument type");
 //        return lua_error(L);
 //    }
-    int area = verifyInt(L, "createMapLabel", 1, "areaID");
+    int area = verifyInt(L, 1, "createMapLabel", "areaID");
 
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");

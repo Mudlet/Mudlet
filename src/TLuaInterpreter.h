@@ -597,11 +597,11 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    bool TLuaInterpreter::verifyBool(lua_State*, const QString&, const int, const QString&, const bool);
-    QString TLuaInterpreter::verifyString(lua_State*, const QString&, const int, const QString&, const bool);
-    int TLuaInterpreter::verifyInt(lua_State*, const QString&, const int, const QString&, const bool);
-    float TLuaInterpreter::verifyFloat(lua_State*, const QString&, const int, const QString&, const bool);
-    void TLuaInterpreter::announceWrongArgumentType(lua_State*, const QString&, const int, const QString&, const bool, const QString&);
+    bool TLuaInterpreter::verifyBool(lua_State*, const int, const QString&, const QString&, const bool);
+    QString TLuaInterpreter::verifyString(lua_State*, const int, const QString&, const QString&, const bool);
+    int TLuaInterpreter::verifyInt(lua_State*, const int, const QString&, const QString&, const bool);
+    float TLuaInterpreter::verifyFloat(lua_State*, const int, const QString&, const QString&, const bool);
+    void TLuaInterpreter::announceWrongArgumentType(lua_State*, const int, const QString&, const QString&, const bool, const QString&);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
