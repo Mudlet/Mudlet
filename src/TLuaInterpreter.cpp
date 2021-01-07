@@ -9277,19 +9277,22 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 //        lua_pushstring(L, "createMapLabel: wrong argument type");
 //        return lua_error(L);
 //    }
+//    int area = lua_tointeger(L, 1);
     int area = verifyInt(L, 1, "createMapLabel", "areaID");
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 2);
+//    if (!lua_isstring(L, 2)) {
+//        lua_pushstring(L, "createMapLabel: wrong argument type");
+//        return lua_error(L);
+//    }
+//    QString text = lua_tostring(L, 2);
+QString text = verifyString(L, 2, "createMapLabel", "text");
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posx = lua_tonumber(L, 3);
+//    if (!lua_isnumber(L, 3)) {
+//        lua_pushstring(L, "createMapLabel: wrong argument type");
+//        return lua_error(L);
+//    }
+//    float posx = lua_tonumber(L, 3);
+    float posx = verifyFloat(L, 3, "posX", "number");
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
@@ -9340,11 +9343,12 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     int bgb = lua_tointeger(L, 11);
 
     if (args > 11) {
-        if (!lua_isnumber(L, 12)) {
-            lua_pushstring(L, "createMapLabel: wrong argument type");
-            return lua_error(L);
-        }
-        zoom = lua_tonumber(L, 12);
+//        if (!lua_isnumber(L, 12)) {
+//            lua_pushstring(L, "createMapLabel: wrong argument type");
+//            return lua_error(L);
+//        }
+//        zoom = lua_tonumber(L, 12);
+        zoom = verifyFloat(L, 12, "createMapLabel", "zoom", true);
 
         if (!lua_isnumber(L, 13)) {
             lua_pushstring(L, "createMapLabel: wrong argument type");
@@ -9353,11 +9357,12 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
         fontSize = lua_tointeger(L, 13);
 
         if (args > 13) {
-            if (!lua_isboolean(L, 14)) {
-                lua_pushstring(L, "createMapLabel: wrong argument type");
-                return lua_error(L);
-            }
-            showOnTop = lua_toboolean(L, 14);
+//            if (!lua_isboolean(L, 14)) {
+//                lua_pushstring(L, "createMapLabel: wrong argument type");
+//                return lua_error(L);
+//            }
+//            showOnTop = lua_toboolean(L, 14);
+            showOnTop = verifyBool(L, 14, "createMapLabel", "showOnTop", true);
         }
         if (args > 14) {
             if (!lua_isboolean(L, 15)) {
