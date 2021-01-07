@@ -203,7 +203,7 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 9);
 //
 // With reduced repetition like that:
-//    bool showOnTop = verifyBoolean(L, "createMapLabel", 9, "showOnTop", false);
+//    bool showOnTop = verifyBoolean(L, 9, "createMapLabel", "showOnTop");
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
