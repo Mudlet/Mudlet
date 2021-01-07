@@ -263,10 +263,10 @@ float TLuaInterpreter::verifyFloat(lua_State* L, const int pos, const char* func
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const int pos, const char* functionName, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!",
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)",
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     } else {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s)!",
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)",
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     }
 }
