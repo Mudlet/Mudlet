@@ -205,6 +205,8 @@ TLuaInterpreter::~TLuaInterpreter()
 // With reduced repetition like that:
 //    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", true);
 //
+// The "notOptional" parameter is optional, and will default to not-optional parameters! :)
+//
 // See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
 bool TLuaInterpreter::verifyBool(L, pos, functionName, publicName, notOptional)
 { 
