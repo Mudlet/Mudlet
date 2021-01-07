@@ -597,7 +597,7 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    bool TLuaInterpreter::verifyBool(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
+    bool TLuaInterpreter::verifyBoolean(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     QString TLuaInterpreter::verifyString(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     int TLuaInterpreter::verifyInt(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     float TLuaInterpreter::verifyFloat(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
