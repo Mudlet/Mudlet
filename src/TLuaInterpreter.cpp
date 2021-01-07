@@ -205,7 +205,7 @@ TLuaInterpreter::~TLuaInterpreter()
 // With reduced repetition like that:
 //    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", true);
 //
-// See also: verifyString, verifyNumber, announceWrongArgumentType
+// See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
 bool TLuaInterpreter::verifyBool(L, functionName, pos, publicName, notOptional)
 { 
     if (!lua_isboolean(L, pos)) { 
@@ -216,7 +216,7 @@ bool TLuaInterpreter::verifyBool(L, functionName, pos, publicName, notOptional)
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool, verifyNumber, announceWrongArgumentType
+// See also: verifyBool
 QString TLuaInterpreter::verifyString(L, functionName, pos, publicName, notOptional)
 { 
     if (!lua_isstring(L, pos)) { 
@@ -227,18 +227,29 @@ QString TLuaInterpreter::verifyString(L, functionName, pos, publicName, notOptio
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool, verifyString, announceWrongArgumentType
-float TLuaInterpreter::verifyNumber(L, functionName, pos, publicName, notOptional)
+// See also: verifyBool
+int TLuaInterpreter::verifyInt(L, functionName, pos, publicName, notOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "string");
+        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "number");
+        return lua_error(L);
+    }
+    return lua_tointeger(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBool
+float TLuaInterpreter::verifyFloat(L, functionName, pos, publicName, notOptional)
+{ 
+    if (!lua_isnumber(L, pos)) { 
+        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "number");
         return lua_error(L);
     }
     return lua_tonumber(L, pos);
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool, verifyString, verifyNumber
+// See also: verifyBool
 void TLuaInterpreter::announceWrongArgumentType(L, functionName, pos, publicName, notOptional, publicType) 
 { 
     if notOptional {
