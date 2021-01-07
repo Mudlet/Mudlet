@@ -9271,11 +9271,11 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     bool noScaling = true;
 
     int args = lua_gettop(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
+//    if (!lua_isnumber(L, 1)) {
+//        lua_pushstring(L, "createMapLabel: wrong argument type");
+//        return lua_error(L);
+//    }
+    int area = verifyInt(L, "createMapLabel", 1, "areaID");
 
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
