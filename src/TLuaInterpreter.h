@@ -597,10 +597,10 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    bool verifyBoolean(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
-    QString verifyString(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
-    int verifyInt(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
-    float verifyFloat(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
+    static bool verifyBoolean(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
+    static QString verifyString(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
+    static int verifyInt(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
+    static float verifyFloat(lua_State*, const int, const QString&, const QString&, const bool isOptional = false);
     void announceWrongArgumentType(lua_State*, const int, const QString&, const QString&, const QString&, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
