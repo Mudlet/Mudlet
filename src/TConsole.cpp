@@ -42,7 +42,6 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
-#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextBoundaryFinder>
@@ -60,7 +59,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , buffer(pH)
 , emergencyStop(new QToolButton)
 , layerCommandLine(nullptr)
-, mBgColor(QColor(Qt::black))
+, mBgColor(Qt::transparent)
 , mCommandBgColor(Qt::black)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")

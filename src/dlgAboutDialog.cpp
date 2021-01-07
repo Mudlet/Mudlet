@@ -24,7 +24,6 @@
 // Debugging value to display ALL licences in the dialog
 // #define DEBUG_SHOWALL
 
-
 #include "dlgAboutDialog.h"
 
 #include "mudlet.h"
@@ -91,7 +90,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2020");
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2021");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -255,10 +254,11 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
 
     textBrowser_mudlet->setHtml(
-            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin:18px 36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                            "%2</table>\n"
-                           "%3</body></html>")
-                    .arg(htmlHead, aboutMudletHeader, aboutMudletBody));
+                           "%3"
+                           "%4</body></html>")
+                    .arg(htmlHead, aboutMudletHeader, createBuildInfo(), aboutMudletBody));
     // clang-format on
 }
 
@@ -1061,4 +1061,13 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
     textBrowser_supporters->setOpenExternalLinks(true);
+}
+
+QString dlgAboutDialog::createBuildInfo() const {
+    return QStringLiteral("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
+        .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
+        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
+        .append(QStringLiteral("</table>"));
 }

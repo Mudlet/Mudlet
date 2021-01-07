@@ -501,6 +501,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
+    AltFocusMenuBarDisable.cpp \
     TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
@@ -517,6 +518,7 @@ SOURCES += \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -603,6 +605,7 @@ SOURCES += \
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
+    AltFocusMenuBarDisable.h \
     TTextCodec.h \
     ctelnet.h \
     discord.h \
@@ -619,6 +622,7 @@ HEADERS += \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -730,6 +734,7 @@ FORMS += \
     ui/notes_editor.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \

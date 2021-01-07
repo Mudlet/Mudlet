@@ -535,6 +535,7 @@ private:
     void migrateDebugConsole(Host* currentHost);
     static bool firstLaunch();
     QString autodetectPreferredLanguage();
+    void installModulesList(Host*, QStringList);
     void setupTrayIcon();
 
     QWidget* mainPane;
@@ -581,6 +582,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;

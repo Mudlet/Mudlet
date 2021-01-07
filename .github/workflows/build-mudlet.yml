@@ -214,10 +214,15 @@ jobs:
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
-      if: env.FOLDER_TO_UPLOAD
+      if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
+
+    - name: Submit to make.mudlet.org
+      if: env.UPLOAD_FILENAME
+      run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      shell: bash
 
     - name: (windows) Show relevant logs logs
       if: failure() && runner.os == 'Windows'
