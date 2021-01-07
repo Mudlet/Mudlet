@@ -203,15 +203,15 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 9);
 //
 // With reduced repetition like that:
-//    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", true);
+//    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", false);
 //
-// The "notOptional" parameter is optional, and will default to not-optional parameters! :)
+// The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
 // See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
-bool TLuaInterpreter::verifyBool(L, pos, functionName, publicName, notOptional)
+bool TLuaInterpreter::verifyBool(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isboolean(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "boolean");
+        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "boolean");
         return lua_error(L);
     }
     return lua_toboolean(L, pos);
@@ -219,10 +219,10 @@ bool TLuaInterpreter::verifyBool(L, pos, functionName, publicName, notOptional)
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, notOptional)
+QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isstring(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "string");
+        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "string");
         return lua_error(L);
     }
     return lua_tostring(L, pos);
@@ -230,10 +230,10 @@ QString TLuaInterpreter::verifyString(L, pos, functionName, publicName, notOptio
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, notOptional)
+int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "number");
         return lua_error(L);
     }
     return lua_tointeger(L, pos);
@@ -241,10 +241,10 @@ int TLuaInterpreter::verifyInt(L, pos, functionName, publicName, notOptional)
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, notOptional)
+float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, isOptional)
 { 
     if (!lua_isnumber(L, pos)) { 
-        announceWrongArgumentType(L, pos, functionName, publicName, notOptional, "number");
+        announceWrongArgumentType(L, pos, functionName, publicName, isOptional, "number");
         return lua_error(L);
     }
     return lua_tonumber(L, pos);
@@ -252,13 +252,13 @@ float TLuaInterpreter::verifyFloat(L, pos, functionName, publicName, notOptional
 
 // No documentation available in wiki - internal function
 // See also: verifyBool
-void TLuaInterpreter::announceWrongArgumentType(L, pos, functionName, publicName, notOptional, publicType) 
+void TLuaInterpreter::announceWrongArgumentType(L, pos, functionName, publicName, isOptional, publicType) 
 { 
-    if notOptional {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s)!", 
+    if isOptional {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!", 
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     } else {
-        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!", 
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s)!", 
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     }
 }
