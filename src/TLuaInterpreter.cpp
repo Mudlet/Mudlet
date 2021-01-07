@@ -9292,7 +9292,7 @@ QString text = verifyString(L, 2, "createMapLabel", "text");
 //        return lua_error(L);
 //    }
 //    float posx = lua_tonumber(L, 3);
-    float posx = verifyFloat(L, 3, "posX", "number");
+    float posx = verifyFloat(L, 3, "createMapLabel", "posX");
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
