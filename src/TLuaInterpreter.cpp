@@ -208,7 +208,7 @@ TLuaInterpreter::~TLuaInterpreter()
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
 // See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
-bool TLuaInterpreter::verifyBoolean(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional)
+bool TLuaInterpreter::verifyBoolean(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "boolean", isOptional);
@@ -221,7 +221,7 @@ bool TLuaInterpreter::verifyBoolean(lua_State* L, const int pos, const QString& 
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional)
+QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
@@ -234,7 +234,7 @@ QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const QString
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-int TLuaInterpreter::verifyInt(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional)
+int TLuaInterpreter::verifyInt(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
@@ -247,7 +247,7 @@ int TLuaInterpreter::verifyInt(lua_State* L, const int pos, const QString& funct
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-float TLuaInterpreter::verifyFloat(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional)
+float TLuaInterpreter::verifyFloat(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
@@ -260,7 +260,7 @@ float TLuaInterpreter::verifyFloat(lua_State* L, const int pos, const QString& f
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const QString& publicType, const bool isOptional)
+void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const int pos, const char* functionName, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!",

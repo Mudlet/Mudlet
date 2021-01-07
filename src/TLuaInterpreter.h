@@ -597,11 +597,11 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    static bool verifyBoolean(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional = false);
-    static QString verifyString(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional = false);
-    static int verifyInt(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional = false);
-    static float verifyFloat(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const bool isOptional = false);
-    static void announceWrongArgumentType(lua_State* L, const int pos, const QString& functionName, const QString& publicName, const QString& publicType, const bool isOptional = false);
+    static bool verifyBoolean(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional = false);
+    static QString verifyString(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional = false);
+    static int verifyInt(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional = false);
+    static float verifyFloat(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional = false);
+    static void announceWrongArgumentType(lua_State* L, const int pos, const char* functionName, const char* publicName, const char* publicType, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
