@@ -193,6 +193,64 @@ TLuaInterpreter::~TLuaInterpreter()
 }
 
 // No documentation available in wiki - internal function
+// Replaces a check like this:
+//    if (!lua_isboolean(L, 9)) {
+//        lua_pushfstring(L,
+//            "createMapLabel: bad argument #9 type (showOnTop as number expected, got %s!)",
+//            luaL_typename(L, 1));
+//        return lua_error(L);
+//    }
+//    bool showOnTop = lua_toboolean(L, 9);
+//
+// With reduced repetition like that:
+//    bool showOnTop = verifyBool(L, "createMapLabel", 9, "showOnTop", true);
+//
+// See also: verifyString, verifyNumber, announceWrongArgumentType
+bool TLuaInterpreter::verifyBool(L, functionName, pos, publicName, notOptional)
+{ 
+    if (!lua_isboolean(L, pos)) { 
+        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "boolean");
+        return lua_error(L);
+    }
+    return lua_toboolean(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBool, verifyNumber, announceWrongArgumentType
+QString TLuaInterpreter::verifyString(L, functionName, pos, publicName, notOptional)
+{ 
+    if (!lua_isstring(L, pos)) { 
+        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "string");
+        return lua_error(L);
+    }
+    return lua_tostring(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBool, verifyString, announceWrongArgumentType
+float TLuaInterpreter::verifyNumber(L, functionName, pos, publicName, notOptional)
+{ 
+    if (!lua_isnumber(L, pos)) { 
+        announceWrongArgumentType(L, functionName, pos, publicName, notOptional, "string");
+        return lua_error(L);
+    }
+    return lua_tonumber(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBool, verifyString, verifyNumber
+void TLuaInterpreter::announceWrongArgumentType(L, functionName, pos, publicName, notOptional, publicType) 
+{ 
+    if notOptional {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s)!", 
+            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+    } else {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s)!", 
+            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+    }
+}
+
+// No documentation available in wiki - internal function
 // Raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
 // the file to be written being the third argument (as multiple downloads are
