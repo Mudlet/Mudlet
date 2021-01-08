@@ -6317,7 +6317,7 @@ with a new symbol to use for all the rooms:</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>El símbolo es &quot;%1&quot; en la sala seleccionada, borrar aquí para suprimir el símbolo o sustitúyalo por un nuevo símbolo para esta sala:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="96"/>
@@ -6333,7 +6333,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgRoomSymbol.cpp" line="130"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {count:%2}</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
@@ -11802,7 +11802,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Reestablecer</translation>
     </message>
   </context>
   <context>
