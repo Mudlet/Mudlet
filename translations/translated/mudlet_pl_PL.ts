@@ -6439,7 +6439,16 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Jedynym używanym symbolem jest &quot;%1&quot; w jednym lub
+więcej wybranych pokoi %n, usuń to aby wyczyść go ze wszystkich wybranych pomieszczeń lub zastąp nowym symbolem, który ma być używany do wszystkich pomieszczeń:</numerusform>
+        <numerusform>Jedynym używanym symbolem jest &quot;%1&quot; w jednym lub
+więcej wybranych pokoi %n, usuń to aby wyczyść go ze wszystkich wybranych pomieszczeń lub zastąp nowym symbolem, który ma być używany do wszystkich pomieszczeń:</numerusform>
+        <numerusform>Jedynym używanym symbolem jest &quot;%1&quot; w jednym lub
+więcej wybranych pokoi %n, usuń to aby wyczyść go ze wszystkich wybranych pomieszczeń lub zastąp nowym symbolem, który ma być używany do wszystkich pomieszczeń:</numerusform>
+        <numerusform>Jedynym używanym symbolem jest &quot;%1&quot; w jednym lub
+więcej wybranych pokoi %n, usuń to aby wyczyść go ze wszystkich wybranych pomieszczeń lub zastąp nowym symbolem, który ma być używany do wszystkich pomieszczeń:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="87"/>
@@ -6447,7 +6456,9 @@ with a new symbol to use for all the rooms:</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Symbolem jest &quot;%1&quot; w wybranym pokoju,
+usuń to, aby skasować symbol lub zamienić
+to z nowym symbolem dla tego pokoju:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="96"/>
@@ -6457,13 +6468,34 @@ it with a new symbol for this room:</source>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wybierz:
+ • istniejący symbol z poniższej listy (posortowany według najczęściej używanych)
+ • wprowadź jeden lub więcej znaków (&quot;widoczne znaki&quot;) jako nowy symbol
+ • wprowadź spację, aby wyczyścić istniejące symbole
+dla wszystkich %n wybranych pokoi:</numerusform>
+        <numerusform>Wybierz:
+ • istniejący symbol z poniższej listy (posortowany według najczęściej używanych)
+ • wprowadź jeden lub więcej znaków (&quot;widoczne znaki&quot;) jako nowy symbol
+ • wprowadź spację, aby wyczyścić istniejące symbole
+dla wszystkich %n wybranych pokoi:</numerusform>
+        <numerusform>Wybierz:
+ • istniejący symbol z poniższej listy (posortowany według najczęściej używanych)
+ • wprowadź jeden lub więcej znaków (&quot;widoczne znaki&quot;) jako nowy symbol
+ • wprowadź spację, aby wyczyścić istniejące symbole
+dla wszystkich %n wybranych pokoi:</numerusform>
+        <numerusform>Wybierz:
+ • istniejący symbol z poniższej listy (posortowany według najczęściej używanych)
+ • wprowadź jeden lub więcej znaków (&quot;widoczne znaki&quot;) jako nowy symbol
+ • wprowadź spację, aby wyczyścić istniejące symbole
+dla wszystkich %n wybranych pokoi:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="130"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {ilość: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
@@ -11954,7 +11986,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Resetuj</translation>
     </message>
   </context>
   <context>
