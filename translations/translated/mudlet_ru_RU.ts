@@ -6565,7 +6565,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет</translation>
     </message>
   </context>
   <context>
@@ -7896,7 +7896,8 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Авторское право © 2008-2021 Mudlet разработчики
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -12051,17 +12052,17 @@ or LUA script</source>
       <location filename="../src/ui/room_symbol.ui" line="14"/>
       <location filename="../src/ui/room_symbol.ui" line="112"/>
       <source>Room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Символ комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Цвет символа комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="147"/>
       <source>Symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет символа</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
