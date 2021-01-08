@@ -9281,103 +9281,25 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     bool noScaling = true;
 
     int args = lua_gettop(L);
-//    if (!lua_isnumber(L, 1)) {
-//        lua_pushstring(L, "createMapLabel: wrong argument type");
-//        return lua_error(L);
-//    }
-//    int area = lua_tointeger(L, 1);
     int area = getVerifiedInt(L, 1, "createMapLabel", "areaID");
-
-//    if (!lua_isstring(L, 2)) {
-//        lua_pushstring(L, "createMapLabel: wrong argument type");
-//        return lua_error(L);
-//    }
-//    QString text = lua_tostring(L, 2);
-QString text = getVerifiedString(L, 2, "createMapLabel", "text");
-
-//    if (!lua_isnumber(L, 3)) {
-//        lua_pushstring(L, "createMapLabel: wrong argument type");
-//        return lua_error(L);
-//    }
-//    float posx = lua_tonumber(L, 3);
+    QString text = getVerifiedString(L, 2, "createMapLabel", "text");
     float posx = getVerifiedFloat(L, 3, "createMapLabel", "posX");
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posy = lua_tonumber(L, 4);
-
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posz = lua_tonumber(L, 5);
-
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgr = lua_tointeger(L, 6);
-
-    if (!lua_isnumber(L, 7)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgg = lua_tointeger(L, 7);
-
-    if (!lua_isnumber(L, 8)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgb = lua_tointeger(L, 8);
-
-    if (!lua_isnumber(L, 9)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgr = lua_tointeger(L, 9);
-
-    if (!lua_isnumber(L, 10)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgg = lua_tointeger(L, 10);
-
-    if (!lua_isnumber(L, 11)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgb = lua_tointeger(L, 11);
-
+    float posy = getVerifiedFloat(L, 4, "createMapLabel", "posY");
+    float posz = getVerifiedFloat(L, 5, "createMapLabel", "posZ");
+    int fgr = getVerifiedInt(L, 6, "createMapLabel", "fgRed");
+    int fgg = getVerifiedInt(L, 7, "createMapLabel", "fgGreen");
+    int fgb = getVerifiedInt(L, 8, "createMapLabel", "fgBlue");
+    int bgr = getVerifiedInt(L, 9, "createMapLabel", "bgRed");
+    int bgg = getVerifiedInt(L, 10, "createMapLabel", "bgGreen");
+    int bgb = getVerifiedInt(L, 11, "createMapLabel", "bgBlue");
     if (args > 11) {
-//        if (!lua_isnumber(L, 12)) {
-//            lua_pushstring(L, "createMapLabel: wrong argument type");
-//            return lua_error(L);
-//        }
-//        zoom = lua_tonumber(L, 12);
         zoom = getVerifiedFloat(L, 12, "createMapLabel", "zoom", true);
-
-        if (!lua_isnumber(L, 13)) {
-            lua_pushstring(L, "createMapLabel: wrong argument type");
-            return lua_error(L);
-        }
-        fontSize = lua_tointeger(L, 13);
-
+        fontSize = getVerifiedInt(L, 13, "createMapLabel", "fontSize", true);
         if (args > 13) {
-//            if (!lua_isboolean(L, 14)) {
-//                lua_pushstring(L, "createMapLabel: wrong argument type");
-//                return lua_error(L);
-//            }
-//            showOnTop = lua_toboolean(L, 14);
             showOnTop = getVerifiedBoolean(L, 14, "createMapLabel", "showOnTop", true);
         }
         if (args > 14) {
-            if (!lua_isboolean(L, 15)) {
-                lua_pushstring(L, "createMapLabel: wrong argument type");
-                return lua_error(L);
-            }
-            noScaling = lua_toboolean(L, 15);
+            noScaling = getVerifiedBoolean(L, 15, "createMapLabel", "noScaling", true);
         }
     }
 
