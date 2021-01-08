@@ -2644,7 +2644,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
 
     int dir = dirToNumber(L, 2);
     if (!dir) {
-        lua_pushfstring(L, "setExitStub: bad argument #2 type (direction as number or string expected, got %s!)");
+        lua_pushfstring(L, "setExitStub: bad argument #2 type (direction as number or string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
