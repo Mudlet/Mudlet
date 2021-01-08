@@ -8696,7 +8696,7 @@ int TLuaInterpreter::setExit(lua_State* L)
 
     int dir = dirToNumber(L, 3);
     if (!dir) {
-        lua_pushfstring(L, "setExit: bad argument #3 type (direction as number or string expected, got %s!)");
+        lua_pushfstring(L, "setExit: bad argument #3 type (direction as number or string expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
 
