@@ -4977,22 +4977,22 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1068"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Техническая информация:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1069"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Версия</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1070"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>ОС</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1071"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>Процессор</translation>
     </message>
   </context>
   <context>
@@ -10729,7 +10729,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Авто-сохранение при выходе</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
