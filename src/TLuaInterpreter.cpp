@@ -2682,24 +2682,15 @@ int TLuaInterpreter::saveMap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitStub
 int TLuaInterpreter::setExitStub(lua_State* L)
 {
-    //args:room id, direction (as given by the #define direction table), status
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setExitStub: Need a room number as first argument");
-        return lua_error(L);
-    }
-    int roomId = lua_tonumber(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    int dirType = dirToNumber(L, 2);
-    if (!dirType) {
-        lua_pushstring(L, "setExitStub: Need a dir number as 2nd argument");
+    int dir = dirToNumber(L, 2);
+    if (!dir) {
+        lua_pushfstring(L, "setExitStub: bad argument #2 type (direction as number or string expected, got %s!)");
         return lua_error(L);
     }
 
-    if (!lua_isboolean(L, 3)) {
-        lua_pushstring(L, "setExitStub: Need a true/false for third argument");
-        return lua_error(L);
-    }
-    bool status = lua_toboolean(L, 3);
+    bool status = getVerifiedBoolean(L, __func__, 3, "set/unset");
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
@@ -2710,11 +2701,11 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         lua_pushstring(L, "setExitStub: RoomId doesn't exist");
         return lua_error(L);
     }
-    if (dirType > 12 || dirType < 1) {
-        lua_pushstring(L, "setExitStub: dirType must be between 1 and 12");
+    if (dir > 12 || dir < 1) {
+        lua_pushstring(L, "setExitStub: direction must be between 1 and 12");
         return lua_error(L);
     }
-    pR->setExitStub(dirType, status);
+    pR->setExitStub(dir, status);
     return 0;
 }
 
@@ -2723,15 +2714,11 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
 {
     int toRoom;
     int roomsGiven = 0;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "connectExitStub: Need a room number as first argument");
-        return lua_error(L);
-    }
-    int roomId = lua_tonumber(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "fromID");
 
     int dirType = dirToNumber(L, 2);
     if (!dirType) {
-        lua_pushstring(L, "connectExitStub: Need a direction number (or room id) as 2nd argument");
+        lua_pushfstring(L, "connectExitStub: bad argument #2 type (toID as number or direction as number or string expected, got %s!)");
         return lua_error(L);
     }
     if (!lua_isnumber(L, 3) && !lua_isstring(L, 3)) {
@@ -5361,11 +5348,7 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomLocked
 int TLuaInterpreter::roomLocked(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "roomLocked: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -5381,17 +5364,8 @@ int TLuaInterpreter::roomLocked(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockRoom
 int TLuaInterpreter::lockRoom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "lockRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
-
-    if (!lua_isboolean(L, 2)) {
-        lua_pushstring(L, "lockRoom: wrong argument type");
-        return lua_error(L);
-    }
-    bool b = lua_toboolean(L, 2);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
+    bool b = getVerifiedBoolean(L, __func__, 2, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -5408,23 +5382,15 @@ int TLuaInterpreter::lockRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockExit
 int TLuaInterpreter::lockExit(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "lockExit: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
 
     int dir = dirToNumber(L, 2);
     if (!dir) {
-        lua_pushstring(L, "lockExit: wrong argument type");
+        lua_pushfstring(L, "lockExit: bad argument #2 type (direction as number or string expected, got %s!)");
         return lua_error(L);
     }
 
-    if (!lua_isboolean(L, 3)) {
-        lua_pushstring(L, "lockExit: wrong argument type");
-        return lua_error(L);
-    }
-    bool b = lua_toboolean(L, 3);
+    bool b = getVerifiedBoolean(L, __func__, 3, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -5524,15 +5490,11 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasExitLock
 int TLuaInterpreter::hasExitLock(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "hasExitLock: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
 
     int dir = dirToNumber(L, 2);
     if (!dir) {
-        lua_pushstring(L, "hasExitLock: wrong argument type");
+        lua_pushfstring(L, "hasExitLock: bad argument #2 type (direction as number or string expected, got %s!)");
         return lua_error(L);
     }
 
@@ -5548,11 +5510,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomExits
 int TLuaInterpreter::getRoomExits(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomExits: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -9009,21 +8967,12 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExit
 int TLuaInterpreter::setExit(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setExit: wrong argument type");
-        return lua_error(L);
-    }
-    int from = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setExit: wrong argument type");
-        return lua_error(L);
-    }
-    int to = lua_tointeger(L, 2);
+    int from = getVerifiedInt(L, __func__, 1, "from roomID");
+    int to = getVerifiedInt(L, __func__, 2, "to roomID");
 
     int dir = dirToNumber(L, 3);
     if (!dir) {
-        lua_pushstring(L, "setExit: wrong argument type");
+        lua_pushfstring(L, "setExit: bad argument #3 type (direction as number or string expected, got %s!)");
         return lua_error(L);
     }
 
@@ -9036,12 +8985,7 @@ int TLuaInterpreter::setExit(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomCoordinates
 int TLuaInterpreter::getRoomCoordinates(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomCoordinates: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
@@ -9060,12 +9004,7 @@ int TLuaInterpreter::getRoomCoordinates(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomArea
 int TLuaInterpreter::getRoomArea(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomArea: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
@@ -9079,12 +9018,7 @@ int TLuaInterpreter::getRoomArea(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomExists
 int TLuaInterpreter::roomExists(lua_State* L)
 {
-    if (!lua_isnumber(L, 1) || !lua_isstring(L, 1)) {
-        lua_pushstring(L, "roomExists: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
@@ -9883,7 +9817,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
     int labelId = -1;
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
-        lua_pushstring(L, "getMapLabel: bad argument #2 type (labelId as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "getMapLabel: bad argument #2 type (labelId as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     if (lua_isnumber(L, 2)) {
@@ -10255,12 +10189,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearSpecialExits
 int TLuaInterpreter::clearSpecialExits(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "clearSpecialExits: wrong argument type");
-        return lua_error(L);
-    }
-    int id_from = lua_tointeger(L, 1);
-
+    int id_from = getVerifiedInt(L, __func__, 1, "roomID");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (pR) {
@@ -10400,11 +10329,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomEnv
 int TLuaInterpreter::getRoomEnv(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomEnv: wrong argument type");
-        return lua_error(L);
-    }
-    int roomID = lua_tointeger(L, 1);
+    int roomID = lua_tointeger(L, __func__, 1, "roomID");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
