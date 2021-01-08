@@ -1645,12 +1645,7 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMapEvent
 int TLuaInterpreter::removeMapEvent(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "removeMapEvent: wrong first argument type");
-        return lua_error(L);
-    }
-    QString displayName = lua_tostring(L, 1);
-
+    QString displayName = getVerifiedString(L, __func__, 1, "event name");
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
         if (host.mpMap->mpMapper) {
@@ -5993,7 +5988,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms
 int TLuaInterpreter::getAreaRooms(lua_State* L)
 {
-    int id = getVerifiedInt(L, __func__, 1, "areaID");
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -8477,17 +8472,8 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
-    if (!lua_isboolean(L, 1)) {
-        lua_pushstring(L, "invokeFileDialog: wrong argument type");
-        return lua_error(L);
-    }
-    bool luaDir = lua_toboolean(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "invokeFileDialog: wrong argument type");
-        return lua_error(L);
-    }
-    QString title = lua_tostring(L, 2);
+    bool luaDir = getVerifiedBoolean(L, __func__, 1, "fileOrFolder");
+    QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
     if (!luaDir) {
         QString fileName = QFileDialog::getExistingDirectory(nullptr, title, QDir::currentPath());
@@ -8560,24 +8546,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderColor
 int TLuaInterpreter::setBorderColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setBorderColor: wrong argument type");
-        return lua_error(L);
-    }
-    int luaRed = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setBorderColor: wrong argument type");
-        return lua_error(L);
-    }
-    int luaGreen = lua_tointeger(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setBorderColor: wrong argument type");
-        return lua_error(L);
-    }
-    int luaBlue = lua_tointeger(L, 3);
-
+    int luaRed = getVerifiedInt(L, __func__, 1, "red");
+    int luaGreen = getVerifiedInt(L, __func__, 1, "green");
+    int luaBlue = getVerifiedInt(L, __func__, 1, "blue");
     Host& host = getHostFromLua(L);
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
@@ -8602,36 +8573,11 @@ int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCustomEnvColor
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        return lua_error(L);
-    }
-    int r = lua_tointeger(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        return lua_error(L);
-    }
-    int g = lua_tointeger(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        return lua_error(L);
-    }
-    int b = lua_tointeger(L, 4);
-
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "setCustomEnvColor: wrong argument type");
-        return lua_error(L);
-    }
-    int alpha = lua_tointeger(L, 5);
-
+    int id = getVerifiedInt(L, __func__, 1, "environmentID");
+    int r = getVerifiedInt(L, __func__, 2, "r");
+    int g = getVerifiedInt(L, __func__, 3, "g");
+    int b = getVerifiedInt(L, __func__, 4, "b");
+    int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->customEnvColors[id] = QColor(r, g, b, alpha);
     return 0;
@@ -11024,7 +10970,7 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
-    int id = getVerifiedInt(L, __func__, 1, "areaID");
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
     int x = getVerifiedInt(L, __func__, 2, "x");
     int y = getVerifiedInt(L, __func__, 3, "y");
     int z = getVerifiedInt(L, __func__, 4, "z");
@@ -11076,7 +11022,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
-    int id = getVerifiedInt(L, __func__, 1, "areaID");
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
     bool gridMode = getVerifiedBoolean(L, __func__, 1, "true/false");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
@@ -11283,15 +11229,11 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         windowName = WINDOW_NAME(L, s);
         s++;
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "insertPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s);
+    QString txt = getVerifiedString(L, __func__, s, "text");
     s++;
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "insertPopup: wrong argument type");
+        lua_pushfstring(L, "insertPopup: bad argument #%d type (commands as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -11307,7 +11249,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     s++;
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "insertPopup: wrong argument type");
+        lua_pushfstring(L, "insertPopup: bad argument #%d type (hints as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -11631,12 +11573,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUrl
 int TLuaInterpreter::openUrl(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "openUrl: wrong argument type");
-        return lua_error(L);
-    }
-    QString url = lua_tostring(L, 1);
-
+    QString url = getVerifiedString(L, __func__, 1, "url");
     QDesktopServices::openUrl(url);
     return 0;
 }
