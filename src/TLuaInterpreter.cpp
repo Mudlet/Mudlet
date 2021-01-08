@@ -6266,18 +6266,9 @@ int TLuaInterpreter::setLink(lua_State* L)
         s++;
     }
 
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setLink: wrong argument type");
-        return lua_error(L);
-    }
-    QString linkFunction = lua_tostring(L, s);
+    QString linkFunction = getVerifiedString(L, __func__, s, "command");
     s++;
-
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setLink: wrong argument type");
-        return lua_error(L);
-    }
-    QString linkHint = lua_tostring(L, s);
+    QString linkHint = getVerifiedString(L, __func__, s, "tooltip");
     s++;
 
     Host& host = getHostFromLua(L);
