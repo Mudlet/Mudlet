@@ -6489,7 +6489,22 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Das einzige verwendete Symbol in 
+einem oder mehreren der 
+ausgewählten Räume ist &quot;%1&quot;. 
+Lösche dieses, um es in allen 
+ausgewählten Räumen zu löschen,
+oder ersetze es mit einem neuen 
+Symbol für alle Räume:</numerusform>
+        <numerusform>Das einzige verwendete Symbol in 
+einem oder mehreren der 
+ausgewählten Räume ist &quot;%1&quot;. 
+Lösche dieses, um es in allen 
+ausgewählten Räumen zu löschen,
+oder ersetze es mit einem neuen 
+Symbol für alle Räume:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="87"/>
@@ -6497,7 +6512,11 @@ with a new symbol to use for all the rooms:</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Das einzige verwendete Symbol im
+ausgewählten Raum ist &quot;%1&quot;. 
+Lösche dieses, um es im ausgewählten 
+Raum zu löschen, oder ersetze es mit 
+einem neuen Symbol für diesen Raum:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="96"/>
@@ -6507,13 +6526,24 @@ it with a new symbol for this room:</source>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wähle:
+ • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
+ • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
+ • tippe ein Leerzeichen, um die bestehenden Symbole zu entfernen
+für alle %n ausgewählten Räume:</numerusform>
+        <numerusform>Wähle:
+ • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
+ • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
+ • tippe ein Leerzeichen, um die bestehenden Symbole zu entfernen
+für alle %n ausgewählten Räume:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="130"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {Anzahl: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
@@ -12024,7 +12054,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Zurücksetzen</translation>
     </message>
   </context>
   <context>
