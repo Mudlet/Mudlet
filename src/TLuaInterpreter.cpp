@@ -542,12 +542,7 @@ int TLuaInterpreter::Wait(lua_State* L)
         return lua_error(L);
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "Wait: wrong argument type");
-        return lua_error(L);
-    }
-    int luaSleepMsec = lua_tointeger(L, 1);
-
+    int luaSleepMsec = getVerifiedInt(L, __func__, 1, "sleep time in msec");
     msleep(luaSleepMsec); // FIXME thread::sleep()
     return 0;
 }
@@ -3929,15 +3924,9 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
 // Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
 int TLuaInterpreter::closeUserWindow(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "closeUserWindow: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     host.closeWindow(text);
-
     return 0;
 }
 
@@ -11128,12 +11117,7 @@ int TLuaInterpreter::insertText(lua_State* L)
 // No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "insertHTML: wrong argument type");
-        return lua_error(L);
-    }
-    QString sendText = lua_tostring(L, 1);
-
+    QString sendText = getVerifiedString(L, __func__, 1, "sendText");
     Host& host = getHostFromLua(L);
     host.mpConsole->insertHTML(sendText);
     return 0;
