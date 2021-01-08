@@ -9281,25 +9281,25 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     bool noScaling = true;
 
     int args = lua_gettop(L);
-    int area = getVerifiedInt(L, 1, "createMapLabel", "areaID");
-    QString text = getVerifiedString(L, 2, "createMapLabel", "text");
-    float posx = getVerifiedFloat(L, 3, "createMapLabel", "posX");
-    float posy = getVerifiedFloat(L, 4, "createMapLabel", "posY");
-    float posz = getVerifiedFloat(L, 5, "createMapLabel", "posZ");
-    int fgr = getVerifiedInt(L, 6, "createMapLabel", "fgRed");
-    int fgg = getVerifiedInt(L, 7, "createMapLabel", "fgGreen");
-    int fgb = getVerifiedInt(L, 8, "createMapLabel", "fgBlue");
-    int bgr = getVerifiedInt(L, 9, "createMapLabel", "bgRed");
-    int bgg = getVerifiedInt(L, 10, "createMapLabel", "bgGreen");
-    int bgb = getVerifiedInt(L, 11, "createMapLabel", "bgBlue");
+    int area = getVerifiedInt(L, 1, __func__, "areaID");
+    QString text = getVerifiedString(L, 2, __func__, "text");
+    float posx = getVerifiedFloat(L, 3, __func__, "posX");
+    float posy = getVerifiedFloat(L, 4, __func__, "posY");
+    float posz = getVerifiedFloat(L, 5, __func__, "posZ");
+    int fgr = getVerifiedInt(L, 6, __func__, "fgRed");
+    int fgg = getVerifiedInt(L, 7, __func__, "fgGreen");
+    int fgb = getVerifiedInt(L, 8, __func__, "fgBlue");
+    int bgr = getVerifiedInt(L, 9, __func__, "bgRed");
+    int bgg = getVerifiedInt(L, 10, __func__, "bgGreen");
+    int bgb = getVerifiedInt(L, 11, __func__, "bgBlue");
     if (args > 11) {
-        zoom = getVerifiedFloat(L, 12, "createMapLabel", "zoom", true);
-        fontSize = getVerifiedInt(L, 13, "createMapLabel", "fontSize", true);
+        zoom = getVerifiedFloat(L, 12, __func__, "zoom", true);
+        fontSize = getVerifiedInt(L, 13, __func__, "fontSize", true);
         if (args > 13) {
-            showOnTop = getVerifiedBoolean(L, 14, "createMapLabel", "showOnTop", true);
+            showOnTop = getVerifiedBoolean(L, 14, __func__, "showOnTop", true);
         }
         if (args > 14) {
-            noScaling = getVerifiedBoolean(L, 15, "createMapLabel", "noScaling", true);
+            noScaling = getVerifiedBoolean(L, 15, __func__, "noScaling", true);
         }
     }
 
