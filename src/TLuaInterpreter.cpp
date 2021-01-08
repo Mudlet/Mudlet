@@ -193,6 +193,85 @@ TLuaInterpreter::~TLuaInterpreter()
 }
 
 // No documentation available in wiki - internal function
+// Replaces a check like this:
+//    if (!lua_isboolean(L, 14)) {
+//        lua_pushfstring(L,
+//            "createMapLabel: bad argument #14 type (showOnTop as boolean is optional, got %s!)",
+//            luaL_typename(L, 14));
+//        return lua_error(L);
+//    }
+//    bool showOnTop = lua_toboolean(L, 14);
+//
+// With reduced repetition like that:
+//    bool showOnTop = getVerifiedBoolean(L, "createMapLabel", 14, "showOnTop", true);
+//
+// The "isOptional" parameter is optional, and will default to not-optional parameters! :)
+//
+// See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
+bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isboolean(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return false;
+    }
+    return lua_toboolean(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
+QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isstring(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "string", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return QString();
+    }
+    return lua_tostring(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
+int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isnumber(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return -1;
+    }
+    return lua_tointeger(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
+float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isnumber(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return 0;
+    }
+    return lua_tonumber(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
+void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
+{
+    if (isOptional) {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)",
+            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+    } else {
+        lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)",
+            functionName, pos, publicName, publicType, luaL_typename(L, pos));
+    }
+}
+
+// No documentation available in wiki - internal function
 // Raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
 // the file to be written being the third argument (as multiple downloads are
@@ -6075,7 +6154,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomWeight 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomWeight
 int TLuaInterpreter::getRoomWeight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -9202,98 +9281,25 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     bool noScaling = true;
 
     int args = lua_gettop(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posx = lua_tonumber(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posy = lua_tonumber(L, 4);
-
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posz = lua_tonumber(L, 5);
-
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgr = lua_tointeger(L, 6);
-
-    if (!lua_isnumber(L, 7)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgg = lua_tointeger(L, 7);
-
-    if (!lua_isnumber(L, 8)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int fgb = lua_tointeger(L, 8);
-
-    if (!lua_isnumber(L, 9)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgr = lua_tointeger(L, 9);
-
-    if (!lua_isnumber(L, 10)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgg = lua_tointeger(L, 10);
-
-    if (!lua_isnumber(L, 11)) {
-        lua_pushstring(L, "createMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int bgb = lua_tointeger(L, 11);
-
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
+    QString text = getVerifiedString(L, __func__, 2, "text");
+    float posx = getVerifiedFloat(L, __func__, 3, "posX");
+    float posy = getVerifiedFloat(L, __func__, 4, "posY");
+    float posz = getVerifiedFloat(L, __func__, 5, "posZ");
+    int fgr = getVerifiedInt(L, __func__, 6, "fgRed");
+    int fgg = getVerifiedInt(L, __func__, 7, "fgGreen");
+    int fgb = getVerifiedInt(L, __func__, 8, "fgBlue");
+    int bgr = getVerifiedInt(L, __func__, 9, "bgRed");
+    int bgg = getVerifiedInt(L, __func__, 10, "bgGreen");
+    int bgb = getVerifiedInt(L, __func__, 11, "bgBlue");
     if (args > 11) {
-        if (!lua_isnumber(L, 12)) {
-            lua_pushstring(L, "createMapLabel: wrong argument type");
-            return lua_error(L);
-        }
-        zoom = lua_tonumber(L, 12);
-
-        if (!lua_isnumber(L, 13)) {
-            lua_pushstring(L, "createMapLabel: wrong argument type");
-            return lua_error(L);
-        }
-        fontSize = lua_tointeger(L, 13);
-
+        zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
+        fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
         if (args > 13) {
-            if (!lua_isboolean(L, 14)) {
-                lua_pushstring(L, "createMapLabel: wrong argument type");
-                return lua_error(L);
-            }
-            showOnTop = lua_toboolean(L, 14);
+            showOnTop = getVerifiedBoolean(L, __func__, 14, "showOnTop", true);
         }
         if (args > 14) {
-            if (!lua_isboolean(L, 15)) {
-                lua_pushstring(L, "createMapLabel: wrong argument type");
-                return lua_error(L);
-            }
-            noScaling = lua_toboolean(L, 15);
+            noScaling = getVerifiedBoolean(L, __func__, 15, "noScaling", true);
         }
     }
 

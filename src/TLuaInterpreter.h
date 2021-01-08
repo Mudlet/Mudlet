@@ -597,6 +597,11 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    static bool getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static void announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
