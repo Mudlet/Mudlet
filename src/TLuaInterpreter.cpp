@@ -197,7 +197,7 @@ TLuaInterpreter::~TLuaInterpreter()
 //    if (!lua_isboolean(L, 9)) {
 //        lua_pushfstring(L,
 //            "createMapLabel: bad argument #9 type (showOnTop as number expected, got %s!)",
-//            luaL_typename(L, 1));
+//            luaL_typename(L, 9));
 //        return lua_error(L);
 //    }
 //    bool showOnTop = lua_toboolean(L, 9);
