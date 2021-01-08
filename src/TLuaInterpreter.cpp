@@ -1496,11 +1496,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
 {
     //    first arg = unique name, second arg= parent name, third arg = display name (=unique name if not provided)
     QStringList menuList;
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "addMapMenu: wrong first argument type");
-        return lua_error(L);
-    }
-    QString uniqueName = lua_tostring(L, 1);
+    QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
 
     if (!lua_isstring(L, 2)) {
         menuList << "";
@@ -5997,12 +5993,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms
 int TLuaInterpreter::getAreaRooms(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getAreaRooms: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tonumber(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "areaID");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -8599,30 +8590,10 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCoordinates
 int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        return lua_error(L);
-    }
-    int x = lua_tointeger(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        return lua_error(L);
-    }
-    int y = lua_tointeger(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setRoomCoordinates: wrong argument type");
-        return lua_error(L);
-    }
-    int z = lua_tointeger(L, 4);
-
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
+    int x = getVerifiedInt(L, __func__, 2, "x");
+    int y = getVerifiedInt(L, __func__, 2, "y");
+    int z = getVerifiedInt(L, __func__, 2, "z");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setRoomCoordinates(id, x, y, z));
     return 1;
@@ -8947,16 +8918,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteRoom
 int TLuaInterpreter::deleteRoom(lua_State* L)
 {
-    int id;
-
-    if (lua_isnumber(L, 1)) {
-        id = lua_tonumber(L, 1);
-        if (id <= 0) {
-            return 0;
-        }
-    } else {
-        lua_pushstring(L, "deleteRoom: wrong argument type");
-        return lua_error(L);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
+    if (id <= 0) {
+        return 0;
     }
 
     Host& host = getHostFromLua(L);
@@ -10329,8 +10293,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomEnv
 int TLuaInterpreter::getRoomEnv(lua_State* L)
 {
-    int roomID = lua_tointeger(L, __func__, 1, "roomID");
-
+    int roomID = getVerifiedInt(L, __func__, 1, "roomID");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (pR) {
@@ -11061,29 +11024,10 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
 int TLuaInterpreter::getRoomsByPosition(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        return lua_error(L);
-    }
-    int x = lua_tointeger(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        return lua_error(L);
-    }
-    int y = lua_tointeger(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "getRoomsByPosition: wrong argument type");
-        return lua_error(L);
-    }
-    int z = lua_tointeger(L, 4);
+    int id = getVerifiedInt(L, __func__, 1, "areaID");
+    int x = getVerifiedInt(L, __func__, 2, "x");
+    int y = getVerifiedInt(L, __func__, 3, "y");
+    int z = getVerifiedInt(L, __func__, 4, "z");
 
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
@@ -11132,18 +11076,8 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setGridMode: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
-
-    if (!lua_isboolean(L, 2)) {
-        lua_pushstring(L, "setGridMode: wrong argument type");
-        return lua_error(L);
-    }
-    bool gridMode = lua_toboolean(L, 2);
-
+    int id = getVerifiedInt(L, __func__, 1, "areaID");
+    bool gridMode = getVerifiedBoolean(L, __func__, 1, "true/false");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
