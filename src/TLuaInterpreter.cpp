@@ -203,15 +203,15 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 14);
 //
 // With reduced repetition like that:
-//    bool showOnTop = getVerifiedBoolean(L, 14, "createMapLabel", "showOnTop", true);
+//    bool showOnTop = getVerifiedBoolean(L, "createMapLabel", 14, "showOnTop", true);
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
-bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
-        announceWrongArgumentType(L, pos, functionName, publicName, "boolean", isOptional);
+        announceWrongArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return false;
@@ -221,10 +221,10 @@ bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const int pos, const char
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-QString TLuaInterpreter::getVerifiedString(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
-        announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
+        announceWrongArgumentType(L, functionName, pos, publicName, "string", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return QString();
@@ -234,10 +234,10 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const int pos, const ch
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-int TLuaInterpreter::getVerifiedInt(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
-        announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return -1;
@@ -247,10 +247,10 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const int pos, const char* fun
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-float TLuaInterpreter::getVerifiedFloat(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
-        announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return 0;
@@ -260,7 +260,7 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const int pos, const char*
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const int pos, const char* functionName, const char* publicName, const char* publicType, const bool isOptional)
+void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)",
