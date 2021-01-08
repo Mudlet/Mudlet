@@ -9281,25 +9281,25 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     bool noScaling = true;
 
     int args = lua_gettop(L);
-    int area = getVerifiedInt(L, 1, __func__, "areaID");
-    QString text = getVerifiedString(L, 2, __func__, "text");
-    float posx = getVerifiedFloat(L, 3, __func__, "posX");
-    float posy = getVerifiedFloat(L, 4, __func__, "posY");
-    float posz = getVerifiedFloat(L, 5, __func__, "posZ");
-    int fgr = getVerifiedInt(L, 6, __func__, "fgRed");
-    int fgg = getVerifiedInt(L, 7, __func__, "fgGreen");
-    int fgb = getVerifiedInt(L, 8, __func__, "fgBlue");
-    int bgr = getVerifiedInt(L, 9, __func__, "bgRed");
-    int bgg = getVerifiedInt(L, 10, __func__, "bgGreen");
-    int bgb = getVerifiedInt(L, 11, __func__, "bgBlue");
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
+    QString text = getVerifiedString(L, __func__, 2, "text");
+    float posx = getVerifiedFloat(L, __func__, 3, "posX");
+    float posy = getVerifiedFloat(L, __func__, 4, "posY");
+    float posz = getVerifiedFloat(L, __func__, 5, "posZ");
+    int fgr = getVerifiedInt(L, __func__, 6, "fgRed");
+    int fgg = getVerifiedInt(L, __func__, 7, "fgGreen");
+    int fgb = getVerifiedInt(L, __func__, 8, "fgBlue");
+    int bgr = getVerifiedInt(L, __func__, 9, "bgRed");
+    int bgg = getVerifiedInt(L, __func__, 10, "bgGreen");
+    int bgb = getVerifiedInt(L, __func__, 11, "bgBlue");
     if (args > 11) {
-        zoom = getVerifiedFloat(L, 12, __func__, "zoom", true);
-        fontSize = getVerifiedInt(L, 13, __func__, "fontSize", true);
+        zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
+        fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
         if (args > 13) {
-            showOnTop = getVerifiedBoolean(L, 14, __func__, "showOnTop", true);
+            showOnTop = getVerifiedBoolean(L, __func__, 14, "showOnTop", true);
         }
         if (args > 14) {
-            noScaling = getVerifiedBoolean(L, 15, __func__, "noScaling", true);
+            noScaling = getVerifiedBoolean(L, __func__, 15, "noScaling", true);
         }
     }
 
