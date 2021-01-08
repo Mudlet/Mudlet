@@ -203,12 +203,12 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 9);
 //
 // With reduced repetition like that:
-//    bool showOnTop = verifyBoolean(L, 9, "createMapLabel", "showOnTop");
+//    bool showOnTop = getVerifiedBoolean(L, 9, "createMapLabel", "showOnTop");
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
-// See also: verifyString, verifyInt, verifyFloat, announceWrongArgumentType
-bool TLuaInterpreter::verifyBoolean(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+// See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
+bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "boolean", isOptional);
@@ -221,7 +221,7 @@ bool TLuaInterpreter::verifyBoolean(lua_State* L, const int pos, const char* fun
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+QString TLuaInterpreter::getVerifiedString(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "string", isOptional);
@@ -234,7 +234,7 @@ QString TLuaInterpreter::verifyString(lua_State* L, const int pos, const char* f
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-int TLuaInterpreter::verifyInt(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+int TLuaInterpreter::getVerifiedInt(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
@@ -247,7 +247,7 @@ int TLuaInterpreter::verifyInt(lua_State* L, const int pos, const char* function
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
-float TLuaInterpreter::verifyFloat(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
+float TLuaInterpreter::getVerifiedFloat(lua_State* L, const int pos, const char* functionName, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
         announceWrongArgumentType(L, pos, functionName, publicName, "number", isOptional);
@@ -9286,21 +9286,21 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 //        return lua_error(L);
 //    }
 //    int area = lua_tointeger(L, 1);
-    int area = verifyInt(L, 1, "createMapLabel", "areaID");
+    int area = getVerifiedInt(L, 1, "createMapLabel", "areaID");
 
 //    if (!lua_isstring(L, 2)) {
 //        lua_pushstring(L, "createMapLabel: wrong argument type");
 //        return lua_error(L);
 //    }
 //    QString text = lua_tostring(L, 2);
-QString text = verifyString(L, 2, "createMapLabel", "text");
+QString text = getVerifiedString(L, 2, "createMapLabel", "text");
 
 //    if (!lua_isnumber(L, 3)) {
 //        lua_pushstring(L, "createMapLabel: wrong argument type");
 //        return lua_error(L);
 //    }
 //    float posx = lua_tonumber(L, 3);
-    float posx = verifyFloat(L, 3, "createMapLabel", "posX");
+    float posx = getVerifiedFloat(L, 3, "createMapLabel", "posX");
 
     if (!lua_isnumber(L, 4)) {
         lua_pushstring(L, "createMapLabel: wrong argument type");
@@ -9356,7 +9356,7 @@ QString text = verifyString(L, 2, "createMapLabel", "text");
 //            return lua_error(L);
 //        }
 //        zoom = lua_tonumber(L, 12);
-        zoom = verifyFloat(L, 12, "createMapLabel", "zoom", true);
+        zoom = getVerifiedFloat(L, 12, "createMapLabel", "zoom", true);
 
         if (!lua_isnumber(L, 13)) {
             lua_pushstring(L, "createMapLabel: wrong argument type");
@@ -9370,7 +9370,7 @@ QString text = verifyString(L, 2, "createMapLabel", "text");
 //                return lua_error(L);
 //            }
 //            showOnTop = lua_toboolean(L, 14);
-            showOnTop = verifyBoolean(L, 14, "createMapLabel", "showOnTop", true);
+            showOnTop = getVerifiedBoolean(L, 14, "createMapLabel", "showOnTop", true);
         }
         if (args > 14) {
             if (!lua_isboolean(L, 15)) {
