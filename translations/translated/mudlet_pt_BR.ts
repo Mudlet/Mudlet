@@ -6307,7 +6307,16 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>O único símbolo usado é &quot;%1&quot; num ou
+mais das %n sala(s) selecionada(s), remova isto para
+limpa-lo de todas as salas selecionadas ou para substituir
+com um novo símbolo para usar em todas as salas:</numerusform>
+        <numerusform>O único símbolo usado é &quot;%1&quot; num ou
+mais das %n sala(s) selecionada(s), remova isto para
+limpa-lo de todas as salas selecionadas ou para substituir
+com um novo símbolo para usar em todas as salas:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="87"/>
@@ -6315,7 +6324,9 @@ with a new symbol to use for all the rooms:</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>O símbolo é &quot;%1&quot; na sala selecionada,
+exclua-o para limpar o símbolo ou substituir
+com um novo símbolo para esta sala:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="96"/>
@@ -6331,7 +6342,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgRoomSymbol.cpp" line="130"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
