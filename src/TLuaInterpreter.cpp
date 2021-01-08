@@ -1896,7 +1896,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     }
 
     if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "setWindowWrap: bad argument #%d type (wrapAt as number expected, got %s!)", luaL_typename(L, s));
+        lua_pushfstring(L, "setWindowWrap: bad argument #%d type (wrapAt as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     int luaFrom = lua_tointeger(L, 2);
