@@ -10837,7 +10837,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
-    bool gridMode = getVerifiedBoolean(L, __func__, 1, "true/false");
+    bool gridMode = getVerifiedBoolean(L, __func__, 2, "true/false");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
