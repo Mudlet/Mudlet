@@ -11906,20 +11906,6 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportAreaImage
-int TLuaInterpreter::exportAreaImage(lua_State* L)
-{
-    int areaID;
-    if (lua_isnumber(L, 1)) {
-        areaID = lua_tointeger(L, 1);
-        Host& host = getHostFromLua(L);
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->mp2dMap->exportAreaImage(areaID);
-        }
-    }
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUrl
 int TLuaInterpreter::openUrl(lua_State* L)
 {
@@ -16406,7 +16392,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
-    lua_register(pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
