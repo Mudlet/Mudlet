@@ -162,7 +162,6 @@ public:
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State* L);
     static int createMapImageLabel(lua_State*);
-    static int exportAreaImage(lua_State*);
     static int installPackage(lua_State*);
     static int installModule(lua_State* L);
     static int uninstallModule(lua_State* L);
