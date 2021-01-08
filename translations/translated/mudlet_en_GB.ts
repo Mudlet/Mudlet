@@ -1484,7 +1484,7 @@ rooms:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16871"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (doesn&apos;t exist)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16876"/>
@@ -1500,7 +1500,7 @@ rooms:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16903"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (couldn&apos;t read file)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16909"/>
@@ -1512,7 +1512,9 @@ rooms:</translation>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
+Tried these locations:
+%1</translation>
     </message>
   </context>
   <context>
@@ -1845,7 +1847,9 @@ older format.</translation>
       <source>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
+this version of Mudlet may not gain enough information from
+it but it will try!  The file is: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1421"/>
@@ -6484,7 +6488,7 @@ for the selected room:</numerusform>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>Pick colour</translation>
     </message>
   </context>
   <context>
@@ -7799,7 +7803,8 @@ There is NO WARRANTY, to the extent permitted by law.
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2021  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -11946,22 +11951,22 @@ or LUA script</source>
       <location filename="../src/ui/room_symbol.ui" line="14"/>
       <location filename="../src/ui/room_symbol.ui" line="112"/>
       <source>Room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Room symbol</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Colour to use for the room symbol(s)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="147"/>
       <source>Symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Symbol colour</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
       <source>Reset</source>
-      <translation type="unfinished"/>
+      <translation>Reset</translation>
     </message>
   </context>
   <context>
