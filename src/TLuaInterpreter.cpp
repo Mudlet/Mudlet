@@ -194,16 +194,16 @@ TLuaInterpreter::~TLuaInterpreter()
 
 // No documentation available in wiki - internal function
 // Replaces a check like this:
-//    if (!lua_isboolean(L, 9)) {
+//    if (!lua_isboolean(L, 14)) {
 //        lua_pushfstring(L,
-//            "createMapLabel: bad argument #9 type (showOnTop as number expected, got %s!)",
-//            luaL_typename(L, 9));
+//            "createMapLabel: bad argument #14 type (showOnTop as boolean is optional, got %s!)",
+//            luaL_typename(L, 14));
 //        return lua_error(L);
 //    }
-//    bool showOnTop = lua_toboolean(L, 9);
+//    bool showOnTop = lua_toboolean(L, 14);
 //
 // With reduced repetition like that:
-//    bool showOnTop = getVerifiedBoolean(L, 9, "createMapLabel", "showOnTop");
+//    bool showOnTop = getVerifiedBoolean(L, 14, "createMapLabel", "showOnTop", true);
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
