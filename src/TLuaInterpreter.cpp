@@ -5222,17 +5222,8 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomWeight
 int TLuaInterpreter::setRoomWeight(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomWeight: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setRoomWeight: wrong argument type");
-        return lua_error(L);
-    }
-    int w = lua_tonumber(L, 2);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
+    int w = getVerifiedInt(L, __func__, 2, "weight");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -6160,11 +6151,7 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
     Host& host = getHostFromLua(L);
     int roomId;
     if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushstring(L, "getRoomWeight: wrong argument type");
-            return lua_error(L);
-        }
-        roomId = lua_tonumber(L, 1);
+        roomId = getVerifiedInt(L, __func__, 1, "roomID");
     } else {
         roomId = host.mpMap->mRoomIdHash.value(host.getName());
     }
@@ -9165,11 +9152,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unHighlightRoom
 int TLuaInterpreter::unHighlightRoom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "unHighlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -9190,65 +9173,16 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#highlightRoom
 int TLuaInterpreter::highlightRoom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int fgr = lua_tointeger(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int fgg = lua_tointeger(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int fgb = lua_tointeger(L, 4);
-
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int bgr = lua_tointeger(L, 5);
-
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int bgg = lua_tointeger(L, 6);
-
-    if (!lua_isnumber(L, 7)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int bgb = lua_tointeger(L, 7);
-
-    if (!lua_isnumber(L, 8)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    float radius = lua_tonumber(L, 8);
-
-    if (!lua_isnumber(L, 9)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int alpha1 = lua_tointeger(L, 9);
-
-    if (!lua_isnumber(L, 10)) {
-        lua_pushstring(L, "highlightRoom: wrong argument type");
-        return lua_error(L);
-    }
-    int alpha2 = lua_tointeger(L, 10);
+    int id = getVerifiedInt(L, __func__, 1, "roomID");
+    int fgr = getVerifiedInt(L, __func__, 2, "color1Red");
+    int fgg = getVerifiedInt(L, __func__, 3, "color1Green");
+    int fgb = getVerifiedInt(L, __func__, 4, "color1Blue");
+    int bgr = getVerifiedInt(L, __func__, 5, "color2Red");
+    int bgg = getVerifiedInt(L, __func__, 6, "color2Green");
+    int bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
+    float radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
+    int alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
+    int alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -9313,12 +9247,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setMapZoom: wrong argument type");
-        return lua_error(L);
-    }
-    qreal zoom = lua_tonumber(L, 1);
-
+    qreal zoom = getVerifiedFloat(L, __func__, 1, "zoom");
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
         if (host.mpMap->mpMapper) {
@@ -9334,60 +9263,15 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
-    // N/U:     int args = lua_gettop(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posx = lua_tonumber(L, 3);
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posy = lua_tonumber(L, 4);
-
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float posz = lua_tonumber(L, 5);
-
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float width = lua_tonumber(L, 6);
-
-    if (!lua_isnumber(L, 7)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float height = lua_tonumber(L, 7);
-
-    if (!lua_isnumber(L, 8)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    float zoom = lua_tonumber(L, 8);
-
-    if (!lua_isboolean(L, 9)) {
-        lua_pushstring(L, "createMapImageLabel: wrong argument type");
-        return lua_error(L);
-    }
-    bool showOnTop = lua_toboolean(L, 9);
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
+    QString text = getVerifiedString(L, __func__, 2, "text");
+    float posx = getVerifiedFloat(L, __func__, 3, "posX");
+    float posy = getVerifiedFloat(L, __func__, 4, "posY");
+    float posz = getVerifiedFloat(L, __func__, 5, "posZ");
+    float width = getVerifiedFloat(L, __func__, 6, "width");
+    float height = getVerifiedFloat(L, __func__, 7, "height");
+    float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
+    bool showOnTop = getVerifiedBoolean(L, __func__, 9, "zoom");
 
     Host& host = getHostFromLua(L);
     lua_pushinteger(L, host.mpMap->createMapImageLabel(area, text, posx, posy, posz, width, height, zoom, showOnTop, false));
@@ -9945,11 +9829,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getExitWeights: wrong argument type");
-        return lua_error(L);
-    }
-    int roomID = lua_tointeger(L, 1);
+    int roomID = getVerifiedInt(L, __func__, 1, "roomID");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
@@ -9968,17 +9848,8 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMapLabel
 int TLuaInterpreter::deleteMapLabel(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "deleteMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "deleteMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int labelID = lua_tointeger(L, 2);
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
+    int labelID = getVerifiedInt(L, __func__, 2, "labelID");
 
     Host& host = getHostFromLua(L);
     host.mpMap->deleteMapLabel(area, labelID);
@@ -9988,11 +9859,7 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabels
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getMapLabels: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
 
     Host& host = getHostFromLua(L);
     if (host.mpMap->mapLabels.contains(area)) {
@@ -10012,15 +9879,11 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 int TLuaInterpreter::getMapLabel(lua_State* L)
 {
     QString labelText;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getMapLabel: wrong argument type");
-        return lua_error(L);
-    }
-    int area = lua_tointeger(L, 1);
+    int area = getVerifiedInt(L, __func__, 1, "areaID");
 
     int labelId = -1;
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
-        lua_pushstring(L, "getMapLabel: wrong argument type");
+        lua_pushstring(L, "getMapLabel: bad argument #2 type (labelId as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     if (lua_isnumber(L, 2)) {
