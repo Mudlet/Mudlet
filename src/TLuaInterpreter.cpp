@@ -8377,8 +8377,8 @@ int TLuaInterpreter::setRoomCoordinates(lua_State* L)
 {
     int id = getVerifiedInt(L, __func__, 1, "roomID");
     int x = getVerifiedInt(L, __func__, 2, "x");
-    int y = getVerifiedInt(L, __func__, 2, "y");
-    int z = getVerifiedInt(L, __func__, 2, "z");
+    int y = getVerifiedInt(L, __func__, 3, "y");
+    int z = getVerifiedInt(L, __func__, 4, "z");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->setRoomCoordinates(id, x, y, z));
     return 1;
