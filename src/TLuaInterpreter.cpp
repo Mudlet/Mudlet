@@ -2908,12 +2908,7 @@ int TLuaInterpreter::loadMap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimer
 int TLuaInterpreter::enableTimer(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "enableTimer: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getTimerUnit()->enableTimer(text);
     lua_pushboolean(L, error);
@@ -2923,12 +2918,7 @@ int TLuaInterpreter::enableTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTimer
 int TLuaInterpreter::disableTimer(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "disableTimer: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getTimerUnit()->disableTimer(text);
     lua_pushboolean(L, error);
@@ -2983,12 +2973,7 @@ int TLuaInterpreter::killKey(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableAlias
 int TLuaInterpreter::enableAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "enableAlias: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getAliasUnit()->enableAlias(text);
     lua_pushboolean(L, error);
@@ -2998,12 +2983,7 @@ int TLuaInterpreter::enableAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableAlias
 int TLuaInterpreter::disableAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "disableAlias: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getAliasUnit()->disableAlias(text);
     lua_pushboolean(L, error);
@@ -3013,12 +2993,7 @@ int TLuaInterpreter::disableAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killAlias
 int TLuaInterpreter::killAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "killAlias: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.getAliasUnit()->killAlias(text));
     return 1;
@@ -3027,12 +3002,7 @@ int TLuaInterpreter::killAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTrigger
 int TLuaInterpreter::enableTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "enableTrigger: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getTriggerUnit()->enableTrigger(text);
     lua_pushboolean(L, error);
@@ -3042,12 +3012,7 @@ int TLuaInterpreter::enableTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTrigger
 int TLuaInterpreter::disableTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "disableTrigger: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     bool error = host.getTriggerUnit()->disableTrigger(text);
     lua_pushboolean(L, error);
@@ -3113,12 +3078,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTimer
 int TLuaInterpreter::killTimer(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "killTimer: killTimer requires a string ID");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "ID");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.killTimer(text));
     return 1;
@@ -3127,12 +3087,7 @@ int TLuaInterpreter::killTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTrigger
 int TLuaInterpreter::killTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "killTrigger: wrong argument type");
-        return lua_error(L);
-    }
-    QString text = lua_tostring(L, 1);
-
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.killTrigger(text));
     return 1;
@@ -6291,7 +6246,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
         s++;
     }
     if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "setTriggerStayOpen: wrong argument type");
+        lua_pushfstring(L, "setTriggerStayOpen: bad argument #%d type (element name as string expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     double b = lua_tonumber(L, s);
@@ -7557,23 +7512,9 @@ int TLuaInterpreter::tempButton(lua_State* L)
     QStringList nameL;
     nameL << toolbar;
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempButton: wrong first arg");
-        return lua_error(L);
-    }
-    toolbar = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempButton: wrong second arg");
-        return lua_error(L);
-    }
-    QString name = lua_tostring(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "tempButton: wrong third arg");
-        return lua_error(L);
-    }
-    int orientation = lua_tonumber(L, 3);
+    toolbar = getVerifiedString(L, __func__, 1, "toolbar name");
+    QString name = getVerifiedString(L, __func__, 2, "button text");
+    int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
     Host& host = getHostFromLua(L);
     TAction* pP = host.getActionUnit()->findAction(toolbar);
@@ -7660,23 +7601,9 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     QStringList nameL;
     nameL << name;
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        return lua_error(L);
-    }
-    name = lua_tostring(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        return lua_error(L);
-    }
-    int location = lua_tonumber(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "tempButtonToolbar: wrong first arg");
-        return lua_error(L);
-    }
-    int orientation = lua_tonumber(L, 3);
+    name = getVerifiedString(L, __func__, 1, "name");
+    int location = getVerifiedInt(L, __func__, 2, "location");
+    int orientation = getVerifiedInt(L, __func__, 3, "orientation");
 
     if (location > 0) {
         location++;
@@ -7806,18 +7733,8 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "exists: wrong argument type");
-        return lua_error(L);
-    }
-    QString name = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "exists: wrong argument type");
-        return lua_error(L);
-    }
-    QString type = lua_tostring(L, 2);
-
+    QString name = getVerifiedString(L, __func__, 1, "name");
+    QString type = getVerifiedString(L, __func__, 2, "type");
     Host& host = getHostFromLua(L);
     int cnt = 0;
     type = type.toLower();
