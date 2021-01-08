@@ -6702,7 +6702,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="532"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronises&quot; modules that are so marked.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="535"/>
