@@ -2192,7 +2192,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     painter.save(); // Save painter state
     QFont f = painter.font();
     TRoom* _prid = mpMap->mpRoomDB->getRoom(roomID);
-    if (_prid) {
+    if (_prid && !mapInfoOverrideCallback) {
         int areaId = _prid->getArea();
         TArea* area = mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
@@ -2291,6 +2291,11 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
                 infoColor = QColor(96, 48, 0); // Dark, slightly orange grey
             }
             break;
+        }
+    } else if (mapInfoOverrideCallback) {
+        auto [success, overrideInfoText] = mpHost->getLuaInterpreter()->callMapInfoOverrideCallback(mapInfoOverrideCallback, roomID);
+        if (success && !overrideInfoText.isEmpty()) {
+            infoText = overrideInfoText.append("\n");
         }
     }
 

@@ -16509,6 +16509,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "setMapInfoOverrideCallback", TLuaInterpreter::setMapInfoOverrideCallback);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -18209,4 +18210,80 @@ int TLuaInterpreter::showNotification(lua_State* L)
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapInfoOverrideCallback
+int TLuaInterpreter::setMapInfoOverrideCallback(lua_State* L) {
+
+    if (lua_gettop(L) > 0 && !lua_isfunction(L, 1) && !lua_isnil(L, 1)) {
+        lua_pushfstring(L, "setMapInfoOverrideCallback: bad argument #1 type (callback as nil or as function expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    bool registeredCallback = false;
+    auto& host = getHostFromLua(L);
+
+    int callback;
+    if(lua_isfunction(L, 1)) {
+        callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        callback = 0;
+    }
+
+    if (host.mpMap) {
+        if (host.mpMap->mpMapper) {
+            if (host.mpMap->mpMapper->mp2dMap) {
+                host.mpMap->mpMapper->mp2dMap->mapInfoOverrideCallback = callback;
+                host.mpMap->mpMapper->mp2dMap->repaint();
+                registeredCallback = true;
+            }
+        }
+    }
+
+    lua_pushboolean(L, registeredCallback);
+    return 1;
+}
+
+// No documentation available in wiki - internal function
+std::pair<bool, QString> TLuaInterpreter::callMapInfoOverrideCallback(const int callback, const int roomId)
+{
+    QString returnValue;
+
+    lua_State* L = pGlobalLua;
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+    if (roomId > 0) {
+        lua_pushinteger(L, roomId);
+    } else {
+        lua_pushnil(L);
+    }
+    int error = lua_pcall(L, 1, 1, 0);
+    if (error != 0) {
+        int nbpossible_errors = lua_gettop(L);
+        for (int i = 1; i <= nbpossible_errors; i++) {
+            std::string e = "";
+            if (lua_isstring(L, i)) {
+                e += lua_tostring(L, i);
+                logError(e, "callMapInfoOverrideCallback", "callback");
+                if (mudlet::debugMode) {
+                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script mapInfoOverrideCallback ERROR:" << e.c_str() << "\n" >> 0;
+                }
+            }
+        }
+    } else {
+        auto index = lua_gettop(L);
+        if (lua_isstring(L, index)) {
+            returnValue = lua_tostring(L, index);
+        }
+
+        if (mudlet::debugMode) {
+            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script mapInfoOverrideCallback ran without errors\n" >> 0;
+        }
+    }
+    lua_pop(L, lua_gettop(L));
+    if (error == 0) {
+        return std::make_pair(true, returnValue);
+    } else {
+        return std::make_pair(false, returnValue);
+    }
 }
