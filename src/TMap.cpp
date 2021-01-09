@@ -192,7 +192,6 @@ void TMap::mapClear()
     locations.clear();
     mMapGraphNeedsUpdate = true;
     mNewMove = true;
-    mapLabels.clear();
     mVersion = mDefaultVersion;
     mUserData.clear();
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
@@ -472,10 +471,11 @@ void TMap::audit()
         while (itArea.hasNext()) {
             itArea.next();
             int areaID = itArea.key();
-            if (mapLabels.contains(areaID)) {
-                QList<int> labelIDList = mapLabels.value(areaID).keys();
+            TArea* pArea = mpRoomDB->getArea(areaID);
+            if (!pArea->mMapLabels.isEmpty()) {
+                QList<int> labelIDList = pArea->mMapLabels.keys();
                 for (int& i : labelIDList) {
-                    TMapLabel l = mapLabels.value(areaID).value(i);
+                    TMapLabel l = pArea->mMapLabels.value(i);
                     if (l.pix.isNull()) {
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
                         if (newID > -1) {
@@ -484,8 +484,8 @@ void TMap::audit()
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg(areaID, tr("[ INFO ] - Converting old style label id: %1.").arg(i));
-                            mapLabels[areaID][i] = mapLabels[areaID][newID];
-                            deleteMapLabel(areaID, newID);
+                            pArea->mMapLabels[i] = pArea->mMapLabels.take(newID);
+
                         } else {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
@@ -495,10 +495,10 @@ void TMap::audit()
                         }
                     }
                     if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
-                        mapLabels[areaID][i].size.setWidth(l.pix.width());
+                        pArea->mMapLabels[i].size.setWidth(l.pix.width());
                     }
                     if ((l.size.height() > std::numeric_limits<qreal>::max()) || (l.size.height() < -std::numeric_limits<qreal>::max())) {
-                        mapLabels[areaID][i].size.setHeight(l.pix.height());
+                        pArea->mMapLabels[i].size.setHeight(l.pix.height());
                     }
                 }
             }
@@ -1119,6 +1119,23 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
         ofs << pA->mUserData;
+        if (mSaveVersion >= 21) {
+            // Revised in version 21 to store labels within the TArea class:
+            ofs << pA->mMapLabels.size();
+            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                ofs << itMapLabel.key(); //label ID
+                TMapLabel label = itMapLabel.value();
+                ofs << label.size;
+                ofs << label.text;
+                ofs << label.fgColor;
+                ofs << label.bgColor;
+                ofs << label.pix;
+                ofs << label.noScaling;
+                ofs << label.showOnTop;
+            }
+        }
     }
 
     if (mSaveVersion >= 18) {
@@ -1130,31 +1147,46 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mRoomIdHash.value(mProfileName);
     }
 
-    ofs << mapLabels.size(); //number of areas
-    QMapIterator<int, QMap<int, TMapLabel>> itL1(mapLabels);
-    while (itL1.hasNext()) {
-        itL1.next();
-        int i = itL1.key();
-        ofs << itL1.value().size(); //number of labels per area
-        ofs << itL1.key();          //area id
-        QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
-        while (itL2.hasNext()) {
-            itL2.next();
-            ofs << itL2.key(); //label ID
-            TMapLabel label = itL2.value();
-            ofs << label.pos;
-            if (mSaveVersion < 21) {
-                ofs << QPointF();
+    if (mSaveVersion < 21) {
+        // Before version 21 the map labels were stored within this class:
+        // number of labels per area - we need this as there is no delimiter
+        // between each area's map labels
+        int areasWithLabels = 0;
+        // Need to count the areas that have mapLabels:
+        for (const auto pArea : mpRoomDB->getAreaPtrList()) {
+            if (pArea && pArea->mMapLabels.isEmpty()) {
+                ++areasWithLabels;
             }
-            ofs << label.size;
-            ofs << label.text;
-            ofs << label.fgColor;
-            ofs << label.bgColor;
-            ofs << label.pix;
-            ofs << label.noScaling;
-            ofs << label.showOnTop;
+        }
+        ofs << areasWithLabels;
+        QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
+        while (itArea.hasNext()) {
+            itArea.next();
+            auto pArea = itArea.value();
+            if (!pArea || pArea->mMapLabels.isEmpty()) {
+                continue;
+            }
+            // number of labels in this area:
+            ofs << pArea->mMapLabels.size();
+            // only used to assign labels to the area:
+            ofs << itArea.key();
+            QMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                ofs << itMapLabel.key(); //label ID
+                TMapLabel label = itMapLabel.value();
+                ofs << QPointF(); // dummy value - not actually used
+                ofs << label.size;
+                ofs << label.text;
+                ofs << label.fgColor;
+                ofs << label.bgColor;
+                ofs << label.pix;
+                ofs << label.noScaling;
+                ofs << label.showOnTop;
+            }
         }
     }
+
     QHashIterator<int, TRoom*> it(mpRoomDB->getRoomMap());
     while (it.hasNext()) {
         it.next();
@@ -1553,6 +1585,23 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 if (mVersion >= 17) {
                     ifs >> pA->mUserData;
                 }
+                if (mVersion >= 21) {
+                    int mapLabelsCount = -1;
+                    ifs >> mapLabelsCount;
+                    for (int i = 0; i < mapLabelsCount; ++i) {
+                        int labelId = -1;
+                        ifs >> labelId;
+                        TMapLabel label;
+                        ifs >> label.size;
+                        ifs >> label.text;
+                        ifs >> label.fgColor;
+                        ifs >> label.bgColor;
+                        ifs >> label.pix;
+                        ifs >> label.noScaling;
+                        ifs >> label.showOnTop;
+                        pA->mMapLabels.insert(labelId, label);
+                    }
+                }
                 mpRoomDB->restoreSingleArea(areaID, pA);
             }
         }
@@ -1579,34 +1628,35 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             mRoomIdHash[mProfileName] = oldRoomId;
         }
 
-        if (mVersion >= 11) {
-            int size;
-            ifs >> size; //size of mapLabels
-            int areaLabelCount = 0;
-            while (!ifs.atEnd() && areaLabelCount < size) {
-                int areaID;
-                int size_labels;
-                ifs >> size_labels;
+        if (mVersion >= 11 && mVersion <= 20) {
+            // After version 20 the map labels have been moved to each area
+            int areasWithLabelsTotal = 0;
+            ifs >> areasWithLabelsTotal;
+            int areasWithLabelsCounter = 0;
+            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+                int areaID = -1;
+                int areaLabelsTotal = 0;
+                ifs >> areaLabelsTotal;
+                // Only used to identify the area for this batch of labels:
                 ifs >> areaID;
-                int labelCount = 0;
-                QMap<int, TMapLabel> _map;
-                while (!ifs.atEnd() && labelCount < size_labels) {
+                int areaLabelCounter = 0;
+                auto pA = mpRoomDB->getArea(areaID);
+                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
                     int labelID;
                     ifs >> labelID;
                     TMapLabel label;
                     if (mVersion >= 12) {
+                        // From version 12 labels could be placed on any level,
+                        // so they have a z coordinate:
                         ifs >> label.pos;
                     } else {
-                        QPointF __label_pos;
-                        ifs >> __label_pos;
-                        label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                        QPointF labelPos2D;
+                        ifs >> labelPos2D;
+                        label.pos = QVector3D(labelPos2D);
                     }
-                    if (mVersion < 21) {
-                        // There was an unused QPointF in versions prior to 21
-                        QPointF dummyPointF;
-                        ifs >> dummyPointF;
-                        Q_UNUSED(dummyPointF)
-                    }
+                    // There was an unused QPointF in versions prior to 21
+                    QPointF dummyPointF;
+                    ifs >> dummyPointF;
                     ifs >> label.size;
                     ifs >> label.text;
                     ifs >> label.fgColor;
@@ -1616,11 +1666,15 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                     }
-                    _map.insert(labelID, label);
-                    labelCount++;
+                    if (pA) {
+                        pA->mMapLabels.insert(labelID, label);
+                    }
+                    ++areaLabelCounter;
+                    // Else: we dump labels for areas not in map - this should
+                    // not be happening nowadays but did in the past - see
+                    // PR #4369
                 }
-                mapLabels[areaID] = _map;
-                areaLabelCount++;
+                ++areasWithLabelsCounter;
             }
         }
 
@@ -1829,6 +1883,22 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             if (otherProfileVersion >= 17) {
                 ifs >> pA.mUserData;
             }
+            if (otherProfileVersion >= 21) {
+                int mapLabelsCount = -1;
+                ifs >> mapLabelsCount;
+                for (int i = 0; i < mapLabelsCount; ++i) {
+                    int labelId = -1;
+                    ifs >> labelId;
+                    TMapLabel label;
+                    ifs >> label.size;
+                    ifs >> label.text;
+                    ifs >> label.fgColor;
+                    ifs >> label.bgColor;
+                    ifs >> label.pix;
+                    ifs >> label.noScaling;
+                    ifs >> label.showOnTop;
+                }
+            }
         }
     }
 
@@ -1853,17 +1923,57 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         }
     }
 
-    if (otherProfileVersion >= 11) {
-        int size;
-        ifs >> size; //size of mapLabels
-        int areaLabelCount = 0;
-        while (!ifs.atEnd() && areaLabelCount < size) {
-            int areaID;
-            int size_labels;
-            ifs >> size_labels;
+    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
+        int areasWithLabelsTotal = 0;
+        ifs >> areasWithLabelsTotal;
+        int currentAreaWithLabelsCount = 0;
+        while (!ifs.atEnd() && currentAreaWithLabelsCount < areasWithLabelsTotal) {
+            int areaID = -1;
+            int areaLabelsTotal = 0;
+            ifs >> areaLabelsTotal;
             ifs >> areaID;
-            int labelCount = 0;
-            while (!ifs.atEnd() && labelCount < size_labels) {
+            int areaLabelCounter = 0;
+            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+                int labelID = -1;
+                ifs >> labelID;
+                TMapLabel label;
+                if (otherProfileVersion >= 12) {
+                    ifs >> label.pos;
+                } else {
+                    QPointF labelPos2D;
+                    ifs >> labelPos2D;
+                    label.pos = QVector3D(labelPos2D);
+                }
+                // There was an unused QPointF in all versions
+                QPointF dummyPointF;
+                ifs >> dummyPointF;
+                Q_UNUSED(dummyPointF)
+                ifs >> label.size;
+                ifs >> label.text;
+                ifs >> label.fgColor;
+                ifs >> label.bgColor;
+                ifs >> label.pix;
+                if (otherProfileVersion >= 15) {
+                    ifs >> label.noScaling;
+                    ifs >> label.showOnTop;
+                }
+                ++areaLabelCounter;
+            }
+            ++currentAreaWithLabelsCount;
+        }
+    }
+
+    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
+        int areasWithLabelsTotal = 0;
+        ifs >> areasWithLabelsTotal;
+        int areasWithLabelsCounter = 0;
+        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+            int areaID = -1;
+            int areaLabelsTotal = 0;
+            ifs >> areaLabelsTotal;
+            ifs >> areaID;
+            int areaLabelCounter = 0;
+            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
                 int labelID;
                 ifs >> labelID;
                 TMapLabel label;
@@ -1874,11 +1984,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                     ifs >> __label_pos;
                     label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
                 }
-                if (mSaveVersion < 21) {
-                    QPointF dummyPointF;
-                    ifs >> dummyPointF;
-                    Q_UNUSED(dummyPointF)
-                }
+                QPointF dummyPointF;
+                ifs >> dummyPointF;
                 ifs >> label.size;
                 ifs >> label.text;
                 ifs >> label.fgColor;
@@ -1888,9 +1995,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                     ifs >> label.noScaling;
                     ifs >> label.showOnTop;
                 }
-                labelCount++;
+                ++areaLabelCounter;
             }
-            areaLabelCount++;
+            ++areasWithLabelsCounter;
         }
     }
 
@@ -1916,7 +2023,12 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
 int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize)
 {
-    if (!mpRoomDB->getArea(area)) {
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
+        return -1;
+    }
+
+    if (text.isEmpty()) {
         return -1;
     }
 
@@ -1930,9 +2042,6 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
 
-    if (label.text.length() < 1) {
-        return -1;
-    }
     QRectF lr = QRectF(0, 0, 1000, 1000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
@@ -1953,24 +2062,12 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
-    if (!mpRoomDB->getArea(area)) {
-        return -1;
-    }
 
-    int label_id;
+    int label_id = -1;
+    do {
+    } while (pA->mMapLabels.contains(++label_id));
 
-    // No labels exist for this area, so start from zero.
-    if (!mapLabels.contains(area)) {
-        QMap<int, TMapLabel> m;
-        label_id = 0;
-        m[label_id] = label;
-        mapLabels[area] = m;
-    } else {
-        label_id = createMapLabelID(area);
-        if (label_id > -1) {
-            mapLabels[area].insert(label_id, label);
-        }
-    }
+    pA->mMapLabels.insert(label_id, label);
 
     if (mpMapper) {
         mpMapper->mp2dMap->update();
@@ -1980,7 +2077,8 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
 
 int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling)
 {
-    if (!mpRoomDB->getArea(area)) {
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
         return -1;
     }
 
@@ -1998,24 +2096,12 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
-    if (!mpRoomDB->getArea(area)) {
-        return -1;
-    }
 
-    int label_id;
+    int label_id = -1;
+    do {
+    } while (pA->mMapLabels.contains(++label_id));
 
-    // No labels exist for this area, so start from zero.
-    if (!mapLabels.contains(area)) {
-        QMap<int, TMapLabel> m;
-        label_id = 0;
-        m[label_id] = label;
-        mapLabels[area] = m;
-    } else {
-        label_id = createMapLabelID(area);
-        if (label_id > -1) {
-            mapLabels[area].insert(label_id, label);
-        }
-    }
+    pA->mMapLabels.insert(label_id, label);
 
     if (mpMapper) {
         mpMapper->mp2dMap->update();
@@ -2023,36 +2109,14 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     return label_id;
 }
 
-
-int TMap::createMapLabelID(int area)
-{
-    if (mapLabels.contains(area)) {
-        const QList<int> idList = mapLabels.value(area).keys();
-        int id = 0;
-        // protect against integer overflow
-        while (id >= 0) {
-            if (!idList.contains(id)) {
-                return id;
-            }
-            id++;
-        }
-    }
-    return -1;
-}
-
 void TMap::deleteMapLabel(int area, int labelID)
 {
-    if (!mpRoomDB->getArea(area)) {
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
         return;
     }
-    if (!mapLabels.contains(area)) {
-        return;
-    }
-    if (!mapLabels[area].contains(labelID)) {
-        return;
-    }
-    mapLabels[area].remove(labelID);
-    if (mpMapper) {
+
+    if (pA->mMapLabels.remove(labelID)) {
         mpMapper->mp2dMap->update();
     }
 }

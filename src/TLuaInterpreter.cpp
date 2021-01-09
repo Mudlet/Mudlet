@@ -9989,15 +9989,16 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getMapLabels: wrong argument type");
+        lua_pushfstring(L, "getMapLabels: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    int area = lua_tointeger(L, 1);
 
+    int area = lua_tointeger(L, 1);
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mapLabels.contains(area)) {
-        lua_newtable(L);
-        QMapIterator<int, TMapLabel> it(host.mpMap->mapLabels[area]);
+    lua_newtable(L);
+    auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA->mMapLabels.isEmpty()) {
+        QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
             it.next();
             lua_pushnumber(L, it.key());
@@ -10011,49 +10012,60 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabel
 int TLuaInterpreter::getMapLabel(lua_State* L)
 {
-    QString labelText;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "getMapLabel: wrong argument type");
+        lua_pushfstring(L, "getMapLabel: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     int area = lua_tointeger(L, 1);
 
-    int labelId = -1;
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
-        lua_pushstring(L, "getMapLabel: wrong argument type");
+        lua_pushfstring(L, "getMapLabel: bad argument #2 type (label id as number, or label text as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    if (lua_isnumber(L, 2)) {
+    QString labelText;
+    int labelId = -1;
+    if (lua_type(L, 2) == LUA_TNUMBER) {
         labelId = lua_tointeger(L, 2);
+        if (labelId < 0) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "label id %d is invalid, it must be zero or greater", labelId);
+        }
+
     } else {
         labelText = lua_tostring(L, 2);
+        // Can be an empty string as image labels have no text!
     }
 
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mapLabels.contains(area)) {
+    auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (pA->mMapLabels.isEmpty()) {
+        // Return an empty table:
         lua_newtable(L);
-        if (labelId != -1) {
-            if (host.mpMap->mapLabels[area].contains(labelId)) {
-                TMapLabel label = host.mpMap->mapLabels[area][labelId];
-                pushMapLabelPropertiesToLua(L, label);
-            } else {
-                lua_pushstring(L, "getMapLabel: labelId doesn't exist");
-                return lua_error(L);
-            }
-        } else {
-            QMapIterator<int, TMapLabel> it(host.mpMap->mapLabels[area]);
-            while (it.hasNext()) {
-                it.next();
-                if (it.value().text == labelText) {
-                    lua_newtable(L);
-                    TMapLabel label = it.value();
-                    int id = it.key();
-                    pushMapLabelPropertiesToLua(L, label);
-                    lua_pushnumber(L, id);
-                    lua_insert(L, -2);
-                    lua_settable(L, -3);
-                }
-            }
+        return 1;
+    }
+
+    if (labelId >= 0) {
+        if (!pA->mMapLabels.contains(labelId)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "label id %d does not exist in area id %d", labelId, area);
+            return 2;
+        }
+        lua_newtable(L);
+        auto label = pA->mMapLabels.value(labelId);
+        pushMapLabelPropertiesToLua(L, label);
+        return 1;
+    }
+
+    lua_newtable(L);
+    QMapIterator<int, TMapLabel> it(pA->mMapLabels);
+    while (it.hasNext()) {
+        it.next();
+        if (it.value().text == labelText) {
+            lua_newtable(L);
+            pushMapLabelPropertiesToLua(L, it.value());
+            lua_pushnumber(L, it.key());
+            lua_insert(L, -2);
+            lua_settable(L, -3);
         }
     }
     return 1;
@@ -10061,33 +10073,28 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
 void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label)
 {
-    int x = label.pos.x();
-    int y = label.pos.y();
-    int z = label.pos.z();
-    float height = label.size.height();
-    float width = label.size.width();
-    QString text = label.text;
     lua_pushstring(L, "X");
-    lua_pushnumber(L, x);
+    lua_pushnumber(L, label.pos.x());
     lua_settable(L, -3);
     lua_pushstring(L, "Y");
-    lua_pushnumber(L, y);
+    lua_pushnumber(L, label.pos.y());
     lua_settable(L, -3);
     lua_pushstring(L, "Z");
-    lua_pushnumber(L, z);
+    lua_pushnumber(L, qRound(label.pos.z()));
     lua_settable(L, -3);
     lua_pushstring(L, "Height");
-    lua_pushnumber(L, height);
+    lua_pushnumber(L, label.size.height());
     lua_settable(L, -3);
     lua_pushstring(L, "Width");
-    lua_pushnumber(L, width);
+    lua_pushnumber(L, label.size.width());
     lua_settable(L, -3);
     lua_pushstring(L, "Text");
-    lua_pushstring(L, text.toUtf8().constData());
+    lua_pushstring(L, label.text.toUtf8().constData());
     lua_settable(L, -3);
     lua_pushstring(L, "Pixmap");
     lua_pushstring(L, label.base64EncodePixmap().constData());
     lua_settable(L, -3);
+
     lua_pushstring(L, "FgColor");
     lua_newtable(L);
     lua_pushstring(L, "r");
@@ -10100,6 +10107,7 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_pushinteger(L, label.fgColor.blue());
     lua_settable(L, -3);
     lua_settable(L, -3);
+
     lua_pushstring(L, "BgColor");
     lua_newtable(L);
     lua_pushstring(L, "r");

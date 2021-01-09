@@ -25,6 +25,8 @@
 
 #include "TMap.h"
 
+#include "TMapLabel.h"
+
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
@@ -82,6 +84,8 @@ public:
     TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
+    // This has been moved from the TMap class:
+    QMap<int, TMapLabel> mMapLabels;
 
 
 private:
