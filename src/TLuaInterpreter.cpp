@@ -4149,13 +4149,13 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     QString text = getVerifiedString(L, __func__, 1, "windowName");
 
     if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #2 type (x as number expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "resizeWindow: bad argument #2 type (width as number expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     double x1 = lua_tonumber(L, 2);
 
     if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #3 type (y as number expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "resizeWindow: bad argument #3 type (height as number expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
     double y1 = lua_tonumber(L, 3);
@@ -5248,7 +5248,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
 
     int dir = dirToNumber(L, 2);
     if (!dir) {
-        lua_pushfstring(L, "lockExit: bad argument #2 type (direction as number or string expected, got %s!)");
+        lua_pushfstring(L, "lockExit: bad argument #2 type (direction as number or string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -8929,7 +8929,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float width = getVerifiedFloat(L, __func__, 6, "width");
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
-    bool showOnTop = getVerifiedBoolean(L, __func__, 9, "zoom");
+    bool showOnTop = getVerifiedBoolean(L, __func__, 9, "showOnTop");
 
     Host& host = getHostFromLua(L);
     lua_pushinteger(L, host.mpMap->createMapImageLabel(area, text, posx, posy, posz, width, height, zoom, showOnTop, false));
