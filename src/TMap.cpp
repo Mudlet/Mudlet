@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +27,7 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -2755,12 +2756,4 @@ QColor TMap::getColor(int id)
         color = customEnvColors[env];
     }
     return color;
-}
-
-QByteArray TMapLabel::base64EncodePixmap() const
-{
-    QBuffer buffer;
-    buffer.open(QIODevice::WriteOnly);
-    pix.save(&buffer, "PNG");
-    return buffer.data().toBase64();
 }

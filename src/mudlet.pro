@@ -561,6 +561,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -668,6 +669,7 @@ HEADERS += \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
