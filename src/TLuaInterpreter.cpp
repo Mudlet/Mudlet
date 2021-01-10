@@ -18230,14 +18230,10 @@ int TLuaInterpreter::setMapInfoOverrideCallback(lua_State* L) {
         callback = 0;
     }
 
-    if (host.mpMap) {
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->mapInfoOverrideCallback = callback;
-                host.mpMap->mpMapper->mp2dMap->repaint();
-                registeredCallback = true;
-            }
-        }
+    if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverrideCallback = callback;
+        host.mpMap->mpMapper->mp2dMap->repaint();
+        registeredCallback = true;
     }
 
     lua_pushboolean(L, registeredCallback);
@@ -18258,7 +18254,7 @@ std::pair<bool, QString> TLuaInterpreter::callMapInfoOverrideCallback(const int 
         lua_pushnil(L);
     }
     int error = lua_pcall(L, 1, 1, 0);
-    if (error != 0) {
+    if (error) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
             std::string e = "";
@@ -18281,9 +18277,9 @@ std::pair<bool, QString> TLuaInterpreter::callMapInfoOverrideCallback(const int 
         }
     }
     lua_pop(L, lua_gettop(L));
-    if (error == 0) {
-        return std::make_pair(true, returnValue);
-    } else {
+    if (error) {
         return std::make_pair(false, returnValue);
+    } else {
+        return std::make_pair(true, returnValue);
     }
 }

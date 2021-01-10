@@ -165,7 +165,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    int mapInfoOverrideCallback;
+    int mapInfoOverrideCallback = 0;
 
 
 public slots:
