@@ -10102,8 +10102,8 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
-        <numerusform>Prüfe die neue Version...</numerusform>
-        <numerusform>Prüfe die neue Version...</numerusform>
+        <numerusform>Prüfe auf neue Version...</numerusform>
+        <numerusform>Prüfe auf neue Versionen...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
