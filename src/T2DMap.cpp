@@ -2295,7 +2295,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     } else if (mapInfoOverrideCallback) {
         auto [success, overrideInfoText] = mpHost->getLuaInterpreter()->callMapInfoOverrideCallback(mapInfoOverrideCallback, roomID);
         if (success && !overrideInfoText.isEmpty()) {
-            infoText = overrideInfoText.append("\n");
+            infoText = overrideInfoText.append(QChar::LineFeed);
         }
     }
 
