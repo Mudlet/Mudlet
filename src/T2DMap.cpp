@@ -621,7 +621,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
                              const float rx,
                              const float ry,
                              const bool picked,
-                             const QMap<int, QPoint>& areaExitsMap)
+                             const QMap<int, QPointF>& areaExitsMap)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -1115,14 +1115,11 @@ inline void T2DMap::drawRoom(QPainter& painter,
 
     painter.restore();
     if (!isGridMode) {
-        QMapIterator<int, QPoint> it(areaExitsMap);
+        QMapIterator<int, QPointF> it(areaExitsMap);
         while (it.hasNext()) {
             it.next();
-            QPoint P = it.value();
-            int rx = P.x();
-            int ry = P.y();
-
-            QRectF dr = QRectF(rx, ry, mRoomWidth * rSize, mRoomHeight * rSize);
+            QPointF roomCenter = it.value();
+            QRectF dr = QRectF(roomCenter.x(), roomCenter.y(), mRoomWidth * rSize, mRoomHeight * rSize);
 
             // clang-format off
             if (((mPick || picked)
@@ -1141,7 +1138,6 @@ inline void T2DMap::drawRoom(QPainter& painter,
                 // room being clicked on that is WITHIN the area, that is
                 // above this point in the source code:
                 float roomRadius = (0.8 * mRoomWidth) / 2.0;
-                QPointF roomCenter = QPointF(rx, ry);
                 QRadialGradient gradient(roomCenter, roomRadius);
                 gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
                 gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
@@ -1180,7 +1176,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    QMap<int, QPoint> areaExitsMap;
+    // This is needed so that clicking on an area exit can instigate a
+    // speed-walk to the room in the linked to area...
+    QMap<int, QPointF> areaExitsMap;
 
     const float widgetWidth = width();
     const float widgetHeight = height();
@@ -1676,7 +1674,7 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     painter.restore();
 }
 
-void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPoint>& areaExitsMap)
+void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
 {
     const float widgetWidth = width();
     const float widgetHeight = height();
@@ -2166,41 +2164,52 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
             } else {
                 // Area exit:
                 painter.save();
-                QPoint _p;
+                QPointF clickPoint;
                 pen = painter.pen();
                 pen.setWidthF(exitWidth);
+                pen.setCapStyle(Qt::RoundCap);
                 pen.setCosmetic(mMapperUseAntiAlias);
                 pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
-                    line = QLine(p2.x(), p2.y() + mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x(), p2.y() + mRoomHeight / 2.0);
+                    line = QLine(p2.x(), p2.y() + 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x(), p2.y() + mRoomHeight);
                 } else if (room->getNorth() == rID) {
-                    line = QLine(p2.x(), p2.y() - mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x(), p2.y() - mRoomHeight / 2.0);
+                    line = QLine(p2.x(), p2.y() - 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x(), p2.y() - mRoomHeight);
                 } else if (room->getWest() == rID) {
-                    line = QLine(p2.x() - mRoomWidth, p2.y(), p2.x(), p2.y());
-                    _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y());
+                    line = QLine(p2.x() - 2.0 * mRoomWidth, p2.y(),
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() - mRoomWidth, p2.y());
                 } else if (room->getEast() == rID) {
-                    line = QLine(p2.x() + mRoomWidth, p2.y(), p2.x(), p2.y());
-                    _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y());
+                    line = QLine(p2.x() + 2.0 * mRoomWidth, p2.y(),
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() + mRoomWidth, p2.y());
                 } else if (room->getNorthwest() == rID) {
-                    line = QLine(p2.x() - mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
+                    line = QLine(p2.x() - 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() - mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getNortheast() == rID) {
-                    line = QLine(p2.x() + mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
+                    line = QLine(p2.x() + 2.0 * mRoomWidth, p2.y() - 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() + mRoomWidth, p2.y() - mRoomHeight);
                 } else if (room->getSoutheast() == rID) {
-                    line = QLine(p2.x() + mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
+                    line = QLine(p2.x() + 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() + mRoomWidth, p2.y() + mRoomHeight);
                 } else if (room->getSouthwest() == rID) {
-                    line = QLine(p2.x() - mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
-                    _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
+                    line = QLine(p2.x() - 2.0 * mRoomWidth, p2.y() + 2.0 * mRoomHeight,
+                                 p2.x(), p2.y());
+                    clickPoint = QPoint(p2.x() - mRoomWidth, p2.y() + mRoomHeight);
                 }
+                areaExitsMap[k] = clickPoint;
+                // line ENDS at the center of the room, and the START sticks out
+                // in the approprate direction
                 painter.drawLine(line);
-                areaExitsMap[k] = _p;
                 QLineF l0 = QLineF(line);
-                l0.setLength(exitWidth * 5.0);
+                l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
                 QPointF _p1 = l0.p1();
                 QPointF _p2 = l0.p2();
                 QLineF l1 = QLineF(l0);
@@ -2208,7 +2217,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 QLineF l2;
                 l2.setP1(_p2);
                 l2.setAngle(w1);
-                l2.setLength(exitWidth * 2.0);
+                l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
                 QPointF _p3 = l2.p2();
                 l2.setAngle(l2.angle() + 180.0);
                 QPointF _p4 = l2.p2();
@@ -2220,6 +2229,8 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 brush.setColor(mpMap->getColor(k));
                 brush.setStyle(Qt::SolidPattern);
                 QPen arrowPen = painter.pen();
+                arrowPen.setJoinStyle(Qt::RoundJoin);
+                arrowPen.setCapStyle(Qt::RoundCap);
                 arrowPen.setCosmetic(mMapperUseAntiAlias);
                 painter.setPen(arrowPen);
                 painter.setBrush(brush);
@@ -2259,14 +2270,14 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 // Else not an XY-plane exit and doorStatus/doorKey will not be
                 // set to a usable value:
                 if (doorStatus && !doorKey.isEmpty()) {
-                    QLineF k0;
+                    QLineF doorBaseLine;
                     if (areaExit) {
-                        k0 = QLineF(line);
+                        doorBaseLine = QLineF(line.p2(), line.p1());
                     } else {
-                        k0 = QLineF(p2.toPointF(), p1.toPointF());
-                        k0.setLength(k0.length() / 2.0);
+                        doorBaseLine = QLineF(p2.toPointF(), p1.toPointF());
                     }
-                    drawDoor(painter, *room, doorKey, k0);
+                    doorBaseLine.setLength(doorBaseLine.length() / 2.0);
+                    drawDoor(painter, *room, doorKey, doorBaseLine);
                 }
             }
         } // End of for( exitList )
