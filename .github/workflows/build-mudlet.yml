@@ -246,6 +246,11 @@ jobs:
         ${{github.workspace}}/CI/travis.after_success.sh
 
         # Try running generation stats again, does it work after fixing up lua-yajl?
+        find / -name "libyajl.2.dylib" > files_and_folders 2> >(grep -v 'Permission denied' >&2)
+        echo "find results:"
+        cat files_and_folders
+        echo "end find results."
+
         cd /Users/runner/work/Mudlet/Mudlet/translations/translated && /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-osx/tools/lua/lua /Users/runner/work/Mudlet/Mudlet/translations/translated/generate-translation-stats.lua
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
