@@ -28,6 +28,7 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
@@ -608,7 +609,19 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapNameFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomName, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter,
+                             QFont& roomVNumFont,
+                             QFont& mapNameFont,
+                             QPen& pen,
+                             TRoom* pRoom,
+                             const bool isGridMode,
+                             const bool areRoomIdsLegible,
+                             bool showRoomName,
+                             const int speedWalkStartRoomId,
+                             const float rx,
+                             const float ry,
+                             const bool picked,
+                             const QMap<int, QPoint>& areaExitsMap)
 {
     const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
@@ -921,17 +934,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         bool isDoor = true;
         QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_up)) {
-        case 1: //open door
-            brush.setColor(QColor(10, 155, 10));
-            innerPen.setColor(QColor(10, 155, 10));
+        case 1:
+            brush.setColor(mOpenDoorColor);
+            innerPen.setColor(mOpenDoorColor);
             break;
-        case 2: //closed door
-            brush.setColor(QColor(155, 155, 10));
-            innerPen.setColor(QColor(155, 155, 10));
+        case 2:
+            brush.setColor(mClosedDoorColor);
+            innerPen.setColor(mClosedDoorColor);
             break;
         case 3:
-            brush.setColor(QColor(155, 10, 10));
-            innerPen.setColor(QColor(155, 10, 10));
+            brush.setColor(mLockedDoorColor);
+            innerPen.setColor(mLockedDoorColor);
             break;
         default:
             brush.setColor(lc);
@@ -967,17 +980,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         bool isDoor = true;
         QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_down)) {
-        case 1: //open door
-            brush.setColor(QColor(10, 155, 10));
-            innerPen.setColor(QColor(10, 155, 10));
+        case 1:
+            brush.setColor(mOpenDoorColor);
+            innerPen.setColor(mOpenDoorColor);
             break;
-        case 2: //closed door
-            brush.setColor(QColor(155, 155, 10));
-            innerPen.setColor(QColor(155, 155, 10));
+        case 2:
+            brush.setColor(mClosedDoorColor);
+            innerPen.setColor(mClosedDoorColor);
             break;
         case 3:
-            brush.setColor(QColor(155, 10, 10));
-            innerPen.setColor(QColor(155, 10, 10));
+            brush.setColor(mLockedDoorColor);
+            innerPen.setColor(mLockedDoorColor);
             break;
         default:
             brush.setColor(lc);
@@ -1014,17 +1027,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         bool isDoor = true;
         QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_in)) {
-        case 1: //open door
-            brush.setColor(QColor(10, 155, 10));
-            innerPen.setColor(QColor(10, 155, 10));
+        case 1:
+            brush.setColor(mOpenDoorColor);
+            innerPen.setColor(mOpenDoorColor);
             break;
-        case 2: //closed door
-            brush.setColor(QColor(155, 155, 10));
-            innerPen.setColor(QColor(155, 155, 10));
+        case 2:
+            brush.setColor(mClosedDoorColor);
+            innerPen.setColor(mClosedDoorColor);
             break;
         case 3:
-            brush.setColor(QColor(155, 10, 10));
-            innerPen.setColor(QColor(155, 10, 10));
+            brush.setColor(mLockedDoorColor);
+            innerPen.setColor(mLockedDoorColor);
             break;
         default:
             brush.setColor(lc);
@@ -1063,17 +1076,17 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         bool isDoor = true;
         QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_out)) {
-        case 1: //open door
-            brush.setColor(QColor(10, 155, 10));
-            innerPen.setColor(QColor(10, 155, 10));
+        case 1:
+            brush.setColor(mOpenDoorColor);
+            innerPen.setColor(mOpenDoorColor);
             break;
-        case 2: //closed door
-            brush.setColor(QColor(155, 155, 10));
-            innerPen.setColor(QColor(155, 155, 10));
+        case 2:
+            brush.setColor(mClosedDoorColor);
+            innerPen.setColor(mClosedDoorColor);
             break;
         case 3:
-            brush.setColor(QColor(155, 10, 10));
-            innerPen.setColor(QColor(155, 10, 10));
+            brush.setColor(mLockedDoorColor);
+            innerPen.setColor(mLockedDoorColor);
             break;
         default:
             brush.setColor(lc);
@@ -1102,7 +1115,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
     painter.restore();
     if (!isGridMode) {
-        QMapIterator<int, QPoint> it(mAreaExitsList);
+        QMapIterator<int, QPoint> it(areaExitsMap);
         while (it.hasNext()) {
             it.next();
             QPoint P = it.value();
@@ -1167,7 +1180,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         return;
     }
 
-    mAreaExitsList.clear();
+    QMap<int, QPoint> areaExitsMap;
 
     const float widgetWidth = width();
     const float widgetHeight = height();
@@ -1391,7 +1404,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 
     if (!pArea->gridMode) {
-        paintAreaExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth);
+        paintAreaExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
     }
 
     // Draw label sizing or group selection box
@@ -1428,12 +1441,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, __Pick, areaExitsMap);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick, areaExitsMap);
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -1597,7 +1610,73 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 }
 
-void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth)
+void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
+{
+    // A set of numbers that is to be frobbed during development:
+    static double shortPositionFactor = 0.225;
+    static double middlePositionFactor = 0.95;
+    static double longPositionFactor = 0.45;
+    static double innerThresholdFactor = 0.225;
+    static double outerThresholdFactor = 0.45;
+    static double middleAngleFactor = 170.0;
+    static double middleFiddleFactor = 0.20;
+    static double endAngleFactor = 160.0;
+    static double endFiddleFactor = 0.25;
+    bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
+    bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
+    QLineF line{exitLine};
+    if (isShortLine) {
+        line.setLength(shortPositionFactor * (mRoomWidth + mRoomHeight));
+    } else if (isLongLine) {
+        line.setLength(longPositionFactor * (mRoomWidth + mRoomHeight));
+    } else {
+        line.setLength(middlePositionFactor * line.length());
+    }
+    // The end of "doorLine" is the one nearest the room center
+    QLineF doorLine(line.p2(), line.p1());
+    // This drags that end outwards - so that the door can be positioned in
+    // 1/10 of the overall distance from the end:
+    doorLine.setLength(endFiddleFactor * (mRoomWidth + mRoomHeight));
+    // This line starts at the inner end of doorLine and ends at the outer end:
+    QLineF subDoorLineA{doorLine.p2(), doorLine.p1()};
+    // This swings the outer end anti-clockwise:
+    subDoorLineA.setAngle(doorLine.angle() - endAngleFactor);
+    // This swings another one in the same configuration clockwise:
+    QLineF subDoorLineD{doorLine.p2(), doorLine.p1()};
+    subDoorLineD.setAngle(doorLine.angle() + endAngleFactor);
+
+    // Repeat for an intermediate second pair of lines - a smaller factor puts
+    // these points nearer to the outer edge - but the amount from the
+    // centerline is less:
+    doorLine.setLength(middleFiddleFactor * (mRoomWidth + mRoomHeight));
+    QLineF subDoorLineB{doorLine.p2(), doorLine.p1()};
+    subDoorLineB.setAngle(doorLine.angle() - middleAngleFactor);
+    QLineF subDoorLineC{doorLine.p2(), doorLine.p1()};
+    subDoorLineC.setAngle(doorLine.angle() + middleAngleFactor);
+
+    // Construct a line through the end points of the above four lines:
+    QPolygonF compositeDoorLine;
+    compositeDoorLine << subDoorLineA.p2() << subDoorLineB.p2() << subDoorLineC.p2() << subDoorLineD.p2();
+    painter.save();
+    QPen doorPen = painter.pen();
+    doorPen.setCosmetic(mMapperUseAntiAlias);
+    doorPen.setStyle(Qt::SolidLine);
+    doorPen.setCapStyle(Qt::RoundCap);
+
+    int doorStatus = room.doors.value(dirKey);
+    if (doorStatus == 1) {
+        doorPen.setColor(mOpenDoorColor);
+    } else if (doorStatus == 2) {
+        doorPen.setColor(mClosedDoorColor);
+    } else {
+        doorPen.setColor(mLockedDoorColor);
+    }
+    painter.setPen(doorPen);
+    painter.drawPolyline(compositeDoorLine);
+    painter.restore();
+}
+
+void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPoint>& areaExitsMap)
 {
     const float widgetWidth = width();
     const float widgetHeight = height();
@@ -1842,7 +1921,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
         }
 
         if (!room->customLines.empty()) {
-            QPen oldPen = painter.pen();
+            painter.save();
             QMapIterator<QString, QList<QPointF>> itk(room->customLines);
             while (itk.hasNext()) {
                 itk.next();
@@ -1859,43 +1938,65 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 // The following sets a point offset from the room center
                 // that depends on the exit direction that the custom line
                 // heads to from the room center - it forms a fixed segment
-                // that cannot be moved:
+                // that cannot be moved - for XY-plane exits:
                 QPointF fixedOffsetPoint;
+                bool isXYPlainExit = false;
                 if (itk.key() == key_n) {
                     fixedOffsetPoint = QPointF(ex, ey - mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_ne) {
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_e) {
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_se) {
                     fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_s) {
                     fixedOffsetPoint = QPointF(ex, ey + mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_sw) {
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_w) {
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey);
+                    isXYPlainExit = true;
                 } else if (itk.key() == key_nw) {
                     fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
+                    isXYPlainExit = true;
                 } else {
                     fixedOffsetPoint = QPointF(ex, ey);
                 }
                 QPen customLinePen = painter.pen();
                 customLinePen.setCosmetic(mMapperUseAntiAlias);
                 customLinePen.setWidthF(exitWidth);
-                customLinePen.setColor(customLineColor);
                 customLinePen.setCapStyle(Qt::RoundCap);
                 customLinePen.setJoinStyle(Qt::RoundJoin);
+                customLinePen.setColor(customLineColor);
                 customLinePen.setStyle(room->customLinesStyle.value(itk.key()));
 
                 QVector<QPointF> polyLinePoints;
                 QList<QPointF> customLinePoints = itk.value();
+                QLineF doorLineSegment;
                 if (!customLinePoints.empty()) {
                     painter.setPen(customLinePen);
                     polyLinePoints << origin;
                     polyLinePoints << fixedOffsetPoint;
                     for (int pk = 0, total = customLinePoints.size(); pk < total; ++pk) {
                         polyLinePoints << QPointF(customLinePoints.at(pk).x() * mRoomWidth + mRX, customLinePoints.at(pk).y() * mRoomHeight * -1 + mRY);
+                    }
+                    if (polyLinePoints.size() > 2) {
+                        if (isXYPlainExit) {
+                            doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
+                        } else {
+                            // Non-XY-Plane exits have the first two points
+                            // being coincident:
+                            doorLineSegment = QLineF{polyLinePoints.at(1), polyLinePoints.at(2)};
+                        }
+                    } else {
+                        // There must be 2 points ...
+                        doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
                     }
                     painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
 
@@ -1951,19 +2052,35 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                         painter.setBrush(_brush);
                     }
                 }
+
+                if (room->doors.value(itk.key())) {
+                    drawDoor(painter, *room, itk.key(), doorLineSegment);
+                }
             }
-            painter.setPen(oldPen);
+            painter.restore();
         }
 
         // draw exit stubs
         QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
+        painter.save();
         for (int direction : qAsConst(room->exitStubs)) {
-            QVector3D uDirection = unitVectors[direction];
-            painter.drawLine(
-                    rx + rSize * uDirection.x() / 2.0, ry + rSize * uDirection.y(), rx + uDirection.x() * (rSize * mRoomWidth * 3.0 / 4.0), ry + uDirection.y() * (rSize * mRoomHeight * 3.0 / 4.0));
+            if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
+                // Stubs on non-XY plane exits are handled differently and we
+                // do not support special exit stubs (yet?)
+                QVector3D uDirection = unitVectors[direction];
+                QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
+                QPen doorPen = painter.pen();
+                doorPen.setCapStyle(Qt::RoundCap);
+                painter.setPen(doorPen);
+                painter.drawLine(stubLine);
+                const QString doorKey{TRoom::dirCodeToShortString(direction)};
+                if (room->doors.value(doorKey)) {
+                    drawDoor(painter, *room, doorKey, stubLine);
+                }
+            }
         }
+        painter.restore();
 
-        QPen __pen;
         for (int& k : exitList) {
             int rID = k;
             if (rID <= 0) {
@@ -1984,25 +2101,39 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 
             QVector3D p1(ex, ey, ez);
             QVector3D p2(rx, ry, rz);
-            QLine _line;
+            QLine line;
             if (!areaExit) {
-                // one way exit or 2 way exit?
+                // Non-area exit:
                 if (!oneWayExits.contains(rID)) {
-                    painter.drawLine(p1.toPointF(), p2.toPointF());
+                    // Two way exit - but only draw the half of the line from
+                    // the room towards the exit - so that it does not overpaint
+                    // any door drawn on the other half from the other
+                    // direction:
+                    QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
+                    l0.setLength(l0.length() / 2.0);
+                    painter.save();
+                    QPen exitPen = painter.pen();
+                    // We need the line not to extend past the actual end point:
+                    exitPen.setCapStyle(Qt::FlatCap);
+                    painter.drawLine(l0);
+                    painter.restore();
                 } else {
-                    // one way exit draw arrow
-
+                    // one way non-area exit - draw arrow
                     QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
                     QLineF k0 = l0;
                     k0.setLength((l0.length() - exitWidth * 5.0) / 2.0);
                     qreal dx = k0.dx();
                     qreal dy = k0.dy();
-                    QPen _tp = painter.pen();
-                    QPen _tp2 = _tp;
-                    _tp2.setStyle(Qt::DotLine);
-                    painter.setPen(_tp2);
+                    painter.save();
+                    QPen arrowPen = painter.pen();
+                    QPen oneWayLinePen = painter.pen();
+                    QBrush brush = painter.brush();
+
+                    oneWayLinePen.setStyle(Qt::DotLine);
+                    oneWayLinePen.setCapStyle(Qt::SquareCap);
+                    painter.setPen(oneWayLinePen);
                     painter.drawLine(l0);
-                    painter.setPen(_tp);
+
                     l0.setLength(exitWidth * 5.0);
                     QPointF _p1 = l0.p2();
                     QPointF _p2 = l0.p1();
@@ -2015,24 +2146,26 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                     QPointF _p3 = l2.p2();
                     l2.setAngle(l2.angle() + 180.0);
                     QPointF _p4 = l2.p2();
-                    QPolygonF _poly;
-                    _poly.append(_p1);
-                    _poly.append(_p3);
-                    _poly.append(_p4);
-
-                    QBrush brush = painter.brush();
-                    brush.setColor(QColor(255, 100, 100));
-                    brush.setStyle(Qt::SolidPattern);
-                    QPen arrowPen = painter.pen();
+                    QPolygonF poly;
+                    poly.append(_p1);
+                    poly.append(_p3);
+                    poly.append(_p4);
                     arrowPen.setCosmetic(mMapperUseAntiAlias);
                     arrowPen.setStyle(Qt::SolidLine);
+                    arrowPen.setJoinStyle(Qt::RoundJoin);
+                    arrowPen.setCapStyle(Qt::RoundCap);
+                    brush.setColor(QColor(255, 100, 100));
+                    brush.setStyle(Qt::SolidPattern);
                     painter.setPen(arrowPen);
                     painter.setBrush(brush);
-                    painter.drawPolygon(_poly.translated(dx, dy));
+                    painter.drawPolygon(poly.translated(dx, dy));
+
+                    painter.restore();
                 }
 
             } else {
-                __pen = painter.pen();
+                // Area exit:
+                painter.save();
                 QPoint _p;
                 pen = painter.pen();
                 pen.setWidthF(exitWidth);
@@ -2040,33 +2173,33 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 pen.setColor(mpMap->getColor(k));
                 painter.setPen(pen);
                 if (room->getSouth() == rID) {
-                    _line = QLine(p2.x(), p2.y() + mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x(), p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x(), p2.y() + mRoomHeight / 2.0);
                 } else if (room->getNorth() == rID) {
-                    _line = QLine(p2.x(), p2.y() - mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x(), p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x(), p2.y() - mRoomHeight / 2.0);
                 } else if (room->getWest() == rID) {
-                    _line = QLine(p2.x() - mRoomWidth, p2.y(), p2.x(), p2.y());
+                    line = QLine(p2.x() - mRoomWidth, p2.y(), p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y());
                 } else if (room->getEast() == rID) {
-                    _line = QLine(p2.x() + mRoomWidth, p2.y(), p2.x(), p2.y());
+                    line = QLine(p2.x() + mRoomWidth, p2.y(), p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y());
                 } else if (room->getNorthwest() == rID) {
-                    _line = QLine(p2.x() - mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x() - mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
                 } else if (room->getNortheast() == rID) {
-                    _line = QLine(p2.x() + mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x() + mRoomWidth, p2.y() - mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() - mRoomHeight / 2.0);
                 } else if (room->getSoutheast() == rID) {
-                    _line = QLine(p2.x() + mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x() + mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() + mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
                 } else if (room->getSouthwest() == rID) {
-                    _line = QLine(p2.x() - mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
+                    line = QLine(p2.x() - mRoomWidth, p2.y() + mRoomHeight, p2.x(), p2.y());
                     _p = QPoint(p2.x() - mRoomWidth / 2.0, p2.y() + mRoomHeight / 2.0);
                 }
-                painter.drawLine(_line);
-                mAreaExitsList[k] = _p;
-                QLineF l0 = QLineF(_line);
+                painter.drawLine(line);
+                areaExitsMap[k] = _p;
+                QLineF l0 = QLineF(line);
                 l0.setLength(exitWidth * 5.0);
                 QPointF _p1 = l0.p1();
                 QPointF _p2 = l0.p2();
@@ -2091,58 +2224,49 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
                 painter.setPen(arrowPen);
                 painter.setBrush(brush);
                 painter.drawPolygon(_poly);
-                painter.setPen(__pen);
+                painter.restore();
             }
+
             // doors
             if (!room->doors.empty()) {
+                QString doorKey;
                 int doorStatus = 0;
                 if (room->getSouth() == rID && room->doors.contains(key_s)) {
-                    doorStatus = room->doors[key_s];
+                    doorKey = key_s;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getNorth() == rID && room->doors.contains(key_n)) {
-                    doorStatus = room->doors[key_n];
+                    doorKey = key_n;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getSouthwest() == rID && room->doors.contains(key_sw)) {
-                    doorStatus = room->doors[key_sw];
+                    doorKey = key_sw;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getSoutheast() == rID && room->doors.contains(key_se)) {
-                    doorStatus = room->doors[key_se];
+                    doorKey = key_se;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getNortheast() == rID && room->doors.contains(key_ne)) {
-                    doorStatus = room->doors[key_ne];
+                    doorKey = key_ne;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getNorthwest() == rID && room->doors.contains(key_nw)) {
-                    doorStatus = room->doors[key_nw];
+                    doorKey = key_nw;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getWest() == rID && room->doors.contains(key_w)) {
-                    doorStatus = room->doors[key_w];
+                    doorKey = key_w;
+                    doorStatus = room->doors.value(doorKey);
                 } else if (room->getEast() == rID && room->doors.contains(key_e)) {
-                    doorStatus = room->doors[key_e];
+                    doorKey = key_e;
+                    doorStatus = room->doors.value(doorKey);
                 }
-                if (doorStatus > 0) {
+                // Else not an XY-plane exit and doorStatus/doorKey will not be
+                // set to a usable value:
+                if (doorStatus && !doorKey.isEmpty()) {
                     QLineF k0;
-                    QRectF rect;
-                    rect.setWidth(0.25 * mRoomWidth);
-                    rect.setHeight(0.25 * mRoomHeight);
                     if (areaExit) {
-                        k0 = QLineF(_line);
+                        k0 = QLineF(line);
                     } else {
                         k0 = QLineF(p2.toPointF(), p1.toPointF());
+                        k0.setLength(k0.length() / 2.0);
                     }
-                    k0.setLength((k0.length()) / 2.0);
-                    rect.moveCenter(k0.p2());
-                    QPen arrowPen = painter.pen();
-                    QPen _tp = painter.pen();
-                    arrowPen.setCosmetic(mMapperUseAntiAlias);
-                    arrowPen.setStyle(Qt::SolidLine);
-                    if (doorStatus == 1) { //open door
-                        arrowPen.setColor(QColor(10, 155, 10));
-                    } else if (doorStatus == 2) { //closed door
-                        arrowPen.setColor(QColor(155, 155, 10));
-                    } else { //locked door
-                        arrowPen.setColor(QColor(155, 10, 10));
-                    }
-                    QBrush brush;
-                    QBrush oldBrush;
-                    painter.setPen(arrowPen);
-                    painter.setBrush(brush);
-                    painter.drawRect(rect);
-                    painter.setBrush(oldBrush);
-                    painter.setPen(_tp);
+                    drawDoor(painter, *room, doorKey, k0);
                 }
             }
         } // End of for( exitList )

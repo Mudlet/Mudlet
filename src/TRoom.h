@@ -131,7 +131,8 @@ public:
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
                    QHash<int, int>);
-    const QString dirCodeToDisplayName(int dirCode);
+    const QString dirCodeToDisplayName(int);
+    static QString dirCodeToShortString(const int);
     bool hasExitOrSpecialExit(const QString&) const;
 
 

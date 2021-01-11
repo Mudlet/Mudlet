@@ -96,7 +96,7 @@ public:
     bool mPick;
     int mTarget;
     bool mStartSpeedWalk;
-    QMap<int, QPoint> mAreaExitsList;
+
 
     // string list: 0 is event name, 1 is menu it is under if it is
     QMap<QString, QStringList> mUserActions;
@@ -165,6 +165,9 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
+    QColor mOpenDoorColor = QColor(10, 155, 10);
+    QColor mClosedDoorColor = QColor(155, 155, 10);
+    QColor mLockedDoorColor = QColor(155, 10, 10);
 
 
 public slots:
@@ -222,10 +225,12 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool);
+    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool, const QMap<int, QPoint>&);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
-    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
+    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPoint>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
+    inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+
 
     bool mDialogLock;
 

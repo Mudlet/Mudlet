@@ -223,13 +223,13 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setTextAlignment(2, Qt::AlignRight);
     pI->setToolTip(2, singleParagraph.arg(tr("Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.")));
     pI->setCheckState(3, Qt::Checked); //Doortype: none
-    pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+    pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on a custom exit line for this exit on 2D Map.")));
     pI->setCheckState(4, Qt::Unchecked); //Doortype: open
-    pI->setToolTip(4, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(4, singleParagraph.arg(tr("Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
     pI->setCheckState(5, Qt::Unchecked); //Doortype: closed
-    pI->setToolTip(5, singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(5, singleParagraph.arg(tr("Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
     pI->setCheckState(6, Qt::Unchecked); //Doortype: locked
-    pI->setToolTip(6, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+    pI->setToolTip(6, singleParagraph.arg(tr("Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
     pI->setText(7, tr("(command or Lua script)", "Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same")); //Exit command
     pI->setTextAlignment(7, Qt::AlignLeft);
     specialExits->addTopLevelItem(pI);
@@ -1885,19 +1885,19 @@ void dlgRoomExits::init(int id)
         //3-6 hold a buttongroup of 4, ideally QRadioButtons, to select a door type
         pI->setCheckState(3, Qt::Unchecked);
         pI->setTextAlignment(3, Qt::AlignCenter);
-        pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on 2D Map for this exit (only functional choice currently).")));
+        pI->setToolTip(3, singleParagraph.arg(tr("No door symbol is drawn on a custom exit line for this exit on 2D Map.")));
         pI->setCheckState(4, Qt::Unchecked);
         pI->setTextAlignment(4, Qt::AlignCenter);
         pI->setToolTip(
-                4, singleParagraph.arg(tr("Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+                4, singleParagraph.arg(tr("Green (Open) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
         pI->setCheckState(5, Qt::Unchecked);
         pI->setTextAlignment(5, Qt::AlignCenter);
         pI->setToolTip(
                 5,
-                singleParagraph.arg(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+                singleParagraph.arg(tr("Orange (Closed) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
         pI->setTextAlignment(6, Qt::AlignCenter);
         pI->setToolTip(
-                6, singleParagraph.arg(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
+                6, singleParagraph.arg(tr("Red (Locked) door symbol is drawn on a custom exit line for this exit on 2D Map.")));
         pI->setCheckState(6, Qt::Unchecked);
         {
             int specialDoor = pR->getDoor(dir);

@@ -103,21 +103,40 @@ TRoom::~TRoom()
 const QString TRoom::dirCodeToDisplayName(const int dirCode)
 {
     switch (dirCode) {
-    case DIR_NORTH:     return tr("North");       break;
-    case DIR_NORTHEAST: return tr("North-east");  break;
-    case DIR_NORTHWEST: return tr("North-west");  break;
-    case DIR_SOUTH:     return tr("South");       break;
-    case DIR_SOUTHEAST: return tr("South-east");  break;
-    case DIR_SOUTHWEST: return tr("South-west");  break;
-    case DIR_EAST:      return tr("East");        break;
-    case DIR_WEST:      return tr("West");        break;
-    case DIR_UP:        return tr("Up");          break;
-    case DIR_DOWN:      return tr("Down");        break;
-    case DIR_IN:        return tr("In");          break;
-    case DIR_OUT:       return tr("Out");         break;
-    case DIR_OTHER:     return tr("Other");       break;
+    case DIR_NORTH:     return tr("North");
+    case DIR_NORTHEAST: return tr("North-east");
+    case DIR_NORTHWEST: return tr("North-west");
+    case DIR_SOUTH:     return tr("South");
+    case DIR_SOUTHEAST: return tr("South-east");
+    case DIR_SOUTHWEST: return tr("South-west");
+    case DIR_EAST:      return tr("East");
+    case DIR_WEST:      return tr("West");
+    case DIR_UP:        return tr("Up");
+    case DIR_DOWN:      return tr("Down");
+    case DIR_IN:        return tr("In");
+    case DIR_OUT:       return tr("Out");
+    case DIR_OTHER:     return tr("Other");
+    default:            return tr("Unknown");
+    }
+}
+
+QString TRoom::dirCodeToShortString(const int dirCode)
+{
+    switch (dirCode) {
+    case DIR_NORTH:     return QStringLiteral("n");
+    case DIR_NORTHEAST: return QStringLiteral("ne");
+    case DIR_NORTHWEST: return QStringLiteral("nw");
+    case DIR_EAST:      return QStringLiteral("e");
+    case DIR_WEST:      return QStringLiteral("w");
+    case DIR_SOUTH:     return QStringLiteral("s");
+    case DIR_SOUTHEAST: return QStringLiteral("se");
+    case DIR_SOUTHWEST: return QStringLiteral("sw");
+    case DIR_UP:        return QStringLiteral("up");
+    case DIR_DOWN:      return QStringLiteral("down");
+    case DIR_IN:        return QStringLiteral("in");
+    case DIR_OUT:       return QStringLiteral("out");
     default:
-        return tr("Unknown");
+        Q_UNREACHABLE();
     }
 }
 

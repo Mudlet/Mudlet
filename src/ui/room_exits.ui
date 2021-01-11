@@ -1900,6 +1900,9 @@
            <property name="text">
             <string>No door</string>
            </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;No door symbol is drawn on 2D Map for an exit stub, normal or custom exit line for this direction.&lt;/p&gt;</string>
+           </property>
            <property name="checked">
             <bool>true</bool>
            </property>
@@ -1915,6 +1918,9 @@
            <property name="text">
             <string>Open door</string>
            </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map for an exit stub, normal or custom exit line for this direction.&lt;/p&gt;</string>
+           </property>
           </widget>
          </item>
          <item row="2" column="4">
@@ -1927,6 +1933,9 @@
            <property name="text">
             <string>Closed door</string>
            </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map for an exit stub, normal or custom exit line for this direction.&lt;/p&gt;</string>
+           </property>
           </widget>
          </item>
          <item row="2" column="5">
@@ -1938,6 +1947,9 @@
            </property>
            <property name="text">
             <string>Locked door</string>
+           </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map for an exit stub, normal or custom exit line for this direction.&lt;/p&gt;</string>
            </property>
           </widget>
          </item>
@@ -2072,7 +2084,7 @@ Weight</string>
 None</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2081,7 +2093,7 @@ None</string>
 Open</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2090,7 +2102,7 @@ Open</string>
 Closed</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
@@ -2099,7 +2111,7 @@ Closed</string>
 Locked</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</string>
+          <string>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map.&lt;/p&gt;</string>
          </property>
         </column>
         <column>
