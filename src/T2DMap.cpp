@@ -4448,12 +4448,6 @@ bool T2DMap::getCenterSelection()
     }
 }
 
-void T2DMap::exportAreaImage(int id)
-{
-    Q_UNUSED(id)
-    paintMap();
-}
-
 void T2DMap::wheelEvent(QWheelEvent* e)
 {
     // If the mouse wheel is scrolling up and down through the
@@ -4992,11 +4986,6 @@ void T2DMap::slot_roomSelectionChanged()
         getCenterSelection();
     }
     update();
-}
-
-void T2DMap::paintMap()
-{
-    // TODO: reimpliment this!
 }
 
 void T2DMap::resizeMultiSelectionWidget()
