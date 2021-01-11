@@ -5291,7 +5291,7 @@ int TLuaInterpreter::connectToServer(lua_State* L)
             return 2;
         }
 
-        result = host.writeProfileData(QLatin1String("url"), QString::number(port));
+        result = host.writeProfileData(QLatin1String("port"), QString::number(port));
         if (!result.first) {
             lua_pushnil(L);
             lua_pushfstring(L, "unable to save port number, reason: %s", result.second.toUtf8().constData());
