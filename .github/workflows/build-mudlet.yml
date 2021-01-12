@@ -79,6 +79,11 @@ jobs:
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache luarocks
@@ -89,9 +94,6 @@ jobs:
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
-        # TODO: needed on Linux, but perhaps not necessary on macOS?
-        # mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
-        # mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
         export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
@@ -218,7 +220,6 @@ jobs:
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
-        set -x
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
         shopt -s expand_aliases
