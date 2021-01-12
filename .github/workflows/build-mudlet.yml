@@ -220,7 +220,6 @@ jobs:
       run: |
         set -x
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
-        lua -v
 
         shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
