@@ -444,6 +444,27 @@ if(APPLE)
   endif(USE_UPDATER)
   set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
                                           MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
+
+#  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
+  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
+  file(GLOB DIC_FILES "*.dic")
+  file(GLOB AFF_FILES "*.aff")
+  target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES})
+  
+  foreach(FILE ${MUDLET_LUA_FILES})
+    string(REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" PATH_IN_BUNDLE ${FILE} )
+    get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
+    set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/${PATH_IN_BUNDLE})
+  endforeach()
+  foreach(FILE ${LUA_TRANSLATIONS})
+    # convert relative paths to absolute ones, necessary for the ../translations
+    file(REAL_PATH ${FILE} FILE)
+    string(REPLACE ${CMAKE_SOURCE_DIR}/translations "" PATH_IN_BUNDLE ${FILE} )
+    get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
+    set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
+  endforeach()
+  set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
