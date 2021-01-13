@@ -46,8 +46,6 @@ jobs:
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2
-      # 5.11 cache restoration goes awry
-      if: matrix.qt != '5.11.0'
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
