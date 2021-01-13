@@ -1413,7 +1413,6 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 // cleaned up in bulk periodically.
 void Host::slot_purgeTimers()
 {
-    qDebug() << "timer cleanup";
     mTimerUnit.doCleanup();
 }
 
