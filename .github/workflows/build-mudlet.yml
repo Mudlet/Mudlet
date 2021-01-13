@@ -30,7 +30,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             qt: '5.11.0'
-          - os: macos-latest
+          - os: macos-10.15
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
@@ -73,16 +73,38 @@ jobs:
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-key
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache
+        brew install pkg-config libzzip libzip ccache luarocks
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        # Install lua-yajl early to generate translation statistics
+        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        # workaround https://github.com/lloyd/yajl/issues/209
+        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
+        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+        luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+        # for some reason it gets installed in a place where lua-yajl can't find it after, fix that
+        mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/
+        cp  /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-osx/lib/libyajl.2.dylib /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/libyajl.2.dylib
+
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
@@ -98,6 +120,21 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-9
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+
+        # Install lua-yajl early to generate translation statistics
+        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
+        # workaround https://github.com/lloyd/yajl/issues/209
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
+        mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
+        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
+        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
+        luarocks install YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lua-yajl
+
+        # Allow stats generation script to see location of lua-yajl
+        eval "$(luarocks path --local --lua-version "5.1")"
+        echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
+        echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
     - name: (Windows) Install non-vcpkg dependencies
       if: runner.os == 'Windows'
@@ -178,31 +215,32 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
       if: runner.os == 'Linux' || runner.os == 'macOS'
 
-    - name: (Linux) package Mudlet
-      if: runner.os == 'Linux' && matrix.deploy == 'deploy'
+    - name: (Linux/macOS) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: |
-        export PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/tools/lua:$PATH"
+        export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
 
-        luarocks install --local LuaFileSystem
-        luarocks install --local luautf8
-        luarocks install --local lua-zip
-        luarocks install --local LuaSQL-SQLite3 SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
-        luarocks install --local lrexlib-pcre
+        shopt -s expand_aliases
+        if [ "${RUNNER_OS}" = "macOS" ]; then
+          alias run-luarocks="luarocks --lua-dir "${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include""
+        else
+          alias run-luarocks="luarocks"
+        fi
 
-        # workaround https://github.com/lloyd/yajl/issues/209
-        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/lib/libyajl.a
-        mv ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/x64-linux/debug/lib/libyajl.a
-        # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{env.VCPKG_ROOT}}/installed/x64-linux/lib:$LIBRARY_PATH"
-        # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install --local lua-yajl YAJL_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"         YAJL_LIBDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/lib" LUA_INCDIR="${{env.VCPKG_ROOT}}/installed/x64-linux/include"
+        run-luarocks install --local LuaFileSystem
+        run-luarocks install --local luautf8
+        run-luarocks install --local lua-zip
+        run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+        run-luarocks install --local lrexlib-pcre
 
         # CI changelog generation dependencies
-        luarocks install --local argparse
-        luarocks install --local lunajson
+        run-luarocks install --local argparse
+        run-luarocks install --local lunajson
 
         # necessary for Qt multimedia
-        sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          sudo apt-get install libgstreamer-plugins-base1.0-0 -y
+        fi
 
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
