@@ -14854,6 +14854,15 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::delete_luafunction(void* pT)
+{
+    lua_State* L = pGlobalLua;
+    lua_pushlightuserdata(L, pT);
+    lua_pushnil(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
 // returns true if function ran without errors
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)

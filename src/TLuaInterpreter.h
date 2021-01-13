@@ -91,6 +91,7 @@ public:
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
     bool call_luafunction(void* pT);
+    bool delete_luafunction(void* pT);
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
