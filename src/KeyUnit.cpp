@@ -318,21 +318,13 @@ int KeyUnit::getNewID()
 QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers modifierCode) const
 {
     QString name;
-    if (modifierCode == Qt::NoModifier) {
-        name = tr("no modifiers + ",
-                  // Intentional comment to separate arguments
-                  "This text is added before the name of the key in a keybinding when there is "
-                  "NO modifiers. If any modifier (\"control\", etc.) is used they will be added "
-                  "instead; but they are not included in the translations. If they need to be "
-                  "translated in your language tell the Mudlet developers so that we can add them.");
-    } else {
-        name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
-               % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
-               % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
-               % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString())
-               % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
-               % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
-    }
+    name = ((modifierCode & Qt::ShiftModifier) ? "shift + " : QString())
+         % ((modifierCode & Qt::ControlModifier) ? "control + " : QString())
+         % ((modifierCode & Qt::AltModifier) ? "alt + " : QString())
+         % ((modifierCode & Qt::MetaModifier) ? "meta + " : QString())
+         % ((modifierCode & Qt::KeypadModifier) ? "keypad + " : QString())
+         % ((modifierCode & Qt::GroupSwitchModifier) ? "groupswitch + " : QString());
+
 
     if (mKeys.contains(keyCode)) {
         return name % mKeys.value(keyCode);
