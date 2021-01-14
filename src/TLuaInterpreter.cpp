@@ -3930,10 +3930,10 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow -- not hideUserWindow - compare initLuaGlobals()
-int TLuaInterpreter::hideUserWindow(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow
+int TLuaInterpreter::hideWindow(lua_State* L)
 {
-    QString text = getVerifiedString(L, "hideWindow", 1, "name");
+    QString text = getVerifiedString(L, __func__, 1, "name");
 
     Host& host = getHostFromLua(L);
     host.hideWindow(text);
@@ -15628,7 +15628,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
-    lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow);
+    lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideWindow);
     lua_register(pGlobalLua, "showWindow", TLuaInterpreter::showUserWindow);
     lua_register(pGlobalLua, "createBuffer", TLuaInterpreter::createBuffer);
     lua_register(pGlobalLua, "createStopWatch", TLuaInterpreter::createStopWatch);
