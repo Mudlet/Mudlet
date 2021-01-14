@@ -14872,7 +14872,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
         lua_setglobal(L, name.toUtf8().constData());
         lua_pop(L, lua_gettop(L));
     } else if (mudlet::debugMode) {
-        qWarning << "LUA: ERROR deleting " << name << ", it is not a function as expected";
+        qWarning() << "LUA: ERROR deleting " << name << ", it is not a function as expected";
     }
 }
 
