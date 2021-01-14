@@ -3930,10 +3930,10 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow -- not hideUserWindow - compare initLuaGlobals()
-int TLuaInterpreter::hideUserWindow(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow
+int TLuaInterpreter::hideWindow(lua_State* L)
 {
-    QString text = getVerifiedString(L, "hideWindow", 1, "name");
+    QString text = getVerifiedString(L, __func__, 1, "name");
 
     Host& host = getHostFromLua(L);
     host.hideWindow(text);
@@ -4143,7 +4143,7 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow -- not resizeUserWindow - compare initLuaGlobals()
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
     QString text = getVerifiedString(L, __func__, 1, "windowName");
@@ -4969,10 +4969,10 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow -- not showUserWindow - compare initLuaGlobals()
-int TLuaInterpreter::showUserWindow(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow
+int TLuaInterpreter::showWindow(lua_State* L)
 {
-    QString text = getVerifiedString(L, "showWindow", 1, "name");
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.showWindow(text));
     return 1;
@@ -11132,8 +11132,8 @@ int TLuaInterpreter::addSupportedTelnetOption(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echo -- not Echo - compare initLuaGlobals()
-int TLuaInterpreter::Echo(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echo
+int TLuaInterpreter::echo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
@@ -15562,7 +15562,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "showUnzipProgress", TLuaInterpreter::showUnzipProgress); //internal function used by the package system NOT FOR USERS
     lua_register(pGlobalLua, "wait", TLuaInterpreter::Wait);
     lua_register(pGlobalLua, "expandAlias", TLuaInterpreter::expandAlias);
-    lua_register(pGlobalLua, "echo", TLuaInterpreter::Echo);
+    lua_register(pGlobalLua, "echo", TLuaInterpreter::echo);
     lua_register(pGlobalLua, "selectString", TLuaInterpreter::selectString);
     lua_register(pGlobalLua, "selectSection", TLuaInterpreter::selectSection);
     lua_register(pGlobalLua, "replace", TLuaInterpreter::replace);
@@ -15628,8 +15628,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
-    lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow);
-    lua_register(pGlobalLua, "showWindow", TLuaInterpreter::showUserWindow);
+    lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideWindow);
+    lua_register(pGlobalLua, "showWindow", TLuaInterpreter::showWindow);
     lua_register(pGlobalLua, "createBuffer", TLuaInterpreter::createBuffer);
     lua_register(pGlobalLua, "createStopWatch", TLuaInterpreter::createStopWatch);
     lua_register(pGlobalLua, "getStopWatchTime", TLuaInterpreter::getStopWatchTime);
@@ -16194,7 +16194,7 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_pushstring(pIndenterState.get(), "SCRIPT_ID");
     lua_pushnumber(pIndenterState.get(), -2); // ID 2 is used to indicate that this is the indenter Lua interpreter
     lua_settable(pIndenterState.get(), LUA_GLOBALSINDEX);
-    lua_register(pIndenterState.get(), "echo", TLuaInterpreter::Echo);
+    lua_register(pIndenterState.get(), "echo", TLuaInterpreter::echo);
     lua_register(pIndenterState.get(), "tempTimer", TLuaInterpreter::tempTimer);
     lua_register(pIndenterState.get(), "send", TLuaInterpreter::sendRaw);
     lua_register(pIndenterState.get(), "debugc", TLuaInterpreter::debug);

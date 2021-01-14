@@ -268,7 +268,7 @@ public:
     static int Wait(lua_State* L);
     static int expandAlias(lua_State* L);
     static int sendRaw(lua_State* L);
-    static int Echo(lua_State* L);
+    static int echo(lua_State* L);
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth(lua_State* L);
     static int selectSection(lua_State* L);
@@ -342,8 +342,8 @@ public:
     static int createBuffer(lua_State*);
     static int raiseWindow(lua_State*);
     static int lowerWindow(lua_State*);
-    static int showUserWindow(lua_State*);
-    static int hideUserWindow(lua_State*);
+    static int showWindow(lua_State*);
+    static int hideWindow(lua_State*);
     static int closeUserWindow(lua_State*);
     static int resizeWindow(lua_State*);
     static int createStopWatch(lua_State*);
