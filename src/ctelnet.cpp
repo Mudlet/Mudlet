@@ -1618,7 +1618,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);
-            } else if (payload.startsWith(QByteArray("Client.GUI"))) {
+            } else if (payload.toLower().startsWith(QByteArray("client.gui"))) {
                 if (!mpHost->mAcceptServerGUI) {
                     return;
                 }
@@ -1629,7 +1629,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 // encoding is wrong.
                 QString msg = decodeBytes(payload);
                 QString version = msg.section(QChar::LineFeed, 0);
-                version.remove(QStringLiteral("Client.GUI "));
+                version.remove(QStringLiteral("Client.GUI "), Qt::CaseInsensitive);
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
@@ -1941,7 +1941,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         data = transcodedMsg.section(QChar::LineFeed, 1);
     }
 
-    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"))) {
+    if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -1962,7 +1962,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (!document.isObject()) {
             // This is raw telnet, not JSON
             version = transcodedMsg.section(QChar::LineFeed, 0);
-            version.remove(QLatin1String("Client.GUI "));
+            version.remove(QLatin1String("Client.GUI "), Qt::CaseInsensitive);
             version.replace(QChar::LineFeed, QChar::Space);
             version = version.section(QChar::Space, 0, 0);
 
@@ -2038,7 +2038,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
         return;
-    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"))) {
+    } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
     data.remove(QChar::LineFeed);
@@ -2048,12 +2048,12 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
-        || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
+    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive)
+        || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
-    if (mpHost->mAcceptServerMedia && packageMessage.toLower().startsWith(QStringLiteral("client.media"))) {
+    if (mpHost->mAcceptServerMedia && packageMessage.startsWith(QStringLiteral("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
