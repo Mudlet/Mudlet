@@ -453,7 +453,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
-    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
 
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
@@ -1405,15 +1405,21 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
 }
 
-// When Mudlet is running in online mode, deleted timers are cleaned up in bulk
+// When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
 // on every new line. When in offline mode, new lines don't come - so they are
 // cleaned up in bulk periodically.
-void Host::slot_purgeTimers()
+void Host::slot_purgeTemps()
 {
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
