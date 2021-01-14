@@ -1,5 +1,8 @@
+#ifndef MUDLET_DLGROOMSYMBOL_H
+#define MUDLET_DLGROOMSYMBOL_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,14 +20,49 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "AltFocusMenuBarDisable.h"
-#include <QProxyStyle>
+#include "Host.h"
 
-int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
+#include "pre_guard.h"
+#include "ui_room_symbol.h"
+#include "post_guard.h"
+
+
+class dlgRoomSymbol : public QDialog, public Ui::room_symbol
 {
-    if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return 0;
-    }
+    Q_OBJECT
 
-    return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
-}
+public:
+    Q_DISABLE_COPY(dlgRoomSymbol)
+    explicit dlgRoomSymbol(Host*, QWidget* parent = nullptr);
+    void init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms);
+    void accept() override;
+
+signals:
+    void signal_save_symbol(QString symbol, QColor color, QSet<TRoom*> rooms);
+
+private:
+    QColor backgroundBasedColor(QColor);
+    QColor defaultColor();
+    QString getNewSymbol();
+    void initInstructionLabel();
+    QStringList getComboBoxItems();
+    QFont getFontForPreview(QString);
+
+    Host* mpHost;
+    QSet<TRoom*> mpRooms;
+    QHash<QString, int> mpSymbols;
+    int firstRoomId;
+    QColor selectedColor = nullptr;
+    QColor previewColor = nullptr;
+    QColor roomColor;
+
+private slots:
+    void openColorSelector();
+    void currentColorChanged(const QColor&);
+    void colorSelected(const QColor&);
+    void colorRejected();
+    void updatePreview();
+    void resetColor();
+};
+
+#endif // MUDLET_DLGROOMSYMBOL_H

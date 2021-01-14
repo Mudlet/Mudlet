@@ -1505,7 +1505,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
@@ -1537,9 +1538,11 @@ void mudlet::slot_uninstall_package()
     if (!pH) {
         return;
     }
-    QListWidgetItem* pI = packageList->currentItem();
-    if (pI) {
-        pH->uninstallPackage(pI->text(), 0);
+    auto selectedPackages = packageList->selectedItems();
+    if (!selectedPackages.empty()) {
+        for (auto package : selectedPackages) {
+            pH->uninstallPackage(package->text(), 0);
+        }
     }
     packageList->clear();
     packageList->addItems(pH->mInstalledPackages);
@@ -2494,7 +2497,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2642,60 +2645,6 @@ void mudlet::slot_irc()
 void mudlet::slot_discord()
 {
     openWebPage(mMudletDiscordInvite);
-}
-
-void mudlet::updateMudletDiscordInvite()
-{
-    QDir dir;
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (!dir.mkpath(cacheDir)) {
-        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
-        return;
-    }
-
-    auto manager = new QNetworkAccessManager(this);
-    auto diskCache = new QNetworkDiskCache(this);
-    diskCache->setCacheDirectory(cacheDir);
-    manager->setCache(diskCache);
-
-
-    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
-    QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
-    QNetworkReply* getReply = manager->get(request);
-
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
-#else
-    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
-#endif
-        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
-        getReply->deleteLater();
-    });
-
-    connect(getReply,
-            &QNetworkReply::finished,
-            this,
-            std::bind(
-                    [=](QNetworkReply* reply) {
-                        if (reply->error() != QNetworkReply::NoError) {
-                            return;
-                        }
-
-                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
-                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
-                        if (inviteKey == QJsonValue::Undefined) {
-                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
-                            return;
-                        }
-
-                        mMudletDiscordInvite = inviteKey.toString();
-                        reply->deleteLater();
-                    },
-                    getReply));
 }
 
 void mudlet::slot_reconnect()
@@ -2952,8 +2901,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 
     pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
-    pHost->mIsProfileLoadingSequence = false;
-
     pHost->updateAnsi16ColorsInTable();
 
     //Load rest of modules after scripts
@@ -2969,6 +2916,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 
     packagesToInstallList.clear();
+
+    pHost->mIsProfileLoadingSequence = false;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -3780,6 +3729,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Removes the normal click to activate "About Mudlet" action and move it
     // to a new menu which also contains a "goto updater" option
 
+    if (mpActionAboutWithUpdates) {
+        mpMainToolBar->removeAction(mpActionAboutWithUpdates);
+    }
+
     // First change the existing button:
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         mpActionAbout->setIcon(QIcon(":/icons/mudlet_information.png"));
@@ -3806,7 +3759,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
-    mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
+    mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
 

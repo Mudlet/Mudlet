@@ -349,10 +349,6 @@ bool TRoomDB::removeArea(int id)
         // This means areas.clear() is not needed during map
         // deletion
         areas.remove(id);
-        // Must also nuke any map labels in the area - otherwise auditing the
-        // map later will regenerate an unnamed area with the same Id to be the
-        // owner of them...!
-        mpMap->mapLabels.remove(id);
 
         mpMap->mMapGraphNeedsUpdate = true;
         return true;
@@ -657,13 +653,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         QSet<int> areaIdsFromAreaNamesSet{areaIdsFromAreaNamesList.begin(), areaIdsFromAreaNamesList.end()};
         areaIdSet.unite(areaIdsFromAreaNamesSet);
     }
-
-    // And the area Ids used by the map labels:
-    if (!mpMap->mapLabels.isEmpty()) {
-        QList<int> areaIdsFromLabelsList{mpMap->mapLabels.keys()};
-        QSet<int> areaIdsFromLabelsSet{areaIdsFromLabelsList.begin(), areaIdsFromLabelsList.end()};
-        areaIdSet.unite(areaIdsFromLabelsSet);
-    }
 #else
     // Check for existance of all areas needed by rooms
     QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
@@ -671,9 +660,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // START OF TASK 3
     // Throw in the area Ids from the areaNamesMap:
     areaIdSet.unite(areaNamesMap.keys().toSet());
-
-    // And the area Ids used by the map labels:
-    areaIdSet.unite(mpMap->mapLabels.keys().toSet());
 #endif
 
     // Check the set of area Ids against the ones we actually have:
@@ -835,12 +821,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             validUsedAreaIds.insert(replacementAreaId);
             areas.insert(replacementAreaId, pA);
 
-            // Fixup map labels as well
-            if (mpMap->mapLabels.contains(faultyAreaId)) {
-                QMap<qint32, TMapLabel> areaMapLabels = mpMap->mapLabels.take(faultyAreaId);
-                mpMap->mapLabels.insert(replacementAreaId, areaMapLabels);
-            }
-
             pA->mIsDirty = true;
         }
         if (mudlet::self()->showMapAuditErrors()) {
@@ -854,7 +834,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         mpMap->appendErrorMsg(tr("[ INFO ]  - Area id numbering is satisfactory."), false);
     }
     // END OF TASK 2,3,4,5 - all needed areas exist and remap details are in
-    // areaRemapping - still need to update rooms and areaNames and mapLabels
+    // areaRemapping - still need to update rooms and areaNames
 
     // Now complete TASK 1 - find the new room Ids to use
     if (!roomRemapping.isEmpty()) {

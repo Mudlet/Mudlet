@@ -24,14 +24,6 @@
 // Debugging value to display ALL licences in the dialog
 // #define DEBUG_SHOWALL
 
-#ifndef GIT_COMMIT_HASH
-#define GIT_COMMIT_HASH "?"
-#endif
-
-#ifndef GIT_BRANCH
-#define GIT_BRANCH "?"
-#endif
-
 #include "dlgAboutDialog.h"
 
 #include "mudlet.h"
@@ -154,7 +146,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
         tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
            "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
-           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
+           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://www.mudlet.org/chat\">discord.gg</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
@@ -1072,15 +1064,10 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 }
 
 QString dlgAboutDialog::createBuildInfo() const {
-
-    QString commitHash = !QByteArray(GIT_COMMIT_HASH).isEmpty() ? QStringLiteral(GIT_COMMIT_HASH) : QStringLiteral("?");
-    QString branch = !QByteArray(GIT_BRANCH).isEmpty() ? QStringLiteral(GIT_BRANCH) : QStringLiteral("?");
     return QStringLiteral("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
         .append(QStringLiteral("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
         .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Branch"), branch))
-        .append(QStringLiteral("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("Commit"), commitHash))
         .append(QStringLiteral("</table>"));
 }

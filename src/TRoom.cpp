@@ -581,43 +581,36 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 
 void TRoom::calcRoomDimensions()
 {
+    min_x = x;
+    max_x = x;
+    min_y = y;
+    max_y = y;
+
     if (customLines.empty()) {
         return;
     }
-    min_x = 0.0;
-    min_y = 0.0;
-    max_x = 0.0;
-    max_y = 0.0;
-    bool needInit = true;
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
         it.next();
-        const QList<QPointF>& _pL = it.value();
-        if (_pL.empty()) {
+        const QList<QPointF>& pointsInLine = it.value();
+        if (pointsInLine.empty()) {
             continue;
         }
-        if (needInit) {
-            needInit = false;
-            min_x = _pL[0].x();
-            max_x = min_x;
-            min_y = _pL[0].y();
-            max_y = min_y;
-        }
-        for (auto point : _pL) {
-            qreal _x = point.x();
-            qreal _y = point.y();
-            if (_x < min_x) {
-                min_x = _x;
+        for (auto pointInLine : pointsInLine) {
+            qreal pointX = pointInLine.x();
+            qreal pointY = pointInLine.y();
+            if (pointX < min_x) {
+                min_x = pointX;
             }
-            if (_x > max_x) {
-                max_x = _x;
+            if (pointX > max_x) {
+                max_x = pointX;
             }
-            if (_y < min_y) {
-                min_y = _y;
+            if (pointY < min_y) {
+                min_y = pointY;
             }
-            if (_y > max_y) {
-                max_y = _y;
+            if (pointY > max_y) {
+                max_y = pointY;
             }
         }
     }
@@ -673,16 +666,16 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         while (itOldSpecialExit.hasNext()) {
             itOldSpecialExit.next();
             QString cmd{itOldSpecialExit.value()};
-            if (cmd.startsWith(QLatin1Char('1'))) {
+            if (cmd.startsWith(QLatin1String("1"))) {
                 // Is locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
                 mSpecialExitLocks.insert(cmd);
-            } else if (Q_LIKELY(cmd.startsWith(QLatin1Char('1')))) {
+            } else if (Q_LIKELY(cmd.startsWith(QLatin1String("0")))) {
                 // Is not locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
             } else {
                 // Has no lock prefix at all
-                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+                mSpecialExits.insert(cmd, itOldSpecialExit.key());
             }
         }
     }
@@ -695,6 +688,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         // For older versions we note the prior unsigned short in case
         // there is no fallback carried in the room user data
         ifs >> oldCharacterCode;
+    }
+
+    if (version >= 21) {
+        ifs >> mSymbolColor;
     }
 
     if (version >= 10) {
@@ -710,6 +707,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 // ASCII or ISO 8859-1 (Latin1) character:
                 mSymbol = QChar(oldCharacterCode);
             }
+        }
+    }
+
+    if (version < 21) {
+        auto symbolColorFallbackKey = QLatin1String("system.fallback_symbol_color");
+        if (userData.contains(symbolColorFallbackKey)) {
+            mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
     }
 

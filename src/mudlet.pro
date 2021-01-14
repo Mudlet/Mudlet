@@ -104,31 +104,6 @@ isEmpty( BUILD ) {
    BUILD = "-dev"
 }
 
-$$system(git --version, blob, GIT_STATUS)
-isEqual(GIT_STATUS, 0) {
-    # Git command appeared to work - so get a description of the current
-    # repository state
-    GIT_DESCRIPTION=$$system(git describe --all --dirty --broken)
-    GIT_COMMITHASH=$$system(git rev-parse --short HEAD)
-    # remove the leading "head/"
-    GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "heads/", "")
-    # Split it on hyphens
-    SPLIT_GIT_DESCRIPTION=$$split(GIT_DESCRIPTION, -)
-    # Get the last part so we can check if it is "broken" or "dirty"
-    LAST_GIT_DESCRIPTION=$$last(SPLIT_GIT_DESCRIPTION)
-    contains(LAST_GIT_DESCRIPTION, "broken" ) {
-        warning( "Main Git repository has a problem." )
-        GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-broken", " (broken)")
-    } else {
-        contains(LAST_GIT_DESCRIPTION, "dirty" ) {
-            GIT_DESCRIPTION=$$replace(GIT_DESCRIPTION, "-dirty", " (modified)")
-        }
-    }
-    !build_pass : message("Using a git description of: \"$${GIT_DESCRIPTION}\", Git SHA1 is: $${GIT_COMMITHASH}")
-    DEFINES += GIT_COMMIT_HASH=\\\"$${GIT_COMMITHASH}\\\"
-    DEFINES += GIT_BRANCH=\\\"\"$${GIT_DESCRIPTION}\"\\\"
-}
-
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
 # want to set the environmental variable WITH_VARIABLE_SPLASH_SCREEN to NO so
@@ -543,6 +518,7 @@ SOURCES += \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -585,6 +561,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -646,6 +623,7 @@ HEADERS += \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -691,6 +669,7 @@ HEADERS += \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
@@ -757,6 +736,7 @@ FORMS += \
     ui/notes_editor.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \

@@ -71,8 +71,17 @@ TTimer::~TTimer()
     mpQTimer->stop();
     if (mpHost) {
         mpHost->getTimerUnit()->unregisterTimer(this);
+
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(this);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
+        }
     }
 
+    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
     mpQTimer->deleteLater();
 }
 

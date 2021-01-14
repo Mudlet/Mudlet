@@ -1,5 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,14 +19,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "AltFocusMenuBarDisable.h"
-#include <QProxyStyle>
 
-int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
+#include "TMapLabel.h"
+
+#include "pre_guard.h"
+#include <QBuffer>
+#include "post_guard.h"
+
+QByteArray TMapLabel::base64EncodePixmap() const
 {
-    if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        return 0;
-    }
-
-    return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    pix.save(&buffer, "PNG");
+    return buffer.data().toBase64();
 }
