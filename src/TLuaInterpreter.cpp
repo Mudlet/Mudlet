@@ -14854,6 +14854,29 @@ bool TLuaInterpreter::call_luafunction(void* pT)
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::delete_luafunction(void* pT)
+{
+    lua_State* L = pGlobalLua;
+    lua_pushlightuserdata(L, pT);
+    lua_pushnil(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::delete_luafunction(const QString& name)
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, name.toUtf8().constData());
+    if (lua_isfunction(L, -1)) {
+        lua_pushnil(L);
+        lua_setglobal(L, name.toUtf8().constData());
+        lua_pop(L, lua_gettop(L));
+    } else if (mudlet::debugMode) {
+        qWarning() << "LUA: ERROR deleting " << name << ", it is not a function as expected";
+    }
+}
+
+// No documentation available in wiki - internal function
 // returns true if function ran without errors
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
