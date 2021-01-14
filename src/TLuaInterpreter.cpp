@@ -7958,32 +7958,23 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "exists: wrong argument type");
-        return lua_error(L);
-    }
-    QString name = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "exists: wrong argument type");
-        return lua_error(L);
-    }
-    QString type = lua_tostring(L, 2);
+    QString name = getVerifiedString(L, __func__, 1, "name");
+    QString type = getVerifiedString(L, __func__, 2, "type");
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
     type = type.toLower();
-    if (type == "timer") {
+    if (type == QLatin1String("timer")) {
         cnt += host.getTimerUnit()->mLookupTable.count(name);
-    } else if (type == "trigger") {
+    } else if (type == QLatin1String("trigger")) {
         cnt += host.getTriggerUnit()->mLookupTable.count(name);
-    } else if (type == "alias") {
+    } else if (type == QLatin1String("alias")) {
         cnt += host.getAliasUnit()->mLookupTable.count(name);
-    } else if (type == "keybind") {
+    } else if (type == QLatin1String("keybind")) {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
-    } else if (type == "button") {
+    } else if (type == QLatin1String("button")) {
         cnt += host.getActionUnit()->findActionsByName(name).size();
-    } else if (type == "script") {
+    } else if (type == QLatin1String("script")) {
         cnt += host.getScriptUnit()->findScriptId(name).size();
     }
     lua_pushnumber(L, cnt);
