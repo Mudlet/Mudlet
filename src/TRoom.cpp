@@ -673,16 +673,16 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         while (itOldSpecialExit.hasNext()) {
             itOldSpecialExit.next();
             QString cmd{itOldSpecialExit.value()};
-            if (cmd.startsWith(QLatin1Char('1'))) {
+            if (cmd.startsWith(QLatin1String("1"))) {
                 // Is locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
                 mSpecialExitLocks.insert(cmd);
-            } else if (Q_LIKELY(cmd.startsWith(QLatin1Char('1')))) {
+            } else if (Q_LIKELY(cmd.startsWith(QLatin1String("0")))) {
                 // Is not locked:
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
             } else {
                 // Has no lock prefix at all
-                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+                mSpecialExits.insert(cmd, itOldSpecialExit.key());
             }
         }
     }
@@ -695,6 +695,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         // For older versions we note the prior unsigned short in case
         // there is no fallback carried in the room user data
         ifs >> oldCharacterCode;
+    }
+
+    if (version >= 21) {
+        ifs >> mSymbolColor;
     }
 
     if (version >= 10) {
@@ -710,6 +714,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 // ASCII or ISO 8859-1 (Latin1) character:
                 mSymbol = QChar(oldCharacterCode);
             }
+        }
+    }
+
+    if (version < 21) {
+        auto symbolColorFallbackKey = QLatin1String("system.fallback_symbol_color");
+        if (userData.contains(symbolColorFallbackKey)) {
+            mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
     }
 
