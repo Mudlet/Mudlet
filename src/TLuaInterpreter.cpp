@@ -4969,10 +4969,10 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow -- not showUserWindow - compare initLuaGlobals()
-int TLuaInterpreter::showUserWindow(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow
+int TLuaInterpreter::showWindow(lua_State* L)
 {
-    QString text = getVerifiedString(L, "showWindow", 1, "name");
+    QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.showWindow(text));
     return 1;
@@ -15629,7 +15629,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
     lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideWindow);
-    lua_register(pGlobalLua, "showWindow", TLuaInterpreter::showUserWindow);
+    lua_register(pGlobalLua, "showWindow", TLuaInterpreter::showWindow);
     lua_register(pGlobalLua, "createBuffer", TLuaInterpreter::createBuffer);
     lua_register(pGlobalLua, "createStopWatch", TLuaInterpreter::createStopWatch);
     lua_register(pGlobalLua, "getStopWatchTime", TLuaInterpreter::getStopWatchTime);
