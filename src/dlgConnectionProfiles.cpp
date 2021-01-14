@@ -635,7 +635,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
-    if (profileDirContents.count() == 0) {
+    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
         return;
