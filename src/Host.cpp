@@ -454,6 +454,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
+
+    // enable by default in case of offline connection; if the profile connects - timer will be disabled
+    purgeTimer.start(1min);
 }
 
 Host::~Host()
