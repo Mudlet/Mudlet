@@ -11108,7 +11108,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2558"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
@@ -12034,17 +12034,17 @@ LUA Skript</translation>
       <location filename="../src/ui/room_symbol.ui" line="14"/>
       <location filename="../src/ui/room_symbol.ui" line="112"/>
       <source>Room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Raumsymbol</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Farbe für die Raumsymbole</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="147"/>
       <source>Symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Symbolfarbe</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
