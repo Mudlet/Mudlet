@@ -602,6 +602,8 @@ private:
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static QString getVerifiedWindowName(lua_State* L, const char* functionName, const int pos, const bool isOptional = false);
+    static QString getVerifiedCommandlineName(lua_State* L, const char* functionName, const int pos, const bool isOptional = false);
     static void announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
