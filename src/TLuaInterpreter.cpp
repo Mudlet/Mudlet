@@ -105,35 +105,12 @@ static bool isMain(const QString& name)
     return false;
 }
 
-static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
-static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
+
+// variable names within the following macros have trailing underscores because
+// in at least one case, masking an existing variable with the new one confused
+// GCC, leading to a crash.
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
-
-#define WINDOW_NAME(_L, _pos)                                                                  \
-    ({                                                                                         \
-        int pos_ = (_pos);                                                                     \
-        const char *res_;                                                                      \
-        if ((lua_gettop(_L) < pos_) || lua_isnil(_L, pos_)) {                                  \
-            res_ = "";                                                                         \
-        } else if (!lua_isstring(_L, pos_)) {                                                  \
-            lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(_L, pos_)); \
-            return lua_error(_L);                                                              \
-        } else {                                                                               \
-            res_ = lua_tostring(_L, pos_);                                                     \
-        }                                                                                      \
-        res_;                                                                                  \
-    })
-
-#define CMDLINE_NAME(_L, _pos)                                                                 \
-    ({                                                                                         \
-        int pos_ = (_pos);                                                                     \
-        if (!lua_isstring(_L, pos_)) {                                                         \
-            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(_L, pos_));\
-            return lua_error(_L);                                                              \
-        }                                                                                      \
-        lua_tostring(_L, pos_);                                                                \
-    })
 
 #define CONSOLE_NIL(_L, _name)                                                                 \
     ({                                                                                         \
@@ -167,10 +144,6 @@ static const char *bad_cmdline_value = "command line \"%s\" not found";
         }                                                                                      \
         cmdLine_;                                                                              \
     })
-
-// variable names within these macros have trailing underscores because in
-// at least one case, masking an existing variable with the new one confused
-// GCC, leading to a crash.
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
@@ -220,7 +193,7 @@ bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const char* functionName,
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: getVerifiedBoolean
 QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
@@ -233,7 +206,7 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: getVerifiedBoolean
 int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
@@ -246,7 +219,7 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: getVerifiedBoolean
 float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
@@ -259,7 +232,25 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: getVerifiedBoolean
+QString TLuaInterpreter::getVerifiedWindowName(lua_State* L, const char* functionName, const int pos, const bool isOptional)
+{
+    if ((lua_gettop(L) < pos) || lua_isnil(L, pos)) {
+        return QString();
+    }
+    return getVerifiedString(L, functionName, pos, "window name", isOptional);
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBoolean
+QString TLuaInterpreter::getVerifiedCommandlineName(lua_State* L, const char* functionName, const int pos, const bool isOptional)
+{
+    return getVerifiedString(L, functionName, pos, "command line name", isOptional);
+}
+
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBoolean
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
@@ -270,6 +261,7 @@ void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functi
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     }
 }
+
 
 // No documentation available in wiki - internal function
 // Raises additional sysDownloadError Events on failure to process
