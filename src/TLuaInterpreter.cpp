@@ -238,7 +238,7 @@ QString TLuaInterpreter::getVerifiedWindowName(lua_State* L, const char* functio
     if ((lua_gettop(L) < pos) || lua_isnil(L, pos)) {
         return QString();
     }
-    return getVerifiedString(L, functionName, pos, "window name", isOptional);
+    return getVerifiedString(L, functionName, pos, "windowName", isOptional);
 }
 
 // No documentation available in wiki - internal function
