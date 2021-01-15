@@ -698,12 +698,47 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
     }
 
-    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
-        || mMultiSelectionSet.contains(currentRoomId)) {
+    if (mBubbleMode) {
+        float roomRadius = 0.5 * rSize * mRoomWidth;
+        QPointF roomCenter = QPointF(rx, ry);
+        // CHECK: The use of a gradient fill to a white center on round
+        // rooms might look nice in some sitations but not in all:
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.85, roomColor);
+        gradient.setColorAt(0, Qt::white);
+        QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
+        borderPen.setWidth(borderWidth);
+        QPainterPath diameterPath;
+        painter.setBrush(gradient);
+        painter.setPen(borderPen);
+        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(diameterPath);
+    } else {
+        painter.fillRect(roomRectangle, roomColor);
+    }
 
-        // This room is in the selection:
-        // TODO: replace this flood fill of the room with an orange rectangle with something a bit more subtle:
-        painter.fillRect(roomRectangle, QColor(255, 155, 55));
+    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
+    || mMultiSelectionSet.contains(currentRoomId)) {
+        auto selectionPen = QPen(QColor(255, 50, 50, 125));
+        selectionPen.setWidth(borderWidth);
+        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+        selectionBg.setColorAt(0.25, Qt::transparent);
+        selectionBg.setColorAt(1, Qt::blue);
+        if (!mBubbleMode) {        
+            auto selectionRectangle = roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth);
+            painter.fillRect(selectionRectangle, selectionBg);
+            painter.setPen(selectionPen);
+            painter.drawRect(selectionRectangle);
+        } else {
+            float roomRadius = 0.5 * rSize * mRoomWidth;
+            QPointF roomCenter = QPointF(rx, ry);
+            QPainterPath diameterPath;
+            painter.setPen(selectionPen);
+            painter.setBrush(selectionBg);
+            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+            painter.drawPath(diameterPath);
+        }
+
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
@@ -731,110 +766,89 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
             initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
         }
-
-    } else {
-        // Room is NOT selected
-        if (mBubbleMode) {
-            float roomRadius = 0.5 * rSize * mRoomWidth;
-            QPointF roomCenter = QPointF(rx, ry);
-            // CHECK: The use of a gradient fill to a white center on round
-            // rooms might look nice in some sitations but not in all:
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.85, roomColor);
-            gradient.setColorAt(0, Qt::white);
-            QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
-            borderPen.setWidth(borderWidth);
-            QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(borderPen);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        } else {
-            painter.fillRect(roomRectangle, roomColor);
-        }
-
-        // Do we need to draw the room symbol:
-        if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-            QColor symbolColor;
-            if (pRoom->mSymbolColor != nullptr) {
-                symbolColor = pRoom->mSymbolColor;
-            } else if (roomColor.lightness() > 127) {
-                symbolColor = Qt::black;
-            } else {
-                symbolColor = Qt::white;
-            }
-            auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
-            if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
-            }
-
-            painter.save();
-            painter.setBackgroundMode(Qt::TransparentMode);
-
-            QPixmap* pix = mSymbolPixmapCache.object(pixmapKey);
-            if (!pix) {
-                qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pRoom->mSymbol.toUtf8().constData());
-            } else {
-                /*
-                 * For the non-scaling QPainter::drawPixmap() used now we
-                 * have to position the generated pixmap containing the
-                 * particular symbol for this room to Y when it would
-                 * position it at X - this should be faster than the previous
-                 * scaling QPainter::drawPixmap() as that would scale the
-                 * pixmap to fit the Room Rectangle!
-                 *
-                 *                         |<------->| roomRectangle.width()
-                 * roomRectangle.topLeft-->X---------+
-                 *                         |  Room   |
-                 *                         |  Y---+  |
-                 *                         |  |Pix|  |
-                 *                         |  +---+  |
-                 *                         |Rectangle|
-                 *                         +---------+
-                 *                            |<->|<--symbolRect.width()
-                 *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
-                 * similarly for the y-offset
-                 */
-
-                painter.drawPixmap(
-                        QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
-                        *pix);
-            }
-
-            painter.restore();
-        }
-
-        // Do we need to draw the custom (user specified) highlight
-        if (pRoom->highlight) {
-            float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
-            QPointF roomCenter = QPointF(rx, ry);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.85, pRoom->highlightColor);
-            gradient.setColorAt(0, pRoom->highlightColor2);
-            QPen transparentPen(Qt::transparent);
-            QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        }
-
-        // Do we need to draw the room Id number:
-        if (mShowRoomID && areRoomIdsLegible) {
-            painter.save();
-            QColor roomIdColor;
-            if (roomColor.lightness() > 127) {
-                roomIdColor = QColor(Qt::black);
-            } else {
-                roomIdColor = QColor(Qt::white);
-            }
-            painter.setPen(QPen(roomIdColor));
-            painter.setFont(roomVNumFont);
-            painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
-            painter.restore();
-        }
-
     }
+
+    // Do we need to draw the room symbol:
+    if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
+        QColor symbolColor;
+        if (pRoom->mSymbolColor != nullptr) {
+            symbolColor = pRoom->mSymbolColor;
+        } else if (roomColor.lightness() > 127) {
+            symbolColor = Qt::black;
+        } else {
+            symbolColor = Qt::white;
+        }
+        auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        if (!mSymbolPixmapCache.contains(pixmapKey)) {
+            addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
+        }
+
+        painter.save();
+        painter.setBackgroundMode(Qt::TransparentMode);
+
+        QPixmap* pix = mSymbolPixmapCache.object(pixmapKey);
+        if (!pix) {
+            qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pRoom->mSymbol.toUtf8().constData());
+        } else {
+            /*
+                * For the non-scaling QPainter::drawPixmap() used now we
+                * have to position the generated pixmap containing the
+                * particular symbol for this room to Y when it would
+                * position it at X - this should be faster than the previous
+                * scaling QPainter::drawPixmap() as that would scale the
+                * pixmap to fit the Room Rectangle!
+                *
+                *                         |<------->| roomRectangle.width()
+                * roomRectangle.topLeft-->X---------+
+                *                         |  Room   |
+                *                         |  Y---+  |
+                *                         |  |Pix|  |
+                *                         |  +---+  |
+                *                         |Rectangle|
+                *                         +---------+
+                *                            |<->|<--symbolRect.width()
+                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                * similarly for the y-offset
+                */
+
+            painter.drawPixmap(
+                    QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
+                    *pix);
+        }
+
+        painter.restore();
+    }
+
+    // Do we need to draw the custom (user specified) highlight
+    if (pRoom->highlight) {
+        float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
+        QPointF roomCenter = QPointF(rx, ry);
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.85, pRoom->highlightColor);
+        gradient.setColorAt(0, pRoom->highlightColor2);
+        QPen transparentPen(Qt::transparent);
+        QPainterPath diameterPath;
+        painter.setBrush(gradient);
+        painter.setPen(transparentPen);
+        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(diameterPath);
+    }
+
+    // Do we need to draw the room Id number:
+    if (mShowRoomID && areRoomIdsLegible) {
+        painter.save();
+        QColor roomIdColor;
+        if (roomColor.lightness() > 127) {
+            roomIdColor = QColor(Qt::black);
+        } else {
+            roomIdColor = QColor(Qt::white);
+        }
+        painter.setPen(QPen(roomIdColor));
+        painter.setFont(roomVNumFont);
+        painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
+        painter.restore();
+    }
+
     // If there is a room name, draw it?
     if (showRoomName) {
         painter.save();
