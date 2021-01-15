@@ -2225,12 +2225,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "adjustStopWatch: bad argument #2 type (modification in seconds as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
-    double adjustment = lua_tonumber(L, 2);
+    double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
@@ -3697,14 +3692,13 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
         lua_pushfstring(L, "setLabelToolTip: bad argument #2 type (text as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    if ((lua_gettop(L) > 2) && !lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setLabelToolTip: bad argument #3 type (duration as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
+    double duration = 0;
+    if (lua_gettop(L) > 2) {
+        duration = getVerifiedDouble(L, __func__, 3, "duration");
     }
 
     QString labelName{lua_tostring(L, 1)};
     QString labelToolTip{lua_tostring(L, 2)};
-    double duration = lua_tonumber(L, 3);
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
