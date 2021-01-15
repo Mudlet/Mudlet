@@ -248,7 +248,6 @@ QString TLuaInterpreter::getVerifiedCommandlineName(lua_State* L, const char* fu
     return getVerifiedString(L, functionName, pos, "command line name", isOptional);
 }
 
-
 // No documentation available in wiki - internal function
 // See also: getVerifiedBoolean
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
@@ -12193,7 +12192,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     QString name = "main";
 
     if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     if (!lua_isstring(L, n)) {
         lua_pushfstring(L, "appendCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
@@ -12218,7 +12217,7 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n >= 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     auto commandline = COMMANDLINE(L, name);
     QString text = commandline->toPlainText();
@@ -12232,7 +12231,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     if (!lua_isstring(L, n)) {
         lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
@@ -12250,7 +12249,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     if (!lua_isstring(L, n)) {
         lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
@@ -12268,7 +12267,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n == 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     auto pN = COMMANDLINE(L, name);
     pN->clearSuggestions();
@@ -12530,7 +12529,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     if (!lua_isstring(L, n)) {
         lua_pushfstring(L, "printCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
@@ -12553,7 +12552,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
-        name = CMDLINE_NAME(L, 1);
+        name = getVerifiedCommandlineName(L, __func__, 1);
     }
     auto pN = COMMANDLINE(L, name);
     pN->clear();
