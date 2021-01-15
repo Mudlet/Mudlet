@@ -7950,11 +7950,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     }
     QString parent{lua_tostring(L, 2)};
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double time = lua_tonumber(L, 3);
+    double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -12895,12 +12891,7 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double rate = lua_tonumber(L, 1);
+    double rate = getVerifiedDouble(L, __func__, 1, "rate");
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -12926,12 +12917,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double pitch = lua_tonumber(L, 1);
+    double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -12957,12 +12943,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double volume = lua_tonumber(L, 1);
+    double volume = getVerifiedDouble(L, __func__, 1, "volume");
 
     if (volume > 1.0) {
         volume = 1.0;
