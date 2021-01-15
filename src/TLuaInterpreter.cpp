@@ -830,7 +830,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
 
@@ -858,7 +858,7 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -1414,7 +1414,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = getHostFromLua(L).findConsole(windowName);
     if (!console) {
         // the next line should be "pushnil"; compatibility with old bugs and all that
@@ -1459,7 +1459,7 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
     int s = 0;
 
     if (lua_gettop(L) > 0) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -1749,7 +1749,7 @@ int TLuaInterpreter::copy(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -1770,7 +1770,7 @@ int TLuaInterpreter::paste(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -1882,7 +1882,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 1) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         ++s;
     }
 
@@ -1900,8 +1900,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowWrap
 int TLuaInterpreter::getWindowWrap(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->getWrapAt());
     return 1;
@@ -1910,7 +1909,7 @@ int TLuaInterpreter::getWindowWrap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrapIndent
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
@@ -1922,7 +1921,7 @@ int TLuaInterpreter::getLineCount(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -1935,7 +1934,7 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -2426,7 +2425,7 @@ int TLuaInterpreter::selectSection(lua_State* L)
     QString windowName;
 
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     if (!lua_isnumber(L, s)) {
@@ -2457,7 +2456,7 @@ int TLuaInterpreter::getSelection(lua_State* L)
 
     QString windowName;
     if (lua_gettop(L) > 0) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
     }
     auto console = CONSOLE(L, windowName);
     std::tie(valid, text, start, length) = console->getSelection();
@@ -2481,7 +2480,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
 
@@ -2501,7 +2500,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
 
@@ -2517,7 +2516,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
 int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setScrollBarVisible(true);
     return 0;
@@ -2526,7 +2525,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setScrollBarVisible(false);
     return 0;
@@ -2535,7 +2534,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableHorizontalScrollBar
 int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setHorizontalScrollBar(true);
     return 0;
@@ -2544,7 +2543,7 @@ int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableHorizontalScrollBar
 int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setHorizontalScrollBar(false);
     return 0;
@@ -2553,7 +2552,7 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setCmdVisible(true);
     return 0;
@@ -2562,7 +2561,7 @@ int TLuaInterpreter::enableCommandLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommandLine
 int TLuaInterpreter::disableCommandLine(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->setCmdVisible(false);
     return 0;
@@ -2576,7 +2575,7 @@ int TLuaInterpreter::replace(lua_State* L)
     QString windowName;
 
     if (n > 1) {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     QString text = getVerifiedString(L, __func__, s, "with");
@@ -2589,7 +2588,7 @@ int TLuaInterpreter::replace(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLine
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->skipLine();
     return 0;
@@ -3179,7 +3178,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isstring(L, ++s)) {
@@ -3223,7 +3222,7 @@ int TLuaInterpreter::getFont(lua_State* L)
 {
     QString windowName = QStringLiteral("main");
     QString font;
-    windowName = WINDOW_NAME(L, 1);
+    windowName = getVerifiedWindowName(L, __func__, 1);
     auto console = CONSOLE(L, windowName);
     font = console->mUpperPane->fontInfo().family();
     lua_pushstring(L, font.toUtf8().constData());
@@ -3238,7 +3237,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     int size;
@@ -3270,7 +3269,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     int rval = -1;
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     if (console == host.mpConsole) {
         rval = host.getDisplayFont().pointSize();
@@ -4186,8 +4185,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     int n = lua_gettop(L);
     int x = 0, y = 0;
     bool show = true;
-
-    QString windowname {WINDOW_NAME(L, 1)};
+    QString windowname {getVerifiedWindowName(L, __func__, 1)};
 
     if (lua_type(L, 2) != LUA_TSTRING) {
         lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
@@ -4309,7 +4307,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, s);
 
         if (!lua_isnumber(L, ++s)) {
             lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4424,7 +4422,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
     } else {
-        windowName = WINDOW_NAME(L, 1);
+        windowName = getVerifiedWindowName(L, __func__, 1);
         size = host.calcFontSize(windowName);
     }
 
@@ -4782,11 +4780,9 @@ int TLuaInterpreter::setLabelOnLeave(lua_State* L)
 int TLuaInterpreter::setTextFormat(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
     int n = lua_gettop(L);
     int s = 0;
-
-    QString windowName {WINDOW_NAME(L, ++s)};
+    QString windowName {getVerifiedWindowName(L, __func__, ++s)};
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
     if (!lua_isnumber(L, ++s)) {
@@ -4945,7 +4941,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseWindow
 int TLuaInterpreter::raiseWindow(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->raiseWindow(windowName));
     return 1;
@@ -4954,7 +4950,7 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lowerWindow
 int TLuaInterpreter::lowerWindow(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpConsole->lowerWindow(windowName));
     return 1;
@@ -6051,7 +6047,7 @@ int TLuaInterpreter::getPath(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deselect
 int TLuaInterpreter::deselect(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->deselect();
     lua_pushboolean(L, true);
@@ -6061,7 +6057,7 @@ int TLuaInterpreter::deselect(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetFormat
 int TLuaInterpreter::resetFormat(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->reset();
     lua_pushboolean(L, true);
@@ -6079,7 +6075,7 @@ int TLuaInterpreter::hasFocus(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoUserWindow
 int TLuaInterpreter::echoUserWindow(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     QString text = getVerifiedString(L, __func__, 2, "text");
     Host& host = getHostFromLua(L);
     host.echoWindow(windowName, text);
@@ -6175,7 +6171,7 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->moveCursorEnd();
     return 0;
@@ -6184,7 +6180,7 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLastLineNumber
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE_NIL(L, windowName);
     int number = console ? console->getLastLineNumber() : -1;
     lua_pushnumber(L, number);
@@ -6222,7 +6218,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     if (!lua_isnumber(L, s)) {
@@ -6242,7 +6238,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
 
@@ -6277,7 +6273,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n > 4) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -6341,7 +6337,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6362,7 +6358,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6383,7 +6379,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6404,7 +6400,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6425,7 +6421,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6446,7 +6442,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     QString windowName;
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isboolean(L, ++s)) {
@@ -6514,8 +6510,7 @@ int TLuaInterpreter::showHandlerError(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     host.getActionUnit()->hideToolBar(windowName);
     return 0;
@@ -6524,8 +6519,7 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showToolBar
 int TLuaInterpreter::showToolBar(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     host.getActionUnit()->showToolBar(windowName);
     return 0;
@@ -6786,8 +6780,7 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 //add getUserWindowSize
 int TLuaInterpreter::getUserWindowSize(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     QSize userWindowSize = host.mpConsole->getUserWindowSize(windowName);
     lua_pushnumber(L, userWindowSize.width());
@@ -10858,7 +10851,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 3) {
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setFgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
@@ -10909,7 +10902,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     int s = 1;
     if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, s, true);
 
         if (!lua_isnumber(L, ++s)) {
             lua_pushfstring(L, "setBgColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -11031,7 +11024,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n >= 4) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     QString txt = getVerifiedString(L, __func__, s, "text");
@@ -11090,7 +11083,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     int s = 0;
 
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, ++s);
+        windowName = getVerifiedWindowName(L, __func__, ++s, true);
     }
 
     if (!lua_isstring(L, ++s)) {
@@ -11183,7 +11176,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int n = lua_gettop(L);
     // console name is an optional first argument
     if (n >= 4) {
-        windowName = WINDOW_NAME(L, s);
+        windowName = getVerifiedWindowName(L, __func__, 1, true);
         s++;
     }
     if (!lua_isstring(L, s)) {
@@ -11359,7 +11352,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
         lua_pushfstring(L, "pasteWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    QString windowName {WINDOW_NAME(L, 1)};
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
     host.pasteWindow(windowName);
     return 0;
@@ -12178,8 +12171,7 @@ int TLuaInterpreter::getEpoch(lua_State *L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     auto console = CONSOLE(L, windowName);
     console->appendBuffer();
     return 0;
@@ -16922,8 +16914,7 @@ Host& getHostFromLua(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnCount
 int TLuaInterpreter::getColumnCount(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     int columns;
     auto console = CONSOLE(L, windowName);
     columns = console->mUpperPane->getColumnCount();
@@ -16934,8 +16925,7 @@ int TLuaInterpreter::getColumnCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRowCount
 int TLuaInterpreter::getRowCount(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     int rows;
     auto console = CONSOLE(L, windowName);
     rows = console->mUpperPane->getRowCount();
@@ -17006,10 +16996,8 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
-
     host.setClickthrough(windowName, true);
     return 0;
 }
@@ -17017,10 +17005,8 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableClickthrough
 int TLuaInterpreter::disableClickthrough(lua_State* L)
 {
-    QString windowName {WINDOW_NAME(L, 1)};
-
+    QString windowName {getVerifiedWindowName(L, __func__, 1)};
     Host& host = getHostFromLua(L);
-
     host.setClickthrough(windowName, false);
     return 0;
 }
