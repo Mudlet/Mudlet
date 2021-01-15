@@ -6208,20 +6208,15 @@ int TLuaInterpreter::reconnect(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTriggerStayOpen
 int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 {
-    QString windowName;
-    int s = 1;
-    if (lua_gettop(L) > 1) {
-        windowName = getVerifiedWindowName(L, __func__, 1, true);
-        s++;
-    }
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "setTriggerStayOpen: bad argument #%d type (element name as string expected, got %s!)", s, luaL_typename(L, s));
+    QString triggerName = getVerifiedString(L, __func__, 1, "name", true);
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setTriggerStayOpen: bad argument #%d type (element name as string expected, got %s!)", 2, luaL_typename(L, 2));
         return lua_error(L);
     }
-    double b = lua_tonumber(L, s);
+    double b = lua_tonumber(L, 2);
 
     Host& host = getHostFromLua(L);
-    host.getTriggerUnit()->setTriggerStayOpen(windowName, static_cast<int>(b));
+    host.getTriggerUnit()->setTriggerStayOpen(triggerName, static_cast<int>(b));
     return 0;
 }
 
