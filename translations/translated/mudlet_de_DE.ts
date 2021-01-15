@@ -5182,7 +5182,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="142"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere das gesamte Profil in ein neues, das einen anderen neuen Namen benötigt.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="146"/>
@@ -5192,7 +5192,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="147"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>Kopiere die Einstellungen und einige andere Teile des Profils in ein neues Profil, das einen anderen neuen Namen benötigt.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="211"/>
@@ -5217,13 +5217,13 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Du benötigst einen gültigen Profilnamen, eine Spielserveradresse und einen Port, bevor diese Schaltfläche aktiviert werden kann.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <comment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</comment>
-      <translation type="unfinished"/>
+      <translation>Schaltfläche, um ein Spiel zum Spielen auszuwählen. Klicke doppelt darauf, um eine Verbindung herzustellen und das Spiel zu beginnen.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="521"/>
@@ -6542,7 +6542,7 @@ für alle %n ausgewählten Räume:</numerusform>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>Farbe wählen</translation>
     </message>
   </context>
   <context>
@@ -7882,7 +7882,8 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2021 Mudlet-Entwickler
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
