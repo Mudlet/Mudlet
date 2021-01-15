@@ -260,6 +260,18 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
+double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isnumber(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return 0;
+    }
+    return lua_tonumber(L, pos);
+}
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
