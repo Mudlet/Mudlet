@@ -81,7 +81,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
       fi
 
       echo "== Creating a public test build =="
-      mv "$app" "source/build/Mudlet PTB.app"
+      if [ -n "${GITHUB_REPOSITORY}" ]; then
+        mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/Mudlet PTB.app"
+      else
+        mv "$app" "source/build/Mudlet PTB.app"
+      fi
+
       app="${BUILD_DIR}/Mudlet PTB.app"
     else
       echo "== Creating a release build =="
