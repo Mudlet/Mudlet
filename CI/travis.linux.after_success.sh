@@ -126,7 +126,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     fi
 
     # push release to DBLSQD
-    npm install -g dblsqd-cli
+    sudo npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
     if [ "${public_test_build}" == "true" ]; then
