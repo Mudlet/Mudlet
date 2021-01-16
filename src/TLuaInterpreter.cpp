@@ -260,6 +260,18 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
+double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isnumber(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return 0;
+    }
+    return lua_tonumber(L, pos);
+}
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
@@ -2213,12 +2225,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "adjustStopWatch: bad argument #2 type (modification in seconds as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
-    double adjustment = lua_tonumber(L, 2);
+    double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
@@ -3685,14 +3692,13 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
         lua_pushfstring(L, "setLabelToolTip: bad argument #2 type (text as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    if ((lua_gettop(L) > 2) && !lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setLabelToolTip: bad argument #3 type (duration as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
+    double duration = 0;
+    if (lua_gettop(L) > 2) {
+        duration = getVerifiedDouble(L, __func__, 3, "duration");
     }
 
     QString labelName{lua_tostring(L, 1)};
     QString labelToolTip{lua_tostring(L, 2)};
-    double duration = lua_tonumber(L, 3);
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
@@ -4147,22 +4153,10 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
     QString text = getVerifiedString(L, __func__, 1, "windowName");
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #2 type (width as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    double x1 = lua_tonumber(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #3 type (height as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double y1 = lua_tonumber(L, 3);
-
+    double x1 = getVerifiedDouble(L, __func__, 2, "width");
+    double y1 = getVerifiedDouble(L, __func__, 3, "height");
     Host& host = getHostFromLua(L);
     host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
-
     return 0;
 }
 
@@ -4170,21 +4164,9 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 int TLuaInterpreter::moveWindow(lua_State* L)
 {
     QString text = getVerifiedString(L, __func__, 1, "name");
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "moveWindow: bad argument #2 type (x as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    double x1 = lua_tonumber(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "moveWindow: bad argument #3 type (y as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double y1 = lua_tonumber(L, 3);
-
+    double x1 = getVerifiedDouble(L, __func__, 2, "x");
+    double y1 = getVerifiedDouble(L, __func__, 3, "y");
     Host& host = getHostFromLua(L);
-
     host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
 }
@@ -6234,12 +6216,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
         windowName = WINDOW_NAME(L, s);
         s++;
     }
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "setTriggerStayOpen: bad argument #%d type (element name as string expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    double b = lua_tonumber(L, s);
-
+    double b = getVerifiedDouble(L, __func__, s, "number of lines");
     Host& host = getHostFromLua(L);
     host.getTriggerUnit()->setTriggerStayOpen(windowName, static_cast<int>(b));
     return 0;
@@ -7973,11 +7950,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     }
     QString parent{lua_tostring(L, 2)};
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double time = lua_tonumber(L, 3);
+    double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -12918,12 +12891,7 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double rate = lua_tonumber(L, 1);
+    double rate = getVerifiedDouble(L, __func__, 1, "rate");
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -12949,12 +12917,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double pitch = lua_tonumber(L, 1);
+    double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -12980,12 +12943,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double volume = lua_tonumber(L, 1);
+    double volume = getVerifiedDouble(L, __func__, 1, "volume");
 
     if (volume > 1.0) {
         volume = 1.0;
