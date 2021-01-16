@@ -65,8 +65,8 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling);
-    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 15.0, int fontSize = 15);
+    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
+    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 30.0, int fontSize = 50);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);

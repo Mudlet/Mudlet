@@ -478,6 +478,9 @@ void TMap::audit()
                 for (int& i : labelIDList) {
                     TMapLabel l = pArea->mMapLabels.value(i);
                     if (l.pix.isNull()) {
+                        // Note that two of the last three arguments here
+                        // (false, 40.0) are not the defaults (true, 30.0) used
+                        // now:
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
@@ -2075,7 +2078,7 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     return labelId;
 }
 
-int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling)
+int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2086,7 +2089,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
-    label.noScaling = noScaling;
+    // This method is only called from the TLuaInterpreter class and the value
+    // passed was hard-coded to this value:
+    label.noScaling = false;
 
     QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
