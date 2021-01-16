@@ -125,8 +125,20 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      echo "=== Uploading public test build to make.mudlet.org ==="
-      DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"  "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" -O - -q)
+      if [ -n "$TRAVIS_REPO_SLUG" ]; then
+        echo "=== Uploading public test build to make.mudlet.org ==="
+        DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"  "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" -O - -q)
+      else
+        echo "=== ... later, via Github ==="
+        # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
+        mkdir "upload/"
+        mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" "upload/"
+        {
+          echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
+          echo "UPLOAD_FILENAME=${appBaseName}"
+        } >> "$GITHUB_ENV"
+        DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
+      fi
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
