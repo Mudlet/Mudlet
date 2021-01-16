@@ -46,9 +46,6 @@ jobs:
             deploy: 'deploy'
 
     steps:
-    - name: Setup tmate session for debugging
-      uses: mxschmitt/action-tmate@v3
-
     - name: Restore Qt cache
       uses: actions/cache@v2
       id: cache-qt
@@ -245,9 +242,20 @@ jobs:
         # necessary for Qt multimedia
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 -y
-        fi
+        fi        
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+      
+    - name: Setup tmate session for debugging
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      uses: mxschmitt/action-tmate@v3
 
-        ${{github.workspace}}/CI/travis.after_success.sh
+    - name: (Linux/macOS) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: |
+        ${{github.workspace}}/CI/travis.after_success.sh        
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
