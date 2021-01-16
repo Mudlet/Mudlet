@@ -61,6 +61,7 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
+    int createLabelId() const;
 
 
     QSet<int> rooms; // rooms of this area

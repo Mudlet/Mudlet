@@ -36,25 +36,17 @@
 class TMapLabel
 {
 public:
-    TMapLabel()
-    : fgColor(Qt::black)
-    , bgColor(Qt::black)
-    , highlight(false)
-    , showOnTop(false)
-    , noScaling(false)
-    {
-    }
 
     QVector3D pos;
     QSizeF size;
     QSizeF clickSize;
     QString text;
-    QColor fgColor;
-    QColor bgColor;
+    QColor fgColor {Qt::black};
+    QColor bgColor {Qt::black};
     QPixmap pix;
-    bool highlight;
-    bool showOnTop;
-    bool noScaling;
+    bool highlight {};
+    bool showOnTop {};
+    bool noScaling {};
 
     QByteArray base64EncodePixmap() const;
 };

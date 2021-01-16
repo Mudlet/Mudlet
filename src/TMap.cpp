@@ -1155,7 +1155,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         int areasWithLabels = 0;
         // Need to count the areas that have mapLabels:
         for (const auto pArea : mpRoomDB->getAreaPtrList()) {
-            if (pArea && pArea->mMapLabels.isEmpty()) {
+            if (pArea && !pArea->mMapLabels.isEmpty()) {
                 ++areasWithLabels;
             }
         }
@@ -2064,16 +2064,15 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.size = s;
     label.clickSize = s;
 
-    int label_id = -1;
-    do {
-    } while (pA->mMapLabels.contains(++label_id));
-
-    pA->mMapLabels.insert(label_id, label);
-
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
-    return label_id;
+
+    return labelId;
 }
 
 int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling)
@@ -2098,26 +2097,25 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pix = pix;
 
-    int label_id = -1;
-    do {
-    } while (pA->mMapLabels.contains(++label_id));
-
-    pA->mMapLabels.insert(label_id, label);
-
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >=0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
-    return label_id;
+
+    return labelId;
 }
 
-void TMap::deleteMapLabel(int area, int labelID)
+void TMap::deleteMapLabel(int area, int labelId)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
         return;
     }
 
-    if (pA->mMapLabels.remove(labelID)) {
+    if (pA->mMapLabels.remove(labelId) && mpMapper) {
         mpMapper->mp2dMap->update();
     }
 }
