@@ -9,6 +9,9 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
     MUDLET_VERSION_BUILD="-testing"
   fi
 
+  # fake PTB build for testing purposes
+  MUDLET_VERSION_BUILD="-ptb"
+
   if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
     BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${BUILD_COMMIT}"
