@@ -203,12 +203,12 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 14);
 //
 // With reduced repetition like that:
-//    bool showOnTop = getVerifiedBoolean(L, "createMapLabel", 14, "showOnTop", true);
+//    bool showOnTop = getVerifiedBool(L, "createMapLabel", 14, "showOnTop", true);
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
-bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
         announceWrongArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
@@ -2655,7 +2655,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         return lua_error(L);
     }
 
-    bool status = getVerifiedBoolean(L, __func__, 3, "set/unset");
+    bool status = getVerifiedBool(L, __func__, 3, "set/unset");
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
@@ -5209,7 +5209,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
 int TLuaInterpreter::lockRoom(lua_State* L)
 {
     int id = getVerifiedInt(L, __func__, 1, "roomID");
-    bool b = getVerifiedBoolean(L, __func__, 2, "lockIfTrue");
+    bool b = getVerifiedBool(L, __func__, 2, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -5234,7 +5234,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
         return lua_error(L);
     }
 
-    bool b = getVerifiedBoolean(L, __func__, 3, "lockIfTrue");
+    bool b = getVerifiedBool(L, __func__, 3, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -8259,7 +8259,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
-    bool luaDir = getVerifiedBoolean(L, __func__, 1, "fileOrFolder");
+    bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
     if (!luaDir) {
@@ -8861,10 +8861,10 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
         zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
         fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
         if (args > 13) {
-            showOnTop = getVerifiedBoolean(L, __func__, 14, "showOnTop", true);
+            showOnTop = getVerifiedBool(L, __func__, 14, "showOnTop", true);
         }
         if (args > 14) {
-            noScaling = getVerifiedBoolean(L, __func__, 15, "noScaling", true);
+            noScaling = getVerifiedBool(L, __func__, 15, "noScaling", true);
         }
     }
 
@@ -8902,7 +8902,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float width = getVerifiedFloat(L, __func__, 6, "width");
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
-    bool showOnTop = getVerifiedBoolean(L, __func__, 9, "showOnTop");
+    bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
 
     Host& host = getHostFromLua(L);
     lua_pushinteger(L, host.mpMap->createMapImageLabel(area, text, posx, posy, posz, width, height, zoom, showOnTop, false));
@@ -10810,7 +10810,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
-    bool gridMode = getVerifiedBoolean(L, __func__, 2, "true/false");
+    bool gridMode = getVerifiedBool(L, __func__, 2, "true/false");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {

@@ -598,7 +598,7 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    static bool getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
