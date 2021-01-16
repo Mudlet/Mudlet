@@ -6262,15 +6262,13 @@ int TLuaInterpreter::setPopup(lua_State* L)
     int n = lua_gettop(L);
 
     // console name is an optional first argument
-    if (n > 4) {
+    if (n > 3) {
         windowName = WINDOW_NAME(L, s);
         s++;
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s);
+
+    // The next argument was a string, but it no longer does anything.
+    // Thus we simply skip it.
     s++;
 
     if (!lua_istable(L, s)) {
