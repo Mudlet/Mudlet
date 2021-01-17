@@ -126,6 +126,14 @@ TTrigger::~TTrigger()
         return;
     }
     mpHost->getTriggerUnit()->unregisterTrigger(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TTrigger::setName(const QString& name)
