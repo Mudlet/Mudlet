@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -56,31 +56,6 @@ class QNetworkAccessManager;
 class QProgressDialog;
 
 
-class TMapLabel
-{
-public:
-    TMapLabel()
-    {
-        highlight = false;
-        showOnTop = false;
-        noScaling = false;
-    }
-
-    QVector3D pos;
-    QSizeF size;
-    QSizeF clickSize;
-    QString text;
-    QColor fgColor;
-    QColor bgColor;
-    QPixmap pix;
-    bool highlight;
-    bool showOnTop;
-    bool noScaling;
-
-    QByteArray base64EncodePixmap() const;
-};
-
-
 class TMap : public QObject
 {
     Q_OBJECT
@@ -90,9 +65,8 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapLabelID(int area);
-    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling);
-    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 15.0, int fontSize = 15);
+    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
+    int createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop = true, bool noScaling = true, qreal zoom = 30.0, int fontSize = 50);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
     bool setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations = false);
@@ -191,9 +165,8 @@ public:
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
-    bool mMapGraphNeedsUpdate;
-    bool mNewMove;
-    QMap<qint32, QMap<qint32, TMapLabel>> mapLabels;
+    bool mMapGraphNeedsUpdate = true;
+    bool mNewMove = true;
 
     // loaded map file format version
     int mVersion;

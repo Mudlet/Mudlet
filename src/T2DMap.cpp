@@ -1345,48 +1345,48 @@ void T2DMap::paintEvent(QPaintEvent* e)
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
 
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto mapLabel = it.value();
-            if (mapLabel.pos.z() != mOz) {
-                continue;
-            }
-            if (mapLabel.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][it.key()].text = tr("no text", "Default text if a label is created in mapper with no text");
-            }
-            QPointF labelPosition;
-            int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-            int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
+    // Draw the ("background") labels that are on the bottom of the map:
+    QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto mapLabel = itMapLabel.value();
+        if (mapLabel.pos.z() != mOz) {
+            continue;
+        }
+        if (mapLabel.text.isEmpty()) {
+            mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        QPointF labelPosition;
+        int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+        int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
-            labelPosition.setX(labelX);
-            labelPosition.setY(labelY);
-            int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-            int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
-            if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-                continue;
-            }
-            if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-                continue;
-            }
-            QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-            if (!mapLabel.showOnTop) {
-                if (!mapLabel.noScaling) {
-                    painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setWidth(labelPaintRectangle.width());
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setHeight(labelPaintRectangle.height());
-                } else {
-                    painter.drawPixmap(labelPosition, mapLabel.pix);
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setWidth(mapLabel.pix.width());
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setHeight(mapLabel.pix.height());
-                }
-            }
+        labelPosition.setX(labelX);
+        labelPosition.setY(labelY);
+        int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
+        int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
+            continue;
+        }
+        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
+            continue;
+        }
 
-            if (mapLabel.highlight) {
-                labelPaintRectangle.setSize(mapLabel.clickSize);
-                painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        if (!mapLabel.showOnTop) {
+            if (!mapLabel.noScaling) {
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
+            } else {
+                painter.drawPixmap(labelPosition, mapLabel.pix);
+                mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
             }
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+
+        if (mapLabel.highlight) {
+            labelPaintRectangle.setSize(mapLabel.clickSize);
+            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
         }
     }
 
@@ -1465,51 +1465,48 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.restore();
     }
 
-    // Draw Labels above the map
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto labelID = it.key();
-            auto label = it.value();
+    // Draw the ("foreground") labels that are on the top of the map:
+    itMapLabel.toFront();
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto mapLabel = itMapLabel.value();
 
-            if (label.pos.z() != mOz) {
-                continue;
-            }
-            if (label.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][labelID].text = tr("no text", "Default text if a label is created in mapper with no text");
-            }
-            QPointF labelPosition;
-            int labelX = label.pos.x() * mRoomWidth + mRX;
-            int labelY = label.pos.y() * mRoomHeight * -1 + mRY;
+        if (mapLabel.pos.z() != mOz) {
+            continue;
+        }
+        if (mapLabel.text.isEmpty()) {
+            mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        QPointF labelPosition;
+        int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+        int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
-            labelPosition.setX(labelX);
-            labelPosition.setY(labelY);
-            int labelWidth = abs(qRound(label.size.width() * mRoomWidth));
-            int labelHeight = abs(qRound(label.size.height() * mRoomHeight));
+        labelPosition.setX(labelX);
+        labelPosition.setY(labelY);
+        int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
+        int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
 
-            if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-                continue;
+        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
+            continue;
+        }
+        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
+            continue;
+        }
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        if (mapLabel.showOnTop) {
+            if (!mapLabel.noScaling) {
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
+            } else {
+                painter.drawPixmap(labelPosition, mapLabel.pix);
+                mapLabel.clickSize = QSize(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-                continue;
-            }
-            QRectF labelPaintRectangle = QRect(label.pos.x() * mRoomWidth + mRX, label.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-            if (label.showOnTop) {
-                if (!label.noScaling) {
-                    painter.drawPixmap(labelPosition, label.pix.scaled(labelPaintRectangle.size().toSize()));
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setWidth(labelPaintRectangle.width());
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setHeight(labelPaintRectangle.height());
-                } else {
-                    painter.drawPixmap(labelPosition, label.pix);
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setWidth(label.pix.width());
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setHeight(label.pix.height());
-                }
-            }
-            if (label.highlight) {
-                labelPaintRectangle.setSize(label.clickSize);
-                painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
-            }
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        if (mapLabel.highlight) {
+            labelPaintRectangle.setSize(mapLabel.clickSize);
+            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
         }
     }
 
@@ -2423,19 +2420,16 @@ void T2DMap::createLabel(QRectF labelRectangle)
     float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
     label.pos = QVector3D(mx, my, mOz);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
-    if (!mpMap->mpRoomDB->getArea(mAreaID)) {
+    auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
         return;
     }
-    int labelID;
-    if (!mpMap->mapLabels.contains(mAreaID)) {
-        QMap<int, TMapLabel> m;
-        m[0] = label;
-        mpMap->mapLabels[mAreaID] = m;
-    } else {
-        labelID = mpMap->createMapLabelID(mAreaID);
-        mpMap->mapLabels[mAreaID].insert(labelID, label);
+
+    int labelId = pArea->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pArea->mMapLabels.insert(labelId, label);
+        update();
     }
-    update();
 }
 
 void T2DMap::mouseReleaseEvent(QMouseEvent* e)
@@ -2677,32 +2671,29 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             // select labels
-            if (mpMap->mapLabels.contains(mAreaID)) {
-                QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-                while (it.hasNext()) {
-                    it.next();
-                    if (it.value().pos.z() != mOz) {
+            if (!pArea->mMapLabels.isEmpty()) {
+                QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+                while (itMapLabel.hasNext()) {
+                    itMapLabel.next();
+                    auto mapLabel = itMapLabel.value();
+                    if (mapLabel.pos.z() != mOz) {
                         continue;
                     }
 
                     QPointF labelPosition;
-                    float labelX = it.value().pos.x() * mRoomWidth + mRX;
-                    float labelY = it.value().pos.y() * mRoomHeight * -1 + mRY;
+                    float labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+                    float labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
                     labelPosition.setX(labelX);
                     labelPosition.setY(labelY);
                     int mx = event->pos().x();
                     int my = event->pos().y();
                     QPoint click = QPoint(mx, my);
-                    QRectF br = QRect(labelX, labelY, it.value().clickSize.width(), it.value().clickSize.height());
+                    QRectF br = QRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
                     if (br.contains(click)) {
-                        if (!it.value().highlight) {
-                            mLabelHighlighted = true;
-                            mpMap->mapLabels[mAreaID][it.key()].highlight = true;
-                        } else {
-                            mpMap->mapLabels[mAreaID][it.key()].highlight = false;
-                            mLabelHighlighted = false;
-                        }
+                        mapLabel.highlight = !mapLabel.highlight;
+                        mLabelHighlighted = mapLabel.highlight;
+                        pArea->mMapLabels[itMapLabel.key()] = mapLabel;
                         update();
                         return;
                     }
@@ -3349,26 +3340,28 @@ void T2DMap::slot_moveLabel()
 
 void T2DMap::slot_deleteLabel()
 {
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QList<int> deleteList;
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto labelID = it.key();
-            auto label = it.value();
-            auto zlevel = static_cast<int>(it.value().pos.z());
-            if (zlevel != mOz) {
-                continue;
-            }
-            if (label.highlight) {
-                deleteList.push_back(labelID);
-            }
+    auto pA = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pA || pA->mMapLabels.isEmpty()) {
+        return;
+    }
+
+    bool updateNeeded = false;
+    QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto label = itMapLabel.value();
+        if (qRound(label.pos.z()) != mOz) {
+            continue;
         }
-        for (int& i : deleteList) {
-            mpMap->mapLabels[mAreaID].remove(i);
+        if (label.highlight) {
+            itMapLabel.remove();
+            updateNeeded = true;
         }
     }
-    update();
+
+    if (updateNeeded) {
+        update();
+    }
 }
 
 void T2DMap::slot_editLabel()
@@ -4205,26 +4198,30 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
     //FIXME:
     if (mLabelHighlighted) {
-        if (mpMap->mapLabels.contains(mAreaID)) {
-            QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-            while (it.hasNext()) {
-                it.next();
-                auto labelID = it.key();
-                auto label = it.value();
+        auto pA = mpMap->mpRoomDB->getArea(mAreaID);
+        if (!pA->mMapLabels.isEmpty()) {
+            bool needUpdate = false;
+            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                auto mapLabel = itMapLabel.value();
 
-                if (label.pos.z() != mOz) {
+                if (qRound(mapLabel.pos.z()) != mOz) {
                     continue;
                 }
-                if (!label.highlight) {
+                if (!mapLabel.highlight) {
                     continue;
                 }
                 int mx = qRound((event->pos().x() / mRoomWidth) + mOx -(xspan / 2.0));
                 int my = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy);
-                QVector3D p = QVector3D(mx, my, mOz);
-                mpMap->mapLabels[mAreaID][labelID].pos = p;
+                mapLabel.pos = QVector3D(mx, my, mOz);
+                pA->mMapLabels[itMapLabel.key()] = mapLabel;
+                needUpdate = true;
+            }
+            if (needUpdate) {
+                update();
             }
         }
-        update();
     } else {
         mMoveLabel = false;
     }
