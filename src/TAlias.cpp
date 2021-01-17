@@ -57,6 +57,14 @@ TAlias::~TAlias()
         return;
     }
     mpHost->getAliasUnit()->unregisterAlias(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TAlias::setName(const QString& name)

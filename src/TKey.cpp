@@ -60,6 +60,14 @@ TKey::~TKey()
         return;
     }
     mpHost->getKeyUnit()->unregisterKey(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TKey::setName(const QString& name)
