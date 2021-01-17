@@ -247,6 +247,8 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
       
     # - name: Setup tmate session for debugging
     #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
@@ -264,6 +266,8 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
