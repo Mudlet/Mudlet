@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include "TTextCodec.h"
+#include "TMap.h"
 
 #include "pre_guard.h"
 #include <QEvent>
@@ -43,7 +44,6 @@
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
-#include "TMap.h"
 
 extern "C" {
 #include <lauxlib.h>
@@ -59,6 +59,7 @@ extern "C" {
 class Host;
 class TEvent;
 class TLuaThread;
+class TMapLabel;
 class TTrigger;
 
 

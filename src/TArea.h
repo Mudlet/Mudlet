@@ -25,6 +25,8 @@
 
 #include "TMap.h"
 
+#include "TMapLabel.h"
+
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
@@ -59,6 +61,7 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
+    int createLabelId() const;
 
 
     QSet<int> rooms; // rooms of this area
@@ -82,6 +85,7 @@ public:
     TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
+    QMap<int, TMapLabel> mMapLabels;
 
 
 private:
