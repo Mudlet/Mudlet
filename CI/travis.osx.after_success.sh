@@ -97,7 +97,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     # the two "undefined" variables are defined by travis
     if [ "${public_test_build}" != "true" ]; then
       echo "=== Registering Mudlet SSH keys for release upload ==="
-      openssl aes-256-cbc -K "${encrypted_70dbe4c5e427_key}" -iv "${encrypted_70dbe4c5e427_iv}" -in "${BUILD_DIR}/CI/mudlet-deploy-key.enc" -out /tmp/mudlet-deploy-key -d
+      openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${BUILD_DIR}/CI/mudlet-deploy-key-github.enc" -out /tmp/mudlet-deploy-key -d
       eval "$(ssh-agent -s)"
       chmod 600 /tmp/mudlet-deploy-key
       ssh-add /tmp/mudlet-deploy-key
