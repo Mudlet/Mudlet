@@ -1030,15 +1030,15 @@ function packageDrop(event, fileName, suffix)
 
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if installationSuccessful then
-    local successText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.success 
-      and mudlet.Locale.packageInstall.success.message or "Package installed successfully.")
-    local infoPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.info or "[ INFO ]  - ")
+    local successText = (mudlet.Locale.packageInstallSuccess 
+      and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully.")
+    local infoPrefix = (mudlet.Locale.prefixInfo and mudlet.Locale.prefixInfo.message or "[ INFO ]  - ")
     decho('<0,150,190>' .. infoPrefix .. '<0,160,0>' .. successText .. '\n') 
     -- Cyan and Light Green; see cTelnet::postMessage for color comparison
   else
-    local failureText = (mudlet.Locale.packageInstall and mudlet.Locale.packageInstall.fail 
-      and mudlet.Locale.packageInstall.fail.message or "Package installation failed.")
-    local warnPrefix = (mudlet.Locale.prefix and mudlet.Locale.prefix.warn or "[ WARN ]  - ")
+    local failureText = (mudlet.Locale.packageInstallFail 
+      and mudlet.Locale.packageInstallFail.message or "Package installation failed.")
+    local warnPrefix = (mudlet.Locale.prefixWarn and mudlet.Locale.prefixWarn.message or "[ WARN ]  - ")
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n') -- Orange
   end
 end
