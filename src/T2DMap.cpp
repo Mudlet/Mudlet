@@ -698,12 +698,47 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
     }
 
-    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
-        || mMultiSelectionSet.contains(currentRoomId)) {
+    if (mBubbleMode) {
+        float roomRadius = 0.5 * rSize * mRoomWidth;
+        QPointF roomCenter = QPointF(rx, ry);
+        // CHECK: The use of a gradient fill to a white center on round
+        // rooms might look nice in some sitations but not in all:
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.85, roomColor);
+        gradient.setColorAt(0, Qt::white);
+        QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
+        borderPen.setWidth(borderWidth);
+        QPainterPath diameterPath;
+        painter.setBrush(gradient);
+        painter.setPen(borderPen);
+        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(diameterPath);
+    } else {
+        painter.fillRect(roomRectangle, roomColor);
+    }
 
-        // This room is in the selection:
-        // TODO: replace this flood fill of the room with an orange rectangle with something a bit more subtle:
-        painter.fillRect(roomRectangle, QColor(255, 155, 55));
+    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
+    || mMultiSelectionSet.contains(currentRoomId)) {
+        auto selectionPen = QPen(QColor(255, 50, 50, 125));
+        selectionPen.setWidth(borderWidth);
+        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+        selectionBg.setColorAt(0.25, Qt::transparent);
+        selectionBg.setColorAt(1, Qt::blue);
+        if (!mBubbleMode) {        
+            auto selectionRectangle = roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth);
+            painter.fillRect(selectionRectangle, selectionBg);
+            painter.setPen(selectionPen);
+            painter.drawRect(selectionRectangle);
+        } else {
+            float roomRadius = 0.5 * rSize * mRoomWidth;
+            QPointF roomCenter = QPointF(rx, ry);
+            QPainterPath diameterPath;
+            painter.setPen(selectionPen);
+            painter.setBrush(selectionBg);
+            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+            painter.drawPath(diameterPath);
+        }
+
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
@@ -731,110 +766,89 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
             initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
         }
-
-    } else {
-        // Room is NOT selected
-        if (mBubbleMode) {
-            float roomRadius = 0.5 * rSize * mRoomWidth;
-            QPointF roomCenter = QPointF(rx, ry);
-            // CHECK: The use of a gradient fill to a white center on round
-            // rooms might look nice in some sitations but not in all:
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.85, roomColor);
-            gradient.setColorAt(0, Qt::white);
-            QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
-            borderPen.setWidth(borderWidth);
-            QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(borderPen);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        } else {
-            painter.fillRect(roomRectangle, roomColor);
-        }
-
-        // Do we need to draw the room symbol:
-        if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-            QColor symbolColor;
-            if (pRoom->mSymbolColor != nullptr) {
-                symbolColor = pRoom->mSymbolColor;
-            } else if (roomColor.lightness() > 127) {
-                symbolColor = Qt::black;
-            } else {
-                symbolColor = Qt::white;
-            }
-            auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
-            if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
-            }
-
-            painter.save();
-            painter.setBackgroundMode(Qt::TransparentMode);
-
-            QPixmap* pix = mSymbolPixmapCache.object(pixmapKey);
-            if (!pix) {
-                qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pRoom->mSymbol.toUtf8().constData());
-            } else {
-                /*
-                 * For the non-scaling QPainter::drawPixmap() used now we
-                 * have to position the generated pixmap containing the
-                 * particular symbol for this room to Y when it would
-                 * position it at X - this should be faster than the previous
-                 * scaling QPainter::drawPixmap() as that would scale the
-                 * pixmap to fit the Room Rectangle!
-                 *
-                 *                         |<------->| roomRectangle.width()
-                 * roomRectangle.topLeft-->X---------+
-                 *                         |  Room   |
-                 *                         |  Y---+  |
-                 *                         |  |Pix|  |
-                 *                         |  +---+  |
-                 *                         |Rectangle|
-                 *                         +---------+
-                 *                            |<->|<--symbolRect.width()
-                 *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
-                 * similarly for the y-offset
-                 */
-
-                painter.drawPixmap(
-                        QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
-                        *pix);
-            }
-
-            painter.restore();
-        }
-
-        // Do we need to draw the custom (user specified) highlight
-        if (pRoom->highlight) {
-            float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
-            QPointF roomCenter = QPointF(rx, ry);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.85, pRoom->highlightColor);
-            gradient.setColorAt(0, pRoom->highlightColor2);
-            QPen transparentPen(Qt::transparent);
-            QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        }
-
-        // Do we need to draw the room Id number:
-        if (mShowRoomID && areRoomIdsLegible) {
-            painter.save();
-            QColor roomIdColor;
-            if (roomColor.lightness() > 127) {
-                roomIdColor = QColor(Qt::black);
-            } else {
-                roomIdColor = QColor(Qt::white);
-            }
-            painter.setPen(QPen(roomIdColor));
-            painter.setFont(roomVNumFont);
-            painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
-            painter.restore();
-        }
-
     }
+
+    // Do we need to draw the room symbol:
+    if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
+        QColor symbolColor;
+        if (pRoom->mSymbolColor != nullptr) {
+            symbolColor = pRoom->mSymbolColor;
+        } else if (roomColor.lightness() > 127) {
+            symbolColor = Qt::black;
+        } else {
+            symbolColor = Qt::white;
+        }
+        auto pixmapKey = QStringLiteral("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        if (!mSymbolPixmapCache.contains(pixmapKey)) {
+            addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
+        }
+
+        painter.save();
+        painter.setBackgroundMode(Qt::TransparentMode);
+
+        QPixmap* pix = mSymbolPixmapCache.object(pixmapKey);
+        if (!pix) {
+            qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pRoom->mSymbol.toUtf8().constData());
+        } else {
+            /*
+                * For the non-scaling QPainter::drawPixmap() used now we
+                * have to position the generated pixmap containing the
+                * particular symbol for this room to Y when it would
+                * position it at X - this should be faster than the previous
+                * scaling QPainter::drawPixmap() as that would scale the
+                * pixmap to fit the Room Rectangle!
+                *
+                *                         |<------->| roomRectangle.width()
+                * roomRectangle.topLeft-->X---------+
+                *                         |  Room   |
+                *                         |  Y---+  |
+                *                         |  |Pix|  |
+                *                         |  +---+  |
+                *                         |Rectangle|
+                *                         +---------+
+                *                            |<->|<--symbolRect.width()
+                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                * similarly for the y-offset
+                */
+
+            painter.drawPixmap(
+                    QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
+                    *pix);
+        }
+
+        painter.restore();
+    }
+
+    // Do we need to draw the custom (user specified) highlight
+    if (pRoom->highlight) {
+        float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
+        QPointF roomCenter = QPointF(rx, ry);
+        QRadialGradient gradient(roomCenter, roomRadius);
+        gradient.setColorAt(0.85, pRoom->highlightColor);
+        gradient.setColorAt(0, pRoom->highlightColor2);
+        QPen transparentPen(Qt::transparent);
+        QPainterPath diameterPath;
+        painter.setBrush(gradient);
+        painter.setPen(transparentPen);
+        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
+        painter.drawPath(diameterPath);
+    }
+
+    // Do we need to draw the room Id number:
+    if (mShowRoomID && areRoomIdsLegible) {
+        painter.save();
+        QColor roomIdColor;
+        if (roomColor.lightness() > 127) {
+            roomIdColor = QColor(Qt::black);
+        } else {
+            roomIdColor = QColor(Qt::white);
+        }
+        painter.setPen(QPen(roomIdColor));
+        painter.setFont(roomVNumFont);
+        painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
+        painter.restore();
+    }
+
     // If there is a room name, draw it?
     if (showRoomName) {
         painter.save();
@@ -1345,48 +1359,48 @@ void T2DMap::paintEvent(QPaintEvent* e)
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
 
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto mapLabel = it.value();
-            if (mapLabel.pos.z() != mOz) {
-                continue;
-            }
-            if (mapLabel.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][it.key()].text = tr("no text", "Default text if a label is created in mapper with no text");
-            }
-            QPointF labelPosition;
-            int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-            int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
+    // Draw the ("background") labels that are on the bottom of the map:
+    QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto mapLabel = itMapLabel.value();
+        if (mapLabel.pos.z() != mOz) {
+            continue;
+        }
+        if (mapLabel.text.isEmpty()) {
+            mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        QPointF labelPosition;
+        int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+        int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
-            labelPosition.setX(labelX);
-            labelPosition.setY(labelY);
-            int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-            int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
-            if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-                continue;
-            }
-            if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-                continue;
-            }
-            QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-            if (!mapLabel.showOnTop) {
-                if (!mapLabel.noScaling) {
-                    painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setWidth(labelPaintRectangle.width());
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setHeight(labelPaintRectangle.height());
-                } else {
-                    painter.drawPixmap(labelPosition, mapLabel.pix);
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setWidth(mapLabel.pix.width());
-                    mpMap->mapLabels[mAreaID][it.key()].clickSize.setHeight(mapLabel.pix.height());
-                }
-            }
+        labelPosition.setX(labelX);
+        labelPosition.setY(labelY);
+        int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
+        int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
+            continue;
+        }
+        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
+            continue;
+        }
 
-            if (mapLabel.highlight) {
-                labelPaintRectangle.setSize(mapLabel.clickSize);
-                painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        if (!mapLabel.showOnTop) {
+            if (!mapLabel.noScaling) {
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
+            } else {
+                painter.drawPixmap(labelPosition, mapLabel.pix);
+                mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
             }
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+
+        if (mapLabel.highlight) {
+            labelPaintRectangle.setSize(mapLabel.clickSize);
+            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
         }
     }
 
@@ -1465,51 +1479,48 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.restore();
     }
 
-    // Draw Labels above the map
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto labelID = it.key();
-            auto label = it.value();
+    // Draw the ("foreground") labels that are on the top of the map:
+    itMapLabel.toFront();
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto mapLabel = itMapLabel.value();
 
-            if (label.pos.z() != mOz) {
-                continue;
-            }
-            if (label.text.length() < 1) {
-                mpMap->mapLabels[mAreaID][labelID].text = tr("no text", "Default text if a label is created in mapper with no text");
-            }
-            QPointF labelPosition;
-            int labelX = label.pos.x() * mRoomWidth + mRX;
-            int labelY = label.pos.y() * mRoomHeight * -1 + mRY;
+        if (mapLabel.pos.z() != mOz) {
+            continue;
+        }
+        if (mapLabel.text.isEmpty()) {
+            mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        QPointF labelPosition;
+        int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+        int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
-            labelPosition.setX(labelX);
-            labelPosition.setY(labelY);
-            int labelWidth = abs(qRound(label.size.width() * mRoomWidth));
-            int labelHeight = abs(qRound(label.size.height() * mRoomHeight));
+        labelPosition.setX(labelX);
+        labelPosition.setY(labelY);
+        int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
+        int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
 
-            if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-                continue;
+        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
+            continue;
+        }
+        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
+            continue;
+        }
+        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
+        if (mapLabel.showOnTop) {
+            if (!mapLabel.noScaling) {
+                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize()));
+                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
+            } else {
+                painter.drawPixmap(labelPosition, mapLabel.pix);
+                mapLabel.clickSize = QSize(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-                continue;
-            }
-            QRectF labelPaintRectangle = QRect(label.pos.x() * mRoomWidth + mRX, label.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-            if (label.showOnTop) {
-                if (!label.noScaling) {
-                    painter.drawPixmap(labelPosition, label.pix.scaled(labelPaintRectangle.size().toSize()));
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setWidth(labelPaintRectangle.width());
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setHeight(labelPaintRectangle.height());
-                } else {
-                    painter.drawPixmap(labelPosition, label.pix);
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setWidth(label.pix.width());
-                    mpMap->mapLabels[mAreaID][labelID].clickSize.setHeight(label.pix.height());
-                }
-            }
-            if (label.highlight) {
-                labelPaintRectangle.setSize(label.clickSize);
-                painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
-            }
+            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+        }
+        if (mapLabel.highlight) {
+            labelPaintRectangle.setSize(mapLabel.clickSize);
+            painter.fillRect(labelPaintRectangle, QColor(255, 155, 55, 190));
         }
     }
 
@@ -2423,19 +2434,16 @@ void T2DMap::createLabel(QRectF labelRectangle)
     float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
     label.pos = QVector3D(mx, my, mOz);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
-    if (!mpMap->mpRoomDB->getArea(mAreaID)) {
+    auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
         return;
     }
-    int labelID;
-    if (!mpMap->mapLabels.contains(mAreaID)) {
-        QMap<int, TMapLabel> m;
-        m[0] = label;
-        mpMap->mapLabels[mAreaID] = m;
-    } else {
-        labelID = mpMap->createMapLabelID(mAreaID);
-        mpMap->mapLabels[mAreaID].insert(labelID, label);
+
+    int labelId = pArea->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pArea->mMapLabels.insert(labelId, label);
+        update();
     }
-    update();
 }
 
 void T2DMap::mouseReleaseEvent(QMouseEvent* e)
@@ -2677,32 +2685,29 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             // select labels
-            if (mpMap->mapLabels.contains(mAreaID)) {
-                QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-                while (it.hasNext()) {
-                    it.next();
-                    if (it.value().pos.z() != mOz) {
+            if (!pArea->mMapLabels.isEmpty()) {
+                QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+                while (itMapLabel.hasNext()) {
+                    itMapLabel.next();
+                    auto mapLabel = itMapLabel.value();
+                    if (mapLabel.pos.z() != mOz) {
                         continue;
                     }
 
                     QPointF labelPosition;
-                    float labelX = it.value().pos.x() * mRoomWidth + mRX;
-                    float labelY = it.value().pos.y() * mRoomHeight * -1 + mRY;
+                    float labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+                    float labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
                     labelPosition.setX(labelX);
                     labelPosition.setY(labelY);
                     int mx = event->pos().x();
                     int my = event->pos().y();
                     QPoint click = QPoint(mx, my);
-                    QRectF br = QRect(labelX, labelY, it.value().clickSize.width(), it.value().clickSize.height());
+                    QRectF br = QRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
                     if (br.contains(click)) {
-                        if (!it.value().highlight) {
-                            mLabelHighlighted = true;
-                            mpMap->mapLabels[mAreaID][it.key()].highlight = true;
-                        } else {
-                            mpMap->mapLabels[mAreaID][it.key()].highlight = false;
-                            mLabelHighlighted = false;
-                        }
+                        mapLabel.highlight = !mapLabel.highlight;
+                        mLabelHighlighted = mapLabel.highlight;
+                        pArea->mMapLabels[itMapLabel.key()] = mapLabel;
                         update();
                         return;
                     }
@@ -3349,26 +3354,28 @@ void T2DMap::slot_moveLabel()
 
 void T2DMap::slot_deleteLabel()
 {
-    if (mpMap->mapLabels.contains(mAreaID)) {
-        QList<int> deleteList;
-        QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-        while (it.hasNext()) {
-            it.next();
-            auto labelID = it.key();
-            auto label = it.value();
-            auto zlevel = static_cast<int>(it.value().pos.z());
-            if (zlevel != mOz) {
-                continue;
-            }
-            if (label.highlight) {
-                deleteList.push_back(labelID);
-            }
+    auto pA = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pA || pA->mMapLabels.isEmpty()) {
+        return;
+    }
+
+    bool updateNeeded = false;
+    QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+    while (itMapLabel.hasNext()) {
+        itMapLabel.next();
+        auto label = itMapLabel.value();
+        if (qRound(label.pos.z()) != mOz) {
+            continue;
         }
-        for (int& i : deleteList) {
-            mpMap->mapLabels[mAreaID].remove(i);
+        if (label.highlight) {
+            itMapLabel.remove();
+            updateNeeded = true;
         }
     }
-    update();
+
+    if (updateNeeded) {
+        update();
+    }
 }
 
 void T2DMap::slot_editLabel()
@@ -4205,26 +4212,30 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
     //FIXME:
     if (mLabelHighlighted) {
-        if (mpMap->mapLabels.contains(mAreaID)) {
-            QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
-            while (it.hasNext()) {
-                it.next();
-                auto labelID = it.key();
-                auto label = it.value();
+        auto pA = mpMap->mpRoomDB->getArea(mAreaID);
+        if (!pA->mMapLabels.isEmpty()) {
+            bool needUpdate = false;
+            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                auto mapLabel = itMapLabel.value();
 
-                if (label.pos.z() != mOz) {
+                if (qRound(mapLabel.pos.z()) != mOz) {
                     continue;
                 }
-                if (!label.highlight) {
+                if (!mapLabel.highlight) {
                     continue;
                 }
                 int mx = qRound((event->pos().x() / mRoomWidth) + mOx -(xspan / 2.0));
                 int my = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy);
-                QVector3D p = QVector3D(mx, my, mOz);
-                mpMap->mapLabels[mAreaID][labelID].pos = p;
+                mapLabel.pos = QVector3D(mx, my, mOz);
+                pA->mMapLabels[itMapLabel.key()] = mapLabel;
+                needUpdate = true;
+            }
+            if (needUpdate) {
+                update();
             }
         }
-        update();
     } else {
         mMoveLabel = false;
     }

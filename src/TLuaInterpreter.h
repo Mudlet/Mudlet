@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include "TTextCodec.h"
+#include "TMap.h"
 
 #include "pre_guard.h"
 #include <QEvent>
@@ -43,7 +44,6 @@
 #include <QTextToSpeech>
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
-#include "TMap.h"
 
 extern "C" {
 #include <lauxlib.h>
@@ -59,6 +59,7 @@ extern "C" {
 class Host;
 class TEvent;
 class TLuaThread;
+class TMapLabel;
 class TTrigger;
 
 
@@ -598,10 +599,11 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
-    static bool getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static double getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static void announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);

@@ -1,27 +1,27 @@
 /***************************************************************************
-*   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
-*   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
-*   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
-*   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
-*   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
-*   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-*   This program is distributed in the hope that it will be useful,       *
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
-*   GNU General Public License for more details.                          *
-*                                                                         *
-*   You should have received a copy of the GNU General Public License     *
-*   along with this program; if not, write to the                         *
-*   Free Software Foundation, Inc.,                                       *
-*   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
-***************************************************************************/
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
+ *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 
 #include "TLuaInterpreter.h"
@@ -35,6 +35,7 @@
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TForkedProcess.h"
+#include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
@@ -203,12 +204,12 @@ TLuaInterpreter::~TLuaInterpreter()
 //    bool showOnTop = lua_toboolean(L, 14);
 //
 // With reduced repetition like that:
-//    bool showOnTop = getVerifiedBoolean(L, "createMapLabel", 14, "showOnTop", true);
+//    bool showOnTop = getVerifiedBool(L, "createMapLabel", 14, "showOnTop", true);
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
-bool TLuaInterpreter::getVerifiedBoolean(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
         announceWrongArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
@@ -258,6 +259,18 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
     return lua_tonumber(L, pos);
 }
 
+// No documentation available in wiki - internal function
+// See also: verifyBoolean
+double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (!lua_isnumber(L, pos)) {
+        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        lua_error(L);
+        Q_UNREACHABLE();
+        return 0;
+    }
+    return lua_tonumber(L, pos);
+}
 // No documentation available in wiki - internal function
 // See also: verifyBoolean
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
@@ -2213,12 +2226,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "adjustStopWatch: bad argument #2 type (modification in seconds as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
-    double adjustment = lua_tonumber(L, 2);
+    double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
@@ -2648,7 +2656,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         return lua_error(L);
     }
 
-    bool status = getVerifiedBoolean(L, __func__, 3, "set/unset");
+    bool status = getVerifiedBool(L, __func__, 3, "set/unset");
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
@@ -3685,14 +3693,13 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
         lua_pushfstring(L, "setLabelToolTip: bad argument #2 type (text as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    if ((lua_gettop(L) > 2) && !lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setLabelToolTip: bad argument #3 type (duration as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
+    double duration = 0;
+    if (lua_gettop(L) > 2) {
+        duration = getVerifiedDouble(L, __func__, 3, "duration");
     }
 
     QString labelName{lua_tostring(L, 1)};
     QString labelToolTip{lua_tostring(L, 2)};
-    double duration = lua_tonumber(L, 3);
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
@@ -4147,22 +4154,10 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
     QString text = getVerifiedString(L, __func__, 1, "windowName");
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #2 type (width as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    double x1 = lua_tonumber(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "resizeWindow: bad argument #3 type (height as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double y1 = lua_tonumber(L, 3);
-
+    double x1 = getVerifiedDouble(L, __func__, 2, "width");
+    double y1 = getVerifiedDouble(L, __func__, 3, "height");
     Host& host = getHostFromLua(L);
     host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
-
     return 0;
 }
 
@@ -4170,21 +4165,9 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 int TLuaInterpreter::moveWindow(lua_State* L)
 {
     QString text = getVerifiedString(L, __func__, 1, "name");
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "moveWindow: bad argument #2 type (x as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    double x1 = lua_tonumber(L, 2);
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "moveWindow: bad argument #3 type (y as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double y1 = lua_tonumber(L, 3);
-
+    double x1 = getVerifiedDouble(L, __func__, 2, "x");
+    double y1 = getVerifiedDouble(L, __func__, 3, "y");
     Host& host = getHostFromLua(L);
-
     host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
 }
@@ -5227,7 +5210,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
 int TLuaInterpreter::lockRoom(lua_State* L)
 {
     int id = getVerifiedInt(L, __func__, 1, "roomID");
-    bool b = getVerifiedBoolean(L, __func__, 2, "lockIfTrue");
+    bool b = getVerifiedBool(L, __func__, 2, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -5252,7 +5235,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
         return lua_error(L);
     }
 
-    bool b = getVerifiedBoolean(L, __func__, 3, "lockIfTrue");
+    bool b = getVerifiedBool(L, __func__, 3, "lockIfTrue");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -6234,12 +6217,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
         windowName = WINDOW_NAME(L, s);
         s++;
     }
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "setTriggerStayOpen: bad argument #%d type (element name as string expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    double b = lua_tonumber(L, s);
-
+    double b = getVerifiedDouble(L, __func__, s, "number of lines");
     Host& host = getHostFromLua(L);
     host.getTriggerUnit()->setTriggerStayOpen(windowName, static_cast<int>(b));
     return 0;
@@ -7973,11 +7951,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
     }
     QString parent{lua_tostring(L, 2)};
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    double time = lua_tonumber(L, 3);
+    double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -8286,7 +8260,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
-    bool luaDir = getVerifiedBoolean(L, __func__, 1, "fileOrFolder");
+    bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
     if (!luaDir) {
@@ -8888,17 +8862,15 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
         zoom = getVerifiedFloat(L, __func__, 12, "zoom", true);
         fontSize = getVerifiedInt(L, __func__, 13, "fontSize", true);
         if (args > 13) {
-            showOnTop = getVerifiedBoolean(L, __func__, 14, "showOnTop", true);
-        }
-        if (args > 14) {
-            noScaling = getVerifiedBoolean(L, __func__, 15, "noScaling", true);
+            showOnTop = getVerifiedBool(L, __func__, 14, "showOnTop", true);
+            if (args > 14) {
+                noScaling = getVerifiedBool(L, __func__, 15, "noScaling", true);
+            }
         }
     }
 
     Host& host = getHostFromLua(L);
-    auto fg = QColor(fgr, fgg, fgb);
-    auto bg = QColor(bgr, bgg, bgb);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, fg, bg, showOnTop, noScaling, zoom, fontSize));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb), QColor(bgr, bgg, bgb), showOnTop, noScaling, zoom, fontSize));
     return 1;
 }
 
@@ -8922,17 +8894,17 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
-    QString text = getVerifiedString(L, __func__, 2, "text");
+    QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
     float posx = getVerifiedFloat(L, __func__, 3, "posX");
     float posy = getVerifiedFloat(L, __func__, 4, "posY");
     float posz = getVerifiedFloat(L, __func__, 5, "posZ");
     float width = getVerifiedFloat(L, __func__, 6, "width");
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
-    bool showOnTop = getVerifiedBoolean(L, __func__, 9, "showOnTop");
+    bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, text, posx, posy, posz, width, height, zoom, showOnTop, false));
+    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop));
     return 1;
 }
 
@@ -9518,11 +9490,11 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
-
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mapLabels.contains(area)) {
-        lua_newtable(L);
-        QMapIterator<int, TMapLabel> it(host.mpMap->mapLabels[area]);
+    lua_newtable(L);
+    auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA->mMapLabels.isEmpty()) {
+        QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
             it.next();
             lua_pushnumber(L, it.key());
@@ -9536,45 +9508,56 @@ int TLuaInterpreter::getMapLabels(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapLabel
 int TLuaInterpreter::getMapLabel(lua_State* L)
 {
-    QString labelText;
     int area = getVerifiedInt(L, __func__, 1, "areaID");
 
-    int labelId = -1;
     if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "getMapLabel: bad argument #2 type (labelId as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "getMapLabel: bad argument #2 type (labelID as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    if (lua_isnumber(L, 2)) {
+    QString labelText;
+    int labelId = -1;
+    if (lua_type(L, 2) == LUA_TNUMBER) {
         labelId = lua_tointeger(L, 2);
+        if (labelId < 0) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "labelID %d is invalid, it must be zero or greater", labelId);
+        }
+
     } else {
         labelText = lua_tostring(L, 2);
+        // Can be an empty string as image labels have no text!
     }
 
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mapLabels.contains(area)) {
+    auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (pA->mMapLabels.isEmpty()) {
+        // Return an empty table:
         lua_newtable(L);
-        if (labelId != -1) {
-            if (host.mpMap->mapLabels[area].contains(labelId)) {
-                TMapLabel label = host.mpMap->mapLabels[area][labelId];
-                pushMapLabelPropertiesToLua(L, label);
-            } else {
-                lua_pushstring(L, "getMapLabel: labelId doesn't exist");
-                return lua_error(L);
-            }
-        } else {
-            QMapIterator<int, TMapLabel> it(host.mpMap->mapLabels[area]);
-            while (it.hasNext()) {
-                it.next();
-                if (it.value().text == labelText) {
-                    lua_newtable(L);
-                    TMapLabel label = it.value();
-                    int id = it.key();
-                    pushMapLabelPropertiesToLua(L, label);
-                    lua_pushnumber(L, id);
-                    lua_insert(L, -2);
-                    lua_settable(L, -3);
-                }
-            }
+        return 1;
+    }
+
+    if (labelId >= 0) {
+        if (!pA->mMapLabels.contains(labelId)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "labelID %d does not exist in area with areaID %d", labelId, area);
+            return 2;
+        }
+        lua_newtable(L);
+        auto label = pA->mMapLabels.value(labelId);
+        pushMapLabelPropertiesToLua(L, label);
+        return 1;
+    }
+
+    lua_newtable(L);
+    QMapIterator<int, TMapLabel> it(pA->mMapLabels);
+    while (it.hasNext()) {
+        it.next();
+        if (it.value().text == labelText) {
+            lua_newtable(L);
+            pushMapLabelPropertiesToLua(L, it.value());
+            lua_pushnumber(L, it.key());
+            lua_insert(L, -2);
+            lua_settable(L, -3);
         }
     }
     return 1;
@@ -9582,33 +9565,28 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
 void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label)
 {
-    int x = label.pos.x();
-    int y = label.pos.y();
-    int z = label.pos.z();
-    float height = label.size.height();
-    float width = label.size.width();
-    QString text = label.text;
     lua_pushstring(L, "X");
-    lua_pushnumber(L, x);
+    lua_pushnumber(L, label.pos.x());
     lua_settable(L, -3);
     lua_pushstring(L, "Y");
-    lua_pushnumber(L, y);
+    lua_pushnumber(L, label.pos.y());
     lua_settable(L, -3);
     lua_pushstring(L, "Z");
-    lua_pushnumber(L, z);
+    lua_pushnumber(L, qRound(label.pos.z()));
     lua_settable(L, -3);
     lua_pushstring(L, "Height");
-    lua_pushnumber(L, height);
+    lua_pushnumber(L, label.size.height());
     lua_settable(L, -3);
     lua_pushstring(L, "Width");
-    lua_pushnumber(L, width);
+    lua_pushnumber(L, label.size.width());
     lua_settable(L, -3);
     lua_pushstring(L, "Text");
-    lua_pushstring(L, text.toUtf8().constData());
+    lua_pushstring(L, label.text.toUtf8().constData());
     lua_settable(L, -3);
     lua_pushstring(L, "Pixmap");
     lua_pushstring(L, label.base64EncodePixmap().constData());
     lua_settable(L, -3);
+
     lua_pushstring(L, "FgColor");
     lua_newtable(L);
     lua_pushstring(L, "r");
@@ -9621,6 +9599,7 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_pushinteger(L, label.fgColor.blue());
     lua_settable(L, -3);
     lua_settable(L, -3);
+
     lua_pushstring(L, "BgColor");
     lua_newtable(L);
     lua_pushstring(L, "r");
@@ -10837,7 +10816,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
-    bool gridMode = getVerifiedBoolean(L, __func__, 2, "true/false");
+    bool gridMode = getVerifiedBool(L, __func__, 2, "true/false");
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -12918,12 +12897,7 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double rate = lua_tonumber(L, 1);
+    double rate = getVerifiedDouble(L, __func__, 1, "rate");
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -12949,12 +12923,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double pitch = lua_tonumber(L, 1);
+    double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -12980,12 +12949,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    double volume = lua_tonumber(L, 1);
+    double volume = getVerifiedDouble(L, __func__, 1, "volume");
 
     if (volume > 1.0) {
         volume = 1.0;
