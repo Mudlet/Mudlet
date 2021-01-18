@@ -1026,20 +1026,21 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  local installationSuccessful = installPackage(fileName) 
+  local installationSuccessful = installPackage(fileName)
 
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if installationSuccessful then
     local successText = (mudlet.Locale.packageInstallSuccess 
       and mudlet.Locale.packageInstallSuccess.message or "Package installed successfully.")
-    local infoPrefix = (mudlet.Locale.prefixInfo and mudlet.Locale.prefixInfo.message or "[ INFO ]  - ")
-    decho('<0,150,190>' .. infoPrefix .. '<0,160,0>' .. successText .. '\n') 
-    -- Cyan and Light Green; see cTelnet::postMessage for color comparison
+    local okPrefix = (mudlet.Locale.prefixOk and mudlet.Locale.prefixOk.message or "[  OK  ]  - ")
+    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = (mudlet.Locale.packageInstallFail 
       and mudlet.Locale.packageInstallFail.message or "Package installation failed.")
     local warnPrefix = (mudlet.Locale.prefixWarn and mudlet.Locale.prefixWarn.message or "[ WARN ]  - ")
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n') -- Orange
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    -- Cyan and Orange; see cTelnet::postMessage for color comparison
   end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")

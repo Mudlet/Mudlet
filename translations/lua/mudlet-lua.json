@@ -1,12 +1,12 @@
 {
-  "AdjustableContainer.attach": { 
+  "AdjustableContainer.attach": {
     "message": "Attach to:",
     "description":"attaches your container to a border"
-  },  
-  "AdjustableContainer.bottom": { 
+  },
+  "AdjustableContainer.bottom": {
     "message":"bottom",
     "description":"one of the borders the container can be attached to"
-  }, 
+  },
   "AdjustableContainer.top": {
     "message":"top",
     "description":"one of the borders the container can be attached to"
@@ -43,7 +43,7 @@
     "message":"full",
     "description":"one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
   },
-  "AdjustableContainer.border": { 
+  "AdjustableContainer.border": {
     "message":"border",
     "description":"one of the Lockstyles which keeps the borders of the container visible."
   },
@@ -75,8 +75,8 @@
     "message":"Package installation failed.",
     "description":"Failure message after drag&drop of package file onto Mudlet"
   },
-  "Mudlet.prefixInfo": {
-    "message":"[ INFO ]  - ",
+  "Mudlet.prefixOk": {
+    "message":"[  OK  ]  - ",
     "description":"Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixWarn": {
