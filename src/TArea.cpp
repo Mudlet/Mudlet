@@ -599,6 +599,16 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     return results;
 }
 
+int TArea::createLabelId() const
+{
+    int labelId = -1;
+    do {} while (mMapLabels.contains(++labelId));
+    if (labelId < 0) {
+        labelId = -1;
+    }
+    return labelId;
+}
+
 void TArea::writeJsonArea(QJsonArray& array) const
 {
     QJsonObject areaObj;

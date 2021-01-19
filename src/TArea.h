@@ -62,6 +62,7 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
+    int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
     std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
 
@@ -89,7 +90,6 @@ public:
     TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
-    // This has been moved from the TMap class:
     QMap<int, TMapLabel> mMapLabels;
 
 

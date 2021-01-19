@@ -1441,7 +1441,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
     painter.setPen(pen);
 
-    // Draw the labels that are on the bottom of the map:
+    // Draw the ("background") labels that are on the bottom of the map:
     QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -1561,7 +1561,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.restore();
     }
 
-    // Draw the labels that are on top of the map:
+    // Draw the ("foreground") labels that are on the top of the map:
     itMapLabel.toFront();
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -2521,12 +2521,11 @@ void T2DMap::createLabel(QRectF labelRectangle)
         return;
     }
 
-    int labelID = -1;
-    do {
-    } while (pArea->mMapLabels.contains(++labelID));
-    pArea->mMapLabels.insert(labelID, label);
-
-    update();
+    int labelId = pArea->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pArea->mMapLabels.insert(labelId, label);
+        update();
+    }
 }
 
 void T2DMap::mouseReleaseEvent(QMouseEvent* e)
@@ -3615,7 +3614,7 @@ void T2DMap::slot_setSymbol()
     // First scan and count all the different symbol used
     TRoom* room;
     bool isAtLeastOneRoom = false;
-    QHash<QString, unsigned int> usedSymbols;
+    QHash<QString, int> usedSymbols;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
@@ -3693,7 +3692,7 @@ void T2DMap::slot_setSymbol()
                                               & isOk,
                                               Qt::Dialog);
         } else {
-            QHashIterator<QString, unsigned int> itSymbolUsed(usedSymbols);
+            QHashIterator<QString, int> itSymbolUsed(usedSymbols);
             QSet<unsigned int> symbolCountsSet;
             while (itSymbolUsed.hasNext()) {
                 itSymbolUsed.next();

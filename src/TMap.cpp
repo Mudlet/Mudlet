@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -479,6 +479,9 @@ void TMap::audit()
                 for (int& i : labelIDList) {
                     TMapLabel l = pArea->mMapLabels.value(i);
                     if (l.pix.isNull()) {
+                        // Note that two of the last three arguments here
+                        // (false, 40.0) are not the defaults (true, 30.0) used
+                        // now:
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
@@ -1156,7 +1159,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         int areasWithLabels = 0;
         // Need to count the areas that have mapLabels:
         for (const auto pArea : mpRoomDB->getAreaPtrList()) {
-            if (pArea && pArea->mMapLabels.isEmpty()) {
+            if (pArea && !pArea->mMapLabels.isEmpty()) {
                 ++areasWithLabels;
             }
         }
@@ -1258,6 +1261,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
             ofs << oldCharacterCode;
         }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -2057,19 +2061,18 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.size = s;
     label.clickSize = s;
 
-    int label_id = -1;
-    do {
-    } while (pA->mMapLabels.contains(++label_id));
-
-    pA->mMapLabels.insert(label_id, label);
-
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
-    return label_id;
+
+    return labelId;
 }
 
-int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling)
+int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2080,7 +2083,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
-    label.noScaling = noScaling;
+    // This method is only called from the TLuaInterpreter class and the value
+    // passed was hard-coded to this value:
+    label.noScaling = false;
 
     QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
@@ -2091,26 +2096,25 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pix = pix;
 
-    int label_id = -1;
-    do {
-    } while (pA->mMapLabels.contains(++label_id));
-
-    pA->mMapLabels.insert(label_id, label);
-
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >=0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
-    return label_id;
+
+    return labelId;
 }
 
-void TMap::deleteMapLabel(int area, int labelID)
+void TMap::deleteMapLabel(int area, int labelId)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
         return;
     }
 
-    if (pA->mMapLabels.remove(labelID)) {
+    if (pA->mMapLabels.remove(labelId) && mpMapper) {
         mpMapper->mp2dMap->update();
     }
 }
@@ -2676,24 +2680,6 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
-void TMap::update()
-{
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        mpM->update();
-    }
-#endif
-    if (mpMapper) {
-        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
-
-        if (mpMapper->mp2dMap) {
-            mpMapper->mp2dMap->mNewMoveAction = true;
-            mpMapper->mp2dMap->update();
-        }
-    }
-}
-
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     QString destination{dest};
@@ -3195,4 +3181,22 @@ bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int incremen
                                         QString::number(mProgressDialogLabelsTotal)));
     qApp->processEvents();
     return mpProgressDialog->wasCanceled();
+}
+
+void TMap::update()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (mpM) {
+        mpM->update();
+    }
+#endif
+    if (mpMapper) {
+        mpMapper->showRoomNames->setVisible(getRoomNamesPresent());
+        mpMapper->showRoomNames->setChecked(getRoomNamesShown());
+
+        if (mpMapper->mp2dMap) {
+            mpMapper->mp2dMap->mNewMoveAction = true;
+            mpMapper->mp2dMap->update();
+        }
+    }
 }
