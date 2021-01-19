@@ -1027,7 +1027,7 @@ function packageDrop(event, fileName, suffix)
     return
   end
   local installationSuccessful = installPackage(fileName)
-
+  -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if installationSuccessful then
     local successText = (mudlet.Locale.packageInstallSuccess
