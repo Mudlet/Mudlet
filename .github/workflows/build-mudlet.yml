@@ -176,11 +176,11 @@ jobs:
         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: actions/cache@v2
+      uses: pat-s/always-upload-cache@v2.1.3
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{github.sha}}
-        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
       if: matrix.os != 'windows-latest'
 
     - name: (Linux/macOS) Set build info
@@ -188,6 +188,10 @@ jobs:
       run: |
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: check ccache stats prior to build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -203,6 +207,10 @@ jobs:
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
+
+    - name: check ccache stats post build
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: ccache --show-stats
 
     - name: Run C++ tests (macOS)
       if: runner.os == 'macOS'
