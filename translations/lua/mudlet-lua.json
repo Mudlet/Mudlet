@@ -69,11 +69,11 @@
   },
   "Mudlet.packageInstallSuccess": {
     "message":"Package '%s' installed successfully.",
-    "description":"Success message after drag&drop of package file onto Mudlet"
+    "description":"Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.packageInstallFail": {
     "message":"Package '%s' installation failed.",
-    "description":"Failure message after drag&drop of package file onto Mudlet"
+    "description":"Failure message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.prefixOk": {
     "message":"[  OK  ]  - ",
