@@ -583,10 +583,9 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
-    static int setMapInfoOverrideCallback(lua_State*);
+    static int setMapInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
-    std::pair<bool, QString> callMapInfoOverrideCallback(const int callback, const int roomId);
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);

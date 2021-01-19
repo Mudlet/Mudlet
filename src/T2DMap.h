@@ -48,6 +48,13 @@ class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
 
+struct MapInfoOverride {
+    QString text;
+    bool isBold;
+    bool isItalic;
+    QColor color;
+};
+
 
 class T2DMap : public QWidget
 {
@@ -165,8 +172,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    int mapInfoOverrideCallback = 0;
-
+    MapInfoOverride* mapInfoOverride;
 
 public slots:
     void slot_roomSelectionChanged();

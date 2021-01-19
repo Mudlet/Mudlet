@@ -2192,7 +2192,17 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     painter.save(); // Save painter state
     QFont f = painter.font();
     TRoom* _prid = mpMap->mpRoomDB->getRoom(roomID);
-    if (_prid && !mapInfoOverrideCallback) {
+
+    TEvent event {};
+    event.mArgumentList.append(QLatin1String("mapInfoRedraw"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(roomID));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(showingCurrentArea));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    mpHost->raiseEvent(event);
+
+    if (_prid && !mapInfoOverride) {
         int areaId = _prid->getArea();
         TArea* area = mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
@@ -2292,11 +2302,15 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
             }
             break;
         }
-    } else if (mapInfoOverrideCallback) {
-        auto [success, overrideInfoText] = mpHost->getLuaInterpreter()->callMapInfoOverrideCallback(mapInfoOverrideCallback, roomID);
-        if (success && !overrideInfoText.isEmpty()) {
-            infoText = overrideInfoText.append(QChar::LineFeed);
+    } else if (mapInfoOverride) {
+        infoText = mapInfoOverride->text;
+        f.setBold(mapInfoOverride->isBold);
+        f.setItalic(mapInfoOverride->isItalic);
+        if (mapInfoOverride->color.isValid()) {
+            infoColor = mapInfoOverride->color;
         }
+        delete mapInfoOverride;
+        mapInfoOverride = NULL;
     }
 
 #ifdef QT_DEBUG
@@ -2329,7 +2343,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         testRect = painter.boundingRect(
                 mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
 
-    } while ((testRect.height() > mMapInfoRect.height() - 20 || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
+    } while ((testRect.height() > mMapInfoRect.height() - mFontHeight || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
     // Last term above is needed to prevent runaway under "odd" conditions
 
     // Restore Grey translucent background, was useful for debugging!

@@ -16509,7 +16509,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
-    lua_register(pGlobalLua, "setMapInfoOverrideCallback", TLuaInterpreter::setMapInfoOverrideCallback);
+    lua_register(pGlobalLua, "setMapInfo", TLuaInterpreter::setMapInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -18212,74 +18212,92 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapInfoOverrideCallback
-int TLuaInterpreter::setMapInfoOverrideCallback(lua_State* L) {
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapInfo
+int TLuaInterpreter::setMapInfo(lua_State* L)
+{
+    QString text;
+    bool isBold = false;
+    bool isItalic = false;
+    QColor color = QColor();
 
-    if (lua_gettop(L) > 0 && !lua_isfunction(L, 1) && !lua_isnil(L, 1)) {
-        lua_pushfstring(L, "setMapInfoOverrideCallback: bad argument #1 type (callback as nil or as function expected, got %s!)", luaL_typename(L, 1));
+    int n = lua_gettop(L);
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setMapInfo: bad argument #1 type (map information text as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    text = QString(lua_tostring(L, 1));
+
+    if (n >= 2 && !lua_isboolean(L, 2)) {
+        lua_pushfstring(L, "setMapInfo: bad argument #2 type (is bold as boolean expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (n >= 2) {
+        isBold = lua_toboolean(L, 2);
+    }
+
+    if (n >= 3 && !lua_isboolean(L, 3)) {
+        lua_pushfstring(L, "setMapInfo: bad argument #3 type (is italic as boolean expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else if (n >= 3) {
+        isItalic = lua_toboolean(L, 3);
+    }
+
+    if (n == 4) {
+        lua_pushfstring(L, "setMapInfo: argument #5 and argument #6 missing (provide r, g, b components for color)");
         return lua_error(L);
     }
 
-    bool registeredCallback = false;
+    if (n == 5) {
+        lua_pushfstring(L, "setMapInfo: argument #6 missing (provide r, g, b components for color)");
+        return lua_error(L);
+    }
+
+    if (n == 6) {
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setMapInfo: bad argument #4 type (red component as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        }
+        int r = lua_tonumber(L, 4);
+        if (r < 0 || r > 255) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
+            return 2;
+        }
+
+        if (!lua_isnumber(L, 5)) {
+            lua_pushfstring(L, "setMapInfo: bad argument #5 type (green component as number expected, got %s!)", luaL_typename(L, 5));
+            return lua_error(L);
+        }
+        int g = lua_tonumber(L, 5);
+        if (g < 0 || g > 255) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
+            return 2;
+        }
+
+        if (!lua_isnumber(L, 6)) {
+            lua_pushfstring(L, "setMapInfo: bad argument #6 type (blue component as number expected, got %s!)", luaL_typename(L, 6));
+            return lua_error(L);
+        }
+        int b = lua_tonumber(L, 6);
+        if (b < 0 || b > 255) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
+            return 2;
+        }
+        color = QColor(r, g, b);
+    }
+
     auto& host = getHostFromLua(L);
 
-    int callback;
-    if(lua_isfunction(L, 1)) {
-        callback = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        callback = 0;
-    }
-
     if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->mapInfoOverrideCallback = callback;
-        host.mpMap->mpMapper->mp2dMap->repaint();
-        registeredCallback = true;
+        auto override = new MapInfoOverride({
+            .text = text, 
+            .isBold = isBold, 
+            .isItalic = isItalic, 
+            .color = color});
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride = override;
     }
 
-    lua_pushboolean(L, registeredCallback);
+    lua_pushboolean(L, true);
     return 1;
-}
-
-// No documentation available in wiki - internal function
-std::pair<bool, QString> TLuaInterpreter::callMapInfoOverrideCallback(const int callback, const int roomId)
-{
-    QString returnValue;
-
-    lua_State* L = pGlobalLua;
-
-    lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
-    if (roomId > 0) {
-        lua_pushinteger(L, roomId);
-    } else {
-        lua_pushnil(L);
-    }
-    int error = lua_pcall(L, 1, 1, 0);
-    if (error) {
-        int nbpossible_errors = lua_gettop(L);
-        for (int i = 1; i <= nbpossible_errors; i++) {
-            std::string e = "";
-            if (lua_isstring(L, i)) {
-                e += lua_tostring(L, i);
-                logError(e, "callMapInfoOverrideCallback", "callback");
-                if (mudlet::debugMode) {
-                    TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script mapInfoOverrideCallback ERROR:" << e.c_str() << "\n" >> 0;
-                }
-            }
-        }
-    } else {
-        auto index = lua_gettop(L);
-        if (lua_isstring(L, index)) {
-            returnValue = lua_tostring(L, index);
-        }
-
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA OK script mapInfoOverrideCallback ran without errors\n" >> 0;
-        }
-    }
-    lua_pop(L, lua_gettop(L));
-    if (error) {
-        return std::make_pair(false, returnValue);
-    } else {
-        return std::make_pair(true, returnValue);
-    }
 }
