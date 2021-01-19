@@ -1610,16 +1610,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
 void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
-    // A set of numbers that is to be frobbed during development:
-    static double shortPositionFactor = 0.225;
-    static double middlePositionFactor = 0.95;
-    static double longPositionFactor = 0.45;
-    static double innerThresholdFactor = 0.225;
-    static double outerThresholdFactor = 0.45;
-    static double middleAngleFactor = 170.0;
-    static double middleFiddleFactor = 0.20;
-    static double endAngleFactor = 160.0;
-    static double endFiddleFactor = 0.25;
+    // A set of numbers that can be converted to statics and be frobbed during
+    // development:
+    const double shortPositionFactor = 0.225;
+    const double middlePositionFactor = 0.95;
+    const double longPositionFactor = 0.45;
+    const double innerThresholdFactor = 0.225;
+    const double outerThresholdFactor = 0.45;
+    const double middleAngleFactor = 170.0;
+    const double middleFiddleFactor = 0.25;
+    const double endAngleFactor = 160.0;
+    const double endFiddleFactor = 0.30;
     bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
     bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
     QLineF line{exitLine};
@@ -1652,9 +1653,6 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     QLineF subDoorLineC{doorLine.p2(), doorLine.p1()};
     subDoorLineC.setAngle(doorLine.angle() + middleAngleFactor);
 
-    // Construct a line through the end points of the above four lines:
-    QPolygonF compositeDoorLine;
-    compositeDoorLine << subDoorLineA.p2() << subDoorLineB.p2() << subDoorLineC.p2() << subDoorLineD.p2();
     painter.save();
     QPen doorPen = painter.pen();
     doorPen.setCosmetic(mMapperUseAntiAlias);
@@ -1670,7 +1668,8 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
         doorPen.setColor(mLockedDoorColor);
     }
     painter.setPen(doorPen);
-    painter.drawPolyline(compositeDoorLine);
+    painter.drawLine(QLineF(subDoorLineA.p2(), subDoorLineB.p2()));
+    painter.drawLine(QLineF(subDoorLineD.p2(), subDoorLineC.p2()));
     painter.restore();
 }
 
