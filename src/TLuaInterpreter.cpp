@@ -1301,12 +1301,7 @@ int TLuaInterpreter::getLines(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
 int TLuaInterpreter::loadReplay(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "loadReplay: bad argument #1 type (replay file name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString replayFileName{lua_tostring(L, 1)};
+    QString replayFileName = getVerifiedString(L, __func__, 1, "replay file name");
     if (replayFileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "a blank string is not a valid replay file name");
@@ -1330,18 +1325,12 @@ int TLuaInterpreter::loadReplay(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setProfileIcon
 int TLuaInterpreter::setProfileIcon(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setProfileIcon: bad argument #1 type (icon file path expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString iconPath{lua_tostring(L, 1)};
+    QString iconPath = getVerifiedString(L, __func__, 1, "icon file path");
     if (iconPath.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "a blank string is not a valid icon file location");
         return 2;
     }
-
     if (!QFileInfo::exists(iconPath)) {
         lua_pushnil(L);
         lua_pushfstring(L, "'%s' doesn't exist", iconPath.toUtf8().constData());
@@ -1396,18 +1385,8 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
 int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #1 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString windowName{lua_tostring(L, 1)};
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #2 type (font size as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int size = lua_tointeger(L, 2);
-
+    QString windowName = getVerifiedString(L, __func__, 1, "miniconsole name");
+    int size = getVerifiedInt(L, __func__, 2, "font size");
     auto console = CONSOLE(L, windowName);
     if (console->setFontSize(size)) {
         lua_pushboolean(L, true);
@@ -1474,12 +1453,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeMapMenu
 int TLuaInterpreter::removeMapMenu(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "removeMapMenu: bad argument #1 type (Menu name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString uniqueName = lua_tostring(L, 1);
-
+    QString uniqueName = getVerifiedString(L, __func__, 1, "Menu name");
     if (uniqueName == "") {
         return 0;
     }
@@ -1556,17 +1530,8 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
 {
     QString eventName, parent, displayName;
     QStringList actionInfo;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "addMapEvent: bad argument #1 type (uniquename as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString uniqueName{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "addMapEvent: bad argument #2 type (event name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    actionInfo << lua_tostring(L, 2);
+    QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
+    actionInfo << getVerifiedString(L, __func__, 2, "event name");
 
     if (!lua_isstring(L, 3)) {
         actionInfo << QString();
@@ -1658,11 +1623,7 @@ int TLuaInterpreter::centerview(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "centerview: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (pR) {
@@ -1748,26 +1709,11 @@ int TLuaInterpreter::paste(lua_State* L)
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L,
-                        "feedTriggers: bad argument #1 type (imitation MUD server text as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
+    QByteArray data{getVerifiedString(L, __func__, 1, "imitation game server text");};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L,
-                            "feedTriggers: bad argument #2 type (Utf8Encoded as boolean is optional, got %s!)",
-                            luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        dataIsUtf8Encoded = lua_toboolean(L, 2);
+        dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
-    QByteArray data{lua_tostring(L, 1)};
 
     QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
@@ -1851,13 +1797,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
         windowName = WINDOW_NAME(L, 1);
         ++s;
     }
-
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "setWindowWrap: bad argument #%d type (wrapAt as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int luaFrom = lua_tointeger(L, 2);
-
+    int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
     console->setWrapAt(luaFrom);
     return 0;
