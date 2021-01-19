@@ -884,12 +884,7 @@ int TLuaInterpreter::selectCurrentLine(lua_State* L)
 int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 {
     std::string windowName = "main";
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiFgColor: bad argument #1 type (ANSI color number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int ansiFg = lua_tointeger(L, 1);
+    int ansiFg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
@@ -983,12 +978,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 {
     std::string windowName = "main";
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "isAnsiBgColor: bad argument #1 type (ANSI color number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int ansiBg = lua_tointeger(L, 1);
+    int ansiBg = getVerifiedInt(L, __func__, 1, "ANSI color");
 
     std::list<int> result;
     Host& host = getHostFromLua(L);
@@ -1083,11 +1073,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
     Host& host = getHostFromLua(L);
@@ -1103,11 +1089,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
     Host& host = getHostFromLua(L);
@@ -1123,11 +1105,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 {
     QString windowName;
     if (lua_gettop(L)) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "getTextFormat: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
     }
 
     Host& host = getHostFromLua(L);
@@ -1228,19 +1206,10 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     int s = 1;
     std::string windowName;
     if (lua_gettop(L)) {
-        if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, "wrapLine: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        windowName = getVerifiedString(L, __func__, 1, "window name");
         s++;
     }
-
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "wrapLine: bad argument #%d type (line as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int lineNumber = lua_tointeger(L, s);
+    int lineNumber = getVerifiedInt(L, __func__, s, "line");
 
     Host& host = getHostFromLua(L);
     host.mpConsole->luaWrapLine(windowName, lineNumber);
@@ -1257,12 +1226,7 @@ int TLuaInterpreter::spawn(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCaptureGroup
 int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "selectCaptureGroup: bad argument #1 type (capture group as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int captureGroup = lua_tointeger(L, 1);
-
+    int captureGroup = getVerifiedInt(L, __func__, 1, "capture group");
     Host& host = getHostFromLua(L);
     if (captureGroup < 1) {
         lua_pushnumber(L, -1);
@@ -1309,24 +1273,15 @@ int TLuaInterpreter::getLines(lua_State* L)
     int s = 0;
     QString windowName;
     if (n > 2) {
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "getLines: bad argument #%d type (mini console, user window or buffer name as string expected {may be omitted for the \"main\" console}, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, s);
+        ++s;
+        windowName = getVerifiedString(L, __func__, s, "mini console, user window or buffer name {may be omitted for the \"main\" console}", true);
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "getLines: bad argument #%d type (start line as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int lineFrom = lua_tointeger(L, s);
+    ++s;
+    int lineFrom = getVerifiedInt(L, __func__, s, "start line");
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "getLines: bad argument #%d type (end line as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int lineTo = lua_tointeger(L, s);
+    ++s;
+    int lineTo = getVerifiedInt(L, __func__, s, "end line");
 
     Host& host = getHostFromLua(L);
     QPair<bool, QStringList> result = host.getLines(windowName, lineFrom, lineTo);
