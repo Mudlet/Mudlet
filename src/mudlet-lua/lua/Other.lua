@@ -1032,7 +1032,7 @@ function packageDrop(event, fileName, suffix)
   if installationSuccessful then
     local successText = (mudlet.Locale.packageInstallSuccess
       and mudlet.Locale.packageInstallSuccess.message or "Package '%s' installed successfully.")
-    sucessText = string.format(successText, fileName)
+    successText = string.format(successText, fileName)
     local okPrefix = (mudlet.Locale.prefixOk and mudlet.Locale.prefixOk.message or "[  OK  ]  - ")
     decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
