@@ -68,11 +68,11 @@
     "description":"disconnect your container from the border frame"
   },
   "Mudlet.packageInstallSuccess": {
-    "message":"Package installed successfully.",
+    "message":"Package '%s' installed successfully.",
     "description":"Success message after drag&drop of package file onto Mudlet"
   },
   "Mudlet.packageInstallFail": {
-    "message":"Package installation failed.",
+    "message":"Package '%s' installation failed.",
     "description":"Failure message after drag&drop of package file onto Mudlet"
   },
   "Mudlet.prefixOk": {
