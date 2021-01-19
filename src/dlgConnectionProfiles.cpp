@@ -2299,7 +2299,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     do {
         font.setPointSize(--fontSize);
         QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, text);
+        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
@@ -2313,7 +2313,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
             pt.setPen(Qt::white);
         }
         pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }
