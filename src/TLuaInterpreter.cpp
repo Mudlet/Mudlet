@@ -1270,17 +1270,14 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 int TLuaInterpreter::getLines(lua_State* L)
 {
     int n = lua_gettop(L);
-    int s = 0;
+    int s = 1;
     QString windowName;
     if (n > 2) {
-        ++s;
-        windowName = getVerifiedString(L, __func__, s, "mini console, user window or buffer name {may be omitted for the \"main\" console}", true);
+        windowName = getVerifiedString(L, __func__, 1, "mini console, user window or buffer name {may be omitted for the \"main\" console}", true);
+        s++;
     }
-
-    ++s;
     int lineFrom = getVerifiedInt(L, __func__, s, "start line");
-
-    ++s;
+    s++;
     int lineTo = getVerifiedInt(L, __func__, s, "end line");
 
     Host& host = getHostFromLua(L);
