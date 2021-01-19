@@ -856,19 +856,11 @@ int TLuaInterpreter::selectString(lua_State* L)
         s++;
     }
 
-    if (!lua_isstring(L, s)) {
-        lua_pushfstring(L, "selectString: bad argument #%d type (text to select as string expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    QString searchText{lua_tostring(L, s)};
+    QString searchText = getVerifiedString(L, __func__, s, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
     s++;
 
-    if (!lua_isnumber(L, s)) {
-        lua_pushfstring(L, "selectString: bad argument #%d type (match count as number {1 for first} expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    qint64 numOfMatch = lua_tointeger(L, s);
+    qint64 numOfMatch = static_cast <qint64> getVerifiedInt(L, __func__, s, "match count {1 for first}")
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));
