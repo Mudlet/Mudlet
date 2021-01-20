@@ -1073,7 +1073,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        windowName = static_cast <std::string> (getVerifiedString(L, __func__, 1, "window name", true));
+        windowName = getVerifiedString(L, __func__, 1, "window name", true).toStdString();
     }
 
     Host& host = getHostFromLua(L);
@@ -1089,7 +1089,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+        windowName = getVerifiedString(L, __func__, 1, "window name", true).toStdString();
     }
 
     Host& host = getHostFromLua(L);
