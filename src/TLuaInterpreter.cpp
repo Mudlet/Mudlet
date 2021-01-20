@@ -1206,7 +1206,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     int s = 1;
     std::string windowName;
     if (lua_gettop(L)) {
-        windowName = getVerifiedString(L, __func__, 1, "window name");
+        windowName = getVerifiedString(L, __func__, 1, "window name").toStdString();
         s++;
     }
     int lineNumber = getVerifiedInt(L, __func__, s, "line");
@@ -4023,11 +4023,7 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getImageSize
 int TLuaInterpreter::getImageSize(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getImageSize: bad argument #1 type (image location as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString imageLocation{lua_tostring(L, 1)};
+    QString imageLocation = getVerifiedString(L, __func__, 1, "image location");
     if (imageLocation.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "bad argument #1 value (image location cannot be an empty string)");
@@ -4048,12 +4044,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
 int TLuaInterpreter::setCmdLineAction(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
+    QString name = getVerifiedString(L, __func__, 1, "command line name");
     if (name.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "setCmdLineAction: bad argument #1 value (command line name cannot be an empty string.)");
@@ -4061,12 +4052,11 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     }
     lua_remove(L, 1);
 
-    int func;
     if (!lua_isfunction(L, 1)) {
         lua_pushfstring(L, "setCmdLineAction: bad argument #2 type (function expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    func = luaL_ref(L, LUA_REGISTRYINDEX);
+    int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (!host.setCmdLineAction(name, func)) {
         lua_pushnil(L);
@@ -4081,12 +4071,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
 int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     Host& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "resetCmdLineAction: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
+    QString name = getVerifiedString(L, __func__, 1, "command line name");
     if (name.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "resetCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
@@ -4112,18 +4097,9 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     int n = lua_gettop(L);
     QString name = "main";
     if (n > 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "setCmdLineStyleSheet: bad argument #1 type (command line name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        name = lua_tostring(L, 1);
+        name = getVerifiedString(L, __func__, 1, "command line name", true);
     }
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "setCmdLineStyleSheet: bad argument #%s type (StyleSheet as string expected, got %s!)", n, luaL_typename(L, n));
-        return lua_error(L);
-    }
-
-    QString styleSheet{lua_tostring(L, n)};
+    QString styleSheet = getVerifiedString(L, __func__, n, "StyleSheet", true);
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setCmdLineStyleSheet(name, styleSheet); !success) {
@@ -4141,12 +4117,7 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
 int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "%s: bad argument #1 type (label name as string expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString labelName{lua_tostring(L, 1)};
+    QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
     if (labelName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "%s: bad argument #1 value (label name cannot be an empty string.)", funcName.toUtf8().constData());
@@ -4154,12 +4125,11 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     lua_remove(L, 1);
 
-    int func;
     if (!lua_isfunction(L, 1)) {
         lua_pushfstring(L, "%s: bad argument #2 type (function expected, got %s!)", funcName.toUtf8().constData(), luaL_typename(L, 1));
         return lua_error(L);
     }
-    func = luaL_ref(L, LUA_REGISTRYINDEX);
+    int func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     bool lua_result = false;
     if (funcName == QStringLiteral("setLabelClickCallback"))
@@ -4240,68 +4210,18 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
 
     int n = lua_gettop(L);
-    int s = 0;
 
-    QString windowName {WINDOW_NAME(L, ++s)};
+    QString windowName {WINDOW_NAME(L, 1)};
 
     QVector<int> colorComponents(6); // 0-2 RGB background, 3-5 RGB foreground
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (red background color component as number\n"
-                        "expected, got %s!)",
-                        s,
-                        luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[0] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
+    colorComponents[0] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 2, "red background color component"), 255.0));
+    colorComponents[1] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 3, "green background color component"), 255.0));
+    colorComponents[2] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 4, "blue background color component"), 255.0));
+    colorComponents[3] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 5, "red foreground color component"), 255.0));
+    colorComponents[4] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 6, "green foreground color component"), 255.0));
+    colorComponents[5] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 7, "blue foreground color component"), 255.0));
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (green background color component as number\n"
-                        "expected, got %s!)",
-                        s,
-                        luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[1] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (blue background color component as number\n"
-                        "expected, got %s!)",
-                        s,
-                        luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[2] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (red foreground color component as number\n"
-                        "expected, got %s!)",
-                        s,
-                        luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[3] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L,
-                        "setTextFormat: bad argument #%d type (green foreground color component as number\n"
-                        "expected, got %s!)",
-                        s,
-                        luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[4] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (blue foreground color component as number\n"
-                           "expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    colorComponents[5] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
-
+    int s = 7;
     bool bold;
     if (lua_isboolean(L, ++s)) {
         bold = lua_toboolean(L, s);
@@ -4428,17 +4348,8 @@ int TLuaInterpreter::showWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomEnv
 int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomEnv: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setRoomEnv: bad argument #2 type (environment id as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int env = lua_tonumber(L, 2);
+    int id = getVerifiedInt(L, __func__, 1, "room id");
+    int env = getVerifiedInt(L, __func__, 2, "environment id");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -4463,17 +4374,8 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomName: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomName: bad argument #2 type (room name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 2)};
+    int id = getVerifiedInt(L, __func__, 1, "room id");
+    QString name = getVerifiedString(L, __func__, 2, "room name", true);
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
@@ -4498,11 +4400,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomName: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "room id");
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
