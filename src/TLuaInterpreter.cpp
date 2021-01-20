@@ -1709,7 +1709,7 @@ int TLuaInterpreter::paste(lua_State* L)
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    QByteArray data{getVerifiedString(L, __func__, 1, "imitation game server text");};
+    QByteArray data{getVerifiedString(L, __func__, 1, "imitation game server text")};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
@@ -3479,7 +3479,7 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
     int n = lua_gettop(L);
     int counter = 1;
 
-    if (n > 5 &&) {
+    if (n > 5) {
         windowName = getVerifiedString(L, __func__, 1, "parent window name", true);
         counter++;
         if (isMain(windowName)) {
@@ -3834,7 +3834,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     s++;
-    int g = size = getVerifiedInt(L, __func__, s, "green value 0-255");
+    int g = getVerifiedInt(L, __func__, s, "green value 0-255");
     if (!validRange(g)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
@@ -3842,7 +3842,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     s++;
-    int b = size = getVerifiedInt(L, __func__, s, "blue value 0-255");
+    int b = getVerifiedInt(L, __func__, s, "blue value 0-255");
     if (!validRange(b)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
