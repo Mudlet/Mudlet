@@ -860,7 +860,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     // CHECK: Do we need to qualify this for a non-blank string?
     s++;
 
-    qint64 numOfMatch = static_cast <qint64> getVerifiedInt(L, __func__, s, "match count {1 for first}")
+    qint64 numOfMatch = static_cast <qint64> (getVerifiedInt(L, __func__, s, "match count {1 for first}"));
 
     auto console = CONSOLE(L, windowName);
     lua_pushnumber(L, console->select(searchText, numOfMatch));
@@ -1073,7 +1073,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 {
     std::string windowName = "main";
     if (lua_gettop(L) > 0) {
-        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+        windowName = static_cast <std::string> (getVerifiedString(L, __func__, 1, "window name", true));
     }
 
     Host& host = getHostFromLua(L);
