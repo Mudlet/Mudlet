@@ -3626,11 +3626,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setBorderTop: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int size = lua_tonumber(L, 1);
+    int size = getVerifiedInt(L, __func__, 1, "new size");
     setBorderSize(L, size, Qt::TopSection);
     return 0;
 }
@@ -3638,11 +3634,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderRight
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setBorderRight: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int size = lua_tonumber(L, 1);
+    int size = getVerifiedInt(L, __func__, 1, "new size");
     setBorderSize(L, size, Qt::RightSection);
     return 0;
 }
@@ -3650,11 +3642,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setBorderBottom: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int size = lua_tonumber(L, 1);
+    int size = getVerifiedInt(L, __func__, 1, "new size");
     setBorderSize(L, size, Qt::BottomSection);
     return 0;
 }
@@ -3662,11 +3650,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderLeft
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setBorderLeft: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int size = lua_tonumber(L, 1);
+    int size = getVerifiedInt(L, __func__, 1, "new size");
     setBorderSize(L, size, Qt::LeftSection);
     return 0;
 }
@@ -3749,31 +3733,12 @@ int TLuaInterpreter::setWindow(lua_State* L)
     bool show = true;
 
     QString windowname {WINDOW_NAME(L, 1)};
-
-    if (lua_type(L, 2) != LUA_TSTRING) {
-        lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 2)};
+    QString name = getVerifiedString(L, __func__, 2, "element name");
 
     if (n > 2) {
-        if (!lua_isnumber(L, 3)) {
-            lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
-        }
-        x = lua_tonumber(L, 3);
-
-        if (!lua_isnumber(L, 4)) {
-            lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
-            return lua_error(L);
-        }
-        y = lua_tonumber(L, 4);
-
-        if (!lua_isboolean(L, 5)) {
-            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean expected, got %s!)", luaL_typename(L, 5));
-            return lua_error(L);
-        }
-        show = lua_toboolean(L, 5);
+        x = getVerifiedInt(L, __func__, 3, "x-coordinate");
+        y = getVerifiedInt(L, __func__, 4, "y-coordinate");
+        show = getVerifiedBool(L, __func__, 5, "show element");
     }
 
     Host& host = getHostFromLua(L);
@@ -3792,38 +3757,16 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
     QString area = QString();
     int x = -1, y = -1, width = -1, height = -1;
     if (n == 1) {
-        if (lua_type(L, 1) != LUA_TSTRING) {
-            lua_pushfstring(L, "openMapWidget: bad argument #1 type (area as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        area = lua_tostring(L, 1);
+        area = getVerifiedString(L, __func__, 1, "area");
     }
     if (n > 1) {
         area = QStringLiteral("f");
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "openMapWidget: bad argument #1 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        x = lua_tonumber(L, 1);
-
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "openMapWidget: bad argument #2 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        y = lua_tonumber(L, 2);
+        x = getVerifiedInt(L, __func__, 1, "x-coordinate");
+        y = getVerifiedInt(L, __func__, 2, "y-coordinate");
     }
     if (n > 2) {
-        if (!lua_isnumber(L, 3)) {
-            lua_pushfstring(L, "openMapWidget: bad argument #3 type (width as number expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
-        }
-        width = lua_tonumber(L, 3);
-
-        if (!lua_isnumber(L, 4)) {
-            lua_pushfstring(L, "openMapWidget: bad argument #4 type (height as number expected, got %s!)", luaL_typename(L, 4));
-            return lua_error(L);
-        }
-        height = lua_tonumber(L, 4);
+        width = getVerifiedInt(L, __func__, 3, "width");
+        height = getVerifiedInt(L, __func__, 4, "height");
     }
 
     Host& host = getHostFromLua(L);
@@ -3862,22 +3805,17 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     QString windowName;
-    int r, g, b, alpha;
+    int r, alpha;
+    int s = 1;
 
     auto validRange = [](int number) {
         return number >= 0 && number <= 255;
     };
 
-    int s = 1;
-    if (lua_isstring(L, s) && !lua_isnumber(L, s)) {
+    if (lua_isstring(L, s)) {
         windowName = WINDOW_NAME(L, s);
-
-        if (!lua_isnumber(L, ++s)) {
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        r = static_cast<int>(lua_tonumber(L, s));
-
+        s++;
+        r = getVerifiedInt(L, __func__, s, "red value 0-255");
         if (!validRange(r)) {
             lua_pushnil(L);
             lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
@@ -3885,7 +3823,6 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
-
         if (!validRange(r)) {
             lua_pushnil(L);
             lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
@@ -3896,24 +3833,16 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return lua_error(L);
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (green value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    g = static_cast<int>(lua_tonumber(L, s));
-
+    s++;
+    int g = size = getVerifiedInt(L, __func__, s, "green value 0-255");
     if (!validRange(g)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
         return 2;
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (blue value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    b = static_cast<int>(lua_tonumber(L, s));
-
+    s++;
+    int b = size = getVerifiedInt(L, __func__, s, "blue value 0-255");
     if (!validRange(b)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
@@ -3921,20 +3850,16 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
-    if (lua_gettop(L) <= s) {
-        alpha = 255;
-    } else if (lua_isnumber(L, ++s)) {
-        alpha = static_cast<int>(lua_tonumber(L, s));
-    } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+    if (lua_gettop(L) > s) {
+        s++;
+        alpha = getVerifiedInt(L, __func__, s, "alpha value 0-255", true);
+        if (!validRange(alpha)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            return 2;
+        }
     }
-
-    if (!validRange(alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-        return 2;
-    }
+    alpha = 255;
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
@@ -3958,17 +3883,8 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, R"(calcFontSize: bad argument #1 (font size as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-
-        if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, R"(calcFontSize: bad argument #2 (font name as string expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-
-        auto font = QFont(lua_tostring(L, 2), static_cast<int> (lua_tonumber(L, 1)), QFont::Normal);
+        auto font = QFont(getVerifiedString(L, __func__, 2, "font name"),
+                          getVerifiedInt(L, __func__, 1, "font size"), QFont::Normal);
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
@@ -4003,12 +3919,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 int TLuaInterpreter::startLogging(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isboolean(L, 1)) {
-        lua_pushfstring(L, "startLogging: bad argument #1 type (turn logging on/off, as boolean expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    bool logOn = lua_toboolean(L, 1);
+    bool logOn = getVerifiedBool(L, __func__, 1, "turn logging on/off");
 
     QString savedLogFileName;
     if (host.mpConsole->mLogToLogFile) {
@@ -4060,27 +3971,15 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     int counter = 1;
     int n = lua_gettop(L);
     if (n > 1 && lua_type(L, 2) == LUA_TSTRING) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "setBackgroundImage: bad argument #1 type (console or label name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = getVerifiedString(L, __func__, 1, "console or label name");
         counter++;
     }
 
-    if (!lua_isstring(L, counter)) {
-        lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (image path as string expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    imgPath = lua_tostring(L, counter);
+    imgPath = getVerifiedString(L, __func__, counter, "image path");
     counter++;
 
     if (n > 2 || (counter == 2 && n > 1)) {
-        if (!lua_isnumber(L, counter)) {
-            lua_pushfstring(L, "setBackgroundImage: bad argument #%d type (mode as number expected, got %s!)", counter, luaL_typename(L, counter));
-            return lua_error(L);
-        }
-        mode = lua_tonumber(L, counter);
+        mode = getVerifiedInt(L, __func__, counter, "mode");
     }
 
     if (mode < 1 || mode > 4) {
@@ -4106,11 +4005,7 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
     QString windowName = QStringLiteral("main");
     int n = lua_gettop(L);
     if (n > 0) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "resetBackgroundImage: bad argument #1 type (console name as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        windowName = lua_tostring(L, 1);
+        windowName = getVerifiedString(L, __func__, 1, "console name");
     }
 
     Host* host = &getHostFromLua(L);
