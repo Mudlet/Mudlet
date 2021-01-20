@@ -104,6 +104,7 @@ EOL
     export DISPLAY
 
     export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
+    ls -l /tmp
     ssh-add /tmp/mudlet-deploy-key
 
     if [ "${public_test_build}" == "true" ]; then
