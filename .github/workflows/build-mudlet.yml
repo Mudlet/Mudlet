@@ -60,6 +60,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+        mirror: http://mirrors.ocf.berkeley.edu/qt/
 
     - name: Checkout Mudlet source code
       uses: actions/checkout@v2
