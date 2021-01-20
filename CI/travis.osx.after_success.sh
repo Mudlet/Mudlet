@@ -102,10 +102,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     # credit to https://github.com/gluster/glusterfs
     SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
-    cat > ${SSH_ASKPASS_SCRIPT} <<EOL
-    #!/bin/bash
-    echo "${DEPLOY_KEY_PASS}"
-    EOL
+cat > ${SSH_ASKPASS_SCRIPT} <<EOL
+#!/bin/bash
+echo "${DEPLOY_KEY_PASS}"
+EOL
     chmod u+x ${SSH_ASKPASS_SCRIPT}
 
     ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
