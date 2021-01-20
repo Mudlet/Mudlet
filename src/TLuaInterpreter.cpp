@@ -1709,7 +1709,14 @@ int TLuaInterpreter::paste(lua_State* L)
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    QByteArray data{getVerifiedString(L, __func__, 1, "imitation game server text")};
+    if (!lua_isstring(L, 1)) {	
+        lua_pushfstring(L,	
+                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"	
+                        "expected, got %s!)",	
+                        luaL_typename(L, 1));	
+        return lua_error(L);	
+    }
+    QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
