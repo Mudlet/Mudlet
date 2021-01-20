@@ -256,7 +256,7 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
         Q_UNREACHABLE();
         return 0;
     }
-    return lua_tonumber(L, pos);
+    return static_cast <float> (lua_tonumber(L, pos));
 }
 
 // No documentation available in wiki - internal function
