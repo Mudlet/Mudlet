@@ -3444,12 +3444,8 @@ int TLuaInterpreter::createMapper(lua_State* L)
     QString windowName = "";
     int counter = 1;
 
-    if (n > 4 && lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "createMapper: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (n > 4 && lua_type(L, 1) == LUA_TSTRING) {
-        windowName = lua_tostring(L, 1);
+    if (n > 4) {
+        windowName = getVerifiedString(L, __func__, 1, "parent window name", true);
         counter++;
         if (isMain(windowName)) {
             // createMapper only accepts the empty name as the main window
@@ -3457,32 +3453,13 @@ int TLuaInterpreter::createMapper(lua_State* L)
         }
     }
 
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMapper: bad argument #%d type (mapper x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int x = lua_tonumber(L, counter);
+    int x = getVerifiedInt(L, __func__, counter, "mapper x-coordinate");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMapper: bad argument #%d type (mapper y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int y = lua_tonumber(L, counter);
+    int y = getVerifiedInt(L, __func__, counter, "mapper y-coordinate");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMapper: bad argument #%d type (mapper width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int width = lua_tonumber(L, counter);
+    int width = getVerifiedInt(L, __func__, counter, "mapper width");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMapper: bad argument #%d type (mapper height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int height = lua_tonumber(L, counter);
+    int height = getVerifiedInt(L, __func__, counter, "mapper height");
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createMapper(windowName, x, y, width, height); !success) {
@@ -3502,12 +3479,8 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
     int n = lua_gettop(L);
     int counter = 1;
 
-    if (n > 5 && lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "createCommandLine: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (n > 5 && lua_type(L, 1) == LUA_TSTRING) {
-        windowName = lua_tostring(L, 1);
+    if (n > 5 &&) {
+        windowName = getVerifiedString(L, __func__, 1, "parent window name", true);
         counter++;
         if (isMain(windowName)) {
             // createCommandLine only accepts the empty name as the main window
@@ -3515,39 +3488,15 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
         }
     }
 
-    if (lua_type(L, counter) != LUA_TSTRING) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    QString commandLineName{lua_tostring(L, counter)};
+    QString commandLineName = getVerifiedString(L, __func__, counter, "commandLine name");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int x = lua_tonumber(L, counter);
+    int x = getVerifiedInt(L, __func__, counter, "commandline x-coordinate");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int y = lua_tonumber(L, counter);
+    int y = getVerifiedInt(L, __func__, counter, "commandline y-coordinate");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int width = lua_tonumber(L, counter);
+    int width = getVerifiedInt(L, __func__, counter, "commandline width");
     counter++;
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandline height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        return lua_error(L);
-    }
-    int height = lua_tonumber(L, counter);
+    int height = getVerifiedInt(L, __func__, counter, "commandline height");
     counter++;
 
     Host& host = getHostFromLua(L);
@@ -3639,71 +3588,31 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
     switch (numberOfArguments) {
         case 0: break;
         case 1: {
-            if (!lua_isnumber(L, 1)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-                return lua_error(L);
-            }
-            sizeTop = lua_tonumber(L, 1);
-            sizeRight = lua_tonumber(L, 1);
-            sizeBottom = lua_tonumber(L, 1);
-            sizeLeft = lua_tonumber(L, 1);
+            sizeTop = getVerifiedInt(L, __func__, 1, "new size");
+            sizeRight = sizeTop;
+            sizeBottom = sizeTop;
+            sizeLeft = sizeTop;
             break;
         }
         case 2: {
-            if (!lua_isnumber(L, 1)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new height as number expected, got %s!)", luaL_typename(L, 1));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 2)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
-                return lua_error(L);
-            }
-            sizeTop = lua_tonumber(L, 1);
-            sizeRight = lua_tonumber(L, 2);
-            sizeBottom = lua_tonumber(L, 1);
-            sizeLeft = lua_tonumber(L, 2);
+            sizeTop = getVerifiedInt(L, __func__, 1, "new height");
+            sizeRight = getVerifiedInt(L, __func__, 2, "new width");
+            sizeBottom = sizeTop;
+            sizeLeft = sizeRight;
             break;
         }
         case 3: {
-            if (!lua_isnumber(L, 1)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 2)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 3)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
-                return lua_error(L);
-            }
-            sizeTop = lua_tonumber(L, 1);
-            sizeRight = lua_tonumber(L, 2);
-            sizeBottom = lua_tonumber(L, 3);
-            sizeLeft = lua_tonumber(L, 2);
+            sizeTop = getVerifiedInt(L, __func__, 1, "new top size");
+            sizeRight = getVerifiedInt(L, __func__, 2, "new width");
+            sizeBottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+            sizeLeft = sizeRight;
             break;
         }
         default: {
-            if (!lua_isnumber(L, 1)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 2)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new right size as number expected, got %s!)", luaL_typename(L, 2));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 3)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
-                return lua_error(L);
-            }
-            if (!lua_isnumber(L, 4)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #4 value (new left size as number expected, got %s!)", luaL_typename(L, 4));
-                return lua_error(L);
-            }
-            sizeTop = lua_tonumber(L, 1);
-            sizeRight = lua_tonumber(L, 2);
-            sizeBottom = lua_tonumber(L, 3);
-            sizeLeft = lua_tonumber(L, 4);
+            sizeTop = getVerifiedInt(L, __func__, 1, "new top size");
+            sizeRight = getVerifiedInt(L, __func__, 2, "new right size");
+            sizeBottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+            sizeBottom = getVerifiedInt(L, __func__, 4, "new left size");
             break;
         }
     }
