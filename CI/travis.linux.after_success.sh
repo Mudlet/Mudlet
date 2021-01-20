@@ -91,6 +91,19 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out /tmp/mudlet-deploy-key -d
     eval "$(ssh-agent -s)"
     chmod 600 /tmp/mudlet-deploy-key
+
+    # credit to https://github.com/gluster/glusterfs
+    SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
+    cat > ${SSH_ASKPASS_SCRIPT} <<EOL
+    #!/bin/bash
+    echo "${DEPLOY_KEY_PASS}"
+    EOL
+    chmod u+x ${SSH_ASKPASS_SCRIPT}
+
+    ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
+    export DISPLAY
+
+    export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
     ssh-add /tmp/mudlet-deploy-key
 
     if [ "${public_test_build}" == "true" ]; then
