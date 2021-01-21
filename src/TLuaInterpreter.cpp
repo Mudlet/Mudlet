@@ -4097,7 +4097,6 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     }
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineStyleSheet
 int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
 {
@@ -4118,7 +4117,6 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
-
 
 // No documentation available in wiki - internal function
 int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
@@ -5973,7 +5971,8 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 
     return 2;
 }
-//add getUserWindowSize
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getUserWindowSize
 int TLuaInterpreter::getUserWindowSize(lua_State* L)
 {
     QString windowName {WINDOW_NAME(L, 1)};
@@ -6426,16 +6425,8 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #1 type (line to start matching from as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "tempLineTrigger: bad argument #2 type (how many lines to match for as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
-    int from = lua_tointeger(L, 1);
+    int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
+    int from = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int howMany = lua_tointeger(L, 2);
     int triggerID;
     int expiryCount = -1;
@@ -6476,35 +6467,34 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
+    QString triggerName = getVerifiedString(L, __func__, 1, "trigger name create or add to");
+    QString pattern = getVerifiedString(L, __func__, 2, "regex pattern to match");
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #1 type (trigger name create or add to as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    } else if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #2 type (regex pattern to match as string, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    } else if (!lua_isstring(L, 3) && !lua_isfunction(L, 3)) {
+    if (!lua_isstring(L, 3) && !lua_isfunction(L, 3)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 4)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #4 type (multiline flag as number expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 7)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #7 type (filter flag as number expected, got %s!)", luaL_typename(L, 7));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 8)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 12)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #12 type (fire length as number expected, got %s!)", luaL_typename(L, 12));
-        return lua_error(L);
-    } else if (!lua_isnumber(L, 13)) {
-        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #13 type (line delta as number expected, got %s!)", luaL_typename(L, 13));
         return lua_error(L);
     }
 
-    QString triggerName{lua_tostring(L, 1)};
+    if (!lua_isnumber(L, 4)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #4 type (multiline flag as number expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    }
     bool multiLine = lua_tonumber(L, 4);
+
+    if (!lua_isnumber(L, 7)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #7 type (filter flag as number expected, got %s!)", luaL_typename(L, 7));
+        return lua_error(L);
+    }
+    bool filter = lua_tonumber(L, 7);
+
+    if (!lua_isnumber(L, 8)) {
+        lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
+        return lua_error(L);
+    }
+    bool matchAll = lua_tonumber(L, 8);
+
+    int fireLength = getVerifiedInt(L, __func__, 12, "fire length");
+    int fireLength = getVerifiedInt(L, __func__, 13, "line delta");
 
     bool colorTrigger;
     QString fgColor;
@@ -6521,9 +6511,6 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else {
         bgColor = lua_tostring(L, 6);
     }
-
-    bool filter = lua_tonumber(L, 7);
-    bool matchAll = lua_tonumber(L, 8);
 
     bool highlight;
     QColor hlFgColor;
@@ -6550,9 +6537,6 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         playSound = false;
     }
 
-    int fireLength = lua_tonumber(L, 12);
-    int lineDelta = lua_tonumber(L, 13);
-
     int expiryCount = -1;
 
     if (lua_isnumber(L, 14)) {
@@ -6568,7 +6552,6 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         return lua_error(L);
     }
 
-    QString pattern{lua_tostring(L, 2)};
     QStringList regexList;
     QList<int> propertyList;
     TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
@@ -6682,19 +6665,8 @@ int TLuaInterpreter::tempButton(lua_State* L)
 int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
 {
     //args: name, css text
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setButtonStyleSheet: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setButtonStyleSheet: bad argument #2 type (css as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString css{lua_tostring(L, 2)};
-
+    QString name = getVerifiedString(L, __func__, 1, "name");
+    QString css = getVerifiedString(L, __func__, 2, "css");
     Host& host = getHostFromLua(L);
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
@@ -6765,12 +6737,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     int triggerID;
     int expiryCount = -1;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "tempRegexTrigger: bad argument #1 type (regex pattern as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString regexPattern{lua_tostring(L, 1)};
+    QString regexPattern = getVerifiedString(L, __func__, 1, "regex pattern");
 
     if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
@@ -6807,15 +6774,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempAlias
 int TLuaInterpreter::tempAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "tempAlias: bad argument #1 type (regex-type pattern as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString regex{lua_tostring(L, 1)};
-
-
-
+    QString regex = getVerifiedString(L, __func__, 1, "regex-type pattern");
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
@@ -6877,21 +6836,10 @@ int TLuaInterpreter::exists(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "isActive: bad argument #1 type (item name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "isActive: bad argument #1 type (item type as string expected, got %s!)",
-                        luaL_typename(L, 2));
-        return lua_error(L);
-    }
+    QString name = getVerifiedString(L, __func__, 1, "item name");
     // Although we only use 4 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
-    QString type{lua_tostring(L, 2)};
+    QString type = getVerifiedString(L, __func__, 2, "item type");
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
@@ -6952,27 +6900,9 @@ int TLuaInterpreter::isActive(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permAlias
 int TLuaInterpreter::permAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permAlias: bad argument #1 type (alias name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permAlias: bad argument #2 type (alias group/parent as string expected, got %s!)",
-                        luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
-
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "permAlias: bad argument #3 type (regexp pattern as string expected, got %s!)",
-                        luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString regex{lua_tostring(L, 3)};
-
+    QString name = getVerifiedString(L, __func__, 1, "alias name");
+    QString parent = getVerifiedString(L, __func__, 2, "alias group/parent");
+    QString regex = getVerifiedString(L, __func__, 3, "regexp pattern");
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
@@ -6990,23 +6920,14 @@ int TLuaInterpreter::permAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScript
 int TLuaInterpreter::getScript(lua_State* L)
 {
     int n = lua_gettop(L);
     int pos = 1;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
+    QString name = getVerifiedString(L, __func__, 1, "script name");
     if (n > 1) {
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "getScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        pos = lua_tonumber(L, 2);
+        pos = getVerifiedInt(L, __func__, 2, "script position");
     }
     Host& host = getHostFromLua(L);
 
@@ -7029,12 +6950,7 @@ int TLuaInterpreter::setScript(lua_State* L)
 {
     int n = lua_gettop(L);
     int pos = 1;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
+    QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -7042,15 +6958,10 @@ int TLuaInterpreter::setScript(lua_State* L)
         lua_pushfstring(L, "setScript: bad argument #%d (%s)", 2, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
-
     QString luaCode{lua_tostring(L, 2)};
 
     if (n > 2) {
-        if (!lua_isnumber(L, 3)) {
-            lua_pushfstring(L, "setScript: bad argument #3 type (script position as number expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
-        }
-        pos = lua_tonumber(L, 3);
+        pos = getVerifiedInt(L, __func__, 3, "script position");
     }
 
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
@@ -7064,29 +6975,17 @@ int TLuaInterpreter::setScript(lua_State* L)
     return 1;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permScript
 int TLuaInterpreter::permScript(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permScript: bad argument #2 type (script parent name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
-
+    QString name = getVerifiedString(L, __func__, 1, "script name");
+    QString parent = getVerifiedString(L, __func__, 2, "script parent name");
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
         lua_pushfstring(L, "permScript: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
-
     QString luaCode{lua_tostring(L, 3)};
     auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
     if (id == -1) {
@@ -7100,27 +6999,15 @@ int TLuaInterpreter::permScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
 int TLuaInterpreter::permTimer(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
-
+    QString name = getVerifiedString(L, __func__, 1, "timer name");
+    QString parent = getVerifiedString(L, __func__, 2, "timer parent name");
     double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
-
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
         lua_pushfstring(L, "permTimer: bad argument #%d (%s)", 4, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
-
     QString luaCode{lua_tostring(L, 4)};
     auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
     if (id == -1) {
@@ -7134,20 +7021,8 @@ int TLuaInterpreter::permTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permSubstringTrigger
 int TLuaInterpreter::permSubstringTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permSubstringTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
-                        luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
-
+    QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
     QStringList regList;
     if (!lua_istable(L, 3)) {
         lua_pushfstring(L, "permSubstringTrigger: bad argument #3 type (sub-strings list as table expected, got %s!)",
@@ -7186,26 +7061,13 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString triggerName, parentName, luaFunction;
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permPromptTrigger: bad argument #1 type (trigger name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    triggerName = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permPromptTrigger: bad argument #2 type (parent trigger name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    parentName = lua_tostring(L, 2);
-
+    QString triggerName = getVerifiedString(L, __func__, 1, "trigger name");
+    QString parentName = getVerifiedString(L, __func__, 2, "parent trigger name");
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(3); !validationResult) {
         lua_pushfstring(L, "permPromptTrigger: bad argument #%d (%s)", 3, validationMessage.toUtf8().constData());
         return lua_error(L);
     }
-
-    luaFunction = lua_tostring(L, 3);
+    QString luaFunction = lua_tostring(L, 3);
 
     auto [triggerID, message] = pLuaInterpreter->startPermPromptTrigger(triggerName, parentName, luaFunction);
     if(triggerID == - 1) {
@@ -7219,34 +7081,16 @@ int TLuaInterpreter::permPromptTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permKey
 int TLuaInterpreter::permKey(lua_State* L)
 {
-    uint_fast8_t argIndex = 0;
-
-    if (!lua_isstring(L, ++argIndex)) {
-        lua_pushfstring(L, "permKey: bad argument #1 type (key name as string expected, got %s!)", luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    QString keyName{lua_tostring(L, argIndex)};
-
-    if (!lua_isstring(L, ++argIndex)) {
-        lua_pushfstring(L, "permKey: bad argument #2 type (key parent group as string expected, got %s!)", luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    QString parentGroup{lua_tostring(L, argIndex)};
-
+    QString keyName = getVerifiedString(L, __func__, 1, "key name");
+    QString parentGroup = getVerifiedString(L, __func__, 2, "key parent group");
+    
+    uint_fast8_t argIndex = 3;
     int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 4) {
-        if (!lua_isnumber(L, ++argIndex) && !lua_isnil(L, argIndex)) {
-            lua_pushfstring(L, "permKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
-            return lua_error(L);
-        }
-        keyModifier = lua_tointeger(L, argIndex);
+        keyModifier = getVerifiedInt(L, __func__, 3, "key modifier", true);
+        argIndex++;
     }
-
-    if (!lua_isnumber(L, ++argIndex)) {
-        lua_pushfstring(L, "permKey: bad argument #%d type (key code as number expected, got %s!)", argIndex, luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    int keyCode = lua_tointeger(L, argIndex);
+    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -7268,21 +7112,13 @@ int TLuaInterpreter::permKey(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempKey
 int TLuaInterpreter::tempKey(lua_State* L)
 {
-    uint_fast8_t argIndex = 0;
+    uint_fast8_t argIndex = 1;
     int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 2) {
-        if (!lua_isnumber(L, ++argIndex) && !lua_isnil(L, argIndex)) {
-            lua_pushfstring(L, "tempKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
-            return lua_error(L);
-        }
-        keyModifier = lua_tointeger(L, argIndex);
+        keyModifier = getVerifiedInt(L, __func__, 1, "key modifier", true);
+        argIndex++;
     }
-
-    if (!lua_isnumber(L, ++argIndex)) {
-        lua_pushfstring(L, "tempKey: bad argument #%d type (key code as number expected, got %s!)", argIndex, luaL_typename(L, argIndex));
-        return lua_error(L);
-    }
-    int keyCode = lua_tointeger(L, argIndex);
+    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -7321,19 +7157,8 @@ int TLuaInterpreter::tempKey(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permBeginOfLineStringTrigger
 int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permBeginOfLineStringTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
-                        luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
+    QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
@@ -7371,19 +7196,8 @@ int TLuaInterpreter::permBeginOfLineStringTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permRegexTrigger
 int TLuaInterpreter::permRegexTrigger(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #1 type (trigger name as string expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permRegexTrigger: bad argument #2 type (trigger parent as string expected, got %s!)",
-                        luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString parent{lua_tostring(L, 2)};
+    QString name = getVerifiedString(L, __func__, 1, "trigger name");
+    QString parent = getVerifiedString(L, __func__, 2, "trigger parent");
 
     QStringList regList;
     if (!lua_istable(L, 3)) {
@@ -7439,26 +7253,18 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 int TLuaInterpreter::getTimestamp(lua_State* L)
 {
     int n = lua_gettop(L);
-    int s = 0;
+    int s = 1;
     QString name;
     if (n > 1) {
-        if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "getTimestamp: bad argument #%d type (mini console, user window or buffer name as string expected {may be omitted for the \"main\" console}, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-        name = lua_tostring(L, s);
+        s++;
+        name = getVerifiedString(L, __func__, 1, "mini console, user window or buffer name {may be omitted for the \"main\" console}");
         if (name == QLatin1String("main")) {
             // clear it so it is treated as the main console below
             name.clear();
         }
     }
 
-    qint64 luaLine;
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "getTimestamp: bad argument #%d type (line number as number expected, got %s!", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    luaLine = lua_tointeger(L, n);
+    qint64 luaLine = getVerifiedInt(L, __func__, s, "line number");
     if (luaLine < 1) {
         lua_pushnil(L);
         lua_pushfstring(L, "line number %d invalid, it should be greater than zero", luaLine);
@@ -7591,11 +7397,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         return lua_error(L);
     }
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setAreaName: bad argument #2 type (area name as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString newName = QString{lua_tostring(L, 2)}.trimmed();
+    QString newName = getVerifiedString(L, __func__, 2, "area name").trimmed();
     // Now allow non-Ascii names but eliminate any leading or trailing spaces
 
     if (newName.isEmpty()) {
@@ -7698,11 +7500,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addAreaName
 int TLuaInterpreter::addAreaName(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "addAreaName: bad argument #1 type (area name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString name = QString{lua_tostring(L, 1)}.trimmed();
+    QString name = getVerifiedString(L, __func__, 1, "area name").trimmed();
 
     Host& host = getHostFromLua(L);
     if ((!host.mpMap) || (!host.mpMap->mpRoomDB)) {
@@ -7817,7 +7615,6 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     if (id <= 0) {
         return 0;
     }
-
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
     return 1;
