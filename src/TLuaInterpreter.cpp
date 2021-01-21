@@ -9782,7 +9782,6 @@ int TLuaInterpreter::echo(lua_State* L)
 int TLuaInterpreter::echoPopup(lua_State* L)
 {
     QString windowName;
-    QString text;
     QStringList hintList;
     QStringList commandList;
     bool customFormat = false;
