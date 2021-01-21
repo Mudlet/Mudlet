@@ -6426,8 +6426,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     int from = getVerifiedInt(L, __func__, 1, "line to start matching from");
-    int from = getVerifiedInt(L, __func__, 2, "how many lines to match for");
-    int howMany = lua_tointeger(L, 2);
+    int howMany  = getVerifiedInt(L, __func__, 2, "how many lines to match for");
     int triggerID;
     int expiryCount = -1;
 
@@ -6494,7 +6493,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     bool matchAll = lua_tonumber(L, 8);
 
     int fireLength = getVerifiedInt(L, __func__, 12, "fire length");
-    int fireLength = getVerifiedInt(L, __func__, 13, "line delta");
+    int lineDelta = getVerifiedInt(L, __func__, 13, "line delta");
 
     bool colorTrigger;
     QString fgColor;
