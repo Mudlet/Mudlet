@@ -2340,7 +2340,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
+                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
