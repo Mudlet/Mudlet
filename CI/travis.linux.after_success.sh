@@ -106,7 +106,7 @@ EOL
 
     export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
     ls -l "${BUILD_DIR}/CI"
-    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
+    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" < /dev/null
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
