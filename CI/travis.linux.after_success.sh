@@ -134,8 +134,8 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
       echo "=== Generating a changelog ==="
-      cd "${BUILD_DIR}"
-      changelog=$(lua "${BUILD_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+      cd "${SOURCE_DIR}" || exit
+      changelog=$(lua "${SOURCE_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
@@ -149,11 +149,11 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
 
     if [ "${public_test_build}" != "true" ]; then
       # generate and deploy source tarball
-      cd "${HOME}"
+      cd "${HOME}" || exit
       # get the archive script
       wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
 
-      cd "${BUILD_DIR}"
+      cd "${BUILD_DIR}" || exit
       # generate and upload the tarball
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"

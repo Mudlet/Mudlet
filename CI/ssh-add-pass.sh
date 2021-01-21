@@ -7,7 +7,7 @@ if [ $# -ne 2 ] ; then
 fi
 
 eval $(ssh-agent)
-pass=$(cat $2)
+pass=$(cat "$2")
 
 expect << EOF
   spawn ssh-add $1
