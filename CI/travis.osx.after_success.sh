@@ -103,18 +103,27 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     # credit to https://github.com/gluster/glusterfs
     SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
-cat > ${SSH_ASKPASS_SCRIPT} <<EOL
-#!/bin/sh
-echo "${DEPLOY_KEY_PASS}"
-EOL
+cat > ${SSH_ASKPASS_SCRIPT} <<EOF
+#!/bin/bash
+
+if [ $# -ne 2 ] ; then
+  echo "Usage: ssh-add-pass keyfile passfile"
+  exit 1
+fi
+
+eval $(ssh-agent)
+pass=$(cat "$2")
+
+expect << EOF
+  spawn ssh-add $1
+  expect "Enter passphrase"
+  send "$pass\r"
+  expect eof
+EOF
+
     chmod u+x ${SSH_ASKPASS_SCRIPT}
 
-    ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
-    export DISPLAY=1
-
-    export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
-    ls -l "${BUILD_DIR}/CI"
-    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" < /dev/null
+    ${SSH_ASKPASS_SCRIPT} "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" "$DEPLOY_KEY_PASS"
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
