@@ -9940,11 +9940,7 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
     QStringList modulesList;
     int n = lua_gettop(L);
     for (int i = 1; i <= n; i++) {
-        if (!lua_isstring(L, i)) {
-            lua_pushfstring(L, "setMergeTables: bad argument #%d (string expected, got %s)", i, luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        modulesList << QString(lua_tostring(L, i));
+        modulesList << getVerifiedString(L, __func__, i, "module");
     }
 
     host.mGMCP_merge_table_keys = host.mGMCP_merge_table_keys + modulesList;
@@ -9977,38 +9973,19 @@ int TLuaInterpreter::openUrl(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelStyleSheet
 int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setLabelStyleSheet: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    std::string label = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setLabelStyleSheet: bad argument #2 type (markup as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    std::string markup = lua_tostring(L, 2);
-
+    std::string label = getVerifiedString(L, __func__, 1, "label").toStdString();
+    std::string markup = getVerifiedString(L, __func__, 2, "markup").toStdString();
     Host& host = getHostFromLua(L);
     //qDebug()<<"CSS: name:"<<label<<"<"<<markup<<">";
     host.mpConsole->setLabelStyleSheet(label, markup);
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet 
 int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setUserWindowStyleSheet: bad argument #1 type (userwindow name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setUserWindowStyleSheet: bad argument #2 type (StyleSheet as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-
-    QString userWindowName{lua_tostring(L, 1)};
-    QString userWindowStyleSheet{lua_tostring(L, 2)};
-
+    QString userWindowName = getVerifiedString(L, __func__, 1, "userwindow name");
+    QString userWindowStyleSheet = getVerifiedString(L, __func__, 2, "StyleSheet");
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
