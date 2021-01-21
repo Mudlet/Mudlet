@@ -11438,8 +11438,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
 int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QString nextVoice = getVerifiedString(L, __func__, 1, "voice");
-
+    int index = getVerifiedInt(L, __func__, 1, "voice as index number");
     index--;
 
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
@@ -11784,8 +11783,8 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    clipboard->setText(getVerifiedString(L, __func__, 1, "text"););
     QClipboard* clipboard = QApplication::clipboard();
+    clipboard->setText(getVerifiedString(L, __func__, 1, "text"););
     lua_pushboolean(L, true);
     return 1;
 }
@@ -13558,25 +13557,16 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
 int TLuaInterpreter::unzipAsync(lua_State *L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "unzipAsync: bad argument #1 type (zip location as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString zipLocation {lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "unzipAsync: bad argument #2 type (extract location as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString extractLocation {lua_tostring(L, 2)};
+    QString zipLocation = getVerifiedString(L, __func__, 1, "zip location");
+    QString extractLocation = getVerifiedString(L, __func__, 2, "extract location");
 
     QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
         lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create temporary directory to extract the zip into");
+        lua_pushstring(L, "couldn't create temporary directory to extract the zip into");
         return 2;
     }
 
@@ -13588,8 +13578,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     QDir dir;
     if (!dir.mkpath(extractLocation)) {
         lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create output directory to put the extracted files into");
+        lua_pushstring(L, "couldn't create output directory to put the extracted files into");
         return 2;
     }
 
@@ -15170,12 +15159,7 @@ int TLuaInterpreter::alert(lua_State* L)
     double luaAlertDuration = 0.0;
 
     if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "alert: bad argument #1 type (alert duration in seconds as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        luaAlertDuration = lua_tonumber(L, 1);
-
+        luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
         if (luaAlertDuration < 0.000) {
             lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
             return lua_error(L);
@@ -15190,6 +15174,7 @@ int TLuaInterpreter::alert(lua_State* L)
 
 static int host_key = 0;
 
+// No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h)
 {
     lua_pushlightuserdata(L, &host_key); // 1 - push unique key
@@ -15197,6 +15182,7 @@ static void storeHostInLua(lua_State* L, Host* h)
     lua_rawset(L, LUA_REGISTRYINDEX);    // 0 - register[key] = host
 }
 
+// No documentation available in wiki - internal function
 Host& getHostFromLua(lua_State* L)
 {
     lua_pushlightuserdata(L, &host_key);    // 1 - push unique key
@@ -15238,7 +15224,8 @@ void TLuaInterpreter::freeLuaRegistryIndex(int index) {
     luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, index);
 }
 
-// Internal function - Looks for argument types in an 'event' that have stored
+// No documentation available in wiki - internal function
+// Looks for argument types in an 'event' that have stored
 // data in the lua registry, and frees this data.
 void TLuaInterpreter::freeAllInLuaRegistry(TEvent event)
 {
@@ -15326,12 +15313,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "addWordToDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, 1)};
-
+    QString text = getVerifiedString(L, __func__, 1, "word");
     QPair<bool, QString> result = host.mpConsole->addWordToSet(text);
     if (!result.first){
         lua_pushnil(L);
@@ -15355,12 +15337,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "removeWordFromDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, 1)};
-
+    QString text = getVerifiedString(L, __func__, 1, "word");
     QPair<bool, QString> result = host.mpConsole->removeWordFromSet(text);
     if (!result.first){
         lua_pushnil(L);
@@ -15379,19 +15356,11 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "spellCheckWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, 1)};
+    QString text = getVerifiedString(L, __func__, 1, "word");
 
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "spellCheckWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        useUserDictionary = lua_toboolean(L, 2);
+        useUserDictionary = getVerifiedBool(L, __func__, 2, "check profile dictionary {use 'false' or omit to check against system dictionary}", true);
         if (useUserDictionary && !hasUserDictionary) {
             lua_pushnil(L);
             lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
@@ -15427,19 +15396,11 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "spellSuggestWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, 1)};
+    QString text = getVerifiedString(L, __func__, 1, "word");
 
     bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        useUserDictionary = lua_toboolean(L, 2);
+        useUserDictionary = getVerifiedBool(L, __func__, 2, "check profile dictionary {use 'false' or omit to check against system dictionary}", true);
         if (useUserDictionary && !hasUserDictionary) {
             lua_pushnil(L);
             lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
@@ -15848,33 +15809,21 @@ int TLuaInterpreter::getMapBackgroundColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapBackgroundColor
 int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setMapBackgroundColor: bad argument #1 type (red component as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int r = lua_tonumber(L, 1);
+    int r = getVerifiedInt(L, __func__, 1, "red component");
     if (r < 0 || r > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setMapBackgroundColor: bad argument #2 type (green component as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int g = lua_tonumber(L, 2);
+    int g = getVerifiedInt(L, __func__, 2, "green component");
     if (g < 0 || g > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
         return 2;
     }
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setMapBackgroundColor: bad argument #3 type (blue component as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    int b = lua_tonumber(L, 3);
+    int b = getVerifiedInt(L, __func__, 3, "blue component");
     if (b < 0 || b > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
@@ -15902,33 +15851,21 @@ int TLuaInterpreter::getMapRoomExitsColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapRoomExitsColor
 int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #1 type (red component as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int r = lua_tonumber(L, 1);
+    int r = getVerifiedInt(L, __func__, 1, "red component");
     if (r < 0 || r > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #2 type (green component as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int g = lua_tonumber(L, 2);
+    int g = getVerifiedInt(L, __func__, 2, "green component");
     if (g < 0 || g > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
         return 2;
     }
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setMapRoomExitsColor: bad argument #3 type (blue component as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    int b = lua_tonumber(L, 3);
+    int b = getVerifiedInt(L, __func__, 3, "blue component");
     if (b < 0 || b > 255) {
         lua_pushnil(L);
         lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
@@ -15946,27 +15883,16 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
 int TLuaInterpreter::showNotification(lua_State* L)
 {
     int n = lua_gettop(L);
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "showNotification: bad argument #1 type (%s as string expected, got %s!)", n >= 2 ? "title" : "message" , luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (n >= 2 && !lua_isstring(L, 2)) {
-        lua_pushfstring(L, "showNotification: bad argument #2 type (message as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
+    QString title = getVerifiedString(L, __func__, 1, "title");
+    QString text = title;
+    if (n >= 2) {
+        QString text = getVerifiedString(L, __func__, 2, "message");
     }
     int notificationExpirationTime = 1;
-    if (n >= 3 && !lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "showNotification: bad argument #3 type (expiration time in seconds as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    } else if (lua_isnumber(L, 3)) {
-        notificationExpirationTime = qMax(qRound(lua_tonumber(L, 3) / 1000), 1);
+    if (n >= 3) {
+        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") / 1000), 1);
     }
 
-    QString text{lua_tostring(L, 1)};
-    QString title{lua_tostring(L, 1)};
-    if (lua_isstring(L, 2)) {
-        text = lua_tostring(L, 2);
-    }
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
