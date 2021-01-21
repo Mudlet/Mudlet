@@ -11784,7 +11784,7 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
     QClipboard* clipboard = QApplication::clipboard();
-    clipboard->setText(getVerifiedString(L, __func__, 1, "text"););
+    clipboard->setText(getVerifiedString(L, __func__, 1, "text"));
     lua_pushboolean(L, true);
     return 1;
 }
