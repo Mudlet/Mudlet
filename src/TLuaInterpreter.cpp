@@ -10132,14 +10132,9 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openWebPage
 int TLuaInterpreter::openWebPage(lua_State* L)
 {
-    if (lua_isstring(L, 1)) {
-        QString url = lua_tostring(L, 1);
-        lua_pushboolean(L, mudlet::self()->openWebPage(url));
-        return 1;
-    } else {
-        lua_pushfstring(L, "openWebPage: bad argument #%d (string expected, got %s)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    QString url = getVerifiedString(L, __func__, 1, "URL");
+    lua_pushboolean(L, mudlet::self()->openWebPage(url));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordApplicationID
@@ -10155,47 +10150,38 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
         return 2;
     }
 
-    if (lua_gettop(L)) {
-        if (lua_isstring(L, 1)) {
-            // Treat it as a UTF-8 string because although it is likely to be an
-            // unsigned long long integer (0 to 18446744073709551615) we want to
-            // be able to handle any input so we can report bad input strings back:
-            QString inputText = QString{lua_tostring(L, 1)}.trimmed();
-            if (!inputText.isEmpty()) {
-                bool isOk = false;
-                quint64 numericEquivalent = inputText.toULongLong(&isOk);
-                if (numericEquivalent && isOk) {
-                    QString appID = QString::number(numericEquivalent);
-                    if (pMudlet->mDiscord.setApplicationID(&host, appID)) {
-                        lua_pushboolean(L, true);
-                        return 1;
-                    } else {
-                        lua_pushnil(L);
-                        lua_pushfstring(L, "%s does not appear to be a valid Discord application id", inputText.toUtf8().constData());
-                        return 2;
-                    }
-                } else {
-                    lua_pushnil(L);
-                    lua_pushfstring(L, "%s can not be converted to the expected numeric Discord application id", inputText.toUtf8().constData());
-                    return 2;
-                }
-            } else {
-                // Empty string input - to reset to default the same as the no
-                // argument case:
-                pMudlet->mDiscord.setApplicationID(&host, QString());
-                // This must always succeed
-                lua_pushboolean(L, true);
-                return 1;
-            }
-        } else {
-            lua_pushfstring(L, "setDiscordApplicationID: bad argument #1 type (id as string expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-    } else {
+    if (!lua_gettop(L)) {
         pMudlet->mDiscord.setApplicationID(&host, QString());
         lua_pushboolean(L, true);
         return 1;
     }
+    QString inputText = getVerifiedString(L, __func__, 1, "id");.trimmed();
+    // Treat it as a UTF-8 string because although it is likely to be an
+    // unsigned long long integer (0 to 18446744073709551615) we want to
+    // be able to handle any input so we can report bad input strings back.    
+    if (inputText.isEmpty()) {
+        // Empty string input - to reset to default the same as the no
+        // argument case:
+        pMudlet->mDiscord.setApplicationID(&host, QString());
+        // This must always succeed
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    bool isOk = false;
+    quint64 numericEquivalent = inputText.toULongLong(&isOk);
+    if (numericEquivalent && isOk) {
+        QString appID = QString::number(numericEquivalent);
+        if (pMudlet->mDiscord.setApplicationID(&host, appID)) {
+            lua_pushboolean(L, true);
+            return 1;
+        }
+        lua_pushnil(L);
+        lua_pushfstring(L, "%s does not appear to be a valid Discord application id", inputText.toUtf8().constData());
+        return 2;    
+    }
+    lua_pushnil(L);
+    lua_pushfstring(L, "%s can not be converted to the expected numeric Discord application id", inputText.toUtf8().constData());
+    return 2;        
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
@@ -10232,14 +10218,9 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        pMudlet->mDiscord.setLargeImage(&host, QString{lua_tostring(L, 1)}.toLower());
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordLargeIcon: bad argument #1 type (key as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setLargeImage(&host, getVerifiedString(L, __func__, 1, "key").toLower());
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIcon
@@ -10280,14 +10261,9 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        pMudlet->mDiscord.setLargeImageText(&host, lua_tostring(L, 1));
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordLargeIconText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setLargeImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordLargeIconText
@@ -10328,14 +10304,9 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        pMudlet->mDiscord.setSmallImage(&host, QString{lua_tostring(L, 1)}.toLower());
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordSmallIcon: bad argument #%d type (key as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setSmallImage(&host, getVerifiedString(L, __func__, 1, "key").toLower());
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIcon
@@ -10376,14 +10347,9 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        pMudlet->mDiscord.setSmallImageText(&host, lua_tostring(L, 1));
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordSmallIconText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setSmallImageText(&host, getVerifiedString(L, __func__, 1, "text"));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordSmallIconText
@@ -10424,14 +10390,9 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        pMudlet->mDiscord.setDetailText(&host, lua_tostring(L, 1));
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordDetail: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setDetailText(&host, getVerifiedString(L, __func__, 1, "text"));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordDetail
@@ -10476,16 +10437,11 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        QString gamename{lua_tostring(L, 1)};
-        pMudlet->mDiscord.setDetailText(&host, tr("Playing %1").arg(gamename));
-        pMudlet->mDiscord.setLargeImage(&host, gamename.toLower());
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordGame: bad argument #%d type (game name as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    QString gamename = getVerifiedString(L, __func__, 1, "game name");
+    pMudlet->mDiscord.setDetailText(&host, tr("Playing %1").arg(gamename));
+    pMudlet->mDiscord.setLargeImage(&host, gamename.toLower());
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordState
@@ -10504,14 +10460,9 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
         return 2;
     }
 
-    if (lua_isstring(L, 1)) {
-        mudlet::self()->mDiscord.setStateText(&host, lua_tostring(L, 1));
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushfstring(L, "setDiscordState: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    pMudlet->mDiscord.setStateText(&host, getVerifiedString(L, __func__, 1, "text"));
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordState
@@ -10552,21 +10503,15 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
         return 2;
     }
 
-    if (lua_isnumber(L, 1)) {
-        int64_t timeStamp = lua_tointeger(L, 1);
-        if (timeStamp >= 0) {
-            pMudlet->mDiscord.setStartTimeStamp(&host, timeStamp);
-            lua_pushboolean(L, true);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushstring(L, "the timestamp must be zero to clear the \"elapsed:\" time or an epoch time value from the recent past");
-            return 2;
-        }
-    } else {
-        lua_pushfstring(L, "setDiscordElapsedStartTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
+    int64_t timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+    if (timeStamp < 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the timestamp must be zero to clear the \"elapsed:\" time or an epoch time value from the recent past");
+        return 2;
     }
+    pMudlet->mDiscord.setStartTimeStamp(&host, timeStamp);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDiscordRemainingEndTime
@@ -10586,21 +10531,16 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
         return 2;
     }
 
-    if (lua_isnumber(L, 1)) {
-        int64_t timeStamp = lua_tointeger(L, 1);
-        if (timeStamp >= 0) {
-            pMudlet->mDiscord.setEndTimeStamp(&host, timeStamp);
-            lua_pushboolean(L, true);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushstring(L, "the timestamp must be zero to clear the \"remaining:\" time or an epoch time value in the recent future");
-            return 2;
-        }
-    } else {
-        lua_pushfstring(L, "setDiscordRemainingEndTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
+    int64_t timeStamp = getVerifiedInt(L, __func__, 1, "epoch time");
+
+    if (timeStamp < 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the timestamp must be zero to clear the \"remaining:\" time or an epoch time value in the recent future");
+        return 2;
     }
+    pMudlet->mDiscord.setEndTimeStamp(&host, timeStamp);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDiscordTimeStamps
@@ -10642,22 +10582,16 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
         return 2;
     }
 
-    int64_t partySize = -1;
-    int64_t partyMax = -1;
-    if (lua_isnumber(L, 1)) {
-        partySize = lua_tointeger(L, 1);
-        if (partySize < 0) {
-            lua_pushnil(L);
-            lua_pushstring(L, "the current party size must be zero or more");
-            return 2;
-        }
-    } else {
-        lua_pushfstring(L, "setDiscordParty: bad argument #%d type (current party size as number expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
+    int64_t partySize = getVerifiedInt(L, __func__, 1, "current party size");
+    if (partySize < 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "the current party size must be zero or more");
+        return 2;
     }
 
+    int64_t partyMax = -1;
     if (lua_gettop(L) > 1) {
-        partyMax = lua_tointeger(L, 2);
+        partyMax = getVerifiedInt(L, __func__, 2, "party maximum size", true);
         if (partyMax < 0) {
             lua_pushnil(L);
             lua_pushstring(L, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
