@@ -10687,7 +10687,6 @@ int TLuaInterpreter::getEpoch(lua_State *L)
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
     QString windowName {WINDOW_NAME(L, 1)};
-
     auto console = CONSOLE(L, windowName);
     console->appendBuffer();
     return 0;
@@ -10702,12 +10701,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "appendCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, n)};
-
+    QString text = getVerifiedString(L, __func__, n, "text to set on command line");
     auto pN = COMMANDLINE(L, name);
 
     QString curText = pN->toPlainText();
@@ -10741,11 +10735,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "addCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, n)};
+    QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
     pN->addSuggestion(text);
     return 0;
@@ -10759,11 +10749,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "removeCmdLineSuggestion: bad argument #%d (suggestion text as string expected, got %s)", n + 1, luaL_typename(L, n));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, n)};
+    QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
     pN->removeSuggestion(text);
     return 0;
@@ -10785,12 +10771,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installPackage: bad argument #1 (package location path and file name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString location{lua_tostring(L, 1)};
-
+    QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.installPackage(location, 0));
     return 1;
@@ -10799,12 +10780,7 @@ int TLuaInterpreter::installPackage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallPackage
 int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "uninstallPackage: bad argument #1 (package name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString packageName =  lua_tostring(L, 1);
-
+    QString packageName = getVerifiedString(L, __func__, 1, "package name");
     Host& host = getHostFromLua(L);
     host.uninstallPackage(packageName, 0);
     return 0;
@@ -10813,12 +10789,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installModule
 int TLuaInterpreter::installModule(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "installModule: bad argument #1 (module location as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString modName = lua_tostring(L, 1);
-
+    QString modName = getVerifiedString(L, __func__, 1, "module location");
     Host& host = getHostFromLua(L);
     QString module = QDir::fromNativeSeparators(modName);
     if (host.installPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
@@ -10830,12 +10801,7 @@ int TLuaInterpreter::installModule(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
 int TLuaInterpreter::uninstallModule(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "uninstallModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString module = lua_tostring(L, 1);
-
+    QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
     if (host.uninstallPackage(module, 3) && mudlet::self()->moduleTableVisible()) {
         mudlet::self()->layoutModules();
@@ -10846,12 +10812,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reloadModule
 int TLuaInterpreter::reloadModule(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "reloadModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString module = lua_tostring(L, 1);
-
+    QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
     host.reloadModule(module);
     return 0;
@@ -10860,12 +10821,7 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableModuleSync
 int TLuaInterpreter::enableModuleSync(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "enableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString module{lua_tostring(L, 1)};
-
+    QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.changeModuleSync(module, QLatin1String("1")); !success) {
         lua_pushnil(L);
@@ -10887,14 +10843,8 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableModuleSync
 int TLuaInterpreter::disableModuleSync(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "disableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString module{lua_tostring(L, 1)};
-
+    QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-
     if (auto [success, message] = host.changeModuleSync(module, QLatin1String("0")); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
@@ -10915,14 +10865,8 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModuleSync
 int TLuaInterpreter::getModuleSync(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString module{lua_tostring(L, 1)};
-
+    QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-
     if (auto [success, message] = host.getModuleSync(module); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
@@ -10946,15 +10890,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         return 2;
     }
 
-    if (!lua_isboolean(L, 1)) {
-        lua_pushfstring(L,
-                        "setDefaultAreaVisible: bad argument #1 type (isToShowDefaultArea as boolean\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    bool isToShowDefaultArea = lua_toboolean(L, 1);
-
+    bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
         // If we are reenabled the display of the default area
         // AND the mapper was showing the default area
@@ -10984,18 +10920,8 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 // this function to get called events.
 int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #1 (event name as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString event = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #2 (function name as string expected, got %s)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString func = lua_tostring(L, 2);
-
+    QString event = getVerifiedString(L, __func__, 1, "event name");
+    QString func = getVerifiedString(L, __func__, 2, "function name");
     Host& host = getHostFromLua(L);
     host.registerAnonymousEventHandler(event, func);
     return 0;
@@ -11004,23 +10930,15 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#expandAlias
 int TLuaInterpreter::expandAlias(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "expandAlias: bad argument #1 type (text to parse as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString payload{lua_tostring(L, 1)};
-
+    QString payload = getVerifiedString(L, __func__, 1, "text to parse");
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
         // check if the 2nd argument is a 'false', but don't match if it is 'nil'
         // because expandAlias("command") should be the same as expandAlias("command", nil)
         if (lua_isnil(L, 2)) {
             wantPrint = false;
-        } else if (lua_isboolean(L, 2)) {
-            wantPrint = lua_toboolean(L, 2);
         } else {
-            lua_pushfstring(L, "expandAlias: bad argument #2 type (echo as boolean is optional, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
+            wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
         }
     }
     Host& host = getHostFromLua(L);
@@ -11039,11 +10957,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     if (n > 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "printCmdLine: bad argument #%d (text to set on command line as string expected, got %s)", n, luaL_typename(L, n));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, n)};
+    QString text = getVerifiedString(L, __func__, n, "text to set on command line");
 
     auto pN = COMMANDLINE(L, name);
     pN->setPlainText(text);
@@ -11073,23 +10987,13 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
 // encoded in the required Mud Server encoding.
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "send: bad argument #1 type (command as string expected, got %s)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, 1)};
-
+    QString text = getVerifiedString(L, __func__, 1, "command");
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "send: bad argument #2 type (showOnScreen as boolean expected, got %s)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        wantPrint = lua_toboolean(L, 2);
+        wantPrint = getVerifiedBool(L, __func__, 2, "showOnScreen", true);
     }
     Host& host = getHostFromLua(L);
-    // Host::send will encode the UTF encoded data here in the wanted Server
-    // encoding:
+    // Host::send will encode the UTF encoded data here in the wanted Server encoding:
     host.send(text, wantPrint, true);
     lua_pushboolean(L, true);
     return 1;
@@ -11115,17 +11019,8 @@ int TLuaInterpreter::sendSocket(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
 int TLuaInterpreter::sendIrc(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
-        return lua_error(L);
-    }
-    QString target = lua_tostring(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "sendIrc: bad argument #2 type (message as string expected, got %s!)", lua_typename(L, lua_type(L, 2)));
-        return lua_error(L);
-    }
-    QString msg = lua_tostring(L, 2);
+    QString target = getVerifiedString(L, __func__, 1, "target");
+    QString msg = getVerifiedString(L, __func__, 2, "message");
 
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mpDlgIRC) {
@@ -11235,12 +11130,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcNick
 int TLuaInterpreter::setIrcNick(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
-        return lua_error(L);
-    }
-    QString nick = lua_tostring(L, 1);
-
+    QString nick = getVerifiedString(L, __func__, 1, "nick");
     if (nick.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "nick must not be empty");
@@ -11262,24 +11152,15 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
-    std::string addr;
     int port = 6667;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
-        return lua_error(L);
-    }
-    addr = lua_tostring(L, 1);
+    std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "hostname must not be empty");
         return 2;
     }
     if (!lua_isnoneornil(L, 2)) {
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "setIrcServer: bad argument #2 type (port number as number is optional {default = 6667}, got %s!)", lua_typename(L, lua_type(L, 2)));
-            return lua_error(L);
-        }
-        port = lua_tointeger(L, 2);
+        port = getVerifiedInt(L, __func__, 2, "port number {default = 6667}", true);
         if (port > 65535 || port < 1) {
             lua_pushnil(L);
             lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 6667 if not provided}", port);
@@ -11365,18 +11246,9 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 int TLuaInterpreter::ttsSpeak(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSpeak: bad argument #%1 type (text to say as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
-    QString textToSay;
-    textToSay = lua_tostring(L, 1);
-
+    QString textToSay = getVerifiedString(L, __func__, 1, "text to say");
     speechUnit->say(textToSay);
     speechCurrent = textToSay;
-
     return 0;
 }
 
@@ -11388,17 +11260,13 @@ void TLuaInterpreter::ttsBuild()
     }
 
     speechUnit = new QTextToSpeech();
-
     bSpeechBuilt = true;
     bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-
-
     speechUnit->setVolume(1.0);
     speechUnit->setRate(0.0);
     speechUnit->setPitch(0.0);
-
     return;
 }
 
@@ -11495,7 +11363,6 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 int TLuaInterpreter::ttsGetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
     lua_pushnumber(L, speechUnit->volume());
     return 1;
 }
@@ -11504,7 +11371,6 @@ int TLuaInterpreter::ttsGetVolume(lua_State* L)
 int TLuaInterpreter::ttsGetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
     lua_pushnumber(L, speechUnit->rate());
     return 1;
 }
@@ -11513,7 +11379,6 @@ int TLuaInterpreter::ttsGetRate(lua_State* L)
 int TLuaInterpreter::ttsGetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
     lua_pushnumber(L, speechUnit->pitch());
     return 1;
 }
@@ -11522,7 +11387,6 @@ int TLuaInterpreter::ttsGetPitch(lua_State* L)
 int TLuaInterpreter::ttsGetVoices(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
     int i = 0;
     lua_newtable(L);
@@ -11531,7 +11395,6 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
         lua_pushstring(L, voice.name().toUtf8().constData());
         lua_settable(L, -3);
     }
-
     return 1;
 }
 
@@ -11539,7 +11402,6 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
 int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
     QString currentVoice = speechUnit->voice().name();
     lua_pushstring(L, currentVoice.toUtf8().constData());
     return 1;
@@ -11549,12 +11411,7 @@ int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
 int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByName: bad argument #1 type (voice as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString nextVoice = QString(lua_tostring(L, 1));
+    QString nextVoice = getVerifiedString(L, __func__, 1, "voice");
 
     QVector<QVoice> speechVoices = speechUnit->availableVoices();
     for (auto voice : speechVoices) {
@@ -11581,12 +11438,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
 int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "ttsSetVoiceByIndex: bad argument #1 type (voice as index number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int index = lua_tonumber(L, 1);
+    QString nextVoice = getVerifiedString(L, __func__, 1, "voice");
 
     index--;
 
@@ -11657,28 +11509,15 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "ttsQueueText: bad argument #1 type (input as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
-    QString inputText = lua_tostring(L, 1);
+    QString inputText = getVerifiedString(L, __func__, 1, "input");
     int index;
 
     if (lua_gettop(L) > 1) {
-        if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (index as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-
-        index = lua_tonumber(L, 2);
+        index = getVerifiedInt(L, __func__, 2, "index");
         index--;
-
         if (index < 0) {
             index = 0;
         }
-
         if (index > speechQueue.size()) {
             index = speechQueue.size();
         }
@@ -11712,14 +11551,8 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsGetQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-
-        int index = lua_tonumber(L, 1);
+        int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-
         if (index < 0 || index > speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
@@ -11768,14 +11601,8 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-
-        int index = lua_tonumber(L, 1);
+        int index = getVerifiedInt(L, __func__, 1, "index");
         index--;
-
         if (index < 0 || index >= speechQueue.size()) {
             lua_pushnil(L);
             lua_pushfstring(L, "index (%d) out of bounds for queue size %d", index + 1, speechQueue.size());
@@ -11841,12 +11668,11 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QByteArray newEncoding;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    newEncoding = lua_tostring(L, 1);
+    QByteArray newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
     if (results.first) {
@@ -11958,12 +11784,8 @@ int TLuaInterpreter::getClipboardText(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setClipboardText
 int TLuaInterpreter::setClipboardText(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setClipboardText: bad argument #%d type (text as string expected, got %s!)", 1, luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    clipboard->setText(getVerifiedString(L, __func__, 1, "text"););
     QClipboard* clipboard = QApplication::clipboard();
-    clipboard->setText(lua_tostring(L, 1));
     lua_pushboolean(L, true);
     return 1;
 }
@@ -12308,8 +12130,6 @@ TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString
     }
     host.raiseEvent(event);
 }
-
-
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
@@ -12947,7 +12767,6 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     }
 }
 
-
 // No documentation available in wiki - internal function
 void TLuaInterpreter::logError(std::string& e, const QString& name, const QString& function)
 {
@@ -13464,12 +13283,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
         dataToPost = lua_tostring(L, 1);
     }
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "putHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString urlString{lua_tostring(L, 2)};
-
+    QString urlString = getVerifiedString(L, __func__, 2, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
@@ -13545,15 +13359,8 @@ int TLuaInterpreter::putHTTP(lua_State* L)
 int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString urlString{lua_tostring(L, 1)};
-
+    QString urlString = getVerifiedString(L, __func__, 1, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
-
     if (!url.isValid()) {
         lua_pushnil(L);
         lua_pushfstring(L,
@@ -13615,12 +13422,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
         dataToPost = lua_tostring(L, 1);
     }
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "postHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString urlString{lua_tostring(L, 2)};
-
+    QString urlString = getVerifiedString(L, __func__, 2, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         lua_pushnil(L);
@@ -13691,18 +13493,12 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#deleteHTTP
 int TLuaInterpreter::deleteHTTP(lua_State *L)
 {
     auto& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "deleteHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString urlString{lua_tostring(L, 1)};
-
+    QString urlString = getVerifiedString(L, __func__, 1, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
-
     if (!url.isValid()) {
         lua_pushnil(L);
         lua_pushfstring(L,
@@ -13750,7 +13546,6 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
     return 2;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
 int TLuaInterpreter::getConnectionInfo(lua_State *L)
