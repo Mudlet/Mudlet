@@ -96,7 +96,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     # credit to https://github.com/gluster/glusterfs
     SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
 cat > ${SSH_ASKPASS_SCRIPT} <<EOL
-#!/bin/bash
+#!/bin/sh
 echo "${DEPLOY_KEY_PASS}"
 EOL
     chmod u+x ${SSH_ASKPASS_SCRIPT}
