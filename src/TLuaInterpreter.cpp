@@ -9214,7 +9214,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return 2;
     }
 
-    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    int id = getVerifiedInt(L, __func__, 1, "room id");
     if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
@@ -9752,7 +9752,7 @@ int TLuaInterpreter::echo(lua_State* L)
 
     if (n > 1) {
         QString consoleName = getVerifiedString(L, __func__, 1, "console name", true);
-        s++
+        s++;
     }
 
     QString displayText = getVerifiedString(L, __func__, s, "text to display");
