@@ -101,17 +101,17 @@ if [ "${DEPLOY}" = "deploy" ]; then
     chmod 600 "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
     # credit to https://github.com/gluster/glusterfs
-#     SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
-# cat > ${SSH_ASKPASS_SCRIPT} <<EOL
-# #!/bin/bash
-# echo "${DEPLOY_KEY_PASS}"
-# EOL
-#     chmod u+x ${SSH_ASKPASS_SCRIPT}
+    SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
+cat > ${SSH_ASKPASS_SCRIPT} <<EOL
+#!/bin/bash
+echo "${DEPLOY_KEY_PASS}"
+EOL
+    chmod u+x ${SSH_ASKPASS_SCRIPT}
 
-#     ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
-#     export DISPLAY
+    ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
+    export DISPLAY
 
-#     export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
+    export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
     ls -l "${BUILD_DIR}/CI"
     ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
