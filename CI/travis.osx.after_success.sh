@@ -100,8 +100,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -d
     eval "$(ssh-agent -s)"
     chmod 600 "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
-    chmod u+x "${SOURCE_DIR}/CI/ssh-add-pass.sh"
-    "${SOURCE_DIR}/CI/ssh-add-pass.sh" "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" "$DEPLOY_KEY_PASS"
+    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
@@ -126,9 +125,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Uploading public test build to make.mudlet.org ==="
-      DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"  "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" -O - -q)
-      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "keneanung@mudlet.org:/tmp"
+      DEPLOY_URL=$(ssh -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -t "keneanung@mudlet.org" "wget --method PUT --body-file=\"/tmp/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar\" \"https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg\" -O - -q")
+      echo "worked? $DEPLOY_URL"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"

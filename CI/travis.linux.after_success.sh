@@ -115,7 +115,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Uploading public test build to make.mudlet.org ==="
       scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "keneanung@mudlet.org:/tmp"
-      DEPLOY_URL=$(ssh -t "keneanung@mudlet.org" "wget --method PUT --body-file=\"/tmp/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar\" \"https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg\" -O - -q")
+      DEPLOY_URL=$(ssh -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -t "keneanung@mudlet.org" "wget --method PUT --body-file=\"/tmp/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar\" \"https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg\" -O - -q")
       echo "worked? $DEPLOY_URL"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
