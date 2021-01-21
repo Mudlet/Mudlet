@@ -10155,7 +10155,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
-    QString inputText = getVerifiedString(L, __func__, 1, "id");.trimmed();
+    QString inputText = getVerifiedString(L, __func__, 1, "id").trimmed();
     // Treat it as a UTF-8 string because although it is likely to be an
     // unsigned long long integer (0 to 18446744073709551615) we want to
     // be able to handle any input so we can report bad input strings back.    
@@ -10460,7 +10460,7 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
         return 2;
     }
 
-    pMudlet->mDiscord.setStateText(&host, getVerifiedString(L, __func__, 1, "text"));
+    mudlet::self()->mDiscord.setStateText(&host, getVerifiedString(L, __func__, 1, "text"));
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10638,13 +10638,9 @@ int TLuaInterpreter::getTime(lua_State* L)
     QString format = QStringLiteral("yyyy.MM.dd hh:mm:ss.zzz");
     QString tm;
     if (n > 0) {
-        return_string = lua_toboolean(L, 1);
+        return_string = getVerifiedBool(L, __func__, 1, "return as string", true);
         if (n > 1) {
-            if (!lua_isstring(L, 2)) {
-                lua_pushfstring(L, "getTime: bad argument #2 (custom time format as string expected, got %s)", luaL_typename(L, 2));
-                return lua_error(L);
-            }
-            format = lua_tostring(L, 2);
+            format = getVerifiedString(L, __func__, 2, "custom time format");
         }
     }
     QDateTime time = QDateTime::currentDateTime();
