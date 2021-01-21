@@ -3486,9 +3486,14 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
         QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
-    } else {
-        return false;
     }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+    return false;
 }
 
 bool Host::resetBackgroundImage(const QString &name)
