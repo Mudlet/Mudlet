@@ -92,31 +92,8 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -d
     eval "$(ssh-agent -s)"
     chmod 600 "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
-
-    # credit to https://github.com/gluster/glusterfs
-    SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
-cat > ${SSH_ASKPASS_SCRIPT} <<EOF
-#!/bin/bash
-
-if [ $# -ne 2 ] ; then
-  echo "Usage: ssh-add-pass keyfile passfile"
-  exit 1
-fi
-
-eval $(ssh-agent)
-pass=$(cat "$2")
-
-expect << EOF
-  spawn ssh-add $1
-  expect "Enter passphrase"
-  send "$pass\r"
-  expect eof
-EOF
-
-    chmod u+x ${SSH_ASKPASS_SCRIPT}
-
-    export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
-    ${SSH_ASKPASS_SCRIPT} "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" "$DEPLOY_KEY_PASS"
+    chmod u+x "${SOURCE_DIR}/CI/ssh-add-pass.sh"
+    "${SOURCE_DIR}/CI/ssh-add-pass.sh" "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" "$DEPLOY_KEY_PASS"
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
