@@ -8,9 +8,9 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
-local builddir_env = os.getenv("TRAVIS_BUILD_DIR")
+local builddir_env = os.getenv("GITHUB_REPOSITORY")
 if builddir_env then
-  -- the script struggles to load the load files relatively in Travis
+  -- the script struggles to load the load files relatively in CI
   loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
   loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
 else
