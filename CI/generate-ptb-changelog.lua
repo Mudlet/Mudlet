@@ -22,7 +22,7 @@ local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from
 parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
 local args = parser:parse()
 
-local MAX_COMMITS_PER_CHANGELOG = 100
+local MAX_COMMITS_PER_CHANGELOG = 1000
 
 -- Basic algorithm is as follows:
 --   retrieve last X commit hashes from current branch
