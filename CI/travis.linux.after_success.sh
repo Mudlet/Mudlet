@@ -88,24 +88,24 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     # shellcheck disable=2154
     # the two "undefined" variables are defined by travis
     echo "=== Registering Mudlet SSH keys for upload ==="
-    openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out /tmp/mudlet-deploy-key -d
+    openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -d
     eval "$(ssh-agent -s)"
-    chmod 600 /tmp/mudlet-deploy-key
+    chmod 600 "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
-    # credit to https://github.com/gluster/glusterfs
-    SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
-cat > ${SSH_ASKPASS_SCRIPT} <<EOL
-#!/bin/bash
-echo "${DEPLOY_KEY_PASS}"
-EOL
-    chmod u+x ${SSH_ASKPASS_SCRIPT}
+#     # credit to https://github.com/gluster/glusterfs
+#     SSH_ASKPASS_SCRIPT=/tmp/ssh-askpass-script
+# cat > ${SSH_ASKPASS_SCRIPT} <<EOL
+# #!/bin/bash
+# echo "${DEPLOY_KEY_PASS}"
+# EOL
+#     chmod u+x ${SSH_ASKPASS_SCRIPT}
 
-    ##set display, necessary for ssh to use with setsid and SSH_ASKPASS
-    export DISPLAY=1
+#     ##set display, necessary for ssh to use with setsid and SSH_ASKPASS
+#     export DISPLAY=1
 
-    export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
-    ls -l /tmp
-    ssh-add /tmp/mudlet-deploy-key
+#     export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
+    ls -l "${BUILD_DIR}/CI"
+    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
@@ -131,9 +131,9 @@ EOL
                     "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
+      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
       # upload an unzipped, unversioned release for appimage.github.io
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
+      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
     fi
 
@@ -170,7 +170,7 @@ EOL
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
-      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
+      scp -i "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
     fi
   fi
   export DEPLOY_URL
