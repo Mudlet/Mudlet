@@ -7688,12 +7688,7 @@ int TLuaInterpreter::roomExists(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addRoom
 int TLuaInterpreter::addRoom(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "addRoom: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     bool added = host.mpMap->addRoom(id);
     lua_pushboolean(L, added);
@@ -7701,7 +7696,6 @@ int TLuaInterpreter::addRoom(lua_State* L)
         host.mpMap->setRoomArea(id, -1, false);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
-
     return 1;
 }
 
@@ -7716,14 +7710,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
     }
 
     if (lua_gettop(L) > 0) {
-        if (!lua_isnumber(L, 1)) {
-            lua_pushfstring(L,
-                            "createRoomID: bad argument #1 type (minimum room Id as number is optional,\n"
-                            "got %s!)",
-                            luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        int minId = lua_tointeger(L, 1);
+        int minId = getVerifiedInt(L, __func__, 1, "minimum room Id", true);
         if (minId < 1) {
             lua_pushnil(L);
             lua_pushfstring(L,
@@ -7876,24 +7863,15 @@ int TLuaInterpreter::setDoor(lua_State* L)
         return 2;
     }
 
-    TRoom* pR;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setDoor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-    pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
         lua_pushfstring(L, "setDoor: bad argument #1 value (number %d is not a valid room id.)", roomId);
         return 2;
     }
+    QString exitCmd = getVerifiedString(L, __func__, 2, "door command");
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setDoor: bad argument #2 type (door command as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString exitCmd{lua_tostring(L, 2)};
     if (exitCmd.compare(QStringLiteral("n")) && exitCmd.compare(QStringLiteral("e")) && exitCmd.compare(QStringLiteral("s")) && exitCmd.compare(QStringLiteral("w"))
         && exitCmd.compare(QStringLiteral("ne"))
         && exitCmd.compare(QStringLiteral("se"))
@@ -7943,14 +7921,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // else IS a valid stub or real normal exit -fall through to continue
     }
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L,
-                        "setDoor: bad argument #3 type (door type as number expected {0=\"none\",\n"
-                        "1=\"open\", 2=\"closed\", 3=\"locked\"}, got %s!)",
-                        luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    int doorStatus = lua_tointeger(L, 3);
+    int doorStatus = getVerifiedInt(L, __func__, 3, "door type  {0=\"none\", 1=\"open\", 2=\"closed\", 3=\"locked\"}");
     if (doorStatus < 0 || doorStatus > 3) {
         lua_pushnil(L);
         lua_pushfstring(L,
@@ -7980,14 +7951,8 @@ int TLuaInterpreter::getDoors(lua_State* L)
         return 2;
     }
 
-    int roomId;
-    TRoom* pR;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getDoors: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    roomId = lua_tointeger(L, 1);
-    pR = host.mpMap->mpRoomDB->getRoom(roomId);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
         lua_pushfstring(L, "getDoors: bad argument #1 value (number %d is not a valid room id).", roomId);
@@ -8008,13 +7973,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 int TLuaInterpreter::setExitWeight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setExitWeight: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomID = lua_tointeger(L, 1);
-
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
         lua_pushnil(L);
@@ -8033,12 +7992,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         return 2;
     }
 
-    qint64 weight;
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setExitWeight: bad argument #3 type (exit weight as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    weight = lua_tonumber(L, 3);
+    qint64 weight = getVerifiedInt(L, __func__, 3, "exit weight");
     if (weight < 0 || weight > std::numeric_limits<int>::max()) {
         lua_pushnil(L);
         lua_pushfstring(L, "weight %d is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %d", weight, std::numeric_limits<int>::max());
@@ -8065,13 +8019,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     QList<qreal> x;
     QList<qreal> y;
     QList<int> z;
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id_from = lua_tointeger(L, 1);
-
+    int id_from = getVerifiedInt(L, __func__, 1, "room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
         lua_pushnil(L);
@@ -8179,11 +8127,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 4)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #4 type (line style as string expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    QString lineStyleString{lua_tostring(L, 4)};
+    QString lineStyleString = getVerifiedString(L, __func__, 4, "line style");
     if (!lineStyleString.compare(QLatin1String("solid line"))) {
         line_style = Qt::SolidLine;
     } else if (!lineStyleString.compare(QLatin1String("dot line"))) {
@@ -8245,12 +8189,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
     }
 
-    if (!lua_isboolean(L, 6)) {
-        lua_pushfstring(L, "addCustomLine: bad argument #6 type (end with arrow as boolean expected, got %s!)", luaL_typename(L, 6));
-        return lua_error(L);
-    }
-    bool arrow = lua_toboolean(L, 6);
-
+    bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
     int lz = z.at(0);
     QList<QPointF> points;
     // TODO: make provision for 3D custom lines (and store the z coordinates and allow them to vary)
@@ -8291,13 +8230,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     Host& host = getHostFromLua(L);
 
     //args: room_id, direction
-    QString direction;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "removeCustomLine: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
@@ -8305,7 +8238,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
         return 2;
     }
 
-    direction = dirToString(L, 2);
+    QString direction = dirToString(L, 2);
     if (direction.isEmpty()) {
         lua_pushfstring(L, "removeCustomLine: bad argument #2 type (direction as string or number (between 1 and 12 inclusive) expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
@@ -8337,12 +8270,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
 int TLuaInterpreter::getCustomLines(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getCustomLines: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomID = lua_tointeger(L, 1);
-
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (pR) {
@@ -8418,7 +8346,6 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
     int roomID = getVerifiedInt(L, __func__, 1, "roomID");
-
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     lua_newtable(L);
@@ -8438,7 +8365,6 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
 {
     int area = getVerifiedInt(L, __func__, 1, "areaID");
     int labelID = getVerifiedInt(L, __func__, 2, "labelID");
-
     Host& host = getHostFromLua(L);
     host.mpMap->deleteMapLabel(area, labelID);
     return 0;
@@ -8521,6 +8447,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     return 1;
 }
 
+// No documentation available - internal function
 void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel& label)
 {
     lua_pushstring(L, "X");
@@ -8576,11 +8503,7 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
 int TLuaInterpreter::addSpecialExit(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "addSpecialExit: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int fromRoomID = lua_tointeger(L, 1);
+    int fromRoomID = getVerifiedInt(L, __func__, 1, "exit room id");
     TRoom* pR_from = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR_from) {
         lua_pushnil(L);
@@ -8588,11 +8511,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "addSpecialExit: bad argument #2 type (entrance room id as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int toRoomID = lua_tointeger(L, 2);
+    int toRoomID = getVerifiedInt(L, __func__, 2, "entrance room id");
     TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoomID);
     if (!pR_to) {
         lua_pushnil(L);
@@ -8600,11 +8519,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, "addSpecialExit: bad argument #3 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString dir = lua_tostring(L, 3);
+    QString dir = getVerifiedString(L, __func__, 3, "special exit name/command");
     if (dir.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "the special exit name/command cannot be empty");
@@ -8620,11 +8535,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
 int TLuaInterpreter::removeSpecialExit(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "removeSpecialExit: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int fromRoomID = lua_tointeger(L, 1);
+    int fromRoomID = getVerifiedInt(L, __func__, 1, "exit room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
         lua_pushnil(L);
@@ -8632,11 +8543,7 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "removeSpecialExit: bad argument #2 type (special exit name/command as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString dir = lua_tostring(L, 2);
+    QString dir = getVerifiedString(L, __func__, 2, "special exit name/command");
     if (dir.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "the exit command cannot be empty");
@@ -8663,13 +8570,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "clearRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-
-
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
@@ -8696,21 +8597,8 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L,
-                        "clearRoomUserDataItem: bad argument #1 type (room id as number expected,\n"
-                        "got %s!)",
-                        luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(clearRoomUserDataItem: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 2)};
-
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         lua_pushnil(L);
@@ -8743,12 +8631,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "clearAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int areaId = lua_tointeger(L, 1);
-
+    int areaId = getVerifiedInt(L, __func__, 1, "area id");
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
         lua_pushnil(L);
@@ -8775,18 +8658,8 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int areaId = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(clearAreaUserDataItem: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 2)};
-
+    int areaId = getVerifiedInt(L, __func__, 1, "area id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
         lua_pushnil(L);
@@ -8833,11 +8706,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 type ("key" as string expected, got %s!))", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 1)};
+    QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 value ("key" can not be an empty string).)");
@@ -8869,11 +8738,7 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
 int TLuaInterpreter::getSpecialExits(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getSpecialExits: bad argument #1 type (exit room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id_from = lua_tointeger(L, 1);
+    int id_from = getVerifiedInt(L, __func__, 1, "exit room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
         lua_pushnil(L);
@@ -8883,11 +8748,7 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
 
     bool showAllExits = false;
     if (lua_gettop(L) > 1) {
-        if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "getSpecialExits: bad argument #2 type (show every exit to same exit room id as boolean is optional, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        showAllExits = lua_toboolean(L, 2);
+        showAllExits = getVerifiedBool(L, __func__, 2, "show every exit to same exit room id", true);
     }
 
     QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
