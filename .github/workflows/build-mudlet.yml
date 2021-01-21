@@ -75,7 +75,7 @@ jobs:
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-newkey
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-akey
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
