@@ -8269,7 +8269,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
 int TLuaInterpreter::getCustomLines(lua_State* L)
 {
-    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    int roomID = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (pR) {
@@ -8870,28 +8870,11 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomUserData: bad argument #1 (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "getRoomUserData: bad argument #2 (key as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 2)};
-
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     bool isBackwardCompatibilityRequired = true;
     if (lua_gettop(L) > 2) {
-        if (!lua_isboolean(L, 3)) {
-            lua_pushfstring(L,
-                            "getRoomUserData: bad argument #3 (enableFullErrorReporting as boolean {default\n"
-                            "= false} is optional, got %s!)",
-                            luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        isBackwardCompatibilityRequired = !lua_toboolean(L, 3);
+        isBackwardCompatibilityRequired = !getVerifiedBool(L, __func__, 1, "enableFullErrorReporting {default = false}", true);
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -8924,18 +8907,8 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaUserData
 int TLuaInterpreter::getAreaUserData(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getAreaUserData: bad argument #1 (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int areaId = lua_tointeger(L, 1);
-
-    QString key;
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "getAreaUserData: bad argument #2 (key as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    key = lua_tostring(L, 2);
+    int areaId = getVerifiedInt(L, __func__, 1, "area id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     if (key.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L,
@@ -8981,12 +8954,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getMapUserData: bad argument #1 (key as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 1)};
-
+    QString key = getVerifiedString(L, __func__, 1, "key");
     if (host.mpMap->mUserData.contains(key)) {
         lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
         return 1;
@@ -9007,24 +8975,10 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(setRoomUserData: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString key{lua_tostring(L, 2)};
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     // Ideally should reject empty keys but this could break existing scripts so we can't
-
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, R"(setRoomUserData: bad argument #3 type ("value" as string expected, got %s!))", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString value{lua_tostring(L, 3)};
+    QString value = getVerifiedString(L, __func__, 3, "value");
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
@@ -9041,18 +8995,8 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaUserData
 int TLuaInterpreter::setAreaUserData(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int areaId = lua_tointeger(L, 1);
-
-    QString key;
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(setAreaUserData: bad argument #2 type ("key" as string expected, got %s!))", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    key = lua_tostring(L, 2);
+    int areaId = getVerifiedInt(L, __func__, 1, "area id");
+    QString key = getVerifiedString(L, __func__, 2, "key");
     if (key.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L,
@@ -9060,12 +9004,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
                         "empty string).");
         return 2;
     }
-
-    if (!lua_isstring(L, 3)) {
-        lua_pushfstring(L, R"(setAreaUserData: bad argument #3 type ("value" as string expected, got %s!))", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    QString value{lua_tostring(L, 3)};
+    QString value = getVerifiedString(L, __func__, 3, "value");
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
@@ -9096,23 +9035,13 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
         return 2;
     }
 
-    QString key;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, R"(setMapUserData: bad argument #1 type ("key" as string expected, got %s!))", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    key = lua_tostring(L, 1);
+    QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, R"(setMapUserData: bad argument #1 value ("key" is not allowed to be an empty string).)");
         return 2;
     }
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, R"(setMapUserData: bad argument #2 type ("value" as string expected, got %s!))", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString value{lua_tostring(L, 2)};
+    QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
     lua_pushboolean(L, true);
@@ -9129,11 +9058,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
 
     QStringList keys;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -9163,11 +9088,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getAllRoomUserData: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int roomId = lua_tointeger(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
 
     QStringList keys;
     QStringList values;
@@ -9199,11 +9120,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getAllAreaUserData: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int areaId = lua_tointeger(L, 1);
+    int areaId = getVerifiedInt(L, __func__, 1, "area id");
 
     QStringList keys;
     QStringList values;
@@ -9252,21 +9169,9 @@ int TLuaInterpreter::getAllMapUserData(lua_State* L)
 int TLuaInterpreter::downloadFile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "downloadFile: bad argument #1 type (local filename as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString localFile{lua_tostring(L, 1)};
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "downloadFile: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString urlString{lua_tostring(L, 2)};
-
+    QString localFile = getVerifiedString(L, __func__, 1, "local filename");
+    QString urlString = getVerifiedString(L, __func__, 2, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
-
     if (!url.isValid()) {
         lua_pushnil(L);
         lua_pushfstring(L,
@@ -9309,12 +9214,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return 2;
     }
 
-    int id;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomArea: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    id = lua_tointeger(L, 1);
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
     if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
@@ -9383,11 +9283,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 int TLuaInterpreter::resetRoomArea(lua_State* L)
 {
     //will reset the room area to our void area
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "resetRoomArea: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "room id");
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
@@ -9420,19 +9316,8 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomChar
 int TLuaInterpreter::setRoomChar(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
-    if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomChar: bad argument #2 type (room symbol as string expected, got %s!)",
-                       luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    QString symbol{lua_tostring(L, 2)};
+    int id = getVerifiedInt(L, __func__, 1, "room id");
+    QString symbol = getVerifiedString(L, __func__, 2, "room symbol");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -9457,13 +9342,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomChar
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
@@ -9479,37 +9358,18 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
 int TLuaInterpreter::setRoomCharColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component as number expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
-    }
-    int r = lua_tonumber(L, 2);
+    int id = getVerifiedInt(L, __func__, 1, "room id");
+    int r = getVerifiedInt(L, __func__, 2, "red component");
     if (r < 0 || r > 255) {
         lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
         return lua_error(L);
     }
-
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    int g = lua_tonumber(L, 3);
+    int g = getVerifiedInt(L, __func__, 3, "green component");
     if (g < 0 || g > 255) {
         lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
         return lua_error(L);
     }
-
-    if (!lua_isnumber(L, 4)) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (green component as number expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    int b = lua_tonumber(L, 4);
+    int b = getVerifiedInt(L, __func__, 4, "blue component");
     if (b < 0 || b > 255) {
         lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
         return lua_error(L);
@@ -9533,11 +9393,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unsetRoomCharColor
 int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "unsetRoomCharColor: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "room id");
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -9557,13 +9413,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomCharColor
 int TLuaInterpreter::getRoomCharColor(lua_State* L)
 {
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getRoomCharColor: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tointeger(L, 1);
-
+    int id = getVerifiedInt(L, __func__, 1, "room id");
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
@@ -9613,11 +9463,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
         return 2;
     }
 
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getGridMode: bad argument #1 type (area id as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    int id = lua_tonumber(L, 1);
+    int id = getVerifiedInt(L, __func__, 1, "area id");
 
     TArea* area = host.mpMap->mpRoomDB->getArea(id);
     if (!area) {
@@ -9662,39 +9508,25 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 {
     int s = 0;
     int n = lua_gettop(L);
+    auto validRange = [](int number) { return number >= 0 && number <= 255; };
     QString windowName;
     if (n > 3) {
         windowName = WINDOW_NAME(L, ++s);
     }
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int luaRed = lua_tointeger(L, s);
-    if (luaRed < 0 || luaRed >  255) {
+    int luaRed = getVerifiedInt(L, __func__, ++s, "red component value");
+    if (!validRange(luaRed)) {
         lua_pushnil(L);
         lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
         return 2;
     }
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    int luaGreen = lua_tointeger(L, s);
-    if (luaGreen< 0 || luaGreen >  255) {
+    int luaGreen = getVerifiedInt(L, __func__, ++s, "green component value");
+    if (!validRange(luaGreen)) {
         lua_pushnil(L);
         lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
         return 2;
     }
-
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
-
-        return lua_error(L);
-    }
-    int luaBlue = lua_tointeger(L, s);
-    if (luaBlue < 0 || luaBlue >  255) {
+    int luaBlue = getVerifiedInt(L, __func__, ++s, "blue component value");
+    if (!validRange(luaBlue)) {
         lua_pushnil(L);
         lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
         return 2;
@@ -9741,24 +9573,14 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         return lua_error(L);
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (green value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    g = static_cast<int>(lua_tonumber(L, s));
-
+    g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
     if (!validRange(g)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBgColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
         return 2;
     }
 
-    if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (blue value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    b = static_cast<int>(lua_tonumber(L, s));
-
+    b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
     if (!validRange(b)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBgColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
@@ -9766,18 +9588,14 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
-    if (lua_gettop(L) <= s) {
-        alpha = 255;
-    } else if (lua_isnumber(L, ++s)) {
-        alpha = static_cast<int>(lua_tonumber(L, s));
+    alpha = 255;
+    if (lua_gettop(L) > s) {
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
         if (!validRange(alpha)) {
             lua_pushnil(L);
             lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
             return 2;
         }
-    } else {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
     }
 
     auto console = CONSOLE(L, windowName);
@@ -9785,7 +9603,6 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
 int TLuaInterpreter::insertLink(lua_State* L)
@@ -9898,12 +9715,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, ++s);
     }
-
-    if (!lua_isstring(L, ++s)) {
-        lua_pushfstring(L, "insertText: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    QString text{lua_tostring(L, s)};
+    QString text = getVerifiedString(L, __func__, ++s, "text");
 
     auto console = CONSOLE(L, windowName);
     console->insertText(text);
@@ -9936,25 +9748,14 @@ int TLuaInterpreter::echo(lua_State* L)
 
     QString consoleName;
     int n = lua_gettop(L);
+    int s = 1;
 
-    if (!n) {
-        // Handle case with NO arguments
-        lua_pushstring(L, "echo: bad argument #1 type (text to display as string expected, got nil!)");
-        return lua_error(L);
-    }
     if (n > 1) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "echo: bad argument #1 type (console name as string, is optional, got %s!)", luaL_typename(L, 1));
-            return lua_error(L);
-        }
-        consoleName = lua_tostring(L, 1);
+        QString consoleName = getVerifiedString(L, __func__, 1, "console name", true);
+        s++
     }
 
-    if (!lua_isstring(L, n)) {
-        lua_pushfstring(L, "echo: bad argument #%d type (text to display as string expected, got %s!)", n, luaL_typename(L, n));
-        return lua_error(L);
-    }
-    QString displayText{lua_tostring(L, n)};
+    QString displayText = getVerifiedString(L, __func__, s, "text to display");
 
     if (isMain(consoleName)) {
         host.mpConsole->buffer.mEchoingText = true;
@@ -9992,12 +9793,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         windowName = WINDOW_NAME(L, s);
         s++;
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushfstring(L, "echoPopup: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
-    } else {
-        text = lua_tostring(L, s);
-        s++;
-    }
+    QString text = getVerifiedString(L, __func__, s++, "text as string");
 
     if (!lua_istable(L, s)) {
         lua_pushfstring(L, "echoPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
