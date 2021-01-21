@@ -92,8 +92,7 @@ if { [ "${DEPLOY}" = "deploy" ]; } ||
     openssl aes-256-cbc -k "$DEPLOY_KEY_PASS" -in "${SOURCE_DIR}/CI/mudlet-deploy-key-github.enc" -out "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" -d
     eval "$(ssh-agent -s)"
     chmod 600 "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
-    chmod u+x "${SOURCE_DIR}/CI/ssh-add-pass.sh"
-    "${SOURCE_DIR}/CI/ssh-add-pass.sh" "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded" "$DEPLOY_KEY_PASS"
+    ssh-add "${BUILD_DIR}/CI/mudlet-deploy-key-github.decoded"
 
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
