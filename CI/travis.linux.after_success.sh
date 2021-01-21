@@ -100,8 +100,8 @@ echo "${DEPLOY_KEY_PASS}"
 EOL
     chmod u+x ${SSH_ASKPASS_SCRIPT}
 
-    ##set no display, necessary for ssh to use with setsid and SSH_ASKPASS
-    export DISPLAY
+    ##set display, necessary for ssh to use with setsid and SSH_ASKPASS
+    export DISPLAY=1
 
     export SSH_ASKPASS=${SSH_ASKPASS_SCRIPT}
     ls -l /tmp
