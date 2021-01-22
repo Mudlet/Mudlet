@@ -2001,7 +2001,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
         // stopwatch) behaviour if only a single NUMERIC argument (ID) supplied:
         bool autoResetAndRestart = true;
         if (lua_gettop(L) > 1) {
-            autoResetAndRestart = getVerifiedBool(L, __func__, 2, "automatic reset and restart", true);
+            autoResetAndRestart = getVerifiedBool(L, __func__, 2, "automatic reset and restart with a numeric stopwatch id", true);
         }
 
         QPair<bool, QString> result;
