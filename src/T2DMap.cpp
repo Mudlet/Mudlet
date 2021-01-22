@@ -2309,8 +2309,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         if (mapInfoOverride->color.isValid()) {
             infoColor = mapInfoOverride->color;
         }
-        delete mapInfoOverride;
-        mapInfoOverride = NULL;
+        mapInfoOverride.reset();
     }
 
 #ifdef QT_DEBUG

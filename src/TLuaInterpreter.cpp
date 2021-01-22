@@ -18288,14 +18288,12 @@ int TLuaInterpreter::setMapInfo(lua_State* L)
     }
 
     auto& host = getHostFromLua(L);
-
     if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        auto override = new MapInfoOverride({
-            .text = text, 
-            .isBold = isBold, 
-            .isItalic = isItalic, 
-            .color = color});
-        host.mpMap->mpMapper->mp2dMap->mapInfoOverride = override;
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride = std::make_unique<MapInfoOverride>();
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride->text = text; 
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride->isBold = isBold; 
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride->isItalic = isItalic; 
+        host.mpMap->mpMapper->mp2dMap->mapInfoOverride->color = color;
     }
 
     lua_pushboolean(L, true);

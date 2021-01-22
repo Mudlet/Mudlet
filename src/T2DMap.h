@@ -172,7 +172,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    MapInfoOverride* mapInfoOverride;
+    std::unique_ptr<MapInfoOverride> mapInfoOverride;
 
 public slots:
     void slot_roomSelectionChanged();
