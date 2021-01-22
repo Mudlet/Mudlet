@@ -852,13 +852,11 @@ int TLuaInterpreter::selectString(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);        
     }
 
-    QString searchText = getVerifiedString(L, __func__, s, "text to select");
+    QString searchText = getVerifiedString(L, __func__, s++, "text to select");
     // CHECK: Do we need to qualify this for a non-blank string?
-    s++;
 
     qint64 numOfMatch = static_cast <qint64> (getVerifiedInt(L, __func__, s, "match count {1 for first}"));
 
@@ -1206,8 +1204,7 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     int s = 1;
     std::string windowName;
     if (lua_gettop(L)) {
-        windowName = getVerifiedString(L, __func__, 1, "window name").toStdString();
-        s++;
+        windowName = getVerifiedString(L, __func__, s++, "window name").toStdString();
     }
     int lineNumber = getVerifiedInt(L, __func__, s, "line");
 
@@ -1273,11 +1270,9 @@ int TLuaInterpreter::getLines(lua_State* L)
     int s = 1;
     QString windowName;
     if (n > 2) {
-        windowName = getVerifiedString(L, __func__, 1, "mini console, user window or buffer name {may be omitted for the \"main\" console}", true);
-        s++;
+        windowName = getVerifiedString(L, __func__, s++, "mini console, user window or buffer name {may be omitted for the \"main\" console}", true);
     }
-    int lineFrom = getVerifiedInt(L, __func__, s, "start line");
-    s++;
+    int lineFrom = getVerifiedInt(L, __func__, s++, "start line");
     int lineTo = getVerifiedInt(L, __func__, s, "end line");
 
     Host& host = getHostFromLua(L);
@@ -1801,8 +1796,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 1) {
-        windowName = WINDOW_NAME(L, 1);
-        ++s;
+        windowName = WINDOW_NAME(L, s++);
     }
     int luaFrom = getVerifiedInt(L, __func__, s, "wrapAt");
     auto console = CONSOLE(L, windowName);
@@ -1910,9 +1904,9 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
     QString name;
     bool autoStart = true;
     int n = lua_gettop(L);
-    int s = 0;
+    int s = 1;
     if (n) {
-        if (lua_type(L, ++s) == LUA_TBOOLEAN) {
+        if (lua_type(L, s) == LUA_TBOOLEAN) {
             autoStart = lua_toboolean(L, s);
         } else if (lua_type(L, s) == LUA_TSTRING) {
             autoStart = false;
@@ -1926,8 +1920,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
         }
 
         if (n > 1) {
-            ++s;
-            autoStart = getVerifiedBool(L, __func__, s, "autostart", true);
+            autoStart = getVerifiedBool(L, __func__, ++s, "autostart", true);
         }
     }
 
@@ -2319,11 +2312,9 @@ int TLuaInterpreter::selectSection(lua_State* L)
     QString windowName;
 
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
-    int from = getVerifiedInt(L, __func__, s, "from position");
-    s++;
+    int from = getVerifiedInt(L, __func__, s++, "from position");
     int to = getVerifiedInt(L, __func__, s, "length");
 
     auto console = CONSOLE(L, windowName);
@@ -2365,12 +2356,10 @@ int TLuaInterpreter::moveCursor(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
 
-    int luaFrom = getVerifiedInt(L, __func__, s, "x");
-    s++;
+    int luaFrom = getVerifiedInt(L, __func__, s++, "x");
     int luaTo = getVerifiedInt(L, __func__, s, "y");
 
     auto console = CONSOLE(L, windowName);
@@ -2385,12 +2374,10 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int n = lua_gettop(L);
     QString windowName;
     if (n > 2) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
 
-    int luaFrom = getVerifiedInt(L, __func__, s, "linesLimit");
-    s++;
+    int luaFrom = getVerifiedInt(L, __func__, s++, "linesLimit");
     int luaTo = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
 
     auto console = CONSOLE(L, windowName);
@@ -2460,8 +2447,7 @@ int TLuaInterpreter::replace(lua_State* L)
     QString windowName;
 
     if (n > 1) {
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     QString text = getVerifiedString(L, __func__, s, "with");
 
@@ -3002,8 +2988,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
 
     QString font = getVerifiedString(L, __func__, s, "name");
@@ -3058,8 +3043,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
 
     int size = getVerifiedInt(L, __func__, s, "size");
@@ -3820,8 +3804,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     };
 
     if (lua_isstring(L, s)) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
         r = getVerifiedInt(L, __func__, s, "red value 0-255");
         if (!validRange(r)) {
             lua_pushnil(L);
@@ -3840,16 +3823,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return lua_error(L);
     }
 
-    s++;
-    int g = getVerifiedInt(L, __func__, s, "green value 0-255");
+    int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
     if (!validRange(g)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
         return 2;
     }
 
-    s++;
-    int b = getVerifiedInt(L, __func__, s, "blue value 0-255");
+    int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
     if (!validRange(b)) {
         lua_pushnil(L);
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
@@ -3858,8 +3839,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
     if (lua_gettop(L) > s) {
-        s++;
-        alpha = getVerifiedInt(L, __func__, s, "alpha value 0-255", true);
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
         if (!validRange(alpha)) {
             lua_pushnil(L);
             lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
@@ -5456,8 +5436,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     double b = getVerifiedDouble(L, __func__, s, "number of lines");
     Host& host = getHostFromLua(L);
@@ -5471,14 +5450,11 @@ int TLuaInterpreter::setLink(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
 
-    QString linkFunction = getVerifiedString(L, __func__, s, "command");
-    s++;
-    QString linkHint = getVerifiedString(L, __func__, s, "tooltip");
-    s++;
+    QString linkFunction = getVerifiedString(L, __func__, s++, "command");
+    QString linkHint = getVerifiedString(L, __func__, s++, "tooltip");
 
     Host& host = getHostFromLua(L);
     QStringList _linkFunction;
@@ -5506,15 +5482,13 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n > 4) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     if (!lua_isstring(L, s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
         return lua_error(L);
     }
-    QString txt = lua_tostring(L, s);
-    s++;
+    QString txt = lua_tostring(L, s++);
 
     if (!lua_istable(L, s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
@@ -5530,9 +5504,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
-
-    if (!lua_istable(L, s)) {
+    if (!lua_istable(L, ++s)) {
         lua_pushstring(L, "setPopup: wrong argument type");
         return lua_error(L);
     }
@@ -5546,7 +5518,6 @@ int TLuaInterpreter::setPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
 
     Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
@@ -5570,8 +5541,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable bold attribute");
     auto console = CONSOLE(L, windowName);
@@ -5586,8 +5556,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable italic attribute");
     auto console = CONSOLE(L, windowName);
@@ -5602,8 +5571,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable overline attribute");
     auto console = CONSOLE(L, windowName);
@@ -5618,8 +5586,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
     auto console = CONSOLE(L, windowName);
@@ -5634,8 +5601,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable strikeout attribute");
     auto console = CONSOLE(L, windowName);
@@ -5650,8 +5616,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     QString windowName;
     int s = 1;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, 1);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable underline attribute");
     auto console = CONSOLE(L, windowName);
@@ -7255,8 +7220,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     int s = 1;
     QString name;
     if (n > 1) {
-        s++;
-        name = getVerifiedString(L, __func__, 1, "mini console, user window or buffer name {may be omitted for the \"main\" console}");
+        name = getVerifiedString(L, __func__, s++, "mini console, user window or buffer name {may be omitted for the \"main\" console}");
         if (name == QLatin1String("main")) {
             // clear it so it is treated as the main console below
             name.clear();
@@ -9654,11 +9618,9 @@ int TLuaInterpreter::insertPopup(lua_State* L)
 
     // console name is an optional first argument
     if (n >= 4) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
-    QString txt = getVerifiedString(L, __func__, s, "text");
-    s++;
+    QString txt = getVerifiedString(L, __func__, s++, "text");
 
     if (!lua_istable(L, s)) {
         lua_pushfstring(L, "insertPopup: bad argument #%d type (commands as table expected, got %s!)", s, luaL_typename(L, s));
@@ -9674,9 +9636,8 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
 
-    if (!lua_istable(L, s)) {
+    if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "insertPopup: bad argument #%d type (hints as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -9690,9 +9651,8 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
 
-    if (n >= s) {
+    if (n >= ++s) {
         customFormat = lua_toboolean(L, s);
     }
 
@@ -9751,8 +9711,7 @@ int TLuaInterpreter::echo(lua_State* L)
     int s = 1;
 
     if (n > 1) {
-        QString consoleName = getVerifiedString(L, __func__, 1, "console name", true);
-        s++;
+        QString consoleName = getVerifiedString(L, __func__, s++, "console name", true);
     }
 
     QString displayText = getVerifiedString(L, __func__, s, "text to display");
@@ -9789,8 +9748,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int n = lua_gettop(L);
     // console name is an optional first argument
     if (n >= 4) {
-        windowName = WINDOW_NAME(L, s);
-        s++;
+        windowName = WINDOW_NAME(L, s++);
     }
     QString text = getVerifiedString(L, __func__, s++, "text as string");
 
@@ -9808,9 +9766,8 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
 
-    if (!lua_istable(L, s)) {
+    if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "echoPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
@@ -9824,9 +9781,8 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    s++;
 
-    if (n >= s) {
+    if (n >= ++s) {
         customFormat = lua_toboolean(L, s);
     }
 
