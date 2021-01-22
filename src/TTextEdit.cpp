@@ -516,7 +516,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     textRects.append(textRect);
     QColor bgColor;
-    if (static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) {
+    if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected())) {
         fgColors.append(charStyle.background());
         bgColor = charStyle.foreground();
     } else {
