@@ -2312,17 +2312,17 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         mapInfoOverride.reset();
     }
 
-#ifdef QT_DEBUG
-    infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
-                       // Intentional comment to separate arguments
-                       "This is debug information that is not expected to be seen in release versions, "
-                       "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
-                       "center of the view (but y will be negative compared to previous room related "
-                       "ones as it represents the real coordinate system for this widget which has "
-                       "y increasing in a downward direction!)")
-                            .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                            .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
-#endif
+// #ifdef QT_DEBUG
+//     infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
+//                        // Intentional comment to separate arguments
+//                        "This is debug information that is not expected to be seen in release versions, "
+//                        "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
+//                        "center of the view (but y will be negative compared to previous room related "
+//                        "ones as it represents the real coordinate system for this widget which has "
+//                        "y increasing in a downward direction!)")
+//                             .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
+//                             .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
+// #endif
 
     // Left margin for info widget:
     uint infoLeftSideAvoid = 10;
@@ -2342,7 +2342,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         testRect = painter.boundingRect(
                 mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
 
-    } while ((testRect.height() > mMapInfoRect.height() - mFontHeight || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
+    } while ((testRect.height() > mMapInfoRect.height() - 20 || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
     // Last term above is needed to prevent runaway under "odd" conditions
 
     // Restore Grey translucent background, was useful for debugging!
