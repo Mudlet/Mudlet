@@ -18228,7 +18228,7 @@ int TLuaInterpreter::setMapInfo(lua_State* L)
     text = QString(lua_tostring(L, 1));
 
     if (n >= 2 && !lua_isboolean(L, 2)) {
-        lua_pushfstring(L, "setMapInfo: bad argument #2 type (is bold as boolean expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "setMapInfo: bad argument #2 type (should be bold as boolean expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     } else if (n >= 2) {
         isBold = lua_toboolean(L, 2);
