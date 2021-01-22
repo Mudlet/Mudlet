@@ -18235,7 +18235,7 @@ int TLuaInterpreter::setMapInfo(lua_State* L)
     }
 
     if (n >= 3 && !lua_isboolean(L, 3)) {
-        lua_pushfstring(L, "setMapInfo: bad argument #3 type (is italic as boolean expected, got %s!)", luaL_typename(L, 3));
+        lua_pushfstring(L, "setMapInfo: bad argument #3 type (should be italic as boolean expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     } else if (n >= 3) {
         isItalic = lua_toboolean(L, 3);
