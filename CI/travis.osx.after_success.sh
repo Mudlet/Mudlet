@@ -119,7 +119,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-        echo "UPLOAD_FILENAME=${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-macos"
+        echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-macos"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
