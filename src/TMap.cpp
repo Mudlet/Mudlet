@@ -27,6 +27,7 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -1262,6 +1263,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << oldCharacterCode;
         }
 
+        if (mSaveVersion >= 21) {
+            ofs << pR->mSymbolColor;
+        } else {
+            if (pR->mSymbolColor != nullptr) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -1958,44 +1967,6 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                 ++areaLabelCounter;
             }
             ++currentAreaWithLabelsCount;
-        }
-    }
-
-    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
-        int areasWithLabelsTotal = 0;
-        ifs >> areasWithLabelsTotal;
-        int areasWithLabelsCounter = 0;
-        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
-            int areaID = -1;
-            int areaLabelsTotal = 0;
-            ifs >> areaLabelsTotal;
-            ifs >> areaID;
-            int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                int labelID;
-                ifs >> labelID;
-                TMapLabel label;
-                if (otherProfileVersion >= 12) {
-                    ifs >> label.pos;
-                } else {
-                    QPointF __label_pos;
-                    ifs >> __label_pos;
-                    label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
-                }
-                QPointF dummyPointF;
-                ifs >> dummyPointF;
-                ifs >> label.size;
-                ifs >> label.text;
-                ifs >> label.fgColor;
-                ifs >> label.bgColor;
-                ifs >> label.pix;
-                if (otherProfileVersion >= 15) {
-                    ifs >> label.noScaling;
-                    ifs >> label.showOnTop;
-                }
-                ++areaLabelCounter;
-            }
-            ++areasWithLabelsCounter;
         }
     }
 
@@ -3199,4 +3170,61 @@ void TMap::update()
             mpMapper->mp2dMap->update();
         }
     }
+}
+
+QColor TMap::getColor(int id)
+{
+    QColor color;
+
+    TRoom* room = mpRoomDB->getRoom(id);
+    if (!room) {
+        return color;
+    }
+
+    int env = room->environment;
+    if (mEnvColors.contains(env)) {
+        env = mEnvColors.value(env);
+    } else {
+        if (!mCustomEnvColors.contains(env)) {
+            env = 1;
+        }
+    }
+    switch (env) {
+    case 1:     color = mpHost->mRed_2;             break;
+    case 2:     color = mpHost->mGreen_2;           break;
+    case 3:     color = mpHost->mYellow_2;          break;
+    case 4:     color = mpHost->mBlue_2;            break;
+    case 5:     color = mpHost->mMagenta_2;         break;
+    case 6:     color = mpHost->mCyan_2;            break;
+    case 7:     color = mpHost->mWhite_2;           break;
+    case 8:     color = mpHost->mBlack_2;           break;
+    case 9:     color = mpHost->mLightRed_2;        break;
+    case 10:    color = mpHost->mLightGreen_2;      break;
+    case 11:    color = mpHost->mLightYellow_2;     break;
+    case 12:    color = mpHost->mLightBlue_2;       break;
+    case 13:    color = mpHost->mLightMagenta_2;    break;
+    case 14:    color = mpHost->mLightCyan_2;       break;
+    case 15:    color = mpHost->mLightWhite_2;      break;
+    case 16:    color = mpHost->mLightBlack_2;      break;
+    default: //user defined room color
+        if (!mCustomEnvColors.contains(env)) {
+            if (16 < env && env < 232) {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
+            break;
+        }
+        color = mCustomEnvColors.value(env);
+    }
+    return color;
 }

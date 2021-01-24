@@ -796,7 +796,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
             } else {
                 // Has no lock prefix at all
-                mSpecialExits.insert(cmd.mid(1), itOldSpecialExit.key());
+                mSpecialExits.insert(cmd, itOldSpecialExit.key());
             }
         }
     }
@@ -809,6 +809,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         // For older versions we note the prior unsigned short in case
         // there is no fallback carried in the room user data
         ifs >> oldCharacterCode;
+    }
+
+    if (version >= 21) {
+        ifs >> mSymbolColor;
     }
 
     if (version >= 10) {
@@ -824,6 +828,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 // ASCII or ISO 8859-1 (Latin1) character:
                 mSymbol = QChar(oldCharacterCode);
             }
+        }
+    }
+
+    if (version < 21) {
+        auto symbolColorFallbackKey = QLatin1String("system.fallback_symbol_color");
+        if (userData.contains(symbolColorFallbackKey)) {
+            mSymbolColor = QColor(userData.take(symbolColorFallbackKey));
         }
     }
 

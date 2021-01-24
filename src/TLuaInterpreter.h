@@ -92,6 +92,8 @@ public:
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
     bool call_luafunction(void* pT);
+    void delete_luafunction(void* pT);
+    void delete_luafunction(const QString& name);
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT);
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
@@ -163,7 +165,6 @@ public:
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State* L);
     static int createMapImageLabel(lua_State*);
-    static int exportAreaImage(lua_State*);
     static int installPackage(lua_State*);
     static int installModule(lua_State* L);
     static int uninstallModule(lua_State* L);
@@ -200,6 +201,9 @@ public:
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
     static int getRoomChar(lua_State*);
+    static int setRoomCharColor(lua_State*);
+    static int unsetRoomCharColor(lua_State*);
+    static int getRoomCharColor(lua_State*);
     static int deleteArea(lua_State*);
     static int deleteRoom(lua_State*);
     static int getRoomAreaName(lua_State*);
@@ -265,7 +269,7 @@ public:
     static int Wait(lua_State* L);
     static int expandAlias(lua_State* L);
     static int sendRaw(lua_State* L);
-    static int Echo(lua_State* L);
+    static int echo(lua_State* L);
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth(lua_State* L);
     static int selectSection(lua_State* L);
@@ -339,8 +343,8 @@ public:
     static int createBuffer(lua_State*);
     static int raiseWindow(lua_State*);
     static int lowerWindow(lua_State*);
-    static int showUserWindow(lua_State*);
-    static int hideUserWindow(lua_State*);
+    static int showWindow(lua_State*);
+    static int hideWindow(lua_State*);
     static int closeUserWindow(lua_State*);
     static int resizeWindow(lua_State*);
     static int createStopWatch(lua_State*);
@@ -597,6 +601,12 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static double getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static void announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     void logError(std::string& e, const QString&, const QString& function);
     void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);

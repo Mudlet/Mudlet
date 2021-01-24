@@ -2093,6 +2093,13 @@ bool dlgConnectionProfiles::validateProfile()
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
+
+        if (url.isEmpty()) {
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
+        }
+
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
@@ -2143,8 +2150,10 @@ bool dlgConnectionProfiles::validateProfile()
             }
             return true;
         } else {
-            notificationArea->show();
-            notificationAreaMessageBox->show();
+            if (!notificationAreaMessageBox->text().isEmpty()) {
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+            }
             if (offline_button) {
                 offline_button->setEnabled(false);
                 offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
@@ -2290,7 +2299,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     do {
         font.setPointSize(--fontSize);
         QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, text);
+        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
@@ -2304,7 +2313,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
             pt.setPen(Qt::white);
         }
         pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }

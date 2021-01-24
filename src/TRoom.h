@@ -153,6 +153,7 @@ public:
     qreal max_x = 0.0;
     qreal max_y = 0.0;
     QString mSymbol;
+    QColor mSymbolColor;
     QString name;
 
     QList<int> exitStubs; //contains a list of: exittype (according to defined values above)

@@ -1537,9 +1537,11 @@ void mudlet::slot_uninstall_package()
     if (!pH) {
         return;
     }
-    QListWidgetItem* pI = packageList->currentItem();
-    if (pI) {
-        pH->uninstallPackage(pI->text(), 0);
+    auto selectedPackages = packageList->selectedItems();
+    if (!selectedPackages.empty()) {
+        for (auto package : selectedPackages) {
+            pH->uninstallPackage(package->text(), 0);
+        }
     }
     packageList->clear();
     packageList->addItems(pH->mInstalledPackages);
@@ -2952,8 +2954,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 
     pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
-    pHost->mIsProfileLoadingSequence = false;
-
     pHost->updateAnsi16ColorsInTable();
 
     //Load rest of modules after scripts
@@ -2969,6 +2969,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 
     packagesToInstallList.clear();
+
+    pHost->mIsProfileLoadingSequence = false;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -3780,6 +3782,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Removes the normal click to activate "About Mudlet" action and move it
     // to a new menu which also contains a "goto updater" option
 
+    if (mpActionAboutWithUpdates) {
+        mpMainToolBar->removeAction(mpActionAboutWithUpdates);
+    }
+
     // First change the existing button:
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         mpActionAbout->setIcon(QIcon(":/icons/mudlet_information.png"));
@@ -3806,7 +3812,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
-    mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
+    mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
 
