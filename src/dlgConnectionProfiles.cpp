@@ -769,7 +769,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
                              "or any of the many RPG systems based on the d20 ruleset.");
     } else if (hostUrl == QStringLiteral("stickmud.com")) {
-        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Upon maturing to level 5, join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
+        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -1007,8 +1007,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("8680");
-            port_ssl_tsl->setChecked(true);
+            host_port = QStringLiteral("7680");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             host_port = QStringLiteral("4000");
