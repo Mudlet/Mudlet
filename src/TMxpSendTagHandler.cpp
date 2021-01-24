@@ -32,17 +32,38 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     if (href.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive) || hint.contains(TAG_CONTENT_PLACEHOLDER, Qt::CaseInsensitive)) {
         mIsHrefInContent = true;
     }
+    // Entities in href and hint may contain | separators, but there are
+    // no | chars in the entity names (allowed, at least), so interpolate
+    // first:
+    href = ctx.getEntityResolver().interpolate(href);
+    if (!hint.isEmpty()) {
+        hint = ctx.getEntityResolver().interpolate(hint);
+    }
 
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
-    while (hints.size() > hrefs.size()) {
+    while (hints.size() > hrefs.size() + 1) {
         hints.removeFirst();
     }
 
-    // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
-    if (hrefs.size() > 1 && hints.size() == 1) {
-        hints = hrefs;
+    if (hrefs.size() > 1) {
+        int i = hints.size();
+        int hsize = hrefs.size();
+
+        // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
+        if (hints.size() == 1) {
+            i = 0; // Take hint as tooltip, add hints for all commands in the loop below.
+        }
+        // if less hints than commands, add commands as hints
+        for (; i < hsize; i++) {
+             hints.append(hrefs[i]);
+        }
+        if (hints.size() <= hsize) {
+            // We now have a multi line menu, with no tooltip for the menulink. Add a special tooltip:
+            // Note hints.size() is at least 2 when we come here.
+            hints.prepend(hints[0] + " (right-click for more)");
+        }
     }
 
     // handle print to prompt feature PROMPT
@@ -50,12 +71,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QString command = tag->hasAttribute(ATTR_PROMPT) ? QStringLiteral("printCmdLine") : QStringLiteral("send");
 
     for (int i = 0; i < hrefs.size(); i++) {
-        hrefs[i] = ctx.getEntityResolver().interpolate(hrefs[i]);
         hrefs[i] = QStringLiteral("%1([[%2]])").arg(command, hrefs[i]);
-
-        if (i < hints.size()) {
-            hints[i] = ctx.getEntityResolver().interpolate(hints[i]);
-        }
     }
 
     mLinkId = client.setLink(hrefs, hints);
@@ -133,6 +149,7 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
         }
     }
 }
+
 void TMxpSendTagHandler::handleContent(char ch)
 {
     if (mIsHrefInContent) {

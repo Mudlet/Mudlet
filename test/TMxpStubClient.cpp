@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@bvirginmedia.com        *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -18,30 +18,45 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+// Text Formatting 'Counters', version, style by Michael Weller, michael.weller@t-online.de
 
-#include "TMxpVersionTagHandler.h"
-#include "TMxpClient.h"
 
-TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
+#include "TMxpStubClient.h"
+
+
+// Handle 'stacks' of attribute settings:
+void TMxpStubClient::setBold(bool bold)
 {
-    Q_UNUSED(ctx)
-    Q_UNUSED(tag)
-    const QString& version = client.getVersion();
-
-    if (tag->getAttributesCount() > 0) {
-        // Spaces in a quoted arg are unlikely and will not parse
-        client.setStyle(tag->getAttrName(0));
-        // Don't return the version string if a style was set - as the MXP specs seem to
-        // suggest and Cmud implements.
-        return MXP_TAG_HANDLED;
+    if (bold) {
+        boldCtr++;
+    } else if (boldCtr > 0){
+        boldCtr--;
     }
+}
 
-    QString payload = scmVersionString.arg(version);
-    if (!client.getStyle().isNull()) {
-        payload.replace(QStringLiteral(">"), QStringLiteral(" STYLE=%1>").arg(client.getStyle()));
+void TMxpStubClient::setItalic(bool italic)
+{
+    if (italic) {
+        italicCtr++;
+    } else if (italicCtr > 0){
+        italicCtr--;
     }
+}
 
-    client.sendToServer(payload);
+void TMxpStubClient::setUnderline(bool underline)
+{
+    if (underline) {
+        underlineCtr++;
+    } else if (underlineCtr > 0){
+        underlineCtr--;
+    }
+}
 
-    return MXP_TAG_HANDLED;
+void TMxpStubClient::setStrikeOut(bool strikeOut)
+{
+    if (strikeOut) {
+        strikeOutCtr++;
+    } else if (strikeOutCtr > 0){
+        strikeOutCtr--;
+    }
 }

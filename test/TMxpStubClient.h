@@ -1,10 +1,31 @@
-//
-// Created by gustavo on 19/04/2020.
-//
+/***************************************************************************
+ *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// Text Formatting 'Counters', version, style by Michael Weller, michael.weller@t-online.de
+
+
 
 #ifndef MUDLET_TEST_TMXPSTUBCLIENT_H
 #define MUDLET_TEST_TMXPSTUBCLIENT_H
 
+#include <QDebug>
 #include "TMxpContext.h"
 #include "TMxpClient.h"
 
@@ -23,12 +44,12 @@ public:
         return mSupportedElements;
     }
 
-    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
+    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
     {
         return MXP_TAG_HANDLED;
     }
 
-    virtual void handleContent(char ch)
+    virtual void handleContent(char ch) override
     {
 
     }
@@ -46,12 +67,17 @@ public:
 
 class TMxpStubClient : public TMxpClient {
 public:
-    QString version;
+    QString version = "Stub-1.0";
     bool linkMode;
 
     QString sentToServer;
 
     QString fgColor, bgColor;
+
+    // These are also a kind of stack for parameters as fg/bgColours, but here a
+    // simple counter suffices:
+    int boldCtr = 0, italicCtr = 0, underlineCtr = 0, strikeOutCtr = 0;
+    QString mxpStyle;
 
     QStringList mHrefs, mHints;
 
@@ -91,20 +117,18 @@ public:
 
     }
 
-    bool isBold, isItalic, isUnderline;
+    void setBold(bool bold) override;
+    void setItalic(bool italic) override;
+    void setUnderline(bool underline) override;
+    void setStrikeOut(bool strikeOut) override;
 
-    void setBold(bool bold) override
-    {
-        isBold = bold;
-    }
-    void setItalic(bool italic) override
-    {
-        isItalic = italic;
-    }
-    void setUnderline(bool underline) override
-    {
-        isUnderline = underline;
-    }
+    bool isBold() override { return boldCtr > 0; }
+    bool isItalic() override { return italicCtr > 0; }
+    bool isUnderline() override { return underlineCtr > 0; }
+    bool isStrikeOut() override { return strikeOutCtr > 0; }
+
+    void setStyle(const QString& val) override {mxpStyle = val; }
+    const QString &getStyle() override {return mxpStyle;}
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {

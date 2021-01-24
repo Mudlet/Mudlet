@@ -36,11 +36,18 @@ class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
+
+    // These are also a kind of stack for parameters as fg/bgColours, but here a
+    // simple counter suffices:
+    int boldCtr, italicCtr, underlineCtr, strikeOutCtr;
+    QString mxpStyle;
+
 public:
     TMxpMudlet(Host* pHost)
-    : isBold(false)
-    , isItalic(false)
-    , isUnderline(false)
+    : boldCtr(0)
+    , italicCtr(0)
+    , underlineCtr(0)
+    , strikeOutCtr(0)
     , mpHost(pHost)
     , mLinkMode(false)
     {}
@@ -82,9 +89,18 @@ public:
     void playMedia(TMediaData& mediaData) override;
     void stopMedia(TMediaData& mediaData) override;
 
-    void setBold(bool bold) override { isBold = bold; }
-    void setItalic(bool italic) override { isItalic = italic; }
-    void setUnderline(bool underline) override { isUnderline = underline; }
+    void setBold(bool bold) override;
+    void setItalic(bool italic) override;
+    void setUnderline(bool underline) override;
+    void setStrikeOut(bool strikeOut) override;
+
+    bool isBold() override { return boldCtr > 0; }
+    bool isItalic() override { return italicCtr > 0; }
+    bool isUnderline() override { return underlineCtr > 0; }
+    bool isStrikeOut() override { return strikeOutCtr > 0; }
+
+    void setStyle(const QString& val) override {mxpStyle = val; }
+    const QString &getStyle() override {return mxpStyle;}
 
     void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
         Q_UNUSED(elementName)
@@ -113,10 +129,6 @@ public:
 
     // Shouldn't be here, look for a better solution
     QQueue<TMxpEvent> mMxpEvents;
-
-    bool isBold;
-    bool isItalic;
-    bool isUnderline;
 
 private:
     inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
