@@ -136,8 +136,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "=== Creating release in Dblsqd ==="
       dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
-      echo "=== Registering release with Dblsqd ==="
-      dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}" || true
+      # release registration and uploading will be manual for the time being
     else
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
