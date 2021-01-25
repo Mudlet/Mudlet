@@ -1181,11 +1181,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
     if (result.first == 1) {
-        return warnArgumentValue(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
+        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' not found").arg(windowName));
     }
 
     if (result.first == 2) {
-        return warnArgumentValue(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
+        return warnArgumentValue(L, __func__, QStringLiteral("(current selection invalid in window '%1'").arg(windowName));
     }
 
     lua_newtable(L);
@@ -1260,9 +1260,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
     lua_pushstring(L, value.toString().toUtf8().constData());
     return 1;
 #else
-    lua_pushnil(L);
-    lua_pushstring(L, "this function is only needed on Windows, and does not work here");
-    return 2;
+    return warnArgumentValue(L, __func__, QStringLiteral("this function is only needed on Windows, and does not work here"));
 #endif
 }
 
@@ -1376,18 +1374,15 @@ int TLuaInterpreter::getLines(lua_State* L)
     QPair<bool, QStringList> result = host.getLines(windowName, lineFrom, lineTo);
     if (!result.first) {
         // Only one QString in .second - the error message
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.at(0).toUtf8().constData());
-        return 2;
-    } else {
-        lua_newtable(L);
-        for (int i = 0, total = result.second.size(); i < total; ++i) {
-            lua_pushnumber(L, i + 1);
-            lua_pushstring(L, result.second.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, result.second.at(0));
+    } 
+    lua_newtable(L);
+    for (int i = 0, total = result.second.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, result.second.at(i).toUtf8().constData());
+        lua_settable(L, -3);
     }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -1400,9 +1395,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     }
     QString replayFileName{lua_tostring(L, 1)};
     if (replayFileName.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a blank string is not a valid replay file name");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("a blank string is not a valid replay file name"));
     }
 
     Host& host = getHostFromLua(L);
@@ -1411,11 +1404,9 @@ int TLuaInterpreter::loadReplay(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushnil(L);
         // Although we only use English text for Lua messages the errMsg could
         // contain a Windows pathFileName which may use non-ASCII characters:
-        lua_pushfstring(L, "unable to start replay, reason: '%s'", errMsg.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to start replay, reason: '%1'").arg(errMsg));
     }
 }
 
@@ -1429,28 +1420,21 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     }
     QString iconPath{lua_tostring(L, 1)};
     if (iconPath.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a blank string is not a valid icon file location");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("a blank string is not a valid icon file path"));
     }
 
     if (!QFileInfo::exists(iconPath)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "'%s' doesn't exist", iconPath.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("path '%1' doesn't exist").arg(iconPath));
     }
 
     Host& host = getHostFromLua(L);
 
     auto[success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
-    if (success) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
-    }
+    if (!success) {
+        return warnArgumentValue(L, __func__, message);
+    }    
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetProfileIcon
@@ -1459,14 +1443,11 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
     Host& host = getHostFromLua(L);
 
     auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
-    if (success) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+    if (!success) {
+        return warnArgumentValue(L, __func__, message);
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
@@ -1504,8 +1485,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     if (console->setFontSize(size)) {
         lua_pushboolean(L, true);
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(Setting font size of "%s" failed)", windowName.toUtf8().constData());
+        return warnArgumentValue(L, __func__, QStringLiteral("Setting font size of '%1' failed").arg(windowName));
     }
     return 0;
 }
@@ -1745,9 +1725,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        lua_pushnil(L);
-        lua_pushstring(L, "centerview: you haven't opened a map yet");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("you haven't opened a map yet"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -1775,9 +1753,7 @@ int TLuaInterpreter::centerview(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "centerview: bad argument #1 value (%d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (%1 is not a valid room id).").arg(roomId));
     }
 }
 
@@ -1787,16 +1763,12 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        lua_pushnil(L);
-        lua_pushstring(L, "you haven't opened a map yet");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("you haven't opened a map yet"));
     }
 
     auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
     if (roomID == -1) {
-        lua_pushnil(L);
-        lua_pushstring(L, "the player does not have a valid room id set");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the player does not have a valid room id set"));
     }
     lua_pushnumber(L, roomID);
     return 1;
@@ -1880,9 +1852,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.constData());
-                return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data, currentEncoding));
             }
 
             std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
@@ -1894,9 +1864,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // else plain, raw ASCII, we hope!
         for (int i = 0, total = dataQString.size(); i < total; ++i) {
             if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"ASCII\"", data.constData());
-                return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral("font '%1' is not available").arg(data));
             }
         }
 
@@ -2016,9 +1984,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         result = host.getStopWatchTime(watchId);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
         }
 
     } else {
@@ -2026,22 +1992,17 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         // Using an empty string will return the first unnamed stopwatch:
         watchId = host.findStopWatchId(name);
         if (!watchId) {
-            lua_pushnil(L);
             if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral("no unnamed stopwatches found"));
+            } 
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 not found").arg(name));
         }
 
         result = host.getStopWatchTime(watchId);
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with name \"%s\" (id: %d) has disappeared - this should not happen, please report it to Mudlet developers", name.toUtf8().constData(), watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 (id: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
         }
     }
 
@@ -2084,9 +2045,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<int, QString> result = host.createStopWatch(name);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     if (autoStart) {
@@ -2111,27 +2070,21 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         QPair<bool, QString> result = host.stopStopWatch(watchId);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
     } else {
         QString name{lua_tostring(L, 1)};
         QPair<bool, QString> result = host.stopStopWatch(name);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         watchId = host.findStopWatchId(name);
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with name \"%s\" (id: %d) has disappeared - this should not happen, please report it to Mudlet developers", name.toUtf8().constData(), watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 (id: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
         }
     }
 
@@ -2171,9 +2124,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
             result = host.startStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         }
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         lua_pushboolean(L, true);
@@ -2182,9 +2133,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
 
     QPair<bool, QString> result = host.startStopWatch(lua_tostring(L, 1));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -2203,9 +2152,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
     if (lua_type(L, 1) == LUA_TNUMBER) {
         QPair<bool, QString> result = host.resetStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         lua_pushboolean(L, true);
@@ -2214,9 +2161,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 
     QPair<bool, QString> result = host.resetStopWatch(lua_tostring(L, 1));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
