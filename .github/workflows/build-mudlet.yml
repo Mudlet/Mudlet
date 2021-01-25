@@ -69,13 +69,13 @@ jobs:
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v5
+      uses: lukka/run-vcpkg@v6
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-aakey
+        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
     - name: (macOS) Install non-vcpkg dependencies
       if: runner.os == 'macOS'
