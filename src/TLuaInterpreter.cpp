@@ -2185,7 +2185,7 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         if (name.isEmpty()) {
             lua_pushstring(L, "no unnamed stopwatches found");
         } else {
-            lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
+            lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
         return std::make_tuple(false, 0);
     }
@@ -2211,9 +2211,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2237,9 +2235,7 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
     bool result = host.destroyStopWatch(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2267,9 +2263,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
     bool isPersistent = lua_toboolean(L, 2);
     // This is only likely to fail when a numeric first argument was given:
     if (!host.makeStopWatchPersistent(watchId, isPersistent)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2309,9 +2303,7 @@ int TLuaInterpreter::setStopWatchName(lua_State* L)
     }
 
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -2372,9 +2364,7 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
     QPair<bool, QString> result = host.getBrokenDownStopWatchTime(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     const QStringList splitTimeString(result.second.split(QLatin1Char(':')));
@@ -2461,9 +2451,7 @@ int TLuaInterpreter::getSelection(lua_State* L)
     std::tie(valid, text, start, length) = console->getSelection();
 
     if (!valid) {
-        lua_pushnil(L);
-        lua_pushstring(L, text.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, text);
     }
 
     lua_pushstring(L, text.toUtf8().constData());
