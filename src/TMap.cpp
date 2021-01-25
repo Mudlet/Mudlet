@@ -1263,7 +1263,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
         } else {
-            if (pR->mSymbolColor != nullptr) {
+            if (pR->mSymbolColor.isValid()) {
                 pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
             }
         }
