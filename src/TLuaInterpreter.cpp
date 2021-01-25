@@ -271,6 +271,7 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
     }
     return lua_tonumber(L, pos);
 }
+
 // No documentation available in wiki - internal function
 // Raises a Lua error in case of an API usage mistake
 // See also: verifyBoolean, returnWrongArgumentType
@@ -285,11 +286,10 @@ void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functi
     }
 }
 
-
 // No documentation available in wiki - internal function
 // returns nil+msg in case of a data mistake, for example a missing room. Should not raise a Lua error
 // See also: announceWrongArgumentType
-void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
+int TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
 {
     if (Q_LIKELY(!useFalseInsteadofNil)) {
         lua_pushnil(L);
@@ -304,8 +304,9 @@ void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* function
         TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
 #endif
     }
+    return 2;
 }
-void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
+int TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
 {
     if (Q_LIKELY(!useFalseInsteadofNil)) {
         lua_pushnil(L);
@@ -320,6 +321,7 @@ void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* function
         TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
 #endif
     }
+    return 2;
 }
 
 // No documentation available in wiki - internal function
@@ -1179,13 +1181,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
     if (result.first == 1) {
-        returnWrongArgumentType(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
     }
 
     if (result.first == 2) {
-        returnWrongArgumentType(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
     }
 
     lua_newtable(L);
@@ -3215,8 +3215,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
-        returnWrongArgumentType(L, __func__, message);
-        return 2;
+        return returnWrongArgumentType(L, __func__, message);
     }
 }
 
@@ -3238,8 +3237,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString font{lua_tostring(L, s)};
 
     if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        returnWrongArgumentType(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
     }
 
 #if defined(Q_OS_LINUX)
@@ -3254,8 +3252,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         // apply changes to main console and its while-scrolling component too.
         auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
         if (!result.first) {
-            returnWrongArgumentType(L, __func__, result.second);
-            return 2;
+            return returnWrongArgumentType(L, __func__, result.second);
         }
         console->refreshView();
     } else {
@@ -12719,7 +12716,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     }
 
     if (cHostName.isEmpty()) {
-        returnWrongArgumentType(L, __func__, error, true);
+        return returnWrongArgumentType(L, __func__, error, true);
     } else {
         lua_pushboolean(L, true);
         lua_pushstring(L, cHostName.toUtf8().constData());
@@ -17184,8 +17181,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        returnWrongArgumentType(L, __func__, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return returnWrongArgumentType(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     // This may stall if this is accessing the shared user dictionary and that
