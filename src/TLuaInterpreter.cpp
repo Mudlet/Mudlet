@@ -1852,7 +1852,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
-                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData(), currentEncoding));
+                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData(), currentEncoding.constData()));
             }
 
             std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
