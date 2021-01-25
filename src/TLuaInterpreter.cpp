@@ -3686,9 +3686,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return returnWrongArgumentType(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -4340,17 +4338,13 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4364,9 +4358,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (green value needs to be between 0-255, got %d!)").arg(s, g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4376,9 +4368,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (blue value needs to be between 0-255, got %d!)").arg(s, b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4392,18 +4382,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (alpha value needs to be between 0-255, got %d!)").arg(s, alpha));
     }
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(window/label "%s" not found)", windowName.toUtf8().constData());
-        return 2;
+        return returnWrongArgumentType(L, __func__, QStringLiteral("window/label '%s' not found").arg(windowName));        
     }
     lua_pushboolean(L, true);
     return 1;
