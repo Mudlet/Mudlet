@@ -3838,6 +3838,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    alpha = 255;
     if (lua_gettop(L) > s) {
         alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
         if (!validRange(alpha)) {
@@ -3846,7 +3847,6 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
             return 2;
         }
     }
-    alpha = 255;
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
