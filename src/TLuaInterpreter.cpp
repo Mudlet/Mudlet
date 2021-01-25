@@ -1852,7 +1852,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
-                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data, currentEncoding));
+                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData(), currentEncoding));
             }
 
             std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
@@ -1864,7 +1864,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // else plain, raw ASCII, we hope!
         for (int i = 0, total = dataQString.size(); i < total; ++i) {
             if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
-                return warnArgumentValue(L, __func__, QStringLiteral("font '%1' is not available").arg(data));
+                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData()));
             }
         }
 
@@ -1984,7 +1984,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         result = host.getStopWatchTime(watchId);
         if (!result.first) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
         }
 
     } else {
@@ -1995,14 +1995,14 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
             if (name.isEmpty()) {
                 return warnArgumentValue(L, __func__, QStringLiteral("no unnamed stopwatches found"));
             } 
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 not found").arg(name));
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
 
         result = host.getStopWatchTime(watchId);
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 (id: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
         }
     }
 
@@ -2084,7 +2084,7 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name %1 (id: %2) has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1# (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers").arg(name, watchId));
         }
     }
 
@@ -2211,7 +2211,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2235,7 +2235,7 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
     bool result = host.destroyStopWatch(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2263,7 +2263,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
     bool isPersistent = lua_toboolean(L, 2);
     // This is only likely to fail when a numeric first argument was given:
     if (!host.makeStopWatchPersistent(watchId, isPersistent)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %d not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -4268,13 +4268,13 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)").arg(s, r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)").arg(s, r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4288,7 +4288,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (green value needs to be between 0-255, got %d!)").arg(s, g));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (green value needs to be between 0-255, got %2!)").arg(s, g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4298,7 +4298,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (blue value needs to be between 0-255, got %d!)").arg(s, b));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (blue value needs to be between 0-255, got %2!)").arg(s, b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4312,14 +4312,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (alpha value needs to be between 0-255, got %d!)").arg(s, alpha));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (alpha value needs to be between 0-255, got %2!)").arg(s, alpha));
     }
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%s' not found").arg(windowName));        
+        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%1' not found").arg(windowName));        
     }
     lua_pushboolean(L, true);
     return 1;
