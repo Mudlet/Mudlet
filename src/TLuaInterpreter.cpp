@@ -272,7 +272,8 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
     return lua_tonumber(L, pos);
 }
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// Raises a Lua error in case of an API usage mistake
+// See also: verifyBoolean, returnWrongArgumentType
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
@@ -281,6 +282,43 @@ void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functi
     } else {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)",
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
+    }
+}
+
+
+// No documentation available in wiki - internal function
+// returns nil+msg in case of a data mistake, for example a missing room. Should not raise a Lua error
+// See also: announceWrongArgumentType
+void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
+{
+    if (Q_LIKELY(!useFalseInsteadofNil)) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    lua_pushstring(L, message.toUtf8().constData());
+    if (mudlet::debugMode) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColor(Qt::white), QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#endif
+    }
+}
+void TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
+{
+    if (Q_LIKELY(!useFalseInsteadofNil)) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    lua_pushstring(L, message);
+    if (mudlet::debugMode) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColor(Qt::white), QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#endif
     }
 }
 
@@ -1141,14 +1179,12 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
     if (result.first == 1) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        returnWrongArgumentType(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
         return 2;
     }
 
     if (result.first == 2) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "current selection invalid in window \"%s\"", windowName.toUtf8().constData());
+        returnWrongArgumentType(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
         return 2;
     }
 
@@ -3179,11 +3215,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
-        lua_pushnil(L);
-        lua_pushstring(L, message.toUtf8().constData());
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: saveProfile: " << message << "\n" >> 0;
-        }
+        returnWrongArgumentType(L, __func__, message);
         return 2;
     }
 }
@@ -3206,8 +3238,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString font{lua_tostring(L, s)};
 
     if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "font '%s' is not available)", font.toUtf8().constData());
+        returnWrongArgumentType(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
         return 2;
     }
 
@@ -3223,8 +3254,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         // apply changes to main console and its while-scrolling component too.
         auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
         if (!result.first) {
-            lua_pushboolean(L, false);
-            lua_pushstring(L, result.second.toUtf8().constData());
+            returnWrongArgumentType(L, __func__, result.second);
             return 2;
         }
         console->refreshView();
@@ -12703,8 +12733,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     }
 
     if (cHostName.isEmpty()) {
-        lua_pushboolean(L, false);
-        lua_pushstring(L, error.toUtf8().constData());
+        returnWrongArgumentType(L, __func__, error, true);
     } else {
         lua_pushboolean(L, true);
         lua_pushstring(L, cHostName.toUtf8().constData());
@@ -17169,8 +17198,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+        returnWrongArgumentType(L, __func__, "no user dictionary enabled in the preferences for this profile");
         return 2;
     }
 
