@@ -2208,7 +2208,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         infoText = QStringLiteral("%1 (%3)\n").arg(
                         !_prid->name.isEmpty() ? QStringLiteral("%1/%2").arg(_prid->name,
-                        QString::number(_prid->getId())),
+                        QString::number(_prid->getId())) : QString::number(_prid->getId()),
                         !areaName.isEmpty() ? areaName : QString::number(areaId));
     }
 #ifdef QT_DEBUG
