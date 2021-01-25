@@ -208,11 +208,11 @@ TLuaInterpreter::~TLuaInterpreter()
 //
 // The "isOptional" parameter is optional, and will default to not-optional parameters! :)
 //
-// See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, announceWrongArgumentType
+// See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, errorArgumentType
 bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isboolean(L, pos)) {
-        announceWrongArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
+        errorArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return false;
@@ -221,11 +221,11 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: verifyBool
 QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
-        announceWrongArgumentType(L, functionName, pos, publicName, "string", isOptional);
+        errorArgumentType(L, functionName, pos, publicName, "string", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return QString();
@@ -234,11 +234,11 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: verifyBool
 int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
-        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return -1;
@@ -247,11 +247,11 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: verifyBool
 float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
-        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return 0;
@@ -260,11 +260,11 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// See also: verifyBool
 double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
-        announceWrongArgumentType(L, functionName, pos, publicName, "number", isOptional);
+        errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
         return 0;
@@ -272,8 +272,8 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
     return lua_tonumber(L, pos);
 }
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
-void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
+// See also: verifyBool
+void TLuaInterpreter::errorArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s is optional, got %s!)",
