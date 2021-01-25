@@ -274,7 +274,7 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
 
 // No documentation available in wiki - internal function
 // Raises a Lua error in case of an API usage mistake
-// See also: verifyBoolean, returnWrongArgumentType
+// See also: verifyBoolean, warnArgumentValue
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
@@ -289,7 +289,7 @@ void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functi
 // No documentation available in wiki - internal function
 // returns nil+msg in case of a data mistake, for example a missing room. Should not raise a Lua error
 // See also: announceWrongArgumentType
-int TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
+int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
 {
     if (Q_LIKELY(!useFalseInsteadofNil)) {
         lua_pushnil(L);
@@ -306,7 +306,7 @@ int TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionN
     }
     return 2;
 }
-int TLuaInterpreter::returnWrongArgumentType(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
+int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
 {
     if (Q_LIKELY(!useFalseInsteadofNil)) {
         lua_pushnil(L);
@@ -1181,11 +1181,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
     if (result.first == 1) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
+        return warnArgumentValue(L, __func__, QStringLiteral(R"(window "%1" not found)").arg(windowName));
     }
 
     if (result.first == 2) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
+        return warnArgumentValue(L, __func__, QStringLiteral(R"(current selection invalid in window "%1")").arg(windowName));
     }
 
     lua_newtable(L);
@@ -3215,7 +3215,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         return 2;
     } else {
         auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
-        return returnWrongArgumentType(L, __func__, message);
+        return warnArgumentValue(L, __func__, message);
     }
 }
 
@@ -3237,7 +3237,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString font{lua_tostring(L, s)};
 
     if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
+        return warnArgumentValue(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
     }
 
 #if defined(Q_OS_LINUX)
@@ -3252,7 +3252,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         // apply changes to main console and its while-scrolling component too.
         auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
         if (!result.first) {
-            return returnWrongArgumentType(L, __func__, result.second);
+            return warnArgumentValue(L, __func__, result.second);
         }
         console->refreshView();
     } else {
@@ -3683,7 +3683,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        return returnWrongArgumentType(L, __func__, message, true);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -4335,13 +4335,13 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (red value needs to be between 0-255, got %d!)").arg(s, r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4355,7 +4355,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (green value needs to be between 0-255, got %d!)").arg(s, g));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (green value needs to be between 0-255, got %d!)").arg(s, g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4365,7 +4365,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (blue value needs to be between 0-255, got %d!)").arg(s, b));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (blue value needs to be between 0-255, got %d!)").arg(s, b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4379,14 +4379,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral("bad argument #%d value (alpha value needs to be between 0-255, got %d!)").arg(s, alpha));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%d value (alpha value needs to be between 0-255, got %d!)").arg(s, alpha));
     }
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        return returnWrongArgumentType(L, __func__, QStringLiteral("window/label '%s' not found").arg(windowName));        
+        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%s' not found").arg(windowName));        
     }
     lua_pushboolean(L, true);
     return 1;
@@ -12716,7 +12716,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     }
 
     if (cHostName.isEmpty()) {
-        return returnWrongArgumentType(L, __func__, error, true);
+        return warnArgumentValue(L, __func__, error, true);
     } else {
         lua_pushboolean(L, true);
         lua_pushstring(L, cHostName.toUtf8().constData());
@@ -17181,7 +17181,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        return returnWrongArgumentType(L, __func__, "no user dictionary enabled in the preferences for this profile");
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     // This may stall if this is accessing the shared user dictionary and that
