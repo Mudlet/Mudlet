@@ -43,6 +43,7 @@ class TimerUnit
 
 public:
     TimerUnit(Host* pHost) : statsActiveTriggers(0), statsTriggerTotal(0), statsTempTriggers(0), mpHost(pHost), mMaxID(0), mModuleMember() {}
+    ~TimerUnit();
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
     TTimer* getTimer(int id);
