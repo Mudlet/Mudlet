@@ -1266,7 +1266,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
         } else {
-            if (pR->mSymbolColor != nullptr) {
+            if (pR->mSymbolColor.isValid()) {
                 pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
             }
         }
@@ -2708,7 +2708,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QJsonObject mapObj;
     // Use this to track any changes. in a major.minor number format, minor
     // is to be three digits long.
-    mapObj.insert(FORMAT_VERSION, static_cast<double>(0.002));
+    // 0.002 was the first published draft
+    // 0.003 changed the format to encapsulte the room symbol text and also
+    // include the room symbol color that was added during the development.
+    mapObj.insert(FORMAT_VERSION, static_cast<double>(0.003));
 
     writeJsonUserData(mapObj);
 
@@ -2880,10 +2883,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     double formatVersion = 0.0f;
     if (mapObj.contains(FORMAT_VERSION) && mapObj[FORMAT_VERSION].isDouble()) {
         formatVersion = mapObj[FORMAT_VERSION].toDouble();
-        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 0.002 || formatVersion > 0.002) {
-            // We only handle 0.002f right now (0.001f was borked):
+        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 0.0030 || formatVersion > 0.0030) {
+            // We only handle 0.003f right now (0.001f was borked, 0.002f
+            // didn't include room symbol color):
             qDebug() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
-            return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 4)};
+            return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))};
         }
     } else {
         qDebug() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";

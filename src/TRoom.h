@@ -184,6 +184,8 @@ private:
     void readJsonUserData(const QJsonObject&);
     void readJsonDoor(const QJsonObject&, const QString&);
     void readJsonHighlight(const QJsonObject&);
+    void readJsonSymbol(const QJsonObject&);
+
     void writeJsonColor(QJsonObject&, const QColor&) const;
     void writeJsonExits(QJsonObject&) const;
     void writeJsonExitStubs(QJsonObject&) const;
@@ -193,6 +195,8 @@ private:
     void writeJsonUserData(QJsonObject&) const;
     void writeJsonDoor(QJsonObject&, const QString&) const;
     void writeJsonHighlight(QJsonObject&) const;
+    void writeJsonSymbol(QJsonObject&) const;
+
 
     int id = 0;
     int area = -1;

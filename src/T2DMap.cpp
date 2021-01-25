@@ -771,7 +771,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
         QColor symbolColor;
-        if (pRoom->mSymbolColor != nullptr) {
+        if (pRoom->mSymbolColor.isValid()) {
             symbolColor = pRoom->mSymbolColor;
         } else if (roomColor.lightness() > 127) {
             symbolColor = Qt::black;

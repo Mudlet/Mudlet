@@ -1776,8 +1776,7 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
     }
 
     if (!mSymbol.isEmpty()) {
-        const QJsonValue symbolValue{mSymbol};
-        roomObj.insert(SYMBOL, symbolValue);
+        writeJsonSymbol(roomObj);
     }
 
     roomObj.insert(ENVIRONMENT, static_cast<double>(environment));
@@ -2437,4 +2436,29 @@ void TRoom::readJsonHighlight(const QJsonObject& highlightObj)
     }
 
     highlightRadius = highlightObj.value(RADIUS).toDouble();
+}
+
+void TRoom::writeJsonSymbol(QJsonObject& roomObj) const
+{
+    if (mSymbol.isEmpty()) {
+        return;
+    }
+
+    QJsonObject symbolObj;
+    const QJsonValue symbolText{mSymbol};
+    symbolObj.insert(QStringLiteral("text"), symbolText);
+    if (mSymbolColor.isValid()) {
+        QJsonObject symbolColorObj;
+        writeJsonColor(symbolColorObj, mSymbolColor);
+        const QJsonValue symbolColorValue{symbolColorObj};
+        symbolObj.insert(QStringLiteral("color"), symbolColorValue);
+    }
+
+    const QJsonValue symbolValue{symbolObj};
+    roomObj.insert(SYMBOL, symbolValue);
+}
+
+void TRoom::readJsonSymbol(const QJsonObject& roomObj)
+{
+    Q_UNUSED(roomObj);
 }
