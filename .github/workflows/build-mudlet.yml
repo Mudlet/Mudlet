@@ -69,7 +69,7 @@ jobs:
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
-      uses: lukka/run-vcpkg@v5
+      uses: lukka/run-vcpkg@v6
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
@@ -86,7 +86,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks
+        brew install pkg-config libzzip libzip ccache luarocks expect
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -113,7 +113,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
         # multiple versions of GCC available in Actions - update to latest
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
@@ -179,7 +179,7 @@ jobs:
       uses: pat-s/always-upload-cache@v2.1.3
       with:
         path: ${{runner.workspace}}/ccache
-        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+        key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
       if: matrix.os != 'windows-latest'
 
@@ -251,12 +251,38 @@ jobs:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 -y
         fi
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
+
+    # - name: Setup tmate session for debugging
+    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+    #   uses: mxschmitt/action-tmate@v3
+    #   env:
+    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+    #     RUNNER_OS: ${{runner.os}}
+    #     DEPLOY: ${{matrix.deploy}}
+    #     DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+    #     DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+    #     DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+
+
+    - name: (Linux/macOS) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: |
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2

@@ -404,12 +404,6 @@ void TTextEdit::scrollDown(int lines)
     }
 }
 
-inline void TTextEdit::drawBackground(QPainter& painter, const QRect& rect, const QColor& bgColor) const
-{
-    QRect bR = rect;
-    painter.fillRect(bR.x(), bR.y(), bR.width(), bR.height(), bgColor);
-}
-
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
 // Unicode codepoint (needs around 21 bits, can be contained in a
@@ -448,8 +442,20 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     if (mShowTimeStamps) {
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
+        QVector<QColor> fgColors;
+        QVector<QRect> textRects;
+        QVector<int> charWidths;
+        QVector<QString> graphemes;
         for (const QChar c : timestamp) {
-            cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
+            // The column argument is not incremented here (is fixed at 0) so
+            // the timestamp does not take up any places when it is clicked on
+            // by the mouse...
+            cursor.setX(cursor.x() + drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, c, 0, timeStampStyle));
+        }
+        int index = -1;
+        for (const QChar c : timestamp) {
+            ++index;
+            drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), c, timeStampStyle);
         }
         currentSize += mTimeStampWidth;
     }
@@ -460,27 +466,32 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen, in
     }
 
     int columnWithOutTimestamp = 0;
+    QVector<QColor> fgColors;
+    QVector<QRect> textRects;
+    QVector<int> charWidths;
+    QVector<QString> graphemes;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
         int nextBoundary = boundaryFinder.toNextBoundary();
 
         TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        int graphemeWidth = drawGrapheme(painter, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
+        int graphemeWidth = drawGraphemeBackground(painter, fgColors, textRects, graphemes, charWidths, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
         columnWithOutTimestamp += graphemeWidth;
     }
+    boundaryFinder.toStart();
+    int index = -1;
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
+        int nextBoundary = boundaryFinder.toNextBoundary();
+
+        TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
+        ++index;
+        drawGraphemeForeground(painter, fgColors.at(index), textRects.at(index), graphemes.at(index), charStyle);
+        indexOfChar = nextBoundary;
+    }
 }
 
-/**
- * @brief TTextEdit::drawGrapheme
- * @param painter
- * @param cursor
- * @param grapheme
- * @param column Used to calculate the width of Tab
- * @param charStyle
- * @return Return the display width of the grapheme
- */
-int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
+int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColors, QVector<QRect>& textRects, QVector<QString>& graphemes, QVector<int>& charWidths, QPoint& cursor, const QString& grapheme, const int column, TChar& charStyle) const
 {
     static const QString replacementCharacter{QChar::ReplacementCharacter};
     uint unicode = getGraphemeBaseCharacter(grapheme);
@@ -488,15 +499,36 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     bool useReplacementCharacter = false;
     if (unicode == '\t') {
         charWidth = mTabStopwidth - (column % mTabStopwidth);
+        graphemes.append(QString(QChar::Tabulation));
     } else {
         charWidth = getGraphemeWidth(unicode);
         if (!charWidth) {
             // Print the grapheme replacement character instead - which seems to
             // be 1 wide
             useReplacementCharacter = true;
+            charWidth = 1;
         }
+        graphemes.append(useReplacementCharacter ? replacementCharacter : grapheme);
     }
+    charWidths.append(charWidth);
 
+    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    textRects.append(textRect);
+    QColor bgColor;
+    if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected())) {
+        fgColors.append(charStyle.background());
+        bgColor = charStyle.foreground();
+    } else {
+        fgColors.append(charStyle.foreground());
+        bgColor = charStyle.background();
+    }
+    painter.fillRect(textRect, bgColor);
+    return charWidth;
+}
+
+void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
+{
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isItalics = attributes & TChar::Italic;
@@ -518,25 +550,10 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         painter.setFont(font);
     }
 
-    QColor bgColor;
-    QColor fgColor;
-    if (static_cast<bool>(attributes & TChar::Reverse) != charStyle.isSelected()) {
-        fgColor = charStyle.background();
-        bgColor = charStyle.foreground();
-    } else {
-        fgColor = charStyle.foreground();
-        bgColor = charStyle.background();
-    }
-
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * (useReplacementCharacter ? 1 : charWidth), mFontHeight);
-    drawBackground(painter, textRect, bgColor);
-
     if (painter.pen().color() != fgColor) {
         painter.setPen(fgColor);
     }
-
-    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, (useReplacementCharacter ? replacementCharacter : grapheme));
-    return (useReplacementCharacter ? 1 : charWidth);
+    painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const
@@ -721,7 +738,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
     QRect deleteRect = QRect(0, from * mFontHeight, x2 * mFontHeight, (y2 + 1) * mFontHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    drawBackground(p, deleteRect, Qt::transparent);
+    p.fillRect(deleteRect, Qt::transparent);
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
     for (int i = from; i <= y2; ++i) {

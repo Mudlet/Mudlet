@@ -21,3 +21,6 @@ CMakeLists.txt.user
 #CLion
 .idea
 cmake-build-debug
+
+#VS Code
+.vscode/*.code-workspace
