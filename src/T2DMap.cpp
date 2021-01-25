@@ -2206,10 +2206,10 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     if (_prid) {
         int areaId = _prid->getArea();
         QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        infoText = QStringLiteral("%1/%2 (%3)\n").arg(
-                        !_prid->name.isEmpty() ? _prid->name : tr("(no room name)", "This text will be shown in the mapper when a room doesn't have any name set on it"),
-                        QString::number(_prid->getId()),
-                        !areaName.isEmpty() ? areaName : tr("no area name"));
+        infoText = QStringLiteral("%1 (%3)\n").arg(
+                        !_prid->name.isEmpty() ? QStringLiteral("%1/%2").arg(_prid->name,
+                        QString::number(_prid->getId())),
+                        !areaName.isEmpty() ? areaName : QString::number(areaId));
     }
 #ifdef QT_DEBUG
     infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
