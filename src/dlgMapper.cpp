@@ -72,8 +72,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     bubbles->setChecked(mpHost->mBubbleMode);
     mp2dMap->mBubbleMode = mpHost->mBubbleMode;
-    viewOnly->setChecked(mpHost->mMapViewOnly);
-    mp2dMap->mMapViewOnly = mpHost->mMapViewOnly;
     d3buttons->setVisible(false);
     roomSize->setValue(mpHost->mRoomSize * 10);
     lineSize->setValue(mpHost->mLineSize);
@@ -88,7 +86,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    connect(viewOnly, &QAbstractButton::clicked, this, &dlgMapper::slot_viewOnly);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
     connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
@@ -279,13 +276,6 @@ void dlgMapper::slot_bubbles()
 {
     mp2dMap->mBubbleMode = bubbles->isChecked();
     mp2dMap->mpHost->mBubbleMode = mp2dMap->mBubbleMode;
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_viewOnly()
-{
-    mp2dMap->mMapViewOnly = viewOnly->isChecked();
-    mp2dMap->mpHost->mMapViewOnly = mp2dMap->mMapViewOnly;
     mp2dMap->update();
 }
 

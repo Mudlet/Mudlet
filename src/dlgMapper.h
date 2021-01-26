@@ -55,7 +55,6 @@ public:
 
 public slots:
     void slot_bubbles();
-    void slot_viewOnly();
     void slot_info();
     void slot_toggleShowRoomIDs(int s);
     void slot_toggleShowRoomNames(int s);

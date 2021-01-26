@@ -163,7 +163,6 @@ public:
     static int setExitWeight(lua_State*);
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
-    static int changeMapperSettings(lua_State* L);
     static int setMapZoom(lua_State* L);
     static int createMapImageLabel(lua_State*);
     static int installPackage(lua_State*);
