@@ -1375,7 +1375,7 @@ int TLuaInterpreter::getLines(lua_State* L)
     if (!result.first) {
         // Only one QString in .second - the error message
         return warnArgumentValue(L, __func__, result.second.at(0));
-    } 
+    }
     lua_newtable(L);
     for (int i = 0, total = result.second.size(); i < total; ++i) {
         lua_pushnumber(L, i + 1);
@@ -1432,7 +1432,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     auto[success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
-    }    
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1994,7 +1994,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         if (!watchId) {
             if (name.isEmpty()) {
                 return warnArgumentValue(L, __func__, QStringLiteral("no unnamed stopwatches found"));
-            } 
+            }
             return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
 
@@ -2757,7 +2757,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
-    } 
+    }
     QList<int> stubs = pR->exitStubs;
     if (stubs.empty()) {
         return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
@@ -3077,7 +3077,7 @@ int TLuaInterpreter::remainingTime(lua_State* L)
         if (timerName.isNull()) {
             // timerName was never set so we must have used the number
             return warnArgumentValue(L, __func__, QStringLiteral("timer id %1 not found").arg(timerId));
-        } 
+        }
         return warnArgumentValue(L, __func__, QStringLiteral("timer named '%1' not found").arg(timerName));
     }
 
@@ -4272,7 +4272,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%1' not found").arg(windowName));        
+        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4415,12 +4415,12 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     if (mode < 1 || mode > 4) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'".arg(mode));
+            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'".arg(mode)));
     }
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("console or label '%1' not found").arg(windowName);
+        return warnArgumentValue(L, __func__, QStringLiteral("console or label '%1' not found").arg(windowName));
     }
 
     lua_pushboolean(L, true);
@@ -4460,12 +4460,13 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (image location cannot be an empty string)"));
     }
 
-    if (auto size = mudlet::self()->getImageSize(imageLocation)) {
-        lua_pushnumber(L, size->width());
-        lua_pushnumber(L, size->height());
-        return 2;
-    } 
-    return warnArgumentValue(L, __func__, QStringLiteral("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
+    auto size = mudlet::self()->getImageSize(imageLocation);
+    if (!size) {
+        return warnArgumentValue(L, __func__, QStringLiteral("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
+    }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCmdLineAction
