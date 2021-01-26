@@ -5283,7 +5283,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
     lua_newtable(L);
     QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
