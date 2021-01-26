@@ -2002,7 +2002,9 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers").arg(name).arg(watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "stopwatch with name '%1' (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers")
+                .arg(name, QString::number(watchId)));
         }
     }
 
@@ -2084,7 +2086,9 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1# (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers").arg(name).arg(watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "stopwatch with name '%1# (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers")
+                .arg(name, QString::number(watchId));
         }
     }
 
@@ -3594,9 +3598,7 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->deleteLabel(labelName); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3623,9 +3625,7 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -4230,13 +4230,15 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)").arg(s).arg(r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)")
+                .arg(QString::number(s), QString::number(r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)").arg(s).arg(r));
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)")
+                .arg(QString::number(s), QString::number(r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4250,7 +4252,8 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (green value needs to be between 0-255, got %2!)").arg(s).arg(g));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (green value needs to be between 0-255, got %2!)")
+            .arg(QString::number(s), QString::number(g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4260,7 +4263,8 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (blue value needs to be between 0-255, got %2!)").arg(s).arg(b));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (blue value needs to be between 0-255, got %2!)")
+            .arg(QString::number(s), QString::number(b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4274,7 +4278,8 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (alpha value needs to be between 0-255, got %2!)").arg(s).arg(alpha));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (alpha value needs to be between 0-255, got %2!)")
+            .arg(QString::number(s), QString::number(alpha));
     }
 
     if (isMain(windowName)) {
@@ -6369,7 +6374,7 @@ int TLuaInterpreter::debug(lua_State* L)
     QString luaDebugText;
     if (n > 1) {
         for (int i = 0; i < n; ++i) {
-            luaDebugText += QStringLiteral(" (%1) %2").arg(QString::number(i + 1)).arg(lua_tostring(L, i + 1));
+            luaDebugText += QStringLiteral(" (%1) %2").arg(QString::number(i + 1), lua_tostring(L, i + 1));
         }
     } else {
         // n == 1
