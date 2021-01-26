@@ -1662,8 +1662,7 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
         QStringList result;
         std::transform(textLines.begin(), textLines.end(), timestamps.begin(), std::back_inserter(result),
-                       [](QString text, QString timestamp) { return timestamp.append(text); }
-        );
+                       [](QString text, QString timestamp) { return timestamp.append(text); } );
         textLines = result;
     }
 
