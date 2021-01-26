@@ -3557,14 +3557,14 @@ void T2DMap::slot_showSymbolSelection()
         }
     }
 
-    if (isAtLeastOneRoom && !mDlgRoomSymbol) {
-        mDlgRoomSymbol = new dlgRoomSymbol(mpHost, this);
-        mDlgRoomSymbol->init(usedSymbols, roomPtrsSet);
-        mDlgRoomSymbol->show();
-        mDlgRoomSymbol->raise();
-        connect(mDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
-        connect(mDlgRoomSymbol, &QDialog::finished, this, [=]() {
-            mDlgRoomSymbol = nullptr;
+    if (isAtLeastOneRoom && !mpDlgRoomSymbol) {
+        mpDlgRoomSymbol = new dlgRoomSymbol(mpHost, this);
+        mpDlgRoomSymbol->init(usedSymbols, roomPtrsSet);
+        mpDlgRoomSymbol->show();
+        mpDlgRoomSymbol->raise();
+        connect(mpDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mpDlgRoomSymbol, &QDialog::finished, this, [=]() {
+            mpDlgRoomSymbol = nullptr;
         });
     }
 }
