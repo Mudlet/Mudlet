@@ -4415,7 +4415,8 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
 
     if (mode < 1 || mode > 4) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'".arg(mode)));
+            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'"
+            .arg(QString::number(mode))));
     }
 
     Host* host = &getHostFromLua(L);
