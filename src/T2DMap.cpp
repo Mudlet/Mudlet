@@ -694,51 +694,48 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    if (shouldDrawBorder && !mBubbleMode) {
-        painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
+    bool isRoomSelected = ((mPick || picked) && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+    selectionBg.setColorAt(0.25, roomColor);
+    selectionBg.setColorAt(1, Qt::blue);
+
+    QPen roomPen(Qt::transparent);
+    roomPen.setWidth(borderWidth);
+    painter.setBrush(roomColor);
+
+    if (shouldDrawBorder) {
+        roomPen.setColor(mpHost->mRoomBorderColor);
     }
+
+    if (isRoomSelected) {
+        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+        selectionBg.setColorAt(0.2, roomColor);
+        selectionBg.setColorAt(1, Qt::blue);
+        roomPen.setColor(QColor(255, 50, 50));
+        painter.setBrush(selectionBg);
+    }
+
+    painter.setPen(roomPen);
 
     if (mBubbleMode) {
         float roomRadius = 0.5 * rSize * mRoomWidth;
         QPointF roomCenter = QPointF(rx, ry);
-        // CHECK: The use of a gradient fill to a white center on round
-        // rooms might look nice in some sitations but not in all:
-        QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85, roomColor);
-        gradient.setColorAt(0, Qt::white);
-        QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
-        borderPen.setWidth(borderWidth);
+        if (!isRoomSelected) {
+            // CHECK: The use of a gradient fill to a white center on round
+            // rooms might look nice in some sitations but not in all:
+            QRadialGradient gradient(roomCenter, roomRadius);
+            gradient.setColorAt(0.85, roomColor);
+            gradient.setColorAt(0, Qt::white);
+            painter.setBrush(gradient);
+        }
         QPainterPath diameterPath;
-        painter.setBrush(gradient);
-        painter.setPen(borderPen);
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
     } else {
-        painter.fillRect(roomRectangle, roomColor);
+        painter.drawRect(roomRectangle);
     }
 
-    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
-    || mMultiSelectionSet.contains(currentRoomId)) {
-        auto selectionPen = QPen(QColor(255, 50, 50, 125));
-        selectionPen.setWidth(borderWidth);
-        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
-        selectionBg.setColorAt(0.25, Qt::transparent);
-        selectionBg.setColorAt(1, Qt::blue);
-        if (!mBubbleMode) {        
-            auto selectionRectangle = roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth);
-            painter.fillRect(selectionRectangle, selectionBg);
-            painter.setPen(selectionPen);
-            painter.drawRect(selectionRectangle);
-        } else {
-            float roomRadius = 0.5 * rSize * mRoomWidth;
-            QPointF roomCenter = QPointF(rx, ry);
-            QPainterPath diameterPath;
-            painter.setPen(selectionPen);
-            painter.setBrush(selectionBg);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        }
-
+    if (isRoomSelected) {
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
