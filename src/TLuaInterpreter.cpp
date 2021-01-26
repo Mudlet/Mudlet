@@ -2720,25 +2720,19 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getExitStubs: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        QList<int> stubs = pR->exitStubs;
-        if (!stubs.empty()) {
-            lua_newtable(L);
-            for (int i = 0, total = stubs.size(); i < total; ++i) {
-                lua_pushnumber(L, i);
-                lua_pushnumber(L, stubs.at(i));
-                lua_settable(L, -3);
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getExitStubs: no stubs in this room with id %d.", roomId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    QList<int> stubs = pR->exitStubs;
+    if (stubs.empty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
+    }
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i);
+        lua_pushnumber(L, stubs.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubs1
@@ -2746,9 +2740,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getExitStubs1: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -2760,25 +2752,19 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getExitStubs1: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        QList<int> stubs = pR->exitStubs;
-        if (!stubs.empty()) {
-            lua_newtable(L);
-            for (int i = 0, total = stubs.size(); i < total; ++i) {
-                lua_pushnumber(L, i + 1);
-                lua_pushnumber(L, stubs.at(i));
-                lua_settable(L, -3);
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getExitStubs1: no stubs in this room with id %d.", roomId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+    } 
+    QList<int> stubs = pR->exitStubs;
+    if (!stubs.empty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
     }
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushnumber(L, stubs.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModulePath
@@ -2827,13 +2813,10 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
     int modulePriority = lua_tonumber(L, 2);
 
     Host& host = getHostFromLua(L);
-    if (host.mInstalledModules.contains(moduleName)) {
-        host.mModulePriorities[moduleName] = modulePriority;
-    } else {
-        lua_pushnil(L);
-        lua_pushstring(L, "module doesn't exist");
-        return 2;
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("module doesn't exist"));
     }
+    host.mModulePriorities[moduleName] = modulePriority;
     return 0;
 }
 
@@ -3010,9 +2993,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
         }
     }
     if (cnt == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("script '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -3038,9 +3019,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
         }
     }
     if (cnt == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("script '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -3087,20 +3066,15 @@ int TLuaInterpreter::remainingTime(lua_State* L)
     }
 
     if (result == -1) {
-        lua_pushnil(L);
-        lua_pushstring(L, "timer is inactive or expired");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("timer is inactive or expired"));
     }
 
     if (result == -2) {
-        lua_pushnil(L);
         if (timerName.isNull()) {
             // timerName was never set so we must have used the number
-            lua_pushfstring(L, "timer id %d not found", timerId);
-        } else {
-            lua_pushfstring(L, "timer named \"%s\" not found", timerName.toUtf8().constData());
-        }
-        return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("timer id %1 not found").arg(timerId));
+        } 
+        return warnArgumentValue(L, __func__, QStringLiteral("timer named '%1' not found").arg(timerName));
     }
 
     lua_pushnumber(L, result / 1000.0);
@@ -3226,9 +3200,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     size = lua_tointeger(L, s);
     if (size <= 0) {
         // just throw an error, no default needed.
-        lua_pushnil(L);
-        lua_pushstring(L, "size cannot be 0 or negative");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("size cannot be 0 or negative"));
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3302,9 +3274,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     //Don't create Userwindow if there is a Label with the same name already. It breaks the UserWindow
 
     if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3330,9 +3300,7 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->setUserWindowTitle(name, title); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3353,9 +3321,7 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.setMapperTitle(title); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3460,9 +3426,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -3550,9 +3514,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
