@@ -260,7 +260,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
-    dlgRoomSymbol* mDlgRoomSymbol;
+    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
 
 private slots:
     void slot_createRoom();
