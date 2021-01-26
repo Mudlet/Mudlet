@@ -4414,12 +4414,13 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     }
 
     if (mode < 1 || mode > 4) {
-        return warnArgumentValue(L, __func__, "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'".arg(mode));
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'".arg(mode));
     }
 
     Host* host = &getHostFromLua(L);
     if (!host->setBackgroundImage(windowName, imgPath, mode)) {
-        return warnArgumentValue(L, __func__, "console or label '%1' not found").arg(windowName);
+        return warnArgumentValue(L, __func__, QStringLiteral("console or label '%1' not found").arg(windowName);
     }
 
     lua_pushboolean(L, true);
