@@ -2939,7 +2939,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             QString viewModeItem = mMapViewOnly
               ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
               : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
-            connect(new QAction(viewModeItem, this), &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
+            auto setMapViewOnly = new QAction(viewModeItem, this);
+            connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
             popup->addAction(setMapViewOnly);
 
             mPopupMenu = true;
