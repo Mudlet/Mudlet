@@ -345,7 +345,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mRoomSize(0.5)
 , mShowInfo(true)
 , mBubbleMode(false)
-, mMapViewOnly(false)
+, mMapViewOnly(true)
 , mShowRoomID(false)
 , mShowPanel(true)
 , mServerGUI_Package_version(QLatin1String("-1"))

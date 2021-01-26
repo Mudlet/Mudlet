@@ -120,8 +120,8 @@ T2DMap::T2DMap(QWidget* parent)
 , mCurrentLineColor(Qt::red)
 , mCurrentLineArrow(true)
 , mBubbleMode()
-, mMapViewOnly(false)
 , mMapperUseAntiAlias(true)
+, mMapViewOnly(true)
 , mLabelHighlighted(false)
 , mMoveLabel()
 , mCustomLineSelectedRoom()
@@ -2932,10 +2932,18 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 setPlayerLocation->setEnabled(false);
                 setPlayerLocation->setToolTip(tr("Can only set location when exactly one room is selected", "2D Mapper context menu (room) item tooltip (disabled state)"));
             }
+            popup->addAction(setPlayerLocation);
+
+            popup->addSeparator();
+
+            QString viewModeItem = mMapViewOnly
+              ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
+              : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
+            connect(new QAction(viewModeItem, this), &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
+            popup->addAction(setMapViewOnly);
 
             mPopupMenu = true;
 
-            popup->addAction(setPlayerLocation);
             popup->popup(mapToGlobal(event->pos()));
 
         } else if (mLabelHighlighted) {
@@ -3400,6 +3408,14 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
         update();
+    }
+}
+
+void T2DMap::slot_toggleMapViewOnly()
+{
+    if (mpHost) {
+        mMapViewOnly = !mMapViewOnly;
+        mpHost->mMapViewOnly = mMapViewOnly;
     }
 }
 
@@ -4533,29 +4549,6 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     }
 
     e->ignore();
-}
-
-void T2DMap::changeMapperSettings(int roomSize, int lineSize, bool round, bool info, bool ids, bool viewOnly, bool showPanel)
-{
-  if (mpHost) {
-    this->mBubbleMode = round;
-    mpHost->mBubbleMode = this->mBubbleMode;
-    this->mShowInfo = info;
-    mpHost->mShowInfo = this->mShowInfo;
-    this->mShowRoomID = ids;
-    mpHost->mShowRoomID = this->mShowRoomID;
-    mpHost->mShowPanel = showPanel;
-    this->setMapViewOnly(viewOnly);
-    this->setExitSize(lineSize);
-    this->setRoomSize((float)roomSize / 10.0);
-  }
-}
-
-void T2DMap::setMapViewOnly(bool viewOnly)
-{
-    if (mpHost) {
-        mpHost->mMapViewOnly = viewOnly;
-    }
 }
 
 void T2DMap::setMapZoom(qreal zoom)

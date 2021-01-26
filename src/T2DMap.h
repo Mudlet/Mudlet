@@ -65,7 +65,6 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
-    void changeMapperSettings(int roomSize, int lineSize, bool round, bool info, bool ids, bool viewOnly, bool showPanel);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
@@ -178,6 +177,7 @@ public slots:
     void slot_deleteLabel();
     void slot_editLabel();
     void slot_setPlayerLocation();
+    void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
     void shiftZup();
