@@ -1930,46 +1930,6 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
         int areasWithLabelsTotal = 0;
         ifs >> areasWithLabelsTotal;
-        int currentAreaWithLabelsCount = 0;
-        while (!ifs.atEnd() && currentAreaWithLabelsCount < areasWithLabelsTotal) {
-            int areaID = -1;
-            int areaLabelsTotal = 0;
-            ifs >> areaLabelsTotal;
-            ifs >> areaID;
-            int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                int labelID = -1;
-                ifs >> labelID;
-                TMapLabel label;
-                if (otherProfileVersion >= 12) {
-                    ifs >> label.pos;
-                } else {
-                    QPointF labelPos2D;
-                    ifs >> labelPos2D;
-                    label.pos = QVector3D(labelPos2D);
-                }
-                // There was an unused QPointF in all versions
-                QPointF dummyPointF;
-                ifs >> dummyPointF;
-                Q_UNUSED(dummyPointF)
-                ifs >> label.size;
-                ifs >> label.text;
-                ifs >> label.fgColor;
-                ifs >> label.bgColor;
-                ifs >> label.pix;
-                if (otherProfileVersion >= 15) {
-                    ifs >> label.noScaling;
-                    ifs >> label.showOnTop;
-                }
-                ++areaLabelCounter;
-            }
-            ++currentAreaWithLabelsCount;
-        }
-    }
-
-    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
-        int areasWithLabelsTotal = 0;
-        ifs >> areasWithLabelsTotal;
         int areasWithLabelsCounter = 0;
         while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
             int areaID = -1;
