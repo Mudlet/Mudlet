@@ -65,6 +65,7 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* e) override;
+    void changeMapperSettings(int roomSize, int lineSize, bool round, bool info, bool ids, bool viewOnly, bool showPanel);
 
     // Was getTopLeft() which returned an index into mMultiSelectionList but that
     // has been been changed to mMultiSelectionSet which cannot be accessed via
@@ -156,6 +157,10 @@ public:
 
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+
+    // Controls if the mapper is in view-only mode
+    bool mMapViewOnly;
+
     bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
@@ -165,7 +170,6 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-
 
 public slots:
     void slot_roomSelectionChanged();

@@ -52,6 +52,7 @@
     "createMapImageLabel": "labelID = createMapImageLabel(areaID, filePath, posx, posy, posz, width, height, zoom, showOnTop)",
     "createMapLabel": "labelID = createMapLabel(areaID, text, posX, posY, posZ, fgRed, fgGreen, fgBlue, bgRed, bgGreen, bgBlue, zoom, fontSize, showOnTop, noScaling)",
     "createMapper": "createMapper([name of userwindow], x, y, width, height)",
+    "changeMapperSettings": "changeMapperSettings(roomSize, lineSize, round, info, ids, viewOnly, showPanel)",
     "createMiniConsole": "createMiniConsole([name of userwindow], name, x, y, width, height)",
     "createRoomID": "usableId = createRoomID([minimumStartingRoomId])",
     "createStopWatch": "createStopWatch([name], [start immediately])",

@@ -8874,6 +8874,26 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#changeMapperSettings
+int TLuaInterpreter::changeMapperSettings(lua_State* L)
+{
+    int args = lua_gettop(L);
+    int roomSize = getVerifiedInt(L, __func__, 1, "roomSize");
+    int lineSize = getVerifiedInt(L, __func__, 2, "lineSize");
+    bool round = getVerifiedBool(L, __func__, 3, "round", false);
+    bool info = getVerifiedBool(L, __func__, 4, "info", true);
+    bool ids = getVerifiedBool(L, __func__, 5, "ids", false);
+    bool viewOnly = getVerifiedBool(L, __func__, 6, "viewOnly", false);
+    bool showPanel = getVerifiedBool(L, __func__, 7, "showPanel", true);
+    Host& host = getHostFromLua(L);
+    if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->changeMapperSettings(
+            roomSize, lineSize, round, info, ids, viewOnly, showPanel
+        );
+    }
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
@@ -15842,6 +15862,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
+    lua_register(pGlobalLua, "changeMapperSettings", TLuaInterpreter::changeMapperSettings);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
