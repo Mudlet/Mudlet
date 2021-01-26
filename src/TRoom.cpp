@@ -81,7 +81,6 @@ static const QString ALC_UP{QStringLiteral("up")};
 static const QString ALC_WEST{QStringLiteral("west")};
 static const QString CLOSED{QStringLiteral("closed")};
 static const QString COLORS{QStringLiteral("colors")};
-static const QString COLOR_RGBA{QStringLiteral("colorRGBA")};
 static const QString COORDINATES{QStringLiteral("coordinates")};
 static const QString CUSTOM_LINE{QStringLiteral("customLine")};
 static const QString DASH_LINE{QStringLiteral("dash line")};
@@ -104,6 +103,7 @@ static const QString RADIUS{QStringLiteral("radius")};
 static const QString STUB_EXITS{QStringLiteral("stubExits")};
 static const QString STYLE{QStringLiteral("style")};
 static const QString SYMBOL{QStringLiteral("symbol")};
+static const QString TEXT{QStringLiteral("text")};
 static const QString USER_DATA{QStringLiteral("userData")};
 static const QString WEIGHT{QStringLiteral("weight")};
 
@@ -2149,51 +2149,6 @@ void TRoom::readJsonDoor(const QJsonObject& obj, const QString& dir)
     Q_UNREACHABLE(); // No other string expected
 }
 
-void TRoom::writeJsonColor(QJsonObject& obj, const QColor& color) const
-{
-    QJsonArray colorRGBAArray;
-    colorRGBAArray.append(static_cast<double>(color.red()));
-    colorRGBAArray.append(static_cast<double>(color.green()));
-    colorRGBAArray.append(static_cast<double>(color.blue()));
-    if (color.alpha() < 255) {
-        colorRGBAArray.append(static_cast<double>(color.alpha()));
-    }
-    QJsonValue colorRGBAValue{colorRGBAArray};
-    obj.insert(COLOR_RGBA, colorRGBAValue);
-}
-
-QColor TRoom::readJsonColor(const QJsonObject& obj) const
-{
-    if (!obj.contains(COLOR_RGBA) || !obj.value(COLOR_RGBA).isArray()) {
-        // Return a null color if one was not found
-        return QColor();
-    }
-
-    QJsonArray colorRGBAArray = obj.value(COLOR_RGBA).toArray();
-    int red = 0;
-    int green = 0;
-    int blue = 0;
-    int alpha = 255;
-    int size = colorRGBAArray.size();
-    if ((size == 3 || size == 4)
-            && colorRGBAArray.at(0).isDouble()
-            && colorRGBAArray.at(1).isDouble()
-            && colorRGBAArray.at(2).isDouble()) {
-
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
-        return QColor(red, green, blue, alpha);
-    }
-
-    return QColor();
-}
-
 // This tacks on extra details onto the calling exitObj if there IS a custom line:
 void TRoom::writeJsonCustomExitLine(QJsonObject& exitObj, const QString& directionString) const
 {
@@ -2218,7 +2173,7 @@ void TRoom::writeJsonCustomExitLine(QJsonObject& exitObj, const QString& directi
     const QJsonValue customLineCoordinatesValue{customLinePointsArray};
     customLineObj.insert(COORDINATES, customLineCoordinatesValue);
 
-    writeJsonColor(customLineObj, customLinesColor.value(directionString));
+    TMap::writeJsonColor(customLineObj, customLinesColor.value(directionString));
 
     customLineObj.insert(ENDS_IN_ARROW, customLinesArrow.value(directionString));
 
@@ -2267,7 +2222,7 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
     }
     customLines.insert(directionString, points);
 
-    customLinesColor.insert(directionString, readJsonColor(customLineObj));
+    customLinesColor.insert(directionString, TMap::readJsonColor(customLineObj));
 
     if (customLineObj.contains(ENDS_IN_ARROW) && customLineObj.value(ENDS_IN_ARROW).isBool()) {
         customLinesArrow.insert(directionString, customLineObj.value(ENDS_IN_ARROW).toBool());
@@ -2407,8 +2362,8 @@ void TRoom::writeJsonHighlight(QJsonObject& obj) const
         QJsonArray highlightColorArray;
         QJsonObject highlightColorFgObj;
         QJsonObject highlightColorBgObj;
-        writeJsonColor(highlightColorFgObj, highlightColor);
-        writeJsonColor(highlightColorBgObj, highlightColor2);
+        TMap::writeJsonColor(highlightColorFgObj, highlightColor);
+        TMap::writeJsonColor(highlightColorBgObj, highlightColor2);
         const QJsonValue highlightColorFgValue{highlightColorFgObj};
         const QJsonValue highlightColorBgValue{highlightColorBgObj};
         highlightColorArray.append(highlightColorFgValue);
@@ -2431,8 +2386,8 @@ void TRoom::readJsonHighlight(const QJsonObject& highlightObj)
     if (highlightObj.contains(COLORS) && highlightObj.value(COLORS).isArray() && highlightObj.value(COLORS).toArray().size() == 2) {
         const QJsonArray highlightColorArray = highlightObj.value(COLORS).toArray();
 
-        highlightColor = readJsonColor(highlightColorArray.at(0).toObject());
-        highlightColor2 = readJsonColor(highlightColorArray.at(1).toObject());
+        highlightColor = TMap::readJsonColor(highlightColorArray.at(0).toObject());
+        highlightColor2 = TMap::readJsonColor(highlightColorArray.at(1).toObject());
     }
 
     highlightRadius = highlightObj.value(RADIUS).toDouble();
@@ -2446,12 +2401,9 @@ void TRoom::writeJsonSymbol(QJsonObject& roomObj) const
 
     QJsonObject symbolObj;
     const QJsonValue symbolText{mSymbol};
-    symbolObj.insert(QStringLiteral("text"), symbolText);
+    symbolObj.insert(TEXT, symbolText);
     if (mSymbolColor.isValid()) {
-        QJsonObject symbolColorObj;
-        writeJsonColor(symbolColorObj, mSymbolColor);
-        const QJsonValue symbolColorValue{symbolColorObj};
-        symbolObj.insert(QStringLiteral("color"), symbolColorValue);
+        TMap::writeJsonColor(symbolObj, mSymbolColor);
     }
 
     const QJsonValue symbolValue{symbolObj};

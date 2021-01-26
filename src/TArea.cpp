@@ -31,7 +31,6 @@
 #include "pre_guard.h"
 #include <QBuffer>
 #include <QElapsedTimer>
-#include <QProgressDialog>
 #include "post_guard.h"
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
@@ -48,7 +47,6 @@ static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
 
 static const QString COLORS {QStringLiteral("colors")};
-static const QString COLOR_RGBA{QStringLiteral("colorRGBA")};
 static const QString COORDINATES{QLatin1String("coordinates")};
 static const QString GRID_MODE{QStringLiteral("gridMode")};
 static const QString ID{QStringLiteral("id")};
@@ -804,8 +802,8 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         QJsonArray colorsArray;
         QJsonObject foregroundColorObj;
         QJsonObject backgroundColorObj;
-        writeJsonColor(foregroundColorObj, pLabel->fgColor);
-        writeJsonColor(backgroundColorObj, pLabel->bgColor);
+        TMap::writeJsonColor(foregroundColorObj, pLabel->fgColor);
+        TMap::writeJsonColor(backgroundColorObj, pLabel->bgColor);
         QJsonValue foregroundColorValue{foregroundColorObj};
         QJsonValue backgroundColorValue{backgroundColorObj};
         colorsArray.append(foregroundColorValue);
@@ -853,8 +851,8 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         // colour was put together (color spec type) can make them NOT seem to
         // be the same when we'd think they were...
         QJsonArray colorsArray = labelObj.value(COLORS).toArray();
-        label.fgColor = readJsonColor(colorsArray.at(0).toObject());
-        label.bgColor = readJsonColor(colorsArray.at(1).toObject());
+        label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject());
+        label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject());
     } else {
         label.fgColor = defaultLabelForeground;
         label.bgColor = defaultLabelBackground;
@@ -937,51 +935,6 @@ QVector3D TArea::readJson3DCoordinates(const QJsonObject& obj, const QString& ti
         position.setZ(valueArray.at(2).toDouble());
     }
     return position;
-}
-
-void TArea::writeJsonColor(QJsonObject& obj, const QColor& color) const
-{
-    QJsonArray colorRGBAArray;
-    colorRGBAArray.append(static_cast<double>(color.red()));
-    colorRGBAArray.append(static_cast<double>(color.green()));
-    colorRGBAArray.append(static_cast<double>(color.blue()));
-    if (color.alpha() < 255) {
-        colorRGBAArray.append(static_cast<double>(color.alpha()));
-    }
-    QJsonValue colorRGBAValue{colorRGBAArray};
-    obj.insert(COLOR_RGBA, colorRGBAValue);
-}
-
-QColor TArea::readJsonColor(const QJsonObject& obj) const
-{
-    if (!obj.contains(COLOR_RGBA) || !obj.value(COLOR_RGBA).isArray()) {
-        // Return a null color if one was not found
-        return QColor();
-    }
-
-    QJsonArray colorRGBAArray = obj.value(COLOR_RGBA).toArray();
-    int red = 0;
-    int green = 0;
-    int blue = 0;
-    int alpha = 255;
-    int size = colorRGBAArray.size();
-    if ((size == 3 || size == 4)
-            && colorRGBAArray.at(0).isDouble()
-            && colorRGBAArray.at(1).isDouble()
-            && colorRGBAArray.at(2).isDouble()) {
-
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
-        return QColor(red, green, blue, alpha);
-    }
-
-    return QColor();
 }
 
 // Serialize a QPixmap in a format that can be conveyed in a text file...

@@ -36,7 +36,6 @@
 #include "post_guard.h"
 
 class TRoomDB;
-class QProgressDialog;
 
 class TArea
 {
@@ -105,9 +104,6 @@ private:
 
     void writeJsonLabel(QJsonArray&, const int, const TMapLabel*) const;
     void readJsonLabel(const QJsonObject&);
-
-    QColor readJsonColor(const QJsonObject&) const;
-    void writeJsonColor(QJsonObject&, const QColor&) const;
 
     QSizeF readJsonSize(const QJsonObject&, const QString&) const;
     void writeJsonSize(QJsonObject&, const QString&, const QSizeF&) const;

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2015, 2018, 2020 by Stephen Lyons                  *
+ *   Copyright (C) 2014-2015, 2018, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -175,7 +175,6 @@ public:
 
 
 private:
-    QColor readJsonColor(const QJsonObject&) const;
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);
     bool readJsonNormalExit(const QJsonObject&, const int);
@@ -186,7 +185,6 @@ private:
     void readJsonHighlight(const QJsonObject&);
     void readJsonSymbol(const QJsonObject&);
 
-    void writeJsonColor(QJsonObject&, const QColor&) const;
     void writeJsonExits(QJsonObject&) const;
     void writeJsonExitStubs(QJsonObject&) const;
     void writeJsonNormalExit(QJsonArray&, const int) const;

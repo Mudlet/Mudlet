@@ -45,26 +45,28 @@
 
 // A common set of predefined QStrings so that there are no duplicated
 // QStringLiteral(...)s in this file:
-const QString AREAS {QStringLiteral("areas")};
-const QString ANONYMOUS_AREA_NAME{QStringLiteral("anonymousAreaName")};
-const QString AREA_COUNT{QStringLiteral("areaCount")};
-const QString COLOR_RGBA{QStringLiteral("colorRGBA")};
-const QString CUSTOM_ENV_COLORS{QStringLiteral("customEnvColors")};
-const QString DEFAULT_AREA_NAME{QStringLiteral("defaultAreaName")};
-const QString ENV_TO_COLOR_MAPPING{QStringLiteral("envToColorMapping")};
-const QString FORMAT_VERSION{QStringLiteral("formatVersion")};
-const QString ID{QStringLiteral("id")};
-const QString LABEL_COUNT{QStringLiteral("labelCount")};
-const QString MAP_SYMBOL_FUDGE_FACTOR{QStringLiteral("mapSymbolFontFudgeFactor")};
-const QString MAP_SYMBOL_FONT_DETAILS{QStringLiteral("mapSymbolFontDetails")};
-const QString ONLY_USE_MAP_SYMBOL_FONT{QStringLiteral("onlyMapSymbolFontToBeUsed")};
-const QString PLAYER_ROOM_COLORS{QStringLiteral("playerRoomColors")};
-const QString PLAYER_OUTER_DIA_PERCENTAGE{QStringLiteral("playerRoomOuterDiameterPercentage")};
-const QString PLAYER_INNER_DIA_PERCENTAGE{QStringLiteral("playerRoomInnerDiameterPercentage")};
-const QString PLAYER_ROOM_STYLE{QStringLiteral("playerRoomStyle")};
-const QString PLAYERS_ROOM_ID{QStringLiteral("playersRoomId")};
-const QString ROOM_COUNT{QStringLiteral("roomCount")};
-const QString USER_DATA{QStringLiteral("userData")};
+static const QString AREAS {QStringLiteral("areas")};
+static const QString ANONYMOUS_AREA_NAME{QStringLiteral("anonymousAreaName")};
+static const QString AREA_COUNT{QStringLiteral("areaCount")};
+static const QString COLOR_RGBA{QStringLiteral("colorRGBA")};
+static const QString COLOR_24RGB{QStringLiteral("color24RGB")};
+static const QString COLOR_32RGBA{QStringLiteral("color32RGBA")};
+static const QString CUSTOM_ENV_COLORS{QStringLiteral("customEnvColors")};
+static const QString DEFAULT_AREA_NAME{QStringLiteral("defaultAreaName")};
+static const QString ENV_TO_COLOR_MAPPING{QStringLiteral("envToColorMapping")};
+static const QString FORMAT_VERSION{QStringLiteral("formatVersion")};
+static const QString ID{QStringLiteral("id")};
+static const QString LABEL_COUNT{QStringLiteral("labelCount")};
+static const QString MAP_SYMBOL_FUDGE_FACTOR{QStringLiteral("mapSymbolFontFudgeFactor")};
+static const QString MAP_SYMBOL_FONT_DETAILS{QStringLiteral("mapSymbolFontDetails")};
+static const QString ONLY_USE_MAP_SYMBOL_FONT{QStringLiteral("onlyMapSymbolFontToBeUsed")};
+static const QString PLAYER_ROOM_COLORS{QStringLiteral("playerRoomColors")};
+static const QString PLAYER_OUTER_DIA_PERCENTAGE{QStringLiteral("playerRoomOuterDiameterPercentage")};
+static const QString PLAYER_INNER_DIA_PERCENTAGE{QStringLiteral("playerRoomInnerDiameterPercentage")};
+static const QString PLAYER_ROOM_STYLE{QStringLiteral("playerRoomStyle")};
+static const QString PLAYERS_ROOM_ID{QStringLiteral("playersRoomId")};
+static const QString ROOM_COUNT{QStringLiteral("roomCount")};
+static const QString USER_DATA{QStringLiteral("userData")};
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
@@ -2709,8 +2711,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     // Use this to track any changes. in a major.minor number format, minor
     // is to be three digits long.
     // 0.002 was the first published draft
-    // 0.003 changed the format to encapsulte the room symbol text and also
-    // include the room symbol color that was added during the development.
+    // 0.003 changed the format to encapsulte the room symbol text, it also
+    // include the room symbol color that was added during the development and
+    // refactored the storage of colors to identify whether there is an alpha
+    // component or not in the array of values.
     mapObj.insert(FORMAT_VERSION, static_cast<double>(0.003));
 
     writeJsonUserData(mapObj);
@@ -2971,7 +2975,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         if (!customEnvColorArray.isEmpty()) {
             for (int index = 0, total = customEnvColorArray.count(); index < total; ++index) {
                 const QJsonObject customEnvColorObj{customEnvColorArray.at(index).toObject()};
-                if (customEnvColorObj.contains(ID) && customEnvColorObj.contains(COLOR_RGBA) && customEnvColorObj.value(ID).isDouble() && customEnvColorObj.value(COLOR_RGBA).isArray()) {
+                if (customEnvColorObj.contains(ID)
+                    && ((customEnvColorObj.contains(COLOR_32RGBA) && customEnvColorObj.value(COLOR_32RGBA).isArray())
+                        ||(customEnvColorObj.contains(COLOR_24RGB) && customEnvColorObj.value(COLOR_24RGB).isArray()))
+                    && customEnvColorObj.value(ID).isDouble()) {
+
                     const int id{customEnvColorObj.value(ID).toInt()};
                     const QColor color{readJsonColor(customEnvColorObj)};
                     customEnvColors.insert(id, color);
@@ -3091,7 +3099,7 @@ QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj) const
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
 // supplied object.
-void TMap::writeJsonColor(QJsonObject& obj, const QColor& color) const
+void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
 {
     QJsonArray colorRGBAArray;
     colorRGBAArray.append(static_cast<double>(color.red()));
@@ -3099,28 +3107,39 @@ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color) const
     colorRGBAArray.append(static_cast<double>(color.blue()));
     if (color.alpha() < 255) {
         colorRGBAArray.append(static_cast<double>(color.alpha()));
+        QJsonValue colorRGBAValue{colorRGBAArray};
+        obj.insert(COLOR_32RGBA, colorRGBAValue);
+    } else {
+        QJsonValue colorRGBAValue{colorRGBAArray};
+        obj.insert(COLOR_24RGB, colorRGBAValue);
     }
-    const QJsonValue jsonValue{colorRGBAArray};
-    obj.insert(COLOR_RGBA, jsonValue);
 }
 
-QColor TMap::readJsonColor(const QJsonObject& obj) const
+QColor TMap::readJsonColor(const QJsonObject& obj)
 {
-    if (!obj.contains(COLOR_RGBA) || !obj.value(COLOR_RGBA).isArray()) {
+    if (!(   (obj.contains(COLOR_32RGBA) && obj.value(COLOR_32RGBA).isArray())
+          || (obj.contains(COLOR_24RGB) && obj.value(COLOR_24RGB).isArray()))) {
         // Return a null color if one was not found
         return QColor();
     }
 
-    QJsonArray colorRGBAArray = obj.value(COLOR_RGBA).toArray();
+    QJsonArray colorRGBAArray;
+    bool hasAlpha = false;
     int red = 0;
     int green = 0;
     int blue = 0;
     int alpha = 255;
+    if (obj.contains(COLOR_32RGBA)) {
+        colorRGBAArray = obj.value(COLOR_32RGBA).toArray();
+        hasAlpha = true;
+    } else {
+        colorRGBAArray = obj.value(COLOR_24RGB).toArray();
+    }
     int size = colorRGBAArray.size();
     if ((size == 3 || size == 4)
-            && colorRGBAArray.at(0).isDouble()
-            && colorRGBAArray.at(1).isDouble()
-            && colorRGBAArray.at(2).isDouble()) {
+        && colorRGBAArray.at(0).isDouble()
+        && colorRGBAArray.at(1).isDouble()
+        && colorRGBAArray.at(2).isDouble()) {
 
         red = qRound(colorRGBAArray.at(0).toDouble());
         green = qRound(colorRGBAArray.at(1).toDouble());
@@ -3128,13 +3147,14 @@ QColor TMap::readJsonColor(const QJsonObject& obj) const
         return QColor(red, green, blue);
     }
 
-    if (size == 4 && colorRGBAArray.at(3).isDouble()) {
+    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
         alpha = qRound(colorRGBAArray.at(3).toDouble());
         return QColor(red, green, blue, alpha);
     }
 
     return QColor();
 }
+
 
 bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int increment)
 {

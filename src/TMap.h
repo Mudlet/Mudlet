@@ -150,6 +150,11 @@ public:
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
+    QColor getColor(int id);
+
+    static void writeJsonColor(QJsonObject&, const QColor&);
+    static QColor readJsonColor(const QJsonObject&);
+
 
     TRoomDB* mpRoomDB;
     QMap<int, int> mEnvColors;
@@ -249,8 +254,6 @@ public:
     quint8 mPlayerRoomInnerDiameterPercentage = 70;
 
 
-    QColor getColor(int id);
-
 public slots:
     // Moved and revised from dlgMapper:
     void slot_setDownloadProgress(qint64, qint64);
@@ -263,8 +266,6 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
     QMap<QString, QString> readJsonUserData(const QJsonObject&) const;
-    void writeJsonColor(QJsonObject&, const QColor&) const;
-    QColor readJsonColor(const QJsonObject&) const;
 
     QStringList mStoredMessages;
 
