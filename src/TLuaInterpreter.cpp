@@ -5114,9 +5114,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
     }
 
     if (!lua_isboolean(L, 4)) {
@@ -5128,14 +5126,11 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
     if (!pR->setSpecialExitLock(dir, b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command %1 does not exist in room id %2")
+            .arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, true);
@@ -5161,21 +5156,17 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "the special exit name/command cannot be empty");
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
     }
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
     if (!pR->getSpecialExits().contains(dir)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command %1 does not exist in room id %2")
+            .arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, pR->hasSpecialExitLock(dir));
@@ -5288,15 +5279,11 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllRoomEntrances: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
     }
     lua_newtable(L);
     QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
@@ -5317,9 +5304,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchRoom: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     int room_id = 0;
@@ -5406,9 +5391,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     QString key = QString();
@@ -5529,9 +5512,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     QString key = QString();
@@ -5648,9 +5629,7 @@ int TLuaInterpreter::getAreaTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaTable: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5671,9 +5650,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaTableSwap: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5750,9 +5727,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAreaExits: bad argument #1 value (number %d is not a valid area id).", area);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(area));
     }
 
     lua_newtable(L);
@@ -5824,13 +5799,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "gotoRoom: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "gotoRoom: bad argument #1 value (number %d is not a valid target room id).", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
     }
 
     if (host.mpMap->gotoRoom(targetRoomId)) {
