@@ -703,12 +703,11 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     roomPen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
-    if (shouldDrawBorder && mRoomWidth >=8) {
+    if (shouldDrawBorder && mRoomWidth >= 12) {
         roomPen.setColor(mpHost->mRoomBorderColor);
     } else if (shouldDrawBorder) {
         auto fadingColor = QColor(mpHost->mRoomBorderColor);
-        fadingColor.setAlpha(255 * (mRoomWidth / 8));
-        qDebug().noquote() << fadingColor.alpha();
+        fadingColor.setAlpha(255 * (mRoomWidth / 12));
         roomPen.setColor(fadingColor);
     }
 
