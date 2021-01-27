@@ -42,26 +42,23 @@ void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
 {
     label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
 
-    int patternType = comboBox_patternType->currentIndex();
-    qDebug() << comboBox_patternType->itemData(0);
-    qDebug() << comboBox_patternType->itemData(0).toInt();
     const bool firstRow = comboBox_patternType->itemData(0).toInt() == 0;
     if (!firstRow) {
         return;
     }
 
-    switch (patternType) {
+    switch (comboBox_patternType->currentIndex()) {
     case REGEX_SUBSTRING:
-        lineEdit_pattern->setPlaceholderText(tr("Text to find anywhere in the line (trigger pattern)"));
+        lineEdit_pattern->setPlaceholderText(tr("Text to find (anywhere in the game output)"));
         break;
     case REGEX_PERL:
-        lineEdit_pattern->setPlaceholderText(tr("Regex pattern"));
+        lineEdit_pattern->setPlaceholderText(tr("Text to find (as a regular expression pattern)"));
         break;
     case REGEX_BEGIN_OF_LINE_SUBSTRING:
-        lineEdit_pattern->setPlaceholderText(tr("Text to find from start of of line (trigger pattern)"));
+        lineEdit_pattern->setPlaceholderText(tr("Text to find (from beginning of the line)"));
         break;
     case REGEX_EXACT_MATCH:
-        lineEdit_pattern->setPlaceholderText(tr("Exact line to match (trigger pattern)"));
+        lineEdit_pattern->setPlaceholderText(tr("Exact line to match"));
         break;
     case REGEX_LUA_CODE:
         lineEdit_pattern->setPlaceholderText(tr("Lua code to run (return true to match)"));
