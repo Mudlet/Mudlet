@@ -893,6 +893,7 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mLineSize = 10.0; // Same value as is in Host class initalizer list
     }
     pHost->mBubbleMode = attributes().value(QStringLiteral("mBubbleMode")) == YES;
+    pHost->mMapViewOnly = attributes().value(QStringLiteral("mMapViewOnly")) == YES;
     pHost->mShowRoomID = attributes().value(QStringLiteral("mShowRoomIDs")) == YES;
     pHost->mShowPanel = attributes().value(QStringLiteral("mShowPanel")) == YES;
     pHost->mHaveMapperScript = attributes().value(QStringLiteral("mHaveMapperScript")) == YES;
