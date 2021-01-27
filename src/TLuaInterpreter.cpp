@@ -8759,7 +8759,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomID));
     }
 
     QString direction(dirToString(L, 2));
