@@ -641,7 +641,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
             ++currentRoomCount;
             pR->writeJsonRoom(roomsArray);
             if (currentRoomCount % 10 == 0) {
-                if (mpMap->incrementProgressDialog(true, 10)) {
+                if (mpMap->incrementJsonProgressDialog(true, true, 10)) {
                     // Cancel has been hit - so give up straight away:
                     return;
                 }
@@ -650,7 +650,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementProgressDialog(true, currentRoomCount % 10);
+        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
     }
     QJsonValue roomsValue{roomsArray};
     areaObj.insert(scROOMS, roomsValue);
@@ -679,7 +679,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         // This also sets the room id for the TRoom:
         mpRoomDB->addRoom(roomId, pR, true);
         if (++roomCount % 10 == 0) {
-            if (mpMap->incrementProgressDialog(true, 10)) {
+            if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
                 // Cancel has been hit - so give up straight away:
                 return {0, {}};
             }
@@ -687,7 +687,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     }
     if (roomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementProgressDialog(true, roomCount % 10);
+        mpMap->incrementJsonProgressDialog(false, true, roomCount % 10);
     }
 
     if (areaObj.contains(scLABELS) && areaObj.value(scLABELS).isArray()) {
@@ -743,7 +743,7 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
-        if (mpMap->incrementProgressDialog(false, 1)) {
+        if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
             // Cancel has been hit - so give up straight away:
             return;
         }
@@ -764,7 +764,7 @@ void TArea::readJsonLabels(const QJsonObject& obj)
 
     for (int index = 0, total = labelsArray.count(); index < total; ++index) {
         readJsonLabel(labelsArray.at(index).toObject());
-        if (mpMap->incrementProgressDialog(false, 1)) {
+        if (mpMap->incrementJsonProgressDialog(false, false, 1)) {
             // Cancel has been hit - so give up straight away:
             return;
         }

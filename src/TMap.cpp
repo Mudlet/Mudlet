@@ -2748,7 +2748,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
             pA->writeJsonArea(areasArray);
         }
         ++mProgressDialogAreasCount;
-        if (incrementProgressDialog(true, 0)) {
+        if (incrementJsonProgressDialog(true, true, 0)) {
             abort = true;
             break;
         }
@@ -2922,7 +2922,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
                                            mpHost->mpConsole);
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
-    mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
+    mpProgressDialog->setWindowTitle(tr("Map JSON import", "This is a title of a progress window."));
     mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
@@ -3007,7 +3007,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         TArea* pArea = new TArea(this, pNewRoomDB);
         auto [id, name] = pArea->readJsonArea(mapObj.value(scAREAS).toArray(), i);
         ++mProgressDialogAreasCount;
-        if (incrementProgressDialog(true, 0)) {
+        if (incrementJsonProgressDialog(false, true, 0)) {
             abort = true;
             break;
         }
@@ -3155,7 +3155,7 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
 }
 
 
-bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int increment)
+bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment)
 {
     if (isRoomNotLabel) {
         mProgressDialogRoomsCount += increment;
@@ -3164,15 +3164,27 @@ bool TMap::incrementProgressDialog(const bool isRoomNotLabel, const int incremen
     }
 
     mpProgressDialog->setValue(mProgressDialogRoomsCount);
-    mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
-                                      "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
-                                   .arg(mProfileName,
-                                        QString::number(mProgressDialogAreasCount),
-                                        QString::number(mProgressDialogAreasTotal),
-                                        QString::number(mProgressDialogRoomsCount),
-                                        QString::number(mProgressDialogRoomsTotal),
-                                        QString::number(mProgressDialogLabelsCount),
-                                        QString::number(mProgressDialogLabelsTotal)));
+    if (isExportNotImport) {
+        mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
+                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                       .arg(mProfileName,
+                                            QString::number(mProgressDialogAreasCount),
+                                            QString::number(mProgressDialogAreasTotal),
+                                            QString::number(mProgressDialogRoomsCount),
+                                            QString::number(mProgressDialogRoomsTotal),
+                                            QString::number(mProgressDialogLabelsCount),
+                                            QString::number(mProgressDialogLabelsTotal)));
+    } else {
+        mpProgressDialog->setLabelText(tr("Importing JSON map data to %1\n"
+                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                       .arg(mProfileName,
+                                            QString::number(mProgressDialogAreasCount),
+                                            QString::number(mProgressDialogAreasTotal),
+                                            QString::number(mProgressDialogRoomsCount),
+                                            QString::number(mProgressDialogRoomsTotal),
+                                            QString::number(mProgressDialogLabelsCount),
+                                            QString::number(mProgressDialogLabelsTotal)));
+    }
     qApp->processEvents();
     return mpProgressDialog->wasCanceled();
 }

@@ -146,7 +146,7 @@ public:
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&);
     int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
-    bool incrementProgressDialog(const bool isRoomNotLabel, const int increment = 1);
+    bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 

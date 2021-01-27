@@ -226,7 +226,7 @@ int TRoom::stringToDirCode(const QString& string) const
     if (string == scALC_SOUTHWEST) {
         return DIR_SOUTHWEST;
     }
-    if (string == scALC_UP) {
+    if (string == scALC_IN) {
         return DIR_IN;
     }
     if (string == scALC_OUT) {
@@ -2335,7 +2335,7 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
             exitStubs.append(dir);
         } else {
             doorKey = direction;
-            qWarning().nospace().noquote() << "TRoom::readJsonExitStubs(...) WARNING - a special exit stub for the name/coomand: \"" << direction
+            qWarning().nospace().noquote() << "TRoom::readJsonExitStubs(...) WARNING - a special exit stub for the name/command: \"" << direction
                                            << "\" has been detected - but Mudlet does not currently support stubs in non-normal exit directions!";
             continue;
         }
