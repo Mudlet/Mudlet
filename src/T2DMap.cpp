@@ -2635,9 +2635,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
             float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
-            if (!mMapViewOnly && !event->modifiers().testFlag(Qt::ControlModifier)) {
-                // If control key NOT down then clear selection, and put up helpful text
-                mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
+            if (!event->modifiers().testFlag(Qt::ControlModifier)) {
+                if (!mMapViewOnly) {
+                  // If control key NOT down then clear selection, and put up helpful text
+                  mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
+                }
                 mMultiSelectionSet.clear();
             }
 
@@ -3414,6 +3416,12 @@ void T2DMap::slot_toggleMapViewOnly()
     if (mpHost) {
         mMapViewOnly = !mMapViewOnly;
         mpHost->mMapViewOnly = mMapViewOnly;
+        TEvent mapModeEvent{};
+        mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
+        mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mapModeEvent.mArgumentList.append(QLatin1String(mMapViewOnly ? "viewing" : "editing"));
+        mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mapModeEvent);
     }
 }
 
