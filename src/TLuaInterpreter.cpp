@@ -8632,9 +8632,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setDoor: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     TRoom* pR;
@@ -8645,9 +8643,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     int roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setDoor: bad argument #1 value (number %d is not a valid room id.)", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -8669,13 +8665,9 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // means we must treat the exitCmd as a SPECIAL exit
         if (!(pR->getSpecialExits().contains(exitCmd))) {
             // And NOT a special one either
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setDoor: bad argument #2 value (room with id %d does not have a special\n"
-                            "exit in direction \"%s\".)",
-                            roomId,
-                            exitCmd.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (room with id %1 does not have a special exit in direction '%2')")
+                .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid special exit - so fall out of if and continue
     } else {
@@ -8693,13 +8685,9 @@ int TLuaInterpreter::setDoor(lua_State* L)
                 || ((!exitCmd.compare(QStringLiteral("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
                 || ((!exitCmd.compare(QStringLiteral("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
             // No there IS NOT a stub or real exit in the exitCmd direction
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setDoor: bad argument #2 value (room with id %d does not have a normal exit\n"
-                            "or a stub exit in direction \"%s\".)",
-                            roomId,
-                            exitCmd.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (room with id %1 does not have a normal exit or a stub exit in direction '%2')")
+                .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid stub or real normal exit -fall through to continue
     }
@@ -8713,12 +8701,9 @@ int TLuaInterpreter::setDoor(lua_State* L)
     }
     int doorStatus = lua_tointeger(L, 3);
     if (doorStatus < 0 || doorStatus > 3) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "setDoor: bad argument #3 value (door type %d is not one of 0=\"none\", 1=\"open\",\n"
-                        "2=\"closed\" or 3=\"locked\".)",
-                        doorStatus);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "bad argument #3 value (door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked')")
+            .arg(doorStatus));
     }
 
     bool result = pR->setDoor(exitCmd, doorStatus);
@@ -8736,9 +8721,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getDoors: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     int roomId;
@@ -8750,9 +8733,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getDoors: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
     }
 
     lua_newtable(L);
@@ -8778,9 +8759,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", roomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(id));
     }
 
     QString direction(dirToString(L, 2));
@@ -8789,9 +8768,8 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomID, lua_tostring(L, 2));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit that can be identified from '%2'")
+            .arg(QString::number(roomID), lua_tostring(L, 2)));
     }
 
     qint64 weight;
@@ -8801,9 +8779,9 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
     }
     weight = lua_tonumber(L, 3);
     if (weight < 0 || weight > std::numeric_limits<int>::max()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "weight %d is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %d", weight, std::numeric_limits<int>::max());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
+            .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
     }
 
     pR->setExitWeight(direction, weight);
