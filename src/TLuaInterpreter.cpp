@@ -7321,9 +7321,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     Host& host = getHostFromLua(L);
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "No button named \"%s\" found.", name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("No button named '%1' found").arg(name));
     }
     for (auto action : actionsList) {
         action->css = css;
@@ -7399,9 +7397,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -7565,8 +7562,8 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
         }
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'", type.toUtf8().constData());
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     lua_pushnumber(L, cnt);
     return 1;
