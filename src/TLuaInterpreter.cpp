@@ -8080,9 +8080,8 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
     luaLine = lua_tointeger(L, n);
     if (luaLine < 1) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "line number %d invalid, it should be greater than zero", luaLine);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
     Host& host = getHostFromLua(L);
@@ -8097,18 +8096,15 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return 1;
     } else {
         auto pC = host.mpConsole->mSubConsoleMap.value(name);
-        if (pC) {
-            if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
-                lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-            } else {
-                lua_pushstring(L, "getTimestamp: invalid line number");
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "mini console, user window or buffer \"%s\" not found", name.toUtf8().constData());
-            return 2;
+        if (!pC) {
+            return warnArgumentValue(L, __func__, QStringLiteral("mini console, user window or buffer '%1' not found)").arg(name));
         }
+        if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
+            lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        } else {
+            lua_pushstring(L, "getTimestamp: invalid line number");
+        }
+        return 1;
     }
 }
 
@@ -8159,49 +8155,33 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     QString existingName;
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setAreaName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     if (lua_isnumber(L, 1)) {
         id = lua_tonumber(L, 1);
         if (id < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #1 value (number %d is not a valid area id as it is\n"
-                            "less than 1).",
-                            id);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #1 value (number %1 is not a valid area id as it is less than 1)").arg(id));
         }
         // Strangely, previous code allowed this command to create a NEW area's name
         // with this ID, but without a TArea instance to accompany it (the latter was/is
         // instantiated as needed when a room is moved to the relevent area...) and we
         // need to continue to allow this - Slysven
         //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
-        //            lua_pushnil(L);
-        //            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
-        //                           id);
-        //            return 2;
+        //            return warnArgumentValue(L, __func__, QStringLiteral(
+        //                "bad argument #1 value (number %1 is not a valid area id)").arg(id));
         //        }
     } else if (lua_isstring(L, 1)) {
         existingName = lua_tostring(L, 1);
         id = host.mpMap->mpRoomDB->getAreaNamesMap().key(existingName, 0);
         if (existingName.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setAreaName: bad argument #1 value (area name cannot be empty).");
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (area name cannot be empty)"));
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(setAreaName: bad argument #1 value (area name "%s" does not exist).)", existingName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (area name '%1' does not exist)").arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #1 value (area name \"%s\" is reserved and\n"
-                            "protected - it cannot be changed).",
-                            existingName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #1 value (area name '%1' is reserved and protected - it cannot be changed)").arg(existingName));
         }
     } else {
         lua_pushfstring(L,
@@ -8220,11 +8200,8 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     if (newName.isEmpty()) {
         // Empty name not allowed (any more)
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "setAreaName: bad argument #2 value (area names may not be empty strings\n"
-                        "{and spaces are trimmed from the ends})!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "bad argument #2 value (area names may not be empty strings {and spaces are trimmed from the ends})"));
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(newName) > 0) {
         // That name is already IN the areaNamesMap, and since we now enforce
         // uniqueness there can be only one of it - so we can check if this is a
@@ -8232,17 +8209,13 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(id) != newName) {
             lua_pushnil(L);
             // And it isn't the trivial case, where the given areaID already IS that name
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                            "id %d already has the name \"%s\").",
-                            host.mpMap->mpRoomDB->getAreaNamesMap().key(newName),
-                            newName.toUtf8().constData());
-            return 2;
-        } else {
-            // Renaming an area to the same name is pointlessly successful!
-            lua_pushboolean(L, true);
-            return 1;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #1 value (area names may not be duplicated and area id %1 already has the name '%2')")
+                .arg(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName), newName));
         }
+        // Renaming an area to the same name is pointlessly successful!
+        lua_pushboolean(L, true);
+        return 1;
     }
 
     bool isCurrentAreaRenamed = false;
@@ -8271,9 +8244,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomAreaName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     int id;
@@ -8326,25 +8297,16 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if ((!host.mpMap) || (!host.mpMap->mpRoomDB)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "addAreaName: error, no map seems to be loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("error, no map seems to be loaded!"));
     } else if (name.isEmpty()) {
         // Empty names now not allowed
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "addAreaName: bad argument #1 value (area names may not be empty strings {and\n"
-                        "spaces are trimmed from the ends})!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "bad argument #1 value (area names may not be empty strings {and spaces are trimmed from the ends})"));
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "addAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                        "id %d already has the name \"%s\").",
-                        host.mpMap->mpRoomDB->getAreaNamesMap().key(name),
-                        name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "bad argument #2 value (area names may not be duplicated and area id %1 already has the name '%2')")
+            .arg(host.mpMap->mpRoomDB->getAreaNamesMap().key(name), name));
     }
 
     // Note that adding an area name implicitly creates an underlying TArea instance
@@ -8366,43 +8328,25 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "deleteArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     if (lua_isnumber(L, 1)) {
         id = lua_tonumber(L, 1);
         if (id < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (number %d is not a valid area id greater\n"
-                            "than zero).",
-                            id);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #1 value (number %1 is not a valid area id greater than zero)").arg(id));
         } else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %d is not a valid area id).", id);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(id));
         }
     } else if (lua_isstring(L, 1)) {
         name = lua_tostring(L, 1);
         if (name.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "deleteArea: bad argument #1 value (an empty string is not a valid area name).");
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (an empty string is not a valid area name)"));
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (string \"%s\" is not a valid\n"
-                            "area name).",
-                            name.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (string '%1' is not a valid area name)").arg(name));
         } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (you can't delete the default area).");
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (you can't delete the default area)"));
         }
     } else {
         lua_pushfstring(L,
@@ -8533,9 +8477,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "createRoomID: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     }
 
     if (lua_gettop(L) > 0) {
@@ -8548,12 +8490,8 @@ int TLuaInterpreter::createRoomID(lua_State* L)
         }
         int minId = lua_tointeger(L, 1);
         if (minId < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "createRoomID: bad argument #1 value (minimum room id %d is an optional value\n"
-                            "but if provided it must be greater than zero.)",
-                            minId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #1 value (minimum room id %1 is an optional value but if provided it must be greater than zero)").arg(minId));
         }
         lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
     } else {
