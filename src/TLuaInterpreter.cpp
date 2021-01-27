@@ -14666,7 +14666,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14743,7 +14743,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14806,7 +14806,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
 
     QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14880,7 +14880,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
