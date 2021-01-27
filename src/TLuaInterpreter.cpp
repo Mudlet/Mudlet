@@ -8211,7 +8211,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             // And it isn't the trivial case, where the given areaID already IS that name
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "bad argument #1 value (area names may not be duplicated and area id %1 already has the name '%2')")
-                .arg(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName), newName));
+                .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName)), newName));
         }
         // Renaming an area to the same name is pointlessly successful!
         lua_pushboolean(L, true);
@@ -8306,7 +8306,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
         // That name is already IN the areaNamesMap
         return warnArgumentValue(L, __func__, QStringLiteral(
             "bad argument #2 value (area names may not be duplicated and area id %1 already has the name '%2')")
-            .arg(host.mpMap->mpRoomDB->getAreaNamesMap().key(name), name));
+            .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
     }
 
     // Note that adding an area name implicitly creates an underlying TArea instance
@@ -10169,7 +10169,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
