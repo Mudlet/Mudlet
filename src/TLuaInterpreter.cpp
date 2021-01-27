@@ -10234,12 +10234,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "downloadFile: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14736,12 +14731,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "putHTTP: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14818,12 +14808,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "getHTTP: bad argument #1 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14886,12 +14871,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
 
     QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "postHTTP: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14933,9 +14913,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation);
         }
 
         fileToUpload = file.readAll();
@@ -14967,12 +14945,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "deleteHTTP: bad argument #1 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString());
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -15042,10 +15015,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 
     QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create temporary directory to extract the zip into");
-        return 2;
+        return warnArgumentValue(L, __func__, "couldn't create temporary directory to extract the zip into");
     }
 
     extractLocation = QDir::fromNativeSeparators(extractLocation);
@@ -15055,10 +15025,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 
     QDir dir;
     if (!dir.mkpath(extractLocation)) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create output directory to put the extracted files into");
-        return 2;
+        return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
 
     auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
@@ -16723,9 +16690,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getMapSelection: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "getMapSelection: no map present or loaded!");
     }
 
     lua_newtable(L);
@@ -16789,9 +16754,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -16801,10 +16764,8 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     QString text{lua_tostring(L, 1)};
 
     QPair<bool, QString> result = host.mpConsole->addWordToSet(text);
-    if (!result.first){
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
     lua_pushboolean(L, true);
     return 1;
@@ -16818,9 +16779,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -16830,10 +16789,8 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     QString text{lua_tostring(L, 1)};
 
     QPair<bool, QString> result = host.mpConsole->removeWordFromSet(text);
-    if (!result.first){
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
     lua_pushboolean(L, true);
     return 1;
@@ -16861,9 +16818,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         }
         useUserDictionary = lua_toboolean(L, 2);
         if (useUserDictionary && !hasUserDictionary) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-            return 2;
+            return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
 
@@ -16875,9 +16830,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
-            return 2;
+            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
@@ -16909,9 +16862,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         }
         useUserDictionary = lua_toboolean(L, 2);
         if (useUserDictionary && !hasUserDictionary) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-            return 2;
+            return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
 
@@ -16925,9 +16876,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
-            return 2;
+            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
