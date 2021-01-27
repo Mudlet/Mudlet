@@ -8733,7 +8733,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
 
     lua_newtable(L);
@@ -8759,7 +8759,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(id));
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomId));
     }
 
     QString direction(dirToString(L, 2));
