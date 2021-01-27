@@ -189,7 +189,7 @@ jobs:
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
 
-    - name: check ccache stats prior to build
+    - name: (Linux/macOS) check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
@@ -208,11 +208,11 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
-    - name: check ccache stats post build
+    - name: (Linux/macOS) check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
-    - name: Run C++ tests (macOS)
+    - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
