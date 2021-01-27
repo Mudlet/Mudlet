@@ -122,6 +122,11 @@ TTrigger::~TTrigger()
         }
         itColorTable.remove();
     }
+
+    for (auto && [key, value] : mConditionMap) {
+        delete value;
+    }
+
     if (!mpHost) {
         return;
     }

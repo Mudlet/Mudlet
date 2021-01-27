@@ -1134,6 +1134,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 itMapLabel.next();
                 ofs << itMapLabel.key(); //label ID
                 TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
                 ofs << label.size;
                 ofs << label.text;
                 ofs << label.fgColor;
@@ -1182,6 +1183,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 itMapLabel.next();
                 ofs << itMapLabel.key(); //label ID
                 TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
                 ofs << QPointF(); // dummy value - not actually used
                 ofs << label.size;
                 ofs << label.text;
@@ -1898,6 +1900,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                     int labelId = -1;
                     ifs >> labelId;
                     TMapLabel label;
+                    ifs >> label.pos;
                     ifs >> label.size;
                     ifs >> label.text;
                     ifs >> label.fgColor;
@@ -1948,9 +1951,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                 if (otherProfileVersion >= 12) {
                     ifs >> label.pos;
                 } else {
-                    QPointF __label_pos;
-                    ifs >> __label_pos;
-                    label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                    QPointF oldLabelPos;
+                    ifs >> oldLabelPos;
+                    label.pos = QVector3D(oldLabelPos);
                 }
                 QPointF dummyPointF;
                 ifs >> dummyPointF;
