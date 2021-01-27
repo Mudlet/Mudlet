@@ -5804,17 +5804,14 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
     }
 
-    if (host.mpMap->gotoRoom(targetRoomId)) {
-        host.startSpeedWalk();
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
+    if (!host.mpMap->gotoRoom(targetRoomId)) {
         int totalWeight = host.assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
         Q_UNUSED(totalWeight);
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, "gotoRoom: no path found from current room to room with id %d!", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
+    host.startSpeedWalk();
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPath
@@ -5834,17 +5831,11 @@ int TLuaInterpreter::getPath(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getPath: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
     } else if (!host.mpMap->mpRoomDB->getRoom(originRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getPath: bad argument #1 value (number %d is not a valid source room id).", originRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid source room id)").arg(originRoomId));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getPath: bad argument #2 value (number %d is not a valid target room id).", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
     }
 
     bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
@@ -5956,9 +5947,7 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
 // inactive and has been removed
 int TLuaInterpreter::showUnzipProgress(lua_State* L)
 {
-    lua_pushnil(L);
-    lua_pushstring(L, "showUnzipProgress: removed command, this function is now inactive and does nothing!");
-    return 2;
+    return warnArgumentValue(L, __func__, QStringLiteral("removed command, this function is now inactive and does nothing"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
