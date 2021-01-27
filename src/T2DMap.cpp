@@ -2638,7 +2638,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
             float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
-            if (!event->modifiers().testFlag(Qt::ControlModifier)) {
+            if (!mMapViewOnly && !event->modifiers().testFlag(Qt::ControlModifier)) {
                 // If control key NOT down then clear selection, and put up helpful text
                 mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
                 mMultiSelectionSet.clear();
