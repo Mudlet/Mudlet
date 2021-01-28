@@ -25,6 +25,8 @@
 
 #include "TMap.h"
 
+#include "TMapLabel.h"
+
 #include "pre_guard.h"
 #include <QList>
 #include <QMap>
@@ -59,6 +61,7 @@ public:
     QList<int> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
+    int createLabelId() const;
 
 
     QSet<int> rooms; // rooms of this area
@@ -75,9 +78,6 @@ public:
     QMap<int, int> xmaxForZ;
     QMap<int, int> yminForZ;
     QMap<int, int> ymaxForZ;
-// Pointless:
-//    QMap<int, int> zminForZ;
-//    QMap<int, int> zmaxForZ;
     QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
     bool gridMode;
     bool isZone;
@@ -85,6 +85,7 @@ public:
     TRoomDB* mpRoomDB;
     bool mIsDirty;
     QMap<QString, QString> mUserData;
+    QMap<int, TMapLabel> mMapLabels;
 
 
 private:

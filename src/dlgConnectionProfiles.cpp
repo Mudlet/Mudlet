@@ -255,25 +255,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     }
 #endif
 
-    mRegularPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, QColor(Qt::white));
-
-    mReadOnlyPalette.setColor(QPalette::Base, QColor(212, 212, 212));
-    mReadOnlyPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-
-    mOKPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mOKPalette.setColor(QPalette::Base, QColor(235, 255, 235));
-
-    mErrorPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
+    mReadOnlyPalette.setColor(QPalette::Base, QColor(125, 125, 125, 25));
+    mOKPalette.setColor(QPalette::Base, QColor(150, 255, 150, 50));
+    mErrorPalette.setColor(QPalette::Base, QColor(255, 150, 150, 50));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
 
@@ -785,7 +769,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
                              "or any of the many RPG systems based on the d20 ruleset.");
     } else if (hostUrl == QStringLiteral("stickmud.com")) {
-        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Upon maturing to level 5, join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
+        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -1023,8 +1007,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("8680");
-            port_ssl_tsl->setChecked(true);
+            host_port = QStringLiteral("7680");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             host_port = QStringLiteral("4000");
@@ -2109,6 +2093,13 @@ bool dlgConnectionProfiles::validateProfile()
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
+
+        if (url.isEmpty()) {
+            host_name_entry->setPalette(mErrorPalette);
+            validUrl = false;
+            valid = false;
+        }
+
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
@@ -2159,8 +2150,10 @@ bool dlgConnectionProfiles::validateProfile()
             }
             return true;
         } else {
-            notificationArea->show();
-            notificationAreaMessageBox->show();
+            if (!notificationAreaMessageBox->text().isEmpty()) {
+                notificationArea->show();
+                notificationAreaMessageBox->show();
+            }
             if (offline_button) {
                 offline_button->setEnabled(false);
                 offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
@@ -2306,7 +2299,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     do {
         font.setPointSize(--fontSize);
         QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, text);
+        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
@@ -2320,7 +2313,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
             pt.setPen(Qt::white);
         }
         pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }

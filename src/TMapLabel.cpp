@@ -1,10 +1,7 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,27 +20,16 @@
  ***************************************************************************/
 
 
+#include "TMapLabel.h"
+
 #include "pre_guard.h"
-#include "ui_trigger_pattern_edit.h"
+#include <QBuffer>
 #include "post_guard.h"
 
-class QAction;
-
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
+QByteArray TMapLabel::base64EncodePixmap() const
 {
-    Q_OBJECT
-
-public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    dlgTriggerPatternEdit(QWidget*);
-
-    int mRow;
-
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
-
-};
-
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    pix.save(&buffer, "PNG");
+    return buffer.data().toBase64();
+}

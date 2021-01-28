@@ -1,10 +1,11 @@
-#ifndef MUDLET_DLGTRIGGERPATTERNEDIT_H
-#define MUDLET_DLGTRIGGERPATTERNEDIT_H
+#ifndef MUDLET_TMAPLABEL_H
+#define MUDLET_TMAPLABEL_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,26 +25,30 @@
 
 
 #include "pre_guard.h"
-#include "ui_trigger_pattern_edit.h"
+#include <QtGlobal>
+#include <QColor>
+#include <QPixmap>
+#include <QSizeF>
+#include <QVector3D>
 #include "post_guard.h"
 
-class QAction;
 
-class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
+class TMapLabel
 {
-    Q_OBJECT
-
 public:
-    Q_DISABLE_COPY(dlgTriggerPatternEdit)
-    dlgTriggerPatternEdit(QWidget*);
 
-    int mRow;
+    QVector3D pos;
+    QSizeF size;
+    QSizeF clickSize;
+    QString text;
+    QColor fgColor {Qt::black};
+    QColor bgColor {Qt::black};
+    QPixmap pix;
+    bool highlight {};
+    bool showOnTop {};
+    bool noScaling {};
 
-
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
-
-
+    QByteArray base64EncodePixmap() const;
 };
 
-#endif // MUDLET_DLGTRIGGERPATTERNEDIT_H
+#endif // MUDLET_TMAPLABEL_H

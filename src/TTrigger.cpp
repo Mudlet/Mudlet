@@ -122,10 +122,23 @@ TTrigger::~TTrigger()
         }
         itColorTable.remove();
     }
+
+    for (auto && [key, value] : mConditionMap) {
+        delete value;
+    }
+
     if (!mpHost) {
         return;
     }
     mpHost->getTriggerUnit()->unregisterTrigger(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TTrigger::setName(const QString& name)
