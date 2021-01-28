@@ -6664,7 +6664,7 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -6709,7 +6709,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -6753,9 +6753,10 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 
     if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
+
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -6795,13 +6796,12 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-
 
     if (lua_isstring(L, 1)) {
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(lua_tostring(L, 1)), expiryCount);
@@ -6912,7 +6912,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #4 value (trigger expiration count must be greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
@@ -6966,23 +6966,21 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is ommitted")
                 .arg(value));
-        } else {
-            // At present we limit the range to (Trigger::scmIgnored),
-            // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
-            // extend it to other "coded" values for locally generated textual
-            // content
-            if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-                return warnArgumentValue(L, __func__, QStringLiteral(
-                    "bad argument #%1 value (invalid ANSI color number %2, only %3 (ignore foreground color), %4 (default foregroud color) or 0 to 255 recognised")
-                    .arg(QString::number(s), QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
-            } else if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
-                return warnArgumentValue(L, __func__, QStringLiteral(
-                    "invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)")
-                    .arg(value));
-            } else {
-                ansiFgColor = value;
-            }
         }
+        // At present we limit the range to (Trigger::scmIgnored),
+        // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
+        // extend it to other "coded" values for locally generated textual
+        // content
+        if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, only %2 (ignore foreground color), %3 (default foregroud color) or 0 to 255 recognised")
+                .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
+        }
+        if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)").arg(value));
+        }
+        ansiFgColor = value;
     }
 
     // s=1 at this point. If top=4 the next argument must be the BG color number,
@@ -7022,7 +7020,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, s);
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
@@ -7066,7 +7064,7 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
@@ -7180,7 +7178,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #14 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 14)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
@@ -7394,7 +7392,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 
         if (expiryCount < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -8158,7 +8156,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         id = lua_tonumber(L, 1);
         if (id < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #1 value (number %1 is not a valid area id as it is less than 1)").arg(id));
+                "number %1 is not a valid area id as it is less than 1)").arg(id));
         }
         // Strangely, previous code allowed this command to create a NEW area's name
         // with this ID, but without a TArea instance to accompany it (the latter was/is
@@ -8166,7 +8164,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         // need to continue to allow this - Slysven
         //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
         //            return warnArgumentValue(L, __func__, QStringLiteral(
-        //                "bad argument #1 value (number %1 is not a valid area id)").arg(id));
+        //                "number %1 is not a valid area id").arg(id));
         //        }
     } else if (lua_isstring(L, 1)) {
         existingName = lua_tostring(L, 1);
@@ -8177,7 +8175,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral("area name '%1' does not exist").arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #1 value (area name '%1' is reserved and protected - it cannot be changed)").arg(existingName));
+                "area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
         lua_pushfstring(L,
@@ -8196,8 +8194,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     if (newName.isEmpty()) {
         // Empty name not allowed (any more)
-        return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #2 value (area names may not be empty strings {and spaces are trimmed from the ends})"));
+        return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(newName) > 0) {
         // That name is already IN the areaNamesMap, and since we now enforce
         // uniqueness there can be only one of it - so we can check if this is a
@@ -8206,7 +8203,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             lua_pushnil(L);
             // And it isn't the trivial case, where the given areaID already IS that name
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #1 value (area names may not be duplicated and area id %1 already has the name '%2')")
+                "area names may not be duplicated and area id %1 already has the name '%2'")
                 .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName)), newName));
         }
         // Renaming an area to the same name is pointlessly successful!
@@ -8296,8 +8293,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
-        return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #2 value (area names may not be duplicated and area id %1 already has the name '%2')")
+        return warnArgumentValue(L, __func__, "area names may not be duplicated and area id %1 already has the name '%2'")
             .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
     }
 
@@ -8326,9 +8322,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     if (lua_isnumber(L, 1)) {
         id = lua_tonumber(L, 1);
         if (id < 1) {
-            return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #1 value (number %1 is not a valid area id greater than zero)").arg(id));
-        } else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id greater than zero").arg(id));
+        }
+        if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
             return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(id));
         }
     } else if (lua_isstring(L, 1)) {
@@ -8483,7 +8479,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
         int minId = lua_tointeger(L, 1);
         if (minId < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #1 value (minimum room id %1 is an optional value but if provided it must be greater than zero)").arg(minId));
+                "minimum room id %1 is an optional value but if provided it must be greater than zero").arg(minId));
         }
         lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
     } else {
@@ -9704,7 +9700,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     if (!pR->userData.contains(key)) {
         if (!isBackwardCompatibilityRequired) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (no user data with key '%1' in room with id %2))").arg(key, QString::number(roomId)));
+                "no user data with key '%1' in room with id %2").arg(key, QString::number(roomId)));
         }
         lua_pushstring(L, QString().toUtf8().constData());
         return 1;
@@ -10430,7 +10426,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
         if (!validRange(r)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+            lua_pushfstring(L, "setBgColor: red value %1 needs to be between 0-255", r);
             return 2;
         }
     } else if (lua_isnumber(L, s)) {
@@ -10438,7 +10434,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
         if (!validRange(r)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
+            lua_pushfstring(L, "setBgColor: red value %1 needs to be between 0-255", r);
             return 2;
         }
     } else {
@@ -10454,7 +10450,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     if (!validRange(g)) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
+        lua_pushfstring(L, "setBgColor: green value %1 needs to be between 0-255", g);
         return 2;
     }
 
@@ -10466,7 +10462,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 
     if (!validRange(b)) {
         lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
+        lua_pushfstring(L, "setBgColor: blue value %1 needs to be between 0-255", b);
         return 2;
     }
 
@@ -10477,7 +10473,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         alpha = static_cast<int>(lua_tonumber(L, s));
         if (!validRange(alpha)) {
             lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
+            lua_pushfstring(L, "setBgColor: alpha value %1 needs to be between 0-255", alpha);
             return 2;
         }
     } else {
@@ -10669,14 +10665,12 @@ int TLuaInterpreter::echo(lua_State* L)
         // results, we now return a true for that
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        if (host.echoWindow(consoleName, displayText)) {
-            lua_pushboolean(L, true);
-            return 1;
-        } else {
-            return warnArgumentValue(L, __func__, QStringLiteral("console/label '%1' does not exist").arg(consoleName));
-        }
     }
+    if (!host.echoWindow(consoleName, displayText)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("console/label '%1' does not exist").arg(consoleName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
