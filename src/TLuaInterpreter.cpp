@@ -10373,9 +10373,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaRed = lua_tointeger(L, s);
     if (luaRed < 0 || luaRed >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(luaRed));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10384,9 +10382,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaGreen = lua_tointeger(L, s);
     if (luaGreen< 0 || luaGreen >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(luaGreen));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10396,9 +10392,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaBlue = lua_tointeger(L, s);
     if (luaBlue < 0 || luaBlue >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(luaBlue));
     }
 
     auto console = CONSOLE(L, windowName);
@@ -10425,17 +10419,13 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: red value %1 needs to be between 0-255", r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: red value %1 needs to be between 0-255", r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -10449,9 +10439,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: green value %1 needs to be between 0-255", g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10461,9 +10449,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: blue value %1 needs to be between 0-255", b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -10472,9 +10458,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     } else if (lua_isnumber(L, ++s)) {
         alpha = static_cast<int>(lua_tonumber(L, s));
         if (!validRange(alpha)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: alpha value %1 needs to be between 0-255", alpha);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("alpha value %1 needs to be between 0-255").arg(alpha));
         }
     } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -16877,9 +16861,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int r = lua_tonumber(L, 1);
     if (r < 0 || r > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -16888,9 +16870,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int g = lua_tonumber(L, 2);
     if (g < 0 || g > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, 3)) {
@@ -16899,9 +16879,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int b = lua_tonumber(L, 3);
     if (b < 0 || b > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     auto& host = getHostFromLua(L);
@@ -16931,9 +16909,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int r = lua_tonumber(L, 1);
     if (r < 0 || r > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -16942,9 +16918,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int g = lua_tonumber(L, 2);
     if (g < 0 || g > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, 3)) {
@@ -16953,9 +16927,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int b = lua_tonumber(L, 3);
     if (b < 0 || b > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     auto& host = getHostFromLua(L);
