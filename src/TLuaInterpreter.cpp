@@ -1852,7 +1852,9 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
-                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData(), currentEncoding.constData()));
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
+                    .arg(data.constData(), currentEncoding.constData()));
             }
 
             std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
@@ -1864,7 +1866,9 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // else plain, raw ASCII, we hope!
         for (int i = 0, total = dataQString.size(); i < total; ++i) {
             if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
-                return warnArgumentValue(L, __func__, QStringLiteral("cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'").arg(data.constData()));
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of 'ASCII'")
+                    .arg(data.constData()));
             }
         }
 
@@ -1984,7 +1988,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         result = host.getStopWatchTime(watchId);
         if (!result.first) {
-            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
         }
 
     } else {
@@ -2003,7 +2007,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "stopwatch with name '%1' (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers")
+                "stopwatch with name '%1' (id: %2) has disappeared - this should not happen, please report it to Mudlet developers")
                 .arg(name, QString::number(watchId)));
         }
     }
@@ -2087,7 +2091,7 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "stopwatch with name '%1# (id: '%2') has disappeared - this should not happen, please report it to Mudlet developers")
+                "stopwatch with name '%1' (id: %2) has disappeared - this should not happen, please report it to Mudlet developers")
                 .arg(name, QString::number(watchId)));
         }
     }
@@ -2215,7 +2219,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2239,7 +2243,7 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
     bool result = host.destroyStopWatch(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2267,7 +2271,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
     bool isPersistent = lua_toboolean(L, 2);
     // This is only likely to fail when a numeric first argument was given:
     if (!host.makeStopWatchPersistent(watchId, isPersistent)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id '%1' not found").arg(watchId));
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2742,7 +2746,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -3123,7 +3127,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
         return 2;
     } else {
-        auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
+        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
         return warnArgumentValue(L, __func__, message);
     }
 }
@@ -4859,7 +4863,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -4889,7 +4893,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -5163,7 +5167,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
         return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
     if (!pR->getSpecialExits().contains(dir)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command %1 does not exist in room id %2")
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command '%1' does not exist in room id %2")
             .arg(dir, QString::number(fromRoomID)));
     }
 
@@ -5277,7 +5281,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
@@ -5302,7 +5306,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int room_id = 0;
@@ -5389,7 +5393,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key = QString();
@@ -5510,7 +5514,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key = QString();
@@ -5627,7 +5631,7 @@ int TLuaInterpreter::getAreaTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5648,7 +5652,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5797,7 +5801,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
     }
@@ -5829,7 +5833,7 @@ int TLuaInterpreter::getPath(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(originRoomId)) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid source room id)").arg(originRoomId));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
@@ -6510,8 +6514,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mTelnet.isChannel102Enabled()) {
-        return warnArgumentValue(L, __func__, QStringLiteral(
-            "unable to send message as the 102 subchannel support has not been enabled by the game server"));
+        return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
     // We have already validated output to contain a 2 byte payload so we
     // should not need to worry about the "encoding" in this use of
@@ -8153,7 +8156,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     QString existingName;
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -8242,7 +8245,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int id;
@@ -8295,11 +8298,10 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if ((!host.mpMap) || (!host.mpMap->mpRoomDB)) {
-        return warnArgumentValue(L, __func__, "error, no map seems to be loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (name.isEmpty()) {
         // Empty names now not allowed
-        return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #1 value (area names may not be empty strings {and spaces are trimmed from the ends})"));
+        return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
         return warnArgumentValue(L, __func__, QStringLiteral(
@@ -8326,7 +8328,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -8475,7 +8477,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_gettop(L) > 0) {
@@ -8630,7 +8632,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     TRoom* pR;
@@ -8719,7 +8721,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int roomId;
@@ -8823,20 +8825,19 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
         if (!pR_to) {
             return warnArgumentValue(L, __func__, QStringLiteral("target room id %1 does not exist").arg(id_to));
-        } else {
-            int area = pR->getArea();
-            int area_to = pR_to->getArea();
-            if (area != area_to) {
-                return warnArgumentValue(L, __func__, QStringLiteral(
-                    "target room is in area '%1' (id: %2) which is not the one '%3' (id: %4) in which this custom line is to be drawn")
-                    .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
-                         (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
-            }
-
-            x.append(static_cast<qreal>(pR_to->x));
-            y.append(static_cast<qreal>(pR_to->y));
-            z.append(pR->z);
         }
+        int area = pR->getArea();
+        int area_to = pR_to->getArea();
+        if (area != area_to) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "target room is in area '%1' (id: %2) which is not the one '%3' (id: %4) in which this custom line is to be drawn")
+                .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
+                        (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+        }
+
+        x.append(static_cast<qreal>(pR_to->x));
+        y.append(static_cast<qreal>(pR_to->y));
+        z.append(pR->z);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
         int i = 0; // Indexes groups of coordinates in the table
@@ -9712,7 +9713,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     if (!pR->userData.contains(key)) {
         if (!isBackwardCompatibilityRequired) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (no user data with key:'%1' in room with id: %2))").arg(key, QString::number(roomId)));
+                "bad argument #2 value (no user data with key '%1' in room with id %2))").arg(key, QString::number(roomId)));
         }
         lua_pushstring(L, QString().toUtf8().constData());
         return 1;
@@ -9750,7 +9751,7 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.contains(key)) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #2 value (no user data with key %1 in area with id: %2)").arg(key, QString::number(areaId)));
+            "bad argument #2 value (no user data with key %1 in area with id %2)").arg(key, QString::number(areaId)));
     }
     lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
     return 1;
@@ -10013,7 +10014,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -10068,7 +10069,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         }
         if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (number %1 is not a valid area id as it does not exist)").arg(areaId));
+                "bad argument #2 value (area id %1 does not exist)").arg(areaId));
         }
     } else if (lua_isstring(L, 2)) {
         areaName = lua_tostring(L, 2);
@@ -10121,7 +10122,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).").arg(QString::number(id)));
     }
@@ -10327,7 +10328,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, "no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -11106,10 +11107,10 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
                         lua_pushboolean(L, true);
                         return 1;
                     } else {
-                        return warnArgumentValue(L, __func__, QStringLiteral("%1 does not appear to be a valid Discord application id").arg(inputText));
+                        return warnArgumentValue(L, __func__, QStringLiteral("'%1' does not appear to be a valid Discord application id").arg(inputText));
                     }
                 } else {
-                    return warnArgumentValue(L, __func__, QStringLiteral("%1 can not be converted to the expected numeric Discord application id").arg(inputText));
+                    return warnArgumentValue(L, __func__, QStringLiteral("'%1' can not be converted to the expected numeric Discord application id").arg(inputText));
                 }
             } else {
                 // Empty string input - to reset to default the same as the no
@@ -14430,7 +14431,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14493,7 +14494,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
 
     QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -14567,7 +14568,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -16312,7 +16313,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, "getMapSelection: no map present or loaded!");
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     lua_newtable(L);
@@ -16452,7 +16453,8 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
+            return warnArgumentValue(L, __func__,
+                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
@@ -16498,7 +16500,8 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
+            return warnArgumentValue(L, __func__,
+                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
