@@ -12167,20 +12167,17 @@ int TLuaInterpreter::sendIrc(lua_State* L)
 
     // wait for our client to be ready before sending messages.
     if (!pHost->mpDlgIRC->mReadyForSending) {
-        lua_pushnil(L);
-        lua_pushstring(L, "not ready to send");
-        return 2;
+        return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    QPair<bool, QString> rval = pHost->mpDlgIRC->sendMsg(target, msg);
+    QPair<bool, QString> result = pHost->mpDlgIRC->sendMsg(target, msg);
 
-    if (rval.first) {
-        lua_pushboolean(L, true);
-    } else {
-        lua_pushnil(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
-    lua_pushstring(L, rval.second.toUtf8().constData());
-    return 2;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcNick
@@ -12271,17 +12268,13 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
     QString nick = lua_tostring(L, 1);
 
     if (nick.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "nick must not be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "nick must not be empty");
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcNickName(pHost, nick);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save nick name, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save nick name, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -12299,9 +12292,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     addr = lua_tostring(L, 1);
     if (addr.empty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "hostname must not be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "hostname must not be empty");
     }
     if (!lua_isnoneornil(L, 2)) {
         if (!lua_isnumber(L, 2)) {
@@ -12310,25 +12301,19 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         }
         port = lua_tointeger(L, 2);
         if (port > 65535 || port < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 6667 if not provided}", port);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save hostname, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save hostname, reason: %1").arg(result.second));
     }
 
     result = dlgIRC::writeIrcHostPort(pHost, port);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save port, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save port, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -12356,18 +12341,14 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (newchannels.count() == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, "channels must contain at least 1 valid channel name");
-        return 2;
+    if (newchannels.empty()) {
+        return warnArgumentValue(L, __func__, "no (valid) channel names provided");
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, newchannels);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save channels, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save channels, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -12806,9 +12787,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         index--;
 
         if (index < 0 || index >= speechQueue.size()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "index (%d) out of bounds for queue size %d", index + 1, speechQueue.size());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -12825,13 +12804,9 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (speechUnit->state() == QTextToSpeech::Ready) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "not speaking any text");
-        return 2;
+        return warnArgumentValue(L, __func__, "not speaking any text");
     } else if (speechUnit->state() == QTextToSpeech::BackendError) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "error with the backend");
-        return 2;
+        return warnArgumentValue(L, __func__, "error with the computer's TTS engine");
     }
 
     lua_pushstring(L, speechCurrent.toUtf8().constData());
@@ -12878,14 +12853,12 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
     newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
-    if (results.first) {
-        lua_pushboolean(L, true);
-        return 1;
+    if (!results.first) {
+        return warnArgumentValue(L, __func__, results.second);
     }
 
-    lua_pushnil(L);
-    lua_pushfstring(L, results.second.toUtf8().constData());
-    return 2;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncoding
@@ -14544,9 +14517,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
         }
 
         fileToUpload = file.readAll();
