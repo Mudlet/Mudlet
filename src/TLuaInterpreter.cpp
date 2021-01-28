@@ -10123,7 +10123,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded!");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).".arg(QString::number(id))));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).").arg(QString::number(id)));
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
