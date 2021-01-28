@@ -2710,9 +2710,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getExitStubs: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10123,13 +10121,9 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "resetRoomArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).".arg(id)));
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
@@ -10169,21 +10163,19 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        if (symbol.isEmpty()) {
-            // Allow an empty string to be used to clear the symbol:
-            pR->mSymbol.clear();
-        } else {
-            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
-            // handle/use/allow:
-            pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-        }
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+
+    if (symbol.isEmpty()) {
+        // Allow an empty string to be used to clear the symbol:
+        pR->mSymbol.clear();
+    } else {
+        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // handle/use/allow:
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomChar
@@ -10199,13 +10191,11 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        lua_pushstring(L, pR->mSymbol.toUtf8().constData());
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+
+    lua_pushstring(L, pR->mSymbol.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
@@ -10250,16 +10240,14 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        pR->mSymbolColor = QColor(r, g, b);
-        lua_pushboolean(L, true);
-        host.mpMap->mpMapper->mp2dMap->repaint();
-        host.mpMap->mpMapper->update();
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+    
+    pR->mSymbolColor = QColor(r, g, b);
+    lua_pushboolean(L, true);
+    host.mpMap->mpMapper->mp2dMap->repaint();
+    host.mpMap->mpMapper->update();
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unsetRoomCharColor
@@ -10274,9 +10262,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     } else {
         pR->mSymbolColor = nullptr;
         lua_pushboolean(L, true);
@@ -10299,15 +10285,13 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        lua_pushnumber(L, pR->mSymbolColor.red());
-        lua_pushnumber(L, pR->mSymbolColor.green());
-        lua_pushnumber(L, pR->mSymbolColor.blue());
-        return 3;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+    
+    lua_pushnumber(L, pR->mSymbolColor.red());
+    lua_pushnumber(L, pR->mSymbolColor.green());
+    lua_pushnumber(L, pR->mSymbolColor.blue());
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
