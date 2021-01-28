@@ -8,11 +8,11 @@ local argparse = require "argparse"
 local lunajson = require "lunajson"
 
 -- don't load all of LuaGlobal, as that requires yajl installed
-local builddir_env = os.getenv("GITHUB_WORKSPACE")
-if builddir_env then
+local github_workspace = os.getenv("GITHUB_WORKSPACE")
+if github_workspace then
   -- the script struggles to load the load files relatively in CI
-  loadfile(builddir_env.. "/src/mudlet-lua/lua/StringUtils.lua")()
-  loadfile(builddir_env.."/src/mudlet-lua/lua/TableUtils.lua")()
+  loadfile(github_workspace.. "/src/mudlet-lua/lua/StringUtils.lua")()
+  loadfile(github_workspace.."/src/mudlet-lua/lua/TableUtils.lua")()
 else
   loadfile("../src/mudlet-lua/lua/StringUtils.lua")()
   loadfile("../src/mudlet-lua/lua/TableUtils.lua")()
@@ -22,7 +22,7 @@ local parser = argparse("generate-ptb-changelog.lua", "Generate a changelog from
 parser:option("-r --releasefile", "Downloaded DBLSQD release feed file")
 local args = parser:parse()
 
-local MAX_COMMITS_PER_CHANGELOG = 1000
+local MAX_COMMITS_PER_CHANGELOG = 100
 
 -- Basic algorithm is as follows:
 --   retrieve last X commit hashes from current branch
@@ -63,7 +63,16 @@ function extract_released_sha1s(input)
 end
 
 function extract_historical_sha1s()
-  local history = string.split(os.capture("git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG))
+  local history, command
+  if github_workspace then
+    command = string.format("git log --pretty=%%H -n %d %s^2", MAX_COMMITS_PER_CHANGELOG, os.getenv("GITHUB_SHA"))
+    print("[temporary debug information: "..command.."]")
+    history = string.split(os.capture(command))
+  else
+    command = "git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG
+    print("[temporary debug information: "..command.."]")
+    history = string.split(os.capture(command))
+  end
 
   local t = {}
   for _, sha1 in ipairs(history) do
