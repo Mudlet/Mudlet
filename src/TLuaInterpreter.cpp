@@ -1260,7 +1260,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
     lua_pushstring(L, value.toString().toUtf8().constData());
     return 1;
 #else
-    return warnArgumentValue(L, __func__, QStringLiteral("this function is only needed on Windows, and does not work here"));
+    return warnArgumentValue(L, __func__, "this function is only needed on Windows, and does not work here");
 #endif
 }
 
@@ -1395,7 +1395,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     }
     QString replayFileName{lua_tostring(L, 1)};
     if (replayFileName.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a blank string is not a valid replay file name"));
+        return warnArgumentValue(L, __func__, "a blank string is not a valid replay file name");
     }
 
     Host& host = getHostFromLua(L);
@@ -1420,7 +1420,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     }
     QString iconPath{lua_tostring(L, 1)};
     if (iconPath.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a blank string is not a valid icon file path"));
+        return warnArgumentValue(L, __func__, "a blank string is not a valid icon file path");
     }
 
     if (!QFileInfo::exists(iconPath)) {
@@ -1725,7 +1725,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        return warnArgumentValue(L, __func__, QStringLiteral("you haven't opened a map yet"));
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -1763,12 +1763,12 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        return warnArgumentValue(L, __func__, QStringLiteral("you haven't opened a map yet"));
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
     auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
     if (roomID == -1) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the player does not have a valid room id set"));
+        return warnArgumentValue(L, __func__, "the player does not have a valid room id set");
     }
     lua_pushnumber(L, roomID);
     return 1;
@@ -1993,7 +1993,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         watchId = host.findStopWatchId(name);
         if (!watchId) {
             if (name.isEmpty()) {
-                return warnArgumentValue(L, __func__, QStringLiteral("no unnamed stopwatches found"));
+                return warnArgumentValue(L, __func__, "no unnamed stopwatches found");
             }
             return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
@@ -2742,7 +2742,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -2816,7 +2816,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mInstalledModules.contains(moduleName)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("module doesn't exist"));
+        return warnArgumentValue(L, __func__, "module doesn't exist");
     }
     host.mModulePriorities[moduleName] = modulePriority;
     return 0;
@@ -3068,7 +3068,7 @@ int TLuaInterpreter::remainingTime(lua_State* L)
     }
 
     if (result == -1) {
-        return warnArgumentValue(L, __func__, QStringLiteral("timer is inactive or expired"));
+        return warnArgumentValue(L, __func__, "timer is inactive or expired");
     }
 
     if (result == -2) {
@@ -3202,7 +3202,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     size = lua_tointeger(L, s);
     if (size <= 0) {
         // just throw an error, no default needed.
-        return warnArgumentValue(L, __func__, QStringLiteral("size cannot be 0 or negative"));
+        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -4455,7 +4455,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     }
     QString imageLocation{lua_tostring(L, 1)};
     if (imageLocation.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (image location cannot be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value (image location cannot be an empty string)");
     }
 
     auto size = mudlet::self()->getImageSize(imageLocation);
@@ -4478,7 +4478,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (command line name cannot be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value (command line name cannot be an empty string)");
     }
     lua_remove(L, 1);
 
@@ -4507,7 +4507,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (command line name cannot be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value (command line name cannot be an empty string)");
     }
 
     bool lua_result = false;
@@ -4561,7 +4561,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     QString labelName{lua_tostring(L, 1)};
     if (labelName.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (label name cannot be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value (label name cannot be an empty string)");
     }
     lua_remove(L, 1);
 
@@ -4859,7 +4859,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -4889,7 +4889,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -5112,7 +5112,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     if (!lua_isboolean(L, 4)) {
@@ -5154,7 +5154,7 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     Host& host = getHostFromLua(L);
@@ -5277,7 +5277,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
@@ -5302,7 +5302,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     int room_id = 0;
@@ -5389,7 +5389,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     QString key = QString();
@@ -5510,7 +5510,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     QString key = QString();
@@ -5627,7 +5627,7 @@ int TLuaInterpreter::getAreaTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5648,7 +5648,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5797,7 +5797,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
     }
@@ -5829,7 +5829,7 @@ int TLuaInterpreter::getPath(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     } else if (!host.mpMap->mpRoomDB->getRoom(originRoomId)) {
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid source room id)").arg(originRoomId));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
@@ -5945,7 +5945,7 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
 // inactive and has been removed
 int TLuaInterpreter::showUnzipProgress(lua_State* L)
 {
-    return warnArgumentValue(L, __func__, QStringLiteral("removed command, this function is now inactive and does nothing"));
+    return warnArgumentValue(L, __func__, "removed command, this function is now inactive and does nothing");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
@@ -6358,12 +6358,12 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_SE;
 
     if (!host.mTelnet.isATCPEnabled()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("ATCP is not currently enabled"));
+        return warnArgumentValue(L, __func__, "ATCP is not currently enabled");
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to send all of the ATCP message"));
+        return warnArgumentValue(L, __func__, "unable to send all of the ATCP message");
     }
 
     lua_pushboolean(L, true);
@@ -6377,7 +6377,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     std::string msg;
 
     if (!host.mTelnet.isMSPEnabled()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("MSP is not currently enabled"));
+        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -6433,12 +6433,12 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_SE;
 
     if (!host.mTelnet.isGMCPEnabled()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("GMCP is not currently enabled"));
+        return warnArgumentValue(L, __func__, "GMCP is not currently enabled");
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("unable to send all of the GMCP message"));
+        return warnArgumentValue(L, __func__, "unable to send all of the GMCP message");
     }
 
     lua_pushboolean(L, true);
@@ -6903,7 +6903,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     }
 
     if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
-        return warnArgumentValue(L, __func__, QStringLiteral("only one of foreground and background colors can be -1 (ignored)"));
+        return warnArgumentValue(L, __func__, "only one of foreground and background colors can be -1 (ignored)");
     }
 
     int triggerID;
@@ -8153,7 +8153,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     QString existingName;
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -8174,7 +8174,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         existingName = lua_tostring(L, 1);
         id = host.mpMap->mpRoomDB->getAreaNamesMap().key(existingName, 0);
         if (existingName.isEmpty()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (area name cannot be empty)"));
+            return warnArgumentValue(L, __func__, "bad argument #1 value (area name cannot be empty)");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
             return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (area name '%1' does not exist)").arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
@@ -8242,7 +8242,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     int id;
@@ -8295,7 +8295,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if ((!host.mpMap) || (!host.mpMap->mpRoomDB)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("error, no map seems to be loaded!"));
+        return warnArgumentValue(L, __func__, "error, no map seems to be loaded!");
     } else if (name.isEmpty()) {
         // Empty names now not allowed
         return warnArgumentValue(L, __func__, QStringLiteral(
@@ -8326,7 +8326,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -8340,11 +8340,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     } else if (lua_isstring(L, 1)) {
         name = lua_tostring(L, 1);
         if (name.isEmpty()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (an empty string is not a valid area name)"));
+            return warnArgumentValue(L, __func__, "bad argument #1 value (an empty string is not a valid area name)");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
             return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (string '%1' is not a valid area name)").arg(name));
         } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (you can't delete the default area)"));
+            return warnArgumentValue(L, __func__, "bad argument #1 value (you can't delete the default area)");
         }
     } else {
         lua_pushfstring(L,
@@ -8475,7 +8475,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     if (lua_gettop(L) > 0) {
@@ -8630,7 +8630,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     TRoom* pR;
@@ -8719,7 +8719,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded!"));
+        return warnArgumentValue(L, __func__, "no map present or loaded!");
     }
 
     int roomId;
@@ -9316,7 +9316,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     pR_from->setSpecialExit(toRoomID, dir);
@@ -9344,7 +9344,7 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 2);
     if (dir.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("the exit command cannot be empty"));
+        return warnArgumentValue(L, __func__, "the exit command cannot be empty");
     }
 
     if (!pR->getSpecialExits().contains(dir)) {
@@ -9361,7 +9361,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9388,7 +9388,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9430,7 +9430,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9457,7 +9457,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9477,7 +9477,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' can not be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' can not be an empty string)");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
     return 1;
@@ -9488,7 +9488,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
@@ -9505,7 +9505,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -9514,7 +9514,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value ('key' can not be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value ('key' can not be an empty string)");
     }
     lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
     return 1;
@@ -9674,7 +9674,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9737,12 +9737,12 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' is not allowed to be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' is not allowed to be an empty string)");
     }
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
@@ -9761,7 +9761,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -9782,7 +9782,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9829,7 +9829,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' is not allowed to be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' is not allowed to be an empty string)");
     }
 
     if (!lua_isstring(L, 3)) {
@@ -9840,7 +9840,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
@@ -9857,7 +9857,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key;
@@ -9867,7 +9867,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     }
     key = lua_tostring(L, 1);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value ('key' is not allowed to be an empty string)"));
+        return warnArgumentValue(L, __func__, "bad argument #1 value ('key' is not allowed to be an empty string)");
     }
 
     if (!lua_isstring(L, 2)) {
@@ -9886,7 +9886,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9915,7 +9915,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9946,7 +9946,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9977,7 +9977,7 @@ int TLuaInterpreter::getAllMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QStringList keys;
@@ -10044,7 +10044,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int id;
@@ -10074,7 +10074,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         areaName = lua_tostring(L, 2);
         // areaId will be zero if not found!
         if (areaName.isEmpty()) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value (area name cannot be empty)"));
+            return warnArgumentValue(L, __func__, "bad argument #2 value (area name cannot be empty)");
         }
         areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key(areaName, 0);
         if (!areaId) {
