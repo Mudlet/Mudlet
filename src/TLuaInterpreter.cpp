@@ -8200,7 +8200,6 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         // uniqueness there can be only one of it - so we can check if this is a
         // problem or just pointless quite easily...!
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(id) != newName) {
-            lua_pushnil(L);
             // And it isn't the trivial case, where the given areaID already IS that name
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "area names may not be duplicated and area id %1 already has the name '%2'")
@@ -8293,7 +8292,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
-        return warnArgumentValue(L, __func__, "area names may not be duplicated and area id %1 already has the name '%2'")
+        return warnArgumentValue(L, __func__, QStringLiteral("area names may not be duplicated and area id %1 already has the name '%2'")
             .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
     }
 
