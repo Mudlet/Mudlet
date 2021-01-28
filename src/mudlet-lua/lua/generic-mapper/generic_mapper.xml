@@ -416,7 +416,7 @@ if not matches[2] then
 else
   local startStr, endStr = string.match(matches[2],"(.*) ([%w%.]+)")
   local vals = {'on', 'off', 'true', 'false'}
-  local modes = {'basic','simple','normal','complex'}
+  local modes = {'lazy','simple','normal','complex'}
   if (table.contains(vals, endStr) or tonumber(endStr)) or (startStr == "mode" and table.contains(modes, endStr)) then
   	map.setConfigs(startStr, endStr)
   else
@@ -717,7 +717,7 @@ map.help = {[[
             or the area name provided
         &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map
         &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area
-        &lt;link: mode&gt;map mode &lt;basic, simple, normal or complex&gt;&lt;/link&gt; - Sets the mapping mode, which
+        &lt;link: mode&gt;map mode &lt;lazy, simple, normal or complex&gt;&lt;/link&gt; - Sets the mapping mode, which
             defines how new rooms are added to the map.
         &lt;link: add door&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;/link&gt; -
             Creates a door in the given direction, with the given status
@@ -924,12 +924,12 @@ map.help.set_area = [[
 ]]
 map.help.mode = [[
     &lt;cyan&gt;Map Mode&lt;reset&gt;
-        syntax: &lt;yellow&gt;map mode &lt;basic, simple, normal, or complex&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;map mode &lt;lazy, simple, normal, or complex&gt;&lt;reset&gt;
 
         This command changes the current mapping mode, which determines what
         happens when new rooms are added to the map.
 
-        In basic mode, connecting exits aren't checked and a room is only added if
+        In lazy mode, connecting exits aren't checked and a room is only added if
         there isn't an adjacent room with the same name.
 
         In simple mode, if an adjacent room has an exit stub pointing toward the
@@ -1143,7 +1143,7 @@ map.help.config = [[
             are cleared. This may be true or false.
 
         &lt;yellow&gt;mode&lt;reset&gt; - This is the default mapping mode on startup, and defines how
-            new rooms are added to the map. May be "basic", "simple",
+            new rooms are added to the map. May be "lazy", "simple",
             "normal" or "complex".
             
         &lt;yellow&gt;download_path&lt;reset&gt; - This is the path that updates are downloaded from.
@@ -1264,7 +1264,7 @@ local profilePath = getMudletHomeDir()
 profilePath = profilePath:gsub("\\","/")
 
 map.defaults = {
-    mode = "normal", -- can be basic, simple, normal, or complex
+    mode = "normal", -- can be lazy, simple, normal, or complex
     stretch_map = true,
     search_on_look = true,
     speedwalk_delay = 1,
@@ -1723,7 +1723,7 @@ local function check_room(roomID, name, exits, onlyName)
     end
     if name ~= getRoomName(roomID) then return false end
     
-    -- used in mode "basic" to match only the room name
+    -- used in mode "lazy" to match only the room name
     if onlyName then return true end
     
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
@@ -1838,7 +1838,7 @@ end
 
 local function find_link(name, exits, dir, max_distance)
     -- search for matching room in desired direction
-    -- in basic mode check_room search only by name
+    -- in lazy mode check_room search only by name
     local x,y,z = getRoomCoordinates(map.currentRoom)
     if map.mapping and x then
         if max_distance &lt; 1 then
@@ -1863,7 +1863,7 @@ local function find_link(name, exits, dir, max_distance)
             if check_room(v,name,exits,false) then
                 match = v
                 break            
-            elseif map.mode == "basic" and check_room(v,name,exits,true) then
+            elseif map.mode == "lazy" and check_room(v,name,exits,true) then
                 match = v
                 break
             end
@@ -1913,7 +1913,7 @@ local function move_map()
             map.find_me(map.currentName,map.currentExits)
         else
         	local onlyName
-            if map.mode == "basic" then
+            if map.mode == "lazy" then
               onlyName = true
             else
               onlyName = false
@@ -2247,8 +2247,8 @@ end
 
 function map.set_mode(mode)
     -- switches mapping modes
-    if not table.contains({"basic","simple","normal","complex"},mode) then
-        show_err("Invalid Map Mode, must be 'basic', 'simple', 'normal' or 'complex'.")
+    if not table.contains({"lazy","simple","normal","complex"},mode) then
+        show_err("Invalid Map Mode, must be 'lazy', 'simple', 'normal' or 'complex'.")
     end
     map.set("mode", mode)
     map.echo("Current mode set to: " .. mode)
