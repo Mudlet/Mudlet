@@ -1485,7 +1485,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     if (console->setFontSize(size)) {
         lua_pushboolean(L, true);
     } else {
-        return warnArgumentValue(L, __func__, QStringLiteral("Setting font size of '%1' failed").arg(windowName));
+        return warnArgumentValue(L, __func__, QStringLiteral("setting font size of '%1' failed").arg(windowName));
     }
     return 0;
 }
@@ -7319,7 +7319,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     Host& host = getHostFromLua(L);
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("No button named '%1' found").arg(name));
+        return warnArgumentValue(L, __func__, QStringLiteral("no button named '%1' found").arg(name));
     }
     for (auto action : actionsList) {
         action->css = css;
