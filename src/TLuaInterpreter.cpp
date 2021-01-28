@@ -1753,7 +1753,7 @@ int TLuaInterpreter::centerview(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (%1 is not a valid room id).").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id.").arg(roomId));
     }
 }
 
@@ -2726,7 +2726,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
     if (stubs.empty()) {
@@ -2758,7 +2758,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     QList<int> stubs = pR->exitStubs;
     if (stubs.empty()) {
@@ -4218,15 +4218,13 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)")
-                .arg(QString::number(s), QString::number(r)));
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (red value needs to be between 0-255, got %2!)")
-                .arg(QString::number(s), QString::number(r)));
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4240,8 +4238,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (green value needs to be between 0-255, got %2!)")
-            .arg(QString::number(s), QString::number(g)));
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4251,8 +4248,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (blue value needs to be between 0-255, got %2!)")
-            .arg(QString::number(s), QString::number(b)));
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4266,8 +4262,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #%1 value (alpha value needs to be between 0-255, got %2!)")
-            .arg(QString::number(s), QString::number(alpha)));
+        return warnArgumentValue(L, __func__, QStringLiteral("alpha value %1 needs to be between 0-255").arg(alpha));
     }
 
     if (isMain(windowName)) {
@@ -4459,7 +4454,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     }
     QString imageLocation{lua_tostring(L, 1)};
     if (imageLocation.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value (image location cannot be an empty string)");
+        return warnArgumentValue(L, __func__, "image location cannot be an empty string");
     }
 
     auto size = mudlet::self()->getImageSize(imageLocation);
@@ -4482,7 +4477,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value (command line name cannot be an empty string)");
+        return warnArgumentValue(L, __func__, "command line name cannot be an empty string");
     }
     lua_remove(L, 1);
 
@@ -4494,7 +4489,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (!host.setCmdLineAction(name, func)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (command line name '%1' not found)").arg(name));
+        return warnArgumentValue(L, __func__, QStringLiteral("command line name '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -4511,7 +4506,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value (command line name cannot be an empty string)");
+        return warnArgumentValue(L, __func__, "command line name cannot be an empty string");
     }
 
     bool lua_result = false;
@@ -4520,7 +4515,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
         lua_pushboolean(L, true);
         return 1;
     } else {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (command line name '%1' not found)").arg(name));
+        return warnArgumentValue(L, __func__, QStringLiteral("command line name '%1' not found").arg(name));
     }
 }
 
@@ -4565,7 +4560,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     QString labelName{lua_tostring(L, 1)};
     if (labelName.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value (label name cannot be an empty string)");
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
     }
     lua_remove(L, 1);
 
@@ -4596,7 +4591,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
 
     if (lua_result) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (label name '%1' not found)").arg(labelName));
+        return warnArgumentValue(L, __func__, QStringLiteral("label name '%1' not found").arg(labelName));
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4880,7 +4875,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
     updateMap(L);
@@ -5285,7 +5280,7 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     lua_newtable(L);
     QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
@@ -5729,7 +5724,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(area));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(area));
     }
 
     lua_newtable(L);
@@ -5803,7 +5798,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid target room id").arg(targetRoomId));
     }
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
@@ -5835,9 +5830,9 @@ int TLuaInterpreter::getPath(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(originRoomId)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid source room id)").arg(originRoomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid source room id").arg(originRoomId));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid target room id)").arg(targetRoomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid target room id").arg(targetRoomId));
     }
 
     bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
@@ -8177,9 +8172,9 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         existingName = lua_tostring(L, 1);
         id = host.mpMap->mpRoomDB->getAreaNamesMap().key(existingName, 0);
         if (existingName.isEmpty()) {
-            return warnArgumentValue(L, __func__, "bad argument #1 value (area name cannot be empty)");
+            return warnArgumentValue(L, __func__, "area name cannot be empty");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (area name '%1' does not exist)").arg(existingName));
+            return warnArgumentValue(L, __func__, QStringLiteral("area name '%1' does not exist").arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "bad argument #1 value (area name '%1' is reserved and protected - it cannot be changed)").arg(existingName));
@@ -8269,10 +8264,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         if (result != -1) {
             return 1;
         } else {
-            lua_pushfstring(L,
-                            "getRoomAreaName: bad argument #1 value (string \"%s\" is\n"
-                            "not a valid area name).",
-                            name.toUtf8().constData());
+            lua_pushfstring(L, "getRoomAreaName: string '%s' is not a valid area name", name.toUtf8().constData());
             return 2;
         }
     } else {
@@ -8281,7 +8273,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
             return 1;
         } else {
             lua_pushnumber(L, -1);
-            lua_pushfstring(L, "getRoomAreaName: bad argument #1 value (number %d is not a valid area id).", id);
+            lua_pushfstring(L, "getRoomAreaName: number %d is not a valid area id", id);
             return 2;
         }
     }
@@ -8337,16 +8329,16 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "bad argument #1 value (number %1 is not a valid area id greater than zero)").arg(id));
         } else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(id));
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(id));
         }
     } else if (lua_isstring(L, 1)) {
         name = lua_tostring(L, 1);
         if (name.isEmpty()) {
-            return warnArgumentValue(L, __func__, "bad argument #1 value (an empty string is not a valid area name)");
+            return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (string '%1' is not a valid area name)").arg(name));
+            return warnArgumentValue(L, __func__, QStringLiteral("string '%1' is not a valid area name").arg(name));
         } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
-            return warnArgumentValue(L, __func__, "bad argument #1 value (you can't delete the default area)");
+            return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
         lua_pushfstring(L,
@@ -8643,7 +8635,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     int roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -8666,7 +8658,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         if (!(pR->getSpecialExits().contains(exitCmd))) {
             // And NOT a special one either
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (room with id %1 does not have a special exit in direction '%2')")
+                "room with id %1 does not have a special exit in direction '%2'")
                 .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid special exit - so fall out of if and continue
@@ -8686,7 +8678,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
                 || ((!exitCmd.compare(QStringLiteral("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
             // No there IS NOT a stub or real exit in the exitCmd direction
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (room with id %1 does not have a normal exit or a stub exit in direction '%2')")
+                "room with id %1 does not have a normal exit or a stub exit in direction '%2'")
                 .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid stub or real normal exit -fall through to continue
@@ -8702,8 +8694,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     int doorStatus = lua_tointeger(L, 3);
     if (doorStatus < 0 || doorStatus > 3) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #3 value (door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked')")
-            .arg(doorStatus));
+            "door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
     }
 
     bool result = pR->setDoor(exitCmd, doorStatus);
@@ -8733,7 +8724,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
 
     lua_newtable(L);
@@ -9350,7 +9341,7 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
 
     if (!pR->getSpecialExits().contains(dir)) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "the special exit name/command '%1' in room id %2").arg(dir, QString::number(fromRoomID)));
+            "the special exit name/command '%1' does not exist in room id %2").arg(dir, QString::number(fromRoomID)));
     }
     pR->setSpecialExit(-1, dir);
     lua_pushboolean(L, true);
@@ -9373,7 +9364,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
@@ -9409,7 +9400,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     // Turns out that an empty key IS possible, but if this changes this should be uncommented
     //        if (key.isEmpty()) {
@@ -9442,7 +9433,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
@@ -9475,10 +9466,10 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' can not be an empty string)");
+        return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
     return 1;
@@ -9515,7 +9506,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value ('key' can not be an empty string)");
+        return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
     return 1;
@@ -9705,7 +9696,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         if (!isBackwardCompatibilityRequired) {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
         }
         lua_pushstring(L, QString().toUtf8().constData());
         return 1;
@@ -9738,7 +9729,7 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' is not allowed to be an empty string)");
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     Host& host = getHostFromLua(L);
@@ -9747,11 +9738,11 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
     if (!pA->mUserData.contains(key)) {
         return warnArgumentValue(L, __func__, QStringLiteral(
-            "bad argument #2 value (no user data with key %1 in area with id %2)").arg(key, QString::number(areaId)));
+            "no user data with key '%1' in area with id %2").arg(key, QString::number(areaId)));
     }
     lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
     return 1;
@@ -9772,7 +9763,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
     QString key{lua_tostring(L, 1)};
 
     if (!host.mpMap->mUserData.contains(key)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (no user data with key '%1' in map)").arg(key));
+        return warnArgumentValue(L, __func__, QStringLiteral("no user data with key '%1' in map").arg(key));
     }
     lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
     return 1;
@@ -9807,7 +9798,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
     lua_pushboolean(L, true);
@@ -9830,7 +9821,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #2 value ('key' is not allowed to be an empty string)");
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     if (!lua_isstring(L, 3)) {
@@ -9846,7 +9837,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
     lua_pushboolean(L, true);
@@ -9868,7 +9859,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     }
     key = lua_tostring(L, 1);
     if (key.isEmpty()) {
-        return warnArgumentValue(L, __func__, "bad argument #1 value ('key' is not allowed to be an empty string)");
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     if (!lua_isstring(L, 2)) {
@@ -9899,7 +9890,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
     QStringList keys;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     keys = pR->userData.keys();
     lua_newtable(L);
@@ -9929,7 +9920,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
     QStringList values;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     keys = pR->userData.keys();
     values = pR->userData.values();
@@ -9960,7 +9951,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
     QStringList values;
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
     keys = pA->mUserData.keys();
     values = pA->mUserData.values();
@@ -10055,7 +10046,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     }
     id = lua_tointeger(L, 1);
     if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
 
     int areaId;
@@ -10064,23 +10055,21 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         areaId = lua_tonumber(L, 2);
         if (areaId < 1) {
             return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (number %1 is not a valid area id greater than zero. "
-                "To remove a room's area, use resetRoomArea( roomId ) )").arg(areaId));
+                "number %1 is not a valid area id greater than zero. "
+                "To remove a room's area, use resetRoomArea( roomId )").arg(areaId));
         }
         if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
-            return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (area id %1 does not exist)").arg(areaId));
+            return warnArgumentValue(L, __func__, QStringLiteral("area id %1 does not exist").arg(areaId));
         }
     } else if (lua_isstring(L, 2)) {
         areaName = lua_tostring(L, 2);
         // areaId will be zero if not found!
         if (areaName.isEmpty()) {
-            return warnArgumentValue(L, __func__, "bad argument #2 value (area name cannot be empty)");
+            return warnArgumentValue(L, __func__, "area name cannot be empty");
         }
         areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key(areaName, 0);
         if (!areaId) {
-            return warnArgumentValue(L, __func__, QStringLiteral(
-                "bad argument #2 value (area name '%1' does not exist)").arg(areaName));
+            return warnArgumentValue(L, __func__, QStringLiteral("area name '%1' does not exist").arg(areaName));
         }
     } else {
         lua_pushfstring(L,
@@ -10124,7 +10113,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).").arg(QString::number(id)));
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
@@ -10685,7 +10674,7 @@ int TLuaInterpreter::echo(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (console/label '%1' does not exist)").arg(consoleName));
+            return warnArgumentValue(L, __func__, QStringLiteral("console/label '%1' does not exist").arg(consoleName));
         }
     }
 }
