@@ -855,7 +855,7 @@ void TTextEdit::highlightSelection()
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
         // X11 has a second clipboard that's updated on any selection
-        clipboard->setText(getSelectedText(), QClipboard::Selection);
+        clipboard->setText(getSelectedText(QChar::LineFeed, mShowTimeStamps), QClipboard::Selection);
     }
 }
 
@@ -1399,7 +1399,7 @@ void TTextEdit::slot_copySelectionToClipboard()
         return;
     }
 
-    QString selectedText = getSelectedText();
+    QString selectedText = getSelectedText(QChar::LineFeed, mShowTimeStamps);
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(selectedText);
 }
@@ -1643,12 +1643,12 @@ void TTextEdit::searchSelectionOnline()
     QDesktopServices::openUrl(QUrl(url));
 }
 
-QString TTextEdit::getSelectedText(const QChar& newlineChar)
+QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
 {
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
-    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1){
+    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
         mPA.ry() -= mpBuffer->mBatchDeleteSize;
         mPB.ry() -= mpBuffer->mBatchDeleteSize;
     }
@@ -1658,6 +1658,13 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar)
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
+    if (showTimestamps) {
+        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
+        QStringList result;
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
+                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        textLines = result;
+    }
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
