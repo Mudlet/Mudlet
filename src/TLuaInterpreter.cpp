@@ -8831,8 +8831,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
             if (area != area_to) {
                 return warnArgumentValue(L, __func__, QStringLiteral(
                     "target room is in area '%1' (id: %2) which is not the one '%3' (id: %4) in which this custom line is to be drawn")
-                    .arg(host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
-                         host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+                    .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
+                         (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
             }
 
             x.append(static_cast<qreal>(pR_to->x));
