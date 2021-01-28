@@ -929,14 +929,14 @@ map.help.mode = [[
         This command changes the current mapping mode, which determines what
         happens when new rooms are added to the map.
 
-        In basic mode, a room is added to the map only if there aren't adjacent
-        room with the same room name, not checking exits.
+        In basic mode, connecting exits aren't checked and a room is only added if
+        there isn't an adjacent room with the same name.
 
         In simple mode, if an adjacent room has an exit stub pointing toward the
         newly created room, and the new room has an exit in that direction,
         those stubs are connected in both directions.
 
-        In normal mode, the newly created room is connected to the room you left
+        In normal mode (default), the newly created room is connected to the room you left
         from, so long as it has an exit leading in that direction.
 
         In complex mode, none of the exits of the newly connected room are
@@ -1717,13 +1717,13 @@ local function connect_rooms(ID1, ID2, dir1, dir2, no_check)
 end
 
 local function check_room(roomID, name, exits, onlyName)
-    -- check to see if room name or/and exits match expecations
+    -- check to see if room name or/and exits match expectations
     if not roomID then
         error("Check Room Error: No ID",2)
     end
     if name ~= getRoomName(roomID) then return false end
     
-    -- used in mode "basci" to match only room name
+    -- used in mode "basic" to match only the room name
     if onlyName then return true end
     
     local t_exits = table.union(getRoomExits(roomID),getRoomStubs(roomID))
