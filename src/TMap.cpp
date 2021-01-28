@@ -1131,6 +1131,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 itMapLabel.next();
                 ofs << itMapLabel.key(); //label ID
                 TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
                 ofs << label.size;
                 ofs << label.text;
                 ofs << label.fgColor;
@@ -1179,6 +1180,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 itMapLabel.next();
                 ofs << itMapLabel.key(); //label ID
                 TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
                 ofs << QPointF(); // dummy value - not actually used
                 ofs << label.size;
                 ofs << label.text;
@@ -1263,7 +1265,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
         } else {
-            if (pR->mSymbolColor != nullptr) {
+            if (pR->mSymbolColor.isValid()) {
                 pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
             }
         }
@@ -1894,6 +1896,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                     int labelId = -1;
                     ifs >> labelId;
                     TMapLabel label;
+                    ifs >> label.pos;
                     ifs >> label.size;
                     ifs >> label.text;
                     ifs >> label.fgColor;
@@ -1930,46 +1933,6 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
         int areasWithLabelsTotal = 0;
         ifs >> areasWithLabelsTotal;
-        int currentAreaWithLabelsCount = 0;
-        while (!ifs.atEnd() && currentAreaWithLabelsCount < areasWithLabelsTotal) {
-            int areaID = -1;
-            int areaLabelsTotal = 0;
-            ifs >> areaLabelsTotal;
-            ifs >> areaID;
-            int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
-                int labelID = -1;
-                ifs >> labelID;
-                TMapLabel label;
-                if (otherProfileVersion >= 12) {
-                    ifs >> label.pos;
-                } else {
-                    QPointF labelPos2D;
-                    ifs >> labelPos2D;
-                    label.pos = QVector3D(labelPos2D);
-                }
-                // There was an unused QPointF in all versions
-                QPointF dummyPointF;
-                ifs >> dummyPointF;
-                Q_UNUSED(dummyPointF)
-                ifs >> label.size;
-                ifs >> label.text;
-                ifs >> label.fgColor;
-                ifs >> label.bgColor;
-                ifs >> label.pix;
-                if (otherProfileVersion >= 15) {
-                    ifs >> label.noScaling;
-                    ifs >> label.showOnTop;
-                }
-                ++areaLabelCounter;
-            }
-            ++currentAreaWithLabelsCount;
-        }
-    }
-
-    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
-        int areasWithLabelsTotal = 0;
-        ifs >> areasWithLabelsTotal;
         int areasWithLabelsCounter = 0;
         while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
             int areaID = -1;
@@ -1984,9 +1947,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                 if (otherProfileVersion >= 12) {
                     ifs >> label.pos;
                 } else {
-                    QPointF __label_pos;
-                    ifs >> __label_pos;
-                    label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                    QPointF oldLabelPos;
+                    ifs >> oldLabelPos;
+                    label.pos = QVector3D(oldLabelPos);
                 }
                 QPointF dummyPointF;
                 ifs >> dummyPointF;

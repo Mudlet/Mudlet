@@ -10244,9 +10244,10 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     }
     
     pR->mSymbolColor = QColor(r, g, b);
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->update();
+    }
     lua_pushboolean(L, true);
-    host.mpMap->mpMapper->mp2dMap->repaint();
-    host.mpMap->mpMapper->update();
     return 1;
 }
 
@@ -10263,13 +10264,15 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
-    } else {
-        pR->mSymbolColor = nullptr;
-        lua_pushboolean(L, true);
-        host.mpMap->mpMapper->mp2dMap->repaint();
-        host.mpMap->mpMapper->update();
-        return 1;
     }
+
+    // Reset it to the default (and invalid) QColor:
+    pR->mSymbolColor = {};
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->update();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomCharColor

@@ -121,6 +121,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mCurrentLineArrow(true)
 , mBubbleMode()
 , mMapperUseAntiAlias(true)
+, mMapViewOnly(true)
 , mLabelHighlighted(false)
 , mMoveLabel()
 , mCustomLineSelectedRoom()
@@ -694,51 +695,48 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
         }
     }
 
-    if (shouldDrawBorder && !mBubbleMode) {
-        painter.fillRect(roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth), mpHost->mRoomBorderColor);
+    bool isRoomSelected = ((mPick || picked) && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+    selectionBg.setColorAt(0.25, roomColor);
+    selectionBg.setColorAt(1, Qt::blue);
+
+    QPen roomPen(Qt::transparent);
+    roomPen.setWidth(borderWidth);
+    painter.setBrush(roomColor);
+
+    if (shouldDrawBorder) {
+        roomPen.setColor(mpHost->mRoomBorderColor);
     }
+
+    if (isRoomSelected) {
+        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
+        selectionBg.setColorAt(0.2, roomColor);
+        selectionBg.setColorAt(1, Qt::blue);
+        roomPen.setColor(QColor(255, 50, 50));
+        painter.setBrush(selectionBg);
+    }
+
+    painter.setPen(roomPen);
 
     if (mBubbleMode) {
         float roomRadius = 0.5 * rSize * mRoomWidth;
         QPointF roomCenter = QPointF(rx, ry);
-        // CHECK: The use of a gradient fill to a white center on round
-        // rooms might look nice in some sitations but not in all:
-        QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85, roomColor);
-        gradient.setColorAt(0, Qt::white);
-        QPen borderPen = shouldDrawBorder ? QPen(mpHost->mRoomBorderColor) : QPen(Qt::transparent);
-        borderPen.setWidth(borderWidth);
+        if (!isRoomSelected) {
+            // CHECK: The use of a gradient fill to a white center on round
+            // rooms might look nice in some sitations but not in all:
+            QRadialGradient gradient(roomCenter, roomRadius);
+            gradient.setColorAt(0.85, roomColor);
+            gradient.setColorAt(0, Qt::white);
+            painter.setBrush(gradient);
+        }
         QPainterPath diameterPath;
-        painter.setBrush(gradient);
-        painter.setPen(borderPen);
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
     } else {
-        painter.fillRect(roomRectangle, roomColor);
+        painter.drawRect(roomRectangle);
     }
 
-    if (((mPick || picked) && roomClickTestRectangle.contains(mPHighlight))
-    || mMultiSelectionSet.contains(currentRoomId)) {
-        auto selectionPen = QPen(QColor(255, 50, 50, 125));
-        selectionPen.setWidth(borderWidth);
-        QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
-        selectionBg.setColorAt(0.25, Qt::transparent);
-        selectionBg.setColorAt(1, Qt::blue);
-        if (!mBubbleMode) {        
-            auto selectionRectangle = roomRectangle.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth);
-            painter.fillRect(selectionRectangle, selectionBg);
-            painter.setPen(selectionPen);
-            painter.drawRect(selectionRectangle);
-        } else {
-            float roomRadius = 0.5 * rSize * mRoomWidth;
-            QPointF roomCenter = QPointF(rx, ry);
-            QPainterPath diameterPath;
-            painter.setPen(selectionPen);
-            painter.setBrush(selectionBg);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-        }
-
+    if (isRoomSelected) {
         mPick = false;
         if (mStartSpeedWalk) {
             mStartSpeedWalk = false;
@@ -771,7 +769,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
         QColor symbolColor;
-        if (pRoom->mSymbolColor != nullptr) {
+        if (pRoom->mSymbolColor.isValid()) {
             symbolColor = pRoom->mSymbolColor;
         } else if (roomColor.lightness() > 127) {
             symbolColor = Qt::black;
@@ -2505,8 +2503,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
     if (event->buttons() & Qt::LeftButton) {
-        // move map with left mouse button + ALT
-        if (event->modifiers().testFlag(Qt::AltModifier)) {
+        // move map with left mouse button + ALT, or just a left mouse button in viewOnly mode
+        if (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly) {
             mpMap->mLeftDown = true;
         }
 
@@ -2528,8 +2526,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
         }
 
-        // check click on custom exit lines
-        if (mMultiSelectionSet.isEmpty()) {
+        // check click on custom exit lines (not in viewOnly mode)
+        if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
             // But NOT if got one or more rooms already selected!
             TArea* pA = mpMap->mpRoomDB->getArea(mAreaID);
             if (pA) {
@@ -2622,8 +2620,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             setMouseTracking(false);
             mRoomBeingMoved = false;
         } else if (!mPopupMenu) {
-            // Not in a context menu, so start selection mode - including drag to select
-            mMultiSelection = true;
+            // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
+            mMultiSelection = !mMapViewOnly;
             mMultiRect = QRect(event->pos(), event->pos());
             int _roomID = mRoomID;
             if (!mpMap->mpRoomDB->getRoom(_roomID)) {
@@ -2638,8 +2636,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
             if (!event->modifiers().testFlag(Qt::ControlModifier)) {
-                // If control key NOT down then clear selection, and put up helpful text
-                mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
+                if (!mMapViewOnly) {
+                  // If control key NOT down then clear selection, and put up helpful text
+                  mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
+                }
                 mMultiSelectionSet.clear();
             }
 
@@ -2684,8 +2684,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 getCenterSelection();
             }
 
-            // select labels
-            if (!pArea->mMapLabels.isEmpty()) {
+            // select labels (not in viewOnly mode)
+            if (!pArea->mMapLabels.isEmpty() && !mMapViewOnly) {
                 QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
                 while (itMapLabel.hasNext()) {
                     itMapLabel.next();
@@ -2837,74 +2837,91 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
 
-            if (mMultiSelectionSet.isEmpty()) {
+            if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
                 mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
                 mpCreateRoomAction->setToolTip(tr("Create a new room here"));
                 connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
                 popup->addAction(mpCreateRoomAction);
             }
 
-            auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
-            moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
-            connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
+            if (!mMapViewOnly) {
+              auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
+              moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
+              connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
 
-            auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
-            deleteRoom->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tooltip"));
-            connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
+              auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
+              deleteRoom->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tooltip"));
+              connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
 
-            auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
-            recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
-            connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
+              auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
+              recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
+              connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
 
-            auto spreadRooms = new QAction(tr("Spread", "2D Mapper context menu (room) item"), this);
-            spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
-            connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
+              auto spreadRooms = new QAction(tr("Spread", "2D Mapper context menu (room) item"), this);
+              spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+              connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
 
-            auto shrinkRooms = new QAction(tr("Shrink", "2D Mapper context menu (room) item"), this);
-            shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
-            connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
+              auto shrinkRooms = new QAction(tr("Shrink", "2D Mapper context menu (room) item"), this);
+              shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
+              connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
 
-            auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
-            lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
-            connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
+              auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
+              lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+              connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
 
-            auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
-            unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
-            connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
+              auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
+              unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
+              connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
 
-            auto weightRoom = new QAction(tr("Weight", "2D Mapper context menu (room) item"), this);
-            weightRoom->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tooltip"));
-            connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
+              auto weightRoom = new QAction(tr("Weight", "2D Mapper context menu (room) item"), this);
+              weightRoom->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tooltip"));
+              connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
 
-            auto roomExits = new QAction(tr("Exits", "2D Mapper context menu (room) item"), this);
-            roomExits->setToolTip(tr("Set room exits", "2D Mapper context menu (room) item tooltip"));
-            connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
+              auto roomExits = new QAction(tr("Exits", "2D Mapper context menu (room) item"), this);
+              roomExits->setToolTip(tr("Set room exits", "2D Mapper context menu (room) item tooltip"));
+              connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
 
-            auto roomSymbol = new QAction(tr("Symbol", "2D Mapper context menu (room) item"), this);
-            roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
-            connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
+              auto roomSymbol = new QAction(tr("Symbol", "2D Mapper context menu (room) item"), this);
+              roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
+              connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showSymbolSelection);
 
-            auto moveRoomXY = new QAction(tr("Move to", "2D Mapper context menu (room) item"), this);
-            moveRoomXY->setToolTip(tr("Move selected group to a given position", "2D Mapper context menu (room) item tooltip"));
-            connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
+              auto moveRoomXY = new QAction(tr("Move to", "2D Mapper context menu (room) item"), this);
+              moveRoomXY->setToolTip(tr("Move selected group to a given position", "2D Mapper context menu (room) item tooltip"));
+              connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
 
-            auto roomArea = new QAction(tr("Area", "2D Mapper context menu (room) item"), this);
-            roomArea->setToolTip(tr("Set room's area number", "2D Mapper context menu (room) item tooltip"));
-            connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
+              auto roomArea = new QAction(tr("Area", "2D Mapper context menu (room) item"), this);
+              roomArea->setToolTip(tr("Set room's area number", "2D Mapper context menu (room) item tooltip"));
+              connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
 
-            auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
-            if (pArea && !pArea->gridMode) {
-                customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
-                connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
-            } else {
-                // Disable custom exit lines in grid mode as they aren't visible anyway
-                customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
-                customExitLine->setEnabled(false);
+              auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
+              if (pArea && !pArea->gridMode) {
+                  customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
+                  connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
+              } else {
+                  // Disable custom exit lines in grid mode as they aren't visible anyway
+                  customExitLine->setToolTip(tr("Custom exit lines are not shown and are not editable in grid mode", "2D Mapper context menu (room) item tooltip (disabled state)"));
+                  customExitLine->setEnabled(false);
+              }
+
+              auto createLabel = new QAction(tr("Create Label", "2D Mapper context menu (room) item"), this);
+              createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
+              connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
+
+              popup->addAction(moveRoom);
+              popup->addAction(roomExits);
+              popup->addAction(customExitLine);
+              popup->addAction(recolorRoom);
+              popup->addAction(roomSymbol);
+              popup->addAction(spreadRooms);
+              popup->addAction(shrinkRooms);
+              popup->addAction(lockRoom);
+              popup->addAction(unlockRoom);
+              popup->addAction(weightRoom);
+              popup->addAction(deleteRoom);
+              popup->addAction(moveRoomXY);
+              popup->addAction(roomArea);
+              popup->addAction(createLabel);
             }
-
-            auto createLabel = new QAction(tr("Create Label", "2D Mapper context menu (room) item"), this);
-            createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
-            connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
 
             auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
@@ -2914,30 +2931,21 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 setPlayerLocation->setEnabled(false);
                 setPlayerLocation->setToolTip(tr("Can only set location when exactly one room is selected", "2D Mapper context menu (room) item tooltip (disabled state)"));
             }
+            popup->addAction(setPlayerLocation);
+
+            popup->addSeparator();
+
+            QString viewModeItem = mMapViewOnly
+              ? tr("Switch to editing mode", "2D Mapper context menu (room) item")
+              : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
+            auto setMapViewOnly = new QAction(viewModeItem, this);
+            connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
+            popup->addAction(setMapViewOnly);
 
             mPopupMenu = true;
 
-            popup->addAction(moveRoom);
-            popup->addAction(roomExits);
-            popup->addAction(customExitLine);
-            popup->addAction(recolorRoom);
-            popup->addAction(roomSymbol);
-            //popup->addAction( action11 );
-            popup->addAction(spreadRooms);
-            popup->addAction(shrinkRooms);
-            //popup->addAction( action5 );
-            popup->addAction(lockRoom);
-            popup->addAction(unlockRoom);
-            popup->addAction(weightRoom);
-            popup->addAction(deleteRoom);
-            popup->addAction(moveRoomXY);
-
-            popup->addAction(roomArea);
-
-            popup->addAction(createLabel);
-            popup->addAction(setPlayerLocation);
-
             popup->popup(mapToGlobal(event->pos()));
+
         } else if (mLabelHighlighted) {
             auto moveLabel = new QAction(tr("Move", "2D Mapper context menu (label) item"), this);
             moveLabel->setToolTip(tr("Move label", "2D Mapper context menu item (label) tooltip"));
@@ -3403,6 +3411,20 @@ void T2DMap::slot_setPlayerLocation()
     }
 }
 
+void T2DMap::slot_toggleMapViewOnly()
+{
+    if (mpHost) {
+        mMapViewOnly = !mMapViewOnly;
+        mpHost->mMapViewOnly = mMapViewOnly;
+        TEvent mapModeEvent{};
+        mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
+        mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mapModeEvent.mArgumentList.append(mMapViewOnly ? QStringLiteral("viewing") : QStringLiteral("editing"));
+        mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mapModeEvent);
+    }
+}
+
 void T2DMap::slot_userAction(QString uniqueName)
 {
     TEvent event {};
@@ -3557,14 +3579,14 @@ void T2DMap::slot_showSymbolSelection()
         }
     }
 
-    if (isAtLeastOneRoom && !mDlgRoomSymbol) {
-        mDlgRoomSymbol = new dlgRoomSymbol(mpHost, this);
-        mDlgRoomSymbol->init(usedSymbols, roomPtrsSet);
-        mDlgRoomSymbol->show();
-        mDlgRoomSymbol->raise();
-        connect(mDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
-        connect(mDlgRoomSymbol, &QDialog::finished, this, [=]() {
-            mDlgRoomSymbol = nullptr;
+    if (isAtLeastOneRoom && !mpDlgRoomSymbol) {
+        mpDlgRoomSymbol = new dlgRoomSymbol(mpHost, this);
+        mpDlgRoomSymbol->init(usedSymbols, roomPtrsSet);
+        mpDlgRoomSymbol->show();
+        mpDlgRoomSymbol->raise();
+        connect(mpDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mpDlgRoomSymbol, &QDialog::finished, this, [=]() {
+            mpDlgRoomSymbol = nullptr;
         });
     }
 }
@@ -4162,12 +4184,12 @@ void T2DMap::slot_setArea()
 
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
-    if (mpMap->mLeftDown && !mpMap->m2DPanMode && event->modifiers().testFlag(Qt::AltModifier)) {
+    if (mpMap->mLeftDown && !mpMap->m2DPanMode && (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly)) {
         mpMap->m2DPanXStart = event->x();
         mpMap->m2DPanYStart = event->y();
         mpMap->m2DPanMode = true;
     }
-    if (mpMap->m2DPanMode && !event->modifiers().testFlag(Qt::AltModifier)) {
+    if (mpMap->m2DPanMode && (!event->modifiers().testFlag(Qt::AltModifier) && !mMapViewOnly)) {
         mpMap->m2DPanMode = false;
         mpMap->mLeftDown = false;
     }
