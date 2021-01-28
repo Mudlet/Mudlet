@@ -8813,9 +8813,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not exist").arg(id_from));
     }
 
     if (!lua_isnumber(L, 2) && !lua_istable(L, 2)) {
@@ -8826,21 +8824,15 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         id_to = lua_tointeger(L, 2);
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
         if (!pR_to) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "target room id %d does not exist", id_to);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("target room id %1 does not exist").arg(id_to));
         } else {
             int area = pR->getArea();
             int area_to = pR_to->getArea();
             if (area != area_to) {
-                lua_pushnil(L);
-                lua_pushfstring(L,
-                                "target room is in area \"%s\" (id: %d) which is not the one \"%s\" (id: %d) in which this custom line is to be drawn",
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to).toUtf8().constData(),
-                                area_to,
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area).toUtf8().constData(),
-                                area);
-                return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "target room is in area '%1' (id: %2) which is not the one '%3' (id: %4) in which this custom line is to be drawn")
+                    .arg(host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
+                         host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
             }
 
             x.append(static_cast<qreal>(pR_to->x));
@@ -8913,9 +8905,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", id_from, lua_tostring(L, 3));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit that can be identified from '%2'")
+            .arg(QString::number(id_from), lua_tostring(L, 3)));
     }
 
     if (!lua_isstring(L, 4)) {
@@ -8934,10 +8925,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
         line_style = Qt::DashDotDotLine;
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(
-                L, "invalid line style \"%s\", only use one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"", lineStyleString.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
+            .arg(lineStyleString));
     }
 
     if (!lua_istable(L, 5)) {
@@ -8958,26 +8948,22 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
                 qint64 component = lua_tonumber(L, -1);
                 if (component < 0 || component > 255) {
-                    lua_pushnil(L);
-                    lua_pushfstring(L,
-                                    "%s color component in the table of the fourth argument is %d which is out of the valid range (0 to 255)",
-                                    (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
-                                    component);
-                    return 2;
-                } else {
-                    switch (tind) {
-                    case 1:
-                        r = component;
-                        break;
-                    case 2:
-                        g = component;
-                        break;
-                    case 3:
-                        b = component;
-                        break;
-                    default:
-                        Q_UNREACHABLE();
-                    }
+                    return warnArgumentValue(L, __func__, QStringLiteral(
+                        "%1 color component in the table of the fourth argument is %2 which is out of the valid range (0 to 255)")
+                        .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
+                }
+                switch (tind) {
+                case 1:
+                    r = component;
+                    break;
+                case 2:
+                    g = component;
+                    break;
+                case 3:
+                    b = component;
+                    break;
+                default:
+                    Q_UNREACHABLE();
                 }
             }
             lua_pop(L, 1);
@@ -8996,9 +8982,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     points.append(QPointF(x.at(0), y.at(0)));
     for (int i = 1, total = z.size(); i < total; ++i) {
         if (lz != z.at(i)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "the z values are not all on the same level (first wrong value is %d at index %d)", z.at(i), i + 1);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "the z values are not all on the same level (first wrong value is %1 at index %2)")
+                .arg(QString::number(z.at(i)), QString::number(i + 1)));
         }
         points.append(QPointF(x.at(i), y.at(i)));
     }
@@ -9039,9 +9025,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomId));
     }
 
     direction = dirToString(L, 2);
@@ -9050,27 +9034,26 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomId, lua_tostring(L, 2));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "room id %1 does not have an exit that can be identified from '%2'").arg(QString::number(roomId), lua_tostring(L, 2)));
     }
 
-    if ((pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction) + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction)) > 0) {
-        // Need to update the TRoom {min|max}_{x|y} settings as they are used during
-        // the painting process:
-        pR->calcRoomDimensions();
-        // Better refresh the 2D map to show the new line:
-        if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-            host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not appear to have a custom exit line for the exit indentifed from  \"%s\"", roomId, lua_tostring(L, 2));
-        return 2;
+    if (0 >= (pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction)
+        + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction))) {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "room id %1 does not appear to have a custom exit line for the exit indentifed from '%2'")
+            .arg(QString::number(roomId), lua_tostring(L, 2)));
     }
+    // Need to update the TRoom {min|max}_{x|y} settings as they are used during
+    // the painting process:
+    pR->calcRoomDimensions();
+    // Better refresh the 2D map to show the new line:
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
+        host.mpMap->mpMapper->mp2dMap->update();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
@@ -9084,73 +9067,70 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
-    if (pR) {
-        lua_newtable(L); //return table customLines[]
-        QStringList exits = pR->customLines.keys();
-        for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
-            lua_pushstring(L, exits.at(i).toUtf8().constData());
-            lua_newtable(L); //customLines[direction]
-            lua_pushstring(L, "attributes");
-            lua_newtable(L); //customLines[attributes]
-            lua_pushstring(L, "style");
-            switch (pR->customLinesStyle.value(exits.at(i))) {
-            case Qt::DotLine:
-                lua_pushstring(L, "dot line");
-                break;
-            case Qt::DashLine:
-                lua_pushstring(L, "dash line");
-                break;
-            case Qt::DashDotLine:
-                lua_pushstring(L, "dash dot line");
-                break;
-            case Qt::DashDotDotLine:
-                lua_pushstring(L, "dash dot dot line");
-                break;
-            case Qt::SolidLine:
-                [[fallthrough]];
-            default:
-                lua_pushstring(L, "solid line");
-            }
-            lua_settable(L, -3);
-            lua_pushstring(L, "arrow");
-            lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-            lua_settable(L, -3);
-            lua_pushstring(L, "color");
-            lua_newtable(L);
-            lua_pushstring(L, "r");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
-            lua_settable(L, -3);
-            lua_pushstring(L, "g");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
-            lua_settable(L, -3);
-            lua_pushstring(L, "b");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
-            lua_settable(L, -3);
-            lua_settable(L, -3); //color
-            lua_settable(L, -3); //attributes
-            lua_pushstring(L, "points");
-            lua_newtable(L); //customLines[points]
-            QList<QPointF> pointL = pR->customLines.value(exits.at(i));
-            for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
-                lua_pushnumber(L, k);
-                lua_newtable(L);
-                lua_pushstring(L, "x");
-                lua_pushnumber(L, pointL.at(k).x());
-                lua_settable(L, -3);
-                lua_pushstring(L, "y");
-                lua_pushnumber(L, pointL.at(k).y());
-                lua_settable(L, -3);
-                lua_settable(L, -3);
-            }
-            lua_settable(L, -3); //customLines[direction][points]
-            lua_settable(L, -3); //customLines[direction]
-        }
-        return 1;
-    } else {
-        lua_pushnil(L); //if the room doesnt exist return nil
-        lua_pushfstring(L, "room %d doesn't exist", roomID);
-        return 2;
+    if (!pR) { //if the room doesnt exist return nil
+        return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(roomID));
     }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[attributes]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3);
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3);
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //color
+        lua_settable(L, -3); //attributes
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[points]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            lua_pushnumber(L, k);
+            lua_newtable(L);
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
@@ -9216,10 +9196,8 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     if (lua_type(L, 2) == LUA_TNUMBER) {
         labelId = lua_tointeger(L, 2);
         if (labelId < 0) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "labelID %d is invalid, it must be zero or greater", labelId);
+            return warnArgumentValue(L, __func__, QStringLiteral("labelID %1 is invalid, it must be zero or greater").arg(labelId));
         }
-
     } else {
         labelText = lua_tostring(L, 2);
         // Can be an empty string as image labels have no text!
@@ -9235,9 +9213,8 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
     if (labelId >= 0) {
         if (!pA->mMapLabels.contains(labelId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "labelID %d does not exist in area with areaID %d", labelId, area);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("labelID %1 does not exist in area with areaID %2")
+                .arg(QString::number(labelId), QString::number(area)));
         }
         lua_newtable(L);
         auto label = pA->mMapLabels.value(labelId);
@@ -9322,9 +9299,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     int fromRoomID = lua_tointeger(L, 1);
     TRoom* pR_from = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR_from) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -9334,9 +9309,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     int toRoomID = lua_tointeger(L, 2);
     TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoomID);
     if (!pR_to) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "entrance room id %d does not exist)", toRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("entrance room id %1 does not exist").arg(toRoomID));
     }
 
     if (!lua_isstring(L, 3)) {
@@ -9345,9 +9318,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command cannot be empty"));
     }
 
     pR_from->setSpecialExit(toRoomID, dir);
@@ -9366,9 +9337,7 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     int fromRoomID = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -9377,15 +9346,12 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 2);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the exit command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the exit command cannot be empty"));
     }
 
     if (!pR->getSpecialExits().contains(dir)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "the special exit name/command '%1' in room id %2").arg(dir, QString::number(fromRoomID)));
     }
     pR->setSpecialExit(-1, dir);
     lua_pushboolean(L, true);
@@ -9397,9 +9363,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9408,21 +9372,17 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     int roomId = lua_tointeger(L, 1);
 
-
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        if (!pR->userData.isEmpty()) {
-            pR->userData.clear();
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    if (!pR->userData.isEmpty()) {
+        pR->userData.clear();
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomUserDataItem
@@ -9430,9 +9390,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearRoomUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9452,24 +9410,21 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearRoomUserDataItem: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        // Turns out that an empty key IS possible, but if this changes this should be uncommented
-        //        if (key.isEmpty()) {
-        //            // If the user accidently supplied an white-space only or empty key
-        //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
-        //            lua_pushboolean( L, false );
-        //        }
-        /*      else */ if (pR->userData.contains(key)) {
-            pR->userData.remove(key);
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    // Turns out that an empty key IS possible, but if this changes this should be uncommented
+    //        if (key.isEmpty()) {
+    //            // If the user accidently supplied an white-space only or empty key
+    //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
+    //            lua_pushboolean( L, false );
+    //        }
+    /*      else */ if (pR->userData.contains(key)) {
+        pR->userData.remove(key);
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserData
@@ -9477,9 +9432,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9490,18 +9443,15 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (!pA->mUserData.isEmpty()) {
-            pA->mUserData.clear();
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
+    if (!pA->mUserData.isEmpty()) {
+        pA->mUserData.clear();
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserDataItem
@@ -9509,9 +9459,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearAreaUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9528,19 +9476,13 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (key.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(clearAreaUserDataItem: bad argument #2 value ("key" can not be an empty string).)");
-            return 2;
-        } else {
-            lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' can not be an empty string)"));
+    }
+    lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearMapUserData
@@ -9548,9 +9490,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
@@ -9567,9 +9507,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearMapUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isstring(L, 1)) {
@@ -9578,9 +9516,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 value ("key" can not be an empty string).)");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value ('key' can not be an empty string)"));
     }
     lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
     return 1;
@@ -9615,9 +9551,7 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
     int id_from = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id_from));
     }
 
     bool showAllExits = false;
@@ -9710,9 +9644,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
     int id_from = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id_from));
     }
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
@@ -9744,9 +9676,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9775,29 +9705,22 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        if (isBackwardCompatibilityRequired) {
-            lua_pushstring(L, QString().toUtf8().constData());
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-            return 2;
+        if (!isBackwardCompatibilityRequired) {
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
         }
-    } else {
-        if (pR->userData.contains(key)) {
-            lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
-            return 1;
-        } else {
-            if (isBackwardCompatibilityRequired) {
-                lua_pushstring(L, QString().toUtf8().constData());
-                return 1;
-            } else {
-                lua_pushnil(L);
-                lua_pushfstring(L, R"(getRoomUserData: bad argument #2 value (no user data with key:"%s" in room with id: %d).)", key.toUtf8().constData(), roomId);
-                return 2;
-            }
-        }
+        lua_pushstring(L, QString().toUtf8().constData());
+        return 1;
     }
+    if (!pR->userData.contains(key)) {
+        if (!isBackwardCompatibilityRequired) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (no user data with key:'%1' in room with id: %2))").arg(key, QString::number(roomId)));
+        }
+        lua_pushstring(L, QString().toUtf8().constData());
+        return 1;
+    }
+    lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaUserData
@@ -9816,38 +9739,23 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                        "getAreaUserData: bad argument #2 value (\"key\" is not allowed to be an\n"
-                        "empty string).");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' is not allowed to be an empty string)"));
     }
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (pA->mUserData.contains(key)) {
-            lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "getAreaUserData: bad argument #2 value (no user data with key:\"%s\"\n"
-                            "in area with id:%d).",
-                            key.toUtf8().constData(),
-                            areaId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
+    if (!pA->mUserData.contains(key)) {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "bad argument #2 value (no user data with key %1 in area with id: %2)").arg(key, QString::number(areaId)));
+    }
+    lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapUserData
@@ -9855,9 +9763,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isstring(L, 1)) {
@@ -9866,14 +9772,11 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
 
-    if (host.mpMap->mUserData.contains(key)) {
-        lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(getMapUserData: bad argument #1 value (no user data with key:"%s" in map).)", key.toUtf8().constData());
-        return 2;
+    if (!host.mpMap->mUserData.contains(key)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (no user data with key '%1' in map)").arg(key));
     }
+    lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomUserData
@@ -9881,9 +9784,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9907,14 +9808,11 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        pR->userData[key] = value;
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    pR->userData[key] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaUserData
@@ -9933,11 +9831,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                        "setAreaUserData: bad argument #2 value (\"key\" is not allowed to be an\n"
-                        "empty string).");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value ('key' is not allowed to be an empty string)"));
     }
 
     if (!lua_isstring(L, 3)) {
@@ -9948,21 +9842,16 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        pA->mUserData[key] = value;
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
+    pA->mUserData[key] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapUserData
@@ -9970,9 +9859,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     QString key;
@@ -9982,9 +9869,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     }
     key = lua_tostring(L, 1);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(setMapUserData: bad argument #1 value ("key" is not allowed to be an empty string).)");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value ('key' is not allowed to be an empty string)"));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -10003,9 +9888,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomUserDataKeys: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10017,19 +9900,16 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
     QStringList keys;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        keys = pR->userData.keys();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushnumber(L, i + 1);
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    keys = pR->userData.keys();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllRoomUserData
@@ -10037,9 +9917,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10052,20 +9930,17 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
     QStringList values;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        keys = pR->userData.keys();
-        values = pR->userData.values();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_pushstring(L, values.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(roomId));
     }
+    keys = pR->userData.keys();
+    values = pR->userData.values();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_pushstring(L, values.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllAreaUserData
@@ -10073,9 +9948,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10088,20 +9961,17 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
     QStringList values;
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        keys = pA->mUserData.keys();
-        values = pA->mUserData.values();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_pushstring(L, values.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid area id)").arg(areaId));
     }
+    keys = pA->mUserData.keys();
+    values = pA->mUserData.values();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_pushstring(L, values.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllMapUserData
@@ -10109,9 +9979,7 @@ int TLuaInterpreter::getAllMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     QStringList keys;
@@ -10178,9 +10046,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setRoomArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
     int id;
@@ -10190,9 +10056,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     }
     id = lua_tointeger(L, 1);
     if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id)").arg(id));
     }
 
     int areaId;
@@ -10200,30 +10064,24 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     if (lua_isnumber(L, 2)) {
         areaId = lua_tonumber(L, 2);
         if (areaId < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setRoomArea: bad argument #2 value (number %d is not a valid area id greater\n"
-                            "than zero.  To remove a room's area, use resetRoomArea( roomId ) ).",
-                            areaId);
-            return 2;
-        } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %d is not a valid area id as it does not exist).", areaId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (number %1 is not a valid area id greater than zero. "
+                "To remove a room's area, use resetRoomArea( roomId ) )").arg(areaId));
+        }
+        if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (number %1 is not a valid area id as it does not exist)").arg(areaId));
         }
     } else if (lua_isstring(L, 2)) {
         areaName = lua_tostring(L, 2);
         // areaId will be zero if not found!
         if (areaName.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "setRoomArea: bad argument #2 value (area name cannot be empty).");
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("bad argument #2 value (area name cannot be empty)"));
         }
         areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key(areaName, 0);
         if (!areaId) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(setRoomArea: bad argument #2 value (area name "%s" does not exist).)", areaName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "bad argument #2 value (area name '%1' does not exist)").arg(areaName));
         }
     } else {
         lua_pushfstring(L,
