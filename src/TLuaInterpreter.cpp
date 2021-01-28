@@ -10123,7 +10123,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded!");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).".arg(id)));
+        return warnArgumentValue(L, __func__, QStringLiteral("bad argument #1 value (number %1 is not a valid room id).".arg(QString::number(id))));
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
@@ -10242,7 +10242,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
-    
+
     pR->mSymbolColor = QColor(r, g, b);
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
@@ -10290,7 +10290,7 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
-    
+
     lua_pushnumber(L, pR->mSymbolColor.red());
     lua_pushnumber(L, pR->mSymbolColor.green());
     lua_pushnumber(L, pR->mSymbolColor.blue());
