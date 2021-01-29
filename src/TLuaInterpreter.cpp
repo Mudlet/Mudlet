@@ -10467,7 +10467,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file "
+            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " bytes downloaded for file "
                                                         << reply->url().toString() << "\n" >> 0;
         }
     });
