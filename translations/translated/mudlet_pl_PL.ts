@@ -2461,24 +2461,24 @@ Mudlet - is your system running out of memory?</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ UWAGA ] - Znaleziono złe (mniej niż +1 i nie zastrzeżone -1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz ustalam, jakich nowych numerów identyfikatorów użyć...</translation>
+      <translation>[ UWAGA ] - Znaleziono błędne (mniej niż +1 i nie zastrzeżone -1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz ustalam, jakich nowych numerów identyfikatorów użyć...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="768"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation>[ ALERT ] - Zły, (mniej niż +1 i nie zastrzeżone -1) identyfikatory obszaru znaleziono (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym dla każdego obszaru którego to dotyczy ...</translation>
+      <translation>[ UWAGA ] - Znaleziono błędne (mniej niż +1 i nie zastrzeżone -1) identyfikatory pokoju (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym dla każdego obszaru którego to dotyczy ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="775"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ] - Zmienione numery ID obszaru będą takie:
+      <translation>[ INFO ] - Zmienione numery ID obszaru będą następujące:
 Stary ==&gt; Nowe</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="793"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ INFO ] - Obszar o złym ID został zmieniony na %1.</translation>
+      <translation>[ INFO ] - Obszar o takim błędnym ID został zmieniony na %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="794"/>
@@ -2495,13 +2495,13 @@ Stary ==&gt; Nowe</translation>
       <location filename="../src/TRoomDB.cpp" line="842"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALERT ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz działam
+      <translation>[ UWAGA ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz działam
 jakich nowych numerów identyfikatorów użyć.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="847"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation>[ ALERT ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym, dla każdego pokoju którego to dotyczy...</translation>
+      <translation>[ UWAGA ] - Znaleziono złe, (mniej niż +1) identyfikatory pokoju (liczba wystąpień: %1) na mapie!  Poszukaj dalszych wiadomości związanych z tym, dla każdego pokoju którego to dotyczy...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="854"/>
@@ -2619,7 +2619,7 @@ zostały one usunięte.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1223"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation>[ OSTRZEŻENIE ] - W pliku mapy wykryto puste i zduplikowane nazwy obszarów!</translation>
+      <translation>[ UWAGA ] - W pliku mapy wykryto puste i zduplikowane nazwy obszarów!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1224"/>
@@ -2637,8 +2637,7 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation>[ INFORMACJA ] - Ze względu na pewne sytuacje, które nie były sprawdzane w przeszłości, Mudlet 
- pozwalał na posiadanie na mapie więcej niż jednego obszaru o tej samej lub bez nazwy.
+      <translation>[ INFORMACJA ] - Ze względu na pewne sytuacje, które nie były sprawdzane w przeszłości, Mudlet pozwalał na posiadanie na mapie więcej niż jednego obszaru o tej samej lub bez nazwy.
 Sprawiają one, że niektóre rzeczy są mylące, dwuznaczne i teraz są niedozwolone. Aby rozwiązać te przypadki, obszar bez nazwy tutaj (lub utworzony w
 w przyszłości) zostanie automatycznie przypisany do nazwy &quot;%1&quot;.
   Duplikowane nazwy obszarów spowodują, że wszystkie oprócz pierwszego napotkanego
@@ -2654,7 +2653,7 @@ najpierw uzyskają w ten sposób przyrostek.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1240"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation>[ ALERT ] - W pliku mapy wykryto zduplikowane nazwy obszarów!</translation>
+      <translation>[ UWAGA ] - W pliku mapy wykryto zduplikowane nazwy obszarów!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
@@ -3770,14 +3769,14 @@ Odinstalowywanie starej wersji &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="514"/>
       <source>hh:mm:ss.zzz</source>
       <comment>This is the format to be used to show the profile connection time, it follows the rules of the &quot;QDateTime::toString(...)&quot; function and may need modification for some locales, e.g. France, Spain.</comment>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="545"/>
       <location filename="../src/ctelnet.cpp" line="557"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation>[ ALERT ] - Połączenie zostało odłączone. Może przeżyjesz! 
+      <translation>[ UWAGA ] - Połączenie zostało odłączone. 
 Powód odłączenia: </translation>
     </message>
     <message>
