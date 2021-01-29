@@ -5185,7 +5185,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <comment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</comment>
-      <translation type="unfinished"/>
+      <translation>Przycisk wyboru gry, kliknij dwukrotnie by się połączyć i rozpocząć grę.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="521"/>
@@ -5646,7 +5646,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="898"/>
       <source>%1 (*Error, report to Mudlet Makers*)</source>
       <comment>The encoder code name is not in the mudlet class mEncodingNamesMap when it should be and the Mudlet Makers need to fix it!</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (*Błąd, zgłoś do twórców Mudletu*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1012"/>
@@ -6505,7 +6505,7 @@ dla wszystkich %n wybranych pokoi:</numerusform>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="201"/>
       <source>Pick color</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz kolor</translation>
     </message>
   </context>
   <context>
@@ -6762,13 +6762,13 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="572"/>
       <source>Editor Toolbar - %1 - Actions</source>
       <comment>This is the toolbar that is initally placed at the top of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Pasek narzędzi edytora - %1 - Akcje</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="608"/>
       <source>Editor Toolbar - %1 - Items</source>
       <comment>This is the toolbar that is initally placed at the left side of the editor.</comment>
-      <translation type="unfinished"/>
+      <translation>Pasek narzędzi Edytora - %1 - Elementy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="672"/>
@@ -7064,7 +7064,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/dlgTriggerEditor.cpp" line="9015"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>zachowaj</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5608"/>
@@ -7355,27 +7355,27 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="241"/>
       <source>-- add your Lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- dodaj tutaj swój kod Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="543"/>
       <source>Errors</source>
-      <translation type="unfinished"/>
+      <translation>Błędy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="682"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Dokładnie dopasuj wielkość liter</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="686"/>
       <source>Include variables</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj zmienne</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="689"/>
       <source>Search variables (slower)</source>
-      <translation type="unfinished"/>
+      <translation>Szukaj zmiennych (wolniejsze)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="781"/>
@@ -7755,7 +7755,7 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
     <message>
       <location filename="../src/main.cpp" line="169"/>
       <source>Profile to open automatically</source>
-      <translation type="unfinished"/>
+      <translation>Profil otwierany automatycznie</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="169"/>
@@ -7766,12 +7766,12 @@ Nie zapisze się na dysku, więc zmiany zostaną utracone w przypadku awarii kom
       <location filename="../src/main.cpp" line="172"/>
       <location filename="../src/main.cpp" line="178"/>
       <source>Display help and exit</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetl pomoc i wyjdź</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="175"/>
       <source>Display version and exit</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetl wersję i wyjdź</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="188"/>
@@ -8121,7 +8121,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
       <source>IDs</source>
-      <translation type="unfinished"/>
+      <translation>Identyfikatory</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="651"/>
@@ -9981,17 +9981,17 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="2621"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - notatki</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2728"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz powtórkę</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2730"/>
       <source>*.dat</source>
-      <translation type="unfinished"/>
+      <translation>*.dat</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2987"/>
@@ -10006,7 +10006,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="3139"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Szybciej</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3142"/>
@@ -10016,7 +10016,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="3146"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Wolniej</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3149"/>
@@ -10028,13 +10028,13 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="3228"/>
       <location filename="../src/mudlet.cpp" line="3241"/>
       <source>Speed: X%1</source>
-      <translation type="unfinished"/>
+      <translation>Prędkość: X%1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3166"/>
       <location filename="../src/mudlet.cpp" line="3183"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Czas: %1</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3806"/>
@@ -10057,7 +10057,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="3854"/>
       <source>Update installed - restart to apply</source>
-      <translation type="unfinished"/>
+      <translation>Aktualizacja zainstalowana - uruchom ponownie, aby zastosować</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3890"/>
