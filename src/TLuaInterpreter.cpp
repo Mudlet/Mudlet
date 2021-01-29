@@ -3520,7 +3520,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        return warnArgumentValue(L, __func__, message, true);
+        return warnArgumentValue(L, "createLabel", message, true);
     }
 
     lua_pushboolean(L, true);
@@ -3584,7 +3584,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        return warnArgumentValue(L, __func__, message, true);
+        return warnArgumentValue(L, "createLabel", message, true);
     }
 
     lua_pushboolean(L, true);
