@@ -12231,6 +12231,10 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     QString textToSay;
     textToSay = lua_tostring(L, 1);
 
+    if (textToSay.trimmed().isEmpty()) { // there's nothing more to say
+        return 0;
+    }
+
     speechUnit->say(textToSay);
     speechCurrent = textToSay;
 
@@ -12521,6 +12525,11 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     }
 
     QString inputText = lua_tostring(L, 1);
+
+    if (inputText.trimmed().isEmpty()) { // there's nothing more to say
+        return 0;
+    }
+
     int index;
 
     if (lua_gettop(L) > 1) {
