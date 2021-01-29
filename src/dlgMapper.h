@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -61,10 +61,12 @@ public slots:
     void slot_toggleStrongHighlight(int v);
     void show2dView();
     void slot_togglePanel();
-    void goRoom();
-    void choseRoom(QListWidgetItem*);
     void slot_roomSize(int d);
     void slot_lineSize(int d);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // Only used in newer Qt versions
+    void slot_switchArea(const int);
+#endif
 
 private:
     TMap* mpMap;

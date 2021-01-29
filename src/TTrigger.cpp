@@ -48,10 +48,13 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
 , mIsLineTrigger(false)
@@ -64,9 +67,6 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
 }
@@ -79,12 +79,15 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mName( name )
 , mRegexCodeList( regexList )
 , exportItem(true)
 , mModuleMasterFolder(false)
+, mRegisteredAnonymousLuaFunction(false)
 , mRegexCodePropertyList(regexProperyList)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
@@ -98,9 +101,6 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi(scmIgnored)
-, mColorTriggerBgAnsi(scmIgnored)
-, mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
     setRegexCodeList(regexList, regexProperyList);
@@ -122,10 +122,23 @@ TTrigger::~TTrigger()
         }
         itColorTable.remove();
     }
+
+    for (auto && [key, value] : mConditionMap) {
+        delete value;
+    }
+
     if (!mpHost) {
         return;
     }
     mpHost->getTriggerUnit()->unregisterTrigger(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TTrigger::setName(const QString& name)
@@ -134,7 +147,7 @@ void TTrigger::setName(const QString& name)
         mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
-    mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getTriggerUnit()->mLookupTable.insert(name, this);
 }
 
 static void pcre_deleter(pcre* pointer)
@@ -142,7 +155,7 @@ static void pcre_deleter(pcre* pointer)
     pcre_free(pointer);
 }
 
-//FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
+//FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 {
     regexList.replaceInStrings("\n", "");
@@ -169,7 +182,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     mTriggerContainsPerlRegex = false;
 
     if (propertyList.size() != regexList.size()) {
-        //FIXME: ronny hat das irgendwie geschafft
+        //FIXME: ronny managed to trigger this somehow
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
@@ -550,7 +563,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
 inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList)
 {
     if (regexNumber == 0) {
-        // wird automatisch auf #1 gesetzt
+        // automatically set to #1
         auto pCondition = new TMatchState(mRegexCodeList.size(), mConditionLineDelta);
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
@@ -1137,7 +1150,6 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 }
 
 
-// Die Musternummer wird ID im color-pattern lookup table
 // This NOW uses proper ANSI numbers
 // A TColorTable is a simple struct that stores four values, the two given ANSI
 // colors for foreground and background (proper ANSI indexes) and what they look

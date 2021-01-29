@@ -183,4 +183,86 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
   end)
 
+  describe("Tests the functionality of _Echoes.Process()", function()
+    it("Should parse hex patterns correctly", function()
+      assert.are.same(
+        _Echos.Process('#ff0000Red', 'Hex'),
+        { "", { fg = { 255, 0, 0 } }, "Red" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#rReset', 'Hex'),
+        { "", "\27reset", "Reset" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#bBold#/b', 'Hex'),
+        { "", "\27bold", "Bold", "\27boldoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#iItalics#/i', 'Hex'),
+        { "", "\27italics", "Italics", "\27italicsoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('#uUnderline#/u', 'Hex'),
+        { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+    end)
+
+    it("Should parse decimal patterns correctly", function()
+      assert.are.same(
+        _Echos.Process('<255,0,0>Red', 'Decimal'),
+        { "", { fg = { "255", "0", "0" } }, "Red" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<r>Reset', 'Decimal'),
+        { "", "\27reset", "Reset" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<b>Bold</b>', 'Decimal'),
+        { "", "\27bold", "Bold", "\27boldoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<i>Italics</i>', 'Decimal'),
+        { "", "\27italics", "Italics", "\27italicsoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<u>Underline</u>', 'Decimal'),
+        { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+    end)
+
+    it("Should parse color patterns correctly", function()
+      assert.are.same(
+        _Echos.Process('<red>Red', 'Color'),
+        { "", { fg = { 255, 0, 0 } }, "Red" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<r>Reset', 'Color'),
+        { "", "\27reset", "Reset" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<b>Bold</b>', 'Color'),
+        { "", "\27bold", "Bold", "\27boldoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<i>Italics</i>', 'Color'),
+        { "", "\27italics", "Italics", "\27italicsoff", "" }
+      )
+
+      assert.are.same(
+        _Echos.Process('<u>Underline</u>', 'Color'),
+        { "", "\27underline", "Underline", "\27underlineoff", "" }
+      )
+    end)
+  end)
 end)

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,16 +52,6 @@
 //#define DEBUG_MXP_PROCESSING
 
 
-// Default constructor:
-TChar::TChar()
-: mFgColor(Qt::white)
-, mBgColor(Qt::black)
-, mFlags(None)
-, mIsSelected(false)
-, mLinkIndex(0)
-{
-}
-
 TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
 : mFgColor(fg)
 , mBgColor(bg)
@@ -106,7 +97,8 @@ bool TChar::operator==(const TChar& other)
     return true;
 }
 
-// Copy constructor:
+// Copy constructor - because it is resetting the mIsSelected flag it is NOT a
+// default copy constructor:
 TChar::TChar(const TChar& copy)
 : mFgColor(copy.mFgColor)
 , mBgColor(copy.mBgColor)
@@ -146,10 +138,10 @@ TBuffer::TBuffer(Host* pH)
 , mMagenta(pH->mMagenta)
 , mLightWhite(pH->mLightWhite)
 , mWhite(pH->mWhite)
-, mpHost(pH)
 , mForeGroundColor(pH->mFgColor)
 , mForeGroundColorLight(pH->mFgColor)
 , mBackGroundColor(pH->mBgColor)
+, mpHost(pH)
 , mBold(false)
 , mItalics(false)
 , mOverline(false)
@@ -449,7 +441,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
-                // arrangement should avoid looping around this loop whilst
+                // arrangement should avoid looping around this loop while
                 // seeking this character pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
@@ -2089,8 +2081,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
                         // changed by this method:
-                        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-                            mudlet::self()->mConsoleMap[pHost]->changeColors();
+                        if (pHost->mpConsole) {
+                            pHost->mpConsole->changeColors();
                         }
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
@@ -2148,8 +2140,8 @@ void TBuffer::resetColors()
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
     // decodeOSC(...) method:
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
+    if (pHost->mpConsole) {
+        pHost->mpConsole->changeColors();
     }
 
     // Also need to update the Lua sub-system's "color_table"
@@ -2191,7 +2183,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 
     for (int i = sub_start; i < length; ++i) {
-        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        //FIXME <=substart+sub_end must check whether sub-ranges are still needed
         if (text.at(i) == QChar::LineFeed) {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
@@ -2701,7 +2693,7 @@ void TBuffer::log(int fromLine, int toLine)
 
     // record the last log call into a temporary buffer - we'll actually log
     // on the next iteration after duplication detection has run
-    lastTextToLog = std::move(linesToLog.join(QString()));
+    lastTextToLog = linesToLog.join(QString());
     lastLoggedFromLine = fromLine;
     lastloggedToLine = toLine;
 }
@@ -3591,7 +3583,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // As we are not in GB18030 mode treat it as if it is a 2 byte sequence
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if        (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xA0)
@@ -3741,7 +3733,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
 
         gbSequenceLength = 2;
         if ((pos + gbSequenceLength - 1) < len) {
-            // We have enough bytes to look at the second one - lets see which
+            // We have enough bytes to look at the second one - let's see which
             // range it is in:
             // clang-format off
             if (  (static_cast<quint8>(bufferData.at(pos    )) >= 0x81) && (static_cast<quint8>(bufferData.at(pos    )) <= 0xFE)

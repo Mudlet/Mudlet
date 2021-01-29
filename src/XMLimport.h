@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2017 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2017, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -57,6 +58,8 @@ public:
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
+    const QString YES = QStringLiteral("yes");
+
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
 
@@ -105,6 +108,8 @@ private:
 
     void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
+    bool readDefaultTrueBool(QString name);
+
     QPointer<Host> mpHost;
     QString mPackageName;
     TTrigger* mpTrigger;
@@ -122,7 +127,6 @@ private:
     bool gotScript;
     int module;
     int mMaxRoomId;
-    int mMaxAreaId; // Could be useful when iterating through map data
     quint8 mVersionMajor;
     quint16 mVersionMinor; // Cannot be a quint8 as that only allows x.255 for the decimal
 };

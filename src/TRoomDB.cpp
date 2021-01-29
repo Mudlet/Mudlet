@@ -210,7 +210,7 @@ bool TRoomDB::__removeRoom(int id)
         // it is unsafe to modify (use copy operations on) something that an STL
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
-        // copy and iterating through that instead whilst modifying the original
+        // copy and iterating through that instead while modifying the original
         while (i != _entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
@@ -653,13 +653,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         QSet<int> areaIdsFromAreaNamesSet{areaIdsFromAreaNamesList.begin(), areaIdsFromAreaNamesList.end()};
         areaIdSet.unite(areaIdsFromAreaNamesSet);
     }
-
-    // And the area Ids used by the map labels:
-    if (!mpMap->mapLabels.isEmpty()) {
-        QList<int> areaIdsFromLabelsList{mpMap->mapLabels.keys()};
-        QSet<int> areaIdsFromLabelsSet{areaIdsFromLabelsList.begin(), areaIdsFromLabelsList.end()};
-        areaIdSet.unite(areaIdsFromLabelsSet);
-    }
 #else
     // Check for existance of all areas needed by rooms
     QSet<int> areaIdSet = areaRoomMultiHash.keys().toSet();
@@ -667,9 +660,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     // START OF TASK 3
     // Throw in the area Ids from the areaNamesMap:
     areaIdSet.unite(areaNamesMap.keys().toSet());
-
-    // And the area Ids used by the map labels:
-    areaIdSet.unite(mpMap->mapLabels.keys().toSet());
 #endif
 
     // Check the set of area Ids against the ones we actually have:
@@ -831,12 +821,6 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             validUsedAreaIds.insert(replacementAreaId);
             areas.insert(replacementAreaId, pA);
 
-            // Fixup map labels as well
-            if (mpMap->mapLabels.contains(faultyAreaId)) {
-                QMap<qint32, TMapLabel> areaMapLabels = mpMap->mapLabels.take(faultyAreaId);
-                mpMap->mapLabels.insert(replacementAreaId, areaMapLabels);
-            }
-
             pA->mIsDirty = true;
         }
         if (mudlet::self()->showMapAuditErrors()) {
@@ -850,7 +834,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         mpMap->appendErrorMsg(tr("[ INFO ]  - Area id numbering is satisfactory."), false);
     }
     // END OF TASK 2,3,4,5 - all needed areas exist and remap details are in
-    // areaRemapping - still need to update rooms and areaNames and mapLabels
+    // areaRemapping - still need to update rooms and areaNames
 
     // Now complete TASK 1 - find the new room Ids to use
     if (!roomRemapping.isEmpty()) {
@@ -874,7 +858,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRenumberedRoomId.next();
             unsigned int newRoomId = 0;
             do {
-                ; // Noop - needed increment is done in test condition!
+                ; // No-op - needed increment is done in test condition!
             } while (validUsedRoomIds.contains(++newRoomId));
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
@@ -936,7 +920,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
             // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
             // Exit stubs:
-            unsigned int _listCount = pR->exitStubs.count();
+            int _listCount = pR->exitStubs.count();
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // These next few constuction of a QSet from a QList or vice versa
             // are probably safe as both iterators refer to the SAME instance

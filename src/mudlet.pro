@@ -45,10 +45,6 @@ include(../3rdparty/communi/communi.pri)
     include(../translations/translated/updateqm.pri)
 }
 
-# disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-*
-# after for some warnings that we wish to ignore:
-!msvc:CONFIG += warn_off
-!msvc:QMAKE_CXXFLAGS += -Wall -Wno-deprecated
 # Before we impose OUR idea about the optimisation levels to use, remove any
 # that Qt tries to put in automatically for us for release builds, only the
 # last, ours, is supposed to apply but it can be confusing to see multiple
@@ -93,7 +89,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.9.1
+VERSION = 4.10.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -269,7 +265,6 @@ unix:!macx {
     }
     LIBS += -lpcre \
         -L/usr/local/lib/ \
-        -lyajl \
         -lzip \
         -lz \
         -lpugixml
@@ -320,7 +315,6 @@ unix:!macx {
         -lpcre-1 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
-        -lyajl \
         -lpugixml \
         -lWs2_32
 
@@ -356,7 +350,7 @@ macx {
     # http://stackoverflow.com/a/16972067
     QT_CONFIG -= no-pkg-config
     CONFIG += link_pkgconfig
-    PKGCONFIG += hunspell lua5.1 yajl libpcre libzip pugixml
+    PKGCONFIG += hunspell lua5.1 libpcre libzip pugixml
     INCLUDEPATH += /usr/local/include
 }
 
@@ -507,6 +501,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
 SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
+    AltFocusMenuBarDisable.cpp \
     TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
@@ -523,6 +518,7 @@ SOURCES += \
     dlgPackageExporter.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -565,6 +561,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TMainConsole.cpp \
     TMap.cpp \
+    TMapLabel.cpp \
     TMedia.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -609,6 +606,7 @@ SOURCES += \
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
+    AltFocusMenuBarDisable.h \
     TTextCodec.h \
     ctelnet.h \
     discord.h \
@@ -625,6 +623,7 @@ HEADERS += \
     dlgPackageExporter.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -670,6 +669,7 @@ HEADERS += \
     TLuaInterpreter.h \
     TMainConsole.h \
     TMap.h \
+    TMapLabel.h \
     TMatchState.h \
     TMedia.h \
     TMxpBRTagHandler.h \
@@ -736,6 +736,7 @@ FORMS += \
     ui/notes_editor.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
@@ -1385,7 +1386,7 @@ macx {
 
     APP_MUDLET_LUA_TRANSLATION.path = Contents/Resources/translations
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
-    
+
     # Set the macOS application's icon
     contains(BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns

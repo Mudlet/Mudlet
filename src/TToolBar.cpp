@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2019-2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -59,9 +60,8 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
-    }
+    Q_UNUSED(e)
+    mpTAction->mpHost->setToolbarLayoutUpdated(this);
 }
 
 void TToolBar::setName(const QString& name)
@@ -80,9 +80,7 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    if (!mudlet::self()->mIsLoadingLayout) {
-        mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
-    }
+    mpTAction->mpHost->setToolbarLayoutUpdated(this);
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();

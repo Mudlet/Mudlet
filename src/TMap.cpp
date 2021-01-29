@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +27,7 @@
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
+#include "TMapLabel.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
@@ -38,6 +39,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
+#include <QBuffer>
 #include "post_guard.h"
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -60,6 +62,16 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
+/*
+ * WARNING: There is new code that will be activated when this is incremented
+ * above 20:
+ * * The room special exits (QMap<QString, int>) and special exit locks data
+ *   QSet<QString> will be stored directly in those new container elements
+ *   replacing the backwards compatible combination (a QMultiMap<int, QString>)
+ *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
+ *   special exit name (stored in the VALUE) in the old format.
+ * It has been tested and *seems* to work. SlySven - 2020/12
+ */
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
@@ -181,7 +193,6 @@ void TMap::mapClear()
     locations.clear();
     mMapGraphNeedsUpdate = true;
     mNewMove = true;
-    mapLabels.clear();
     mVersion = mDefaultVersion;
     mUserData.clear();
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
@@ -221,7 +232,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
 
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
-        // Uh oh, the area doesn't seem to exist as a TArea instance, lets check
+        // Uh oh, the area doesn't seem to exist as a TArea instance, let's check
         // to see if it exists as a name only:
         if (!mpRoomDB->getAreaNamesMap().contains(area)) {
             // Ah, no it doesn't so moan:
@@ -461,11 +472,15 @@ void TMap::audit()
         while (itArea.hasNext()) {
             itArea.next();
             int areaID = itArea.key();
-            if (mapLabels.contains(areaID)) {
-                QList<int> labelIDList = mapLabels.value(areaID).keys();
+            TArea* pArea = mpRoomDB->getArea(areaID);
+            if (!pArea->mMapLabels.isEmpty()) {
+                QList<int> labelIDList = pArea->mMapLabels.keys();
                 for (int& i : labelIDList) {
-                    TMapLabel l = mapLabels.value(areaID).value(i);
+                    TMapLabel l = pArea->mMapLabels.value(i);
                     if (l.pix.isNull()) {
+                        // Note that two of the last three arguments here
+                        // (false, 40.0) are not the defaults (true, 30.0) used
+                        // now:
                         int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
@@ -473,8 +488,8 @@ void TMap::audit()
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg(areaID, tr("[ INFO ] - Converting old style label id: %1.").arg(i));
-                            mapLabels[areaID][i] = mapLabels[areaID][newID];
-                            deleteMapLabel(areaID, newID);
+                            pArea->mMapLabels[i] = pArea->mMapLabels.take(newID);
+
                         } else {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
@@ -484,10 +499,10 @@ void TMap::audit()
                         }
                     }
                     if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
-                        mapLabels[areaID][i].size.setWidth(l.pix.width());
+                        pArea->mMapLabels[i].size.setWidth(l.pix.width());
                     }
                     if ((l.size.height() > std::numeric_limits<qreal>::max()) || (l.size.height() < -std::numeric_limits<qreal>::max())) {
-                        mapLabels[areaID][i].size.setHeight(l.pix.height());
+                        pArea->mMapLabels[i].size.setHeight(l.pix.height());
                     }
                 }
             }
@@ -519,14 +534,6 @@ void TMap::audit()
         QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
         postMessage(msg);
     }
-}
-
-void TMap::tidyMap(int areaID)
-{
-}
-
-void TMap::solveRoomCollision(int id, int creationDirection, bool PCheck)
-{
 }
 
 QList<int> TMap::detectRoomCollisions(int id)
@@ -625,7 +632,8 @@ void TMap::initGraph()
         l.id = itRoom.key();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
-        // Map's usable TRooms (key) to index of entry in locations (for route finding), will lose invalid and unusable (through locking) rooms
+        // This command maps usable TRooms (key) to index of entry in locations (for route finding).
+        // It loses invalid and unusable (i.e. locked) rooms
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
@@ -641,7 +649,7 @@ void TMap::initGraph()
         int target = pSourceR->getNorth();
         TRoom* pTargetR;
         quint8 direction = DIR_NORTH;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             // In above tests the second test is to eliminate self-edges (they
             // are of no use).  The third test is to eliminate targets that we
             // have already found to be unreachable because they are invalid or
@@ -657,7 +665,7 @@ void TMap::initGraph()
 
         target = pSourceR->getEast();
         direction = DIR_EAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -671,7 +679,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSouth();
         direction = DIR_SOUTH;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -685,7 +693,7 @@ void TMap::initGraph()
 
         target = pSourceR->getWest();
         direction = DIR_WEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -699,7 +707,7 @@ void TMap::initGraph()
 
         target = pSourceR->getUp();
         direction = DIR_UP;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -713,7 +721,7 @@ void TMap::initGraph()
 
         target = pSourceR->getDown();
         direction = DIR_DOWN;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -727,7 +735,7 @@ void TMap::initGraph()
 
         target = pSourceR->getNortheast();
         direction = DIR_NORTHEAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -741,7 +749,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSoutheast();
         direction = DIR_SOUTHEAST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -755,7 +763,7 @@ void TMap::initGraph()
 
         target = pSourceR->getSouthwest();
         direction = DIR_SOUTHWEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -769,7 +777,7 @@ void TMap::initGraph()
 
         target = pSourceR->getNorthwest();
         direction = DIR_NORTHWEST;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -783,7 +791,7 @@ void TMap::initGraph()
 
         target = pSourceR->getIn();
         direction = DIR_IN;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -797,7 +805,7 @@ void TMap::initGraph()
 
         target = pSourceR->getOut();
         direction = DIR_OUT;
-        if (target > 0 && source != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
+        if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target) && !pSourceR->hasExitLock(direction)) {
             pTargetR = mpRoomDB->getRoom(target);
             if (pTargetR && !pTargetR->isLocked) {
                 route r;
@@ -809,24 +817,20 @@ void TMap::initGraph()
             }
         }
 
-        QMapIterator<int, QString> itSpecialExit(pSourceR->getOtherMap());
+        QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
-            if ((itSpecialExit.value()).startsWith(QStringLiteral("1"))) {
+            if (pSourceR->hasSpecialExitLock(itSpecialExit.key())) {
                 continue; // Is a locked exit so forget it...
             }
 
-            target = itSpecialExit.key();
+            target = itSpecialExit.value();
             direction = DIR_OTHER;
-            if (target > 0 && source != target && !unUsableRoomSet.contains(target)) {
+            if (target > 0 && static_cast<int>(source) != target && !unUsableRoomSet.contains(target)) {
                 pTargetR = mpRoomDB->getRoom(target);
                 if (pTargetR && !pTargetR->isLocked) {
                     route r;
-                    if (Q_LIKELY((itSpecialExit.value()).startsWith(QStringLiteral("0")))) {
-                        r.specialExitName = itSpecialExit.value().mid(1);
-                    } else {
-                        r.specialExitName = itSpecialExit.value();
-                    }
+                    r.specialExitName = itSpecialExit.value();
                     r.cost = exitWeights.value(r.specialExitName, pTargetR->getWeight());
                     if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                         r.direction = direction;
@@ -925,9 +929,9 @@ bool TMap::findPath(int from, int to)
     }
     if (!hasUsableExit) {
         // No available normal exits from this room so check the special ones
-        QStringList specialExitCommands = pFrom->getOtherMap().values();
+        QStringList specialExitCommands = pFrom->getSpecialExits().keys();
         while (!specialExitCommands.isEmpty()) {
-            if (specialExitCommands.at(0).mid(0, 1) == "0") {
+            if (pFrom->hasSpecialExitLock(specialExitCommands.at(0))) {
                 hasUsableExit = true;
                 break;
             }
@@ -1098,7 +1102,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pA->rooms;
         } else {
             // Switched to a (faster) QSet<int> from a QList<int> in version 18
-            QList<int> _oldList = pA->rooms.toList();
+            QList<int> _oldList = pA->rooms.values();
             ofs << _oldList;
         }
         ofs << pA->zLevels;
@@ -1119,6 +1123,24 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
         ofs << pA->mUserData;
+        if (mSaveVersion >= 21) {
+            // Revised in version 21 to store labels within the TArea class:
+            ofs << pA->mMapLabels.size();
+            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                ofs << itMapLabel.key(); //label ID
+                TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
+                ofs << label.size;
+                ofs << label.text;
+                ofs << label.fgColor;
+                ofs << label.bgColor;
+                ofs << label.pix;
+                ofs << label.noScaling;
+                ofs << label.showOnTop;
+            }
+        }
     }
 
     if (mSaveVersion >= 18) {
@@ -1130,29 +1152,47 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mRoomIdHash.value(mProfileName);
     }
 
-    ofs << mapLabels.size(); //anzahl der areas
-    QMapIterator<int, QMap<int, TMapLabel>> itL1(mapLabels);
-    while (itL1.hasNext()) {
-        itL1.next();
-        int i = itL1.key();
-        ofs << itL1.value().size(); //anzahl der labels pro area
-        ofs << itL1.key();          //area id
-        QMapIterator<int, TMapLabel> itL2(mapLabels[i]);
-        while (itL2.hasNext()) {
-            itL2.next();
-            ofs << itL2.key(); //label ID
-            TMapLabel label = itL2.value();
-            ofs << label.pos;
-            ofs << label.pointer;
-            ofs << label.size;
-            ofs << label.text;
-            ofs << label.fgColor;
-            ofs << label.bgColor;
-            ofs << label.pix;
-            ofs << label.noScaling;
-            ofs << label.showOnTop;
+    if (mSaveVersion < 21) {
+        // Before version 21 the map labels were stored within this class:
+        // number of labels per area - we need this as there is no delimiter
+        // between each area's map labels
+        int areasWithLabels = 0;
+        // Need to count the areas that have mapLabels:
+        for (const auto pArea : mpRoomDB->getAreaPtrList()) {
+            if (pArea && !pArea->mMapLabels.isEmpty()) {
+                ++areasWithLabels;
+            }
+        }
+        ofs << areasWithLabels;
+        QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
+        while (itArea.hasNext()) {
+            itArea.next();
+            auto pArea = itArea.value();
+            if (!pArea || pArea->mMapLabels.isEmpty()) {
+                continue;
+            }
+            // number of labels in this area:
+            ofs << pArea->mMapLabels.size();
+            // only used to assign labels to the area:
+            ofs << itArea.key();
+            QMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+            while (itMapLabel.hasNext()) {
+                itMapLabel.next();
+                ofs << itMapLabel.key(); //label ID
+                TMapLabel label = itMapLabel.value();
+                ofs << label.pos;
+                ofs << QPointF(); // dummy value - not actually used
+                ofs << label.size;
+                ofs << label.text;
+                ofs << label.fgColor;
+                ofs << label.bgColor;
+                ofs << label.pix;
+                ofs << label.noScaling;
+                ofs << label.showOnTop;
+            }
         }
     }
+
     QHashIterator<int, TRoom*> it(mpRoomDB->getRoomMap());
     while (it.hasNext()) {
         it.next();
@@ -1188,7 +1228,21 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->getWeight();
         ofs << pR->name;
         ofs << pR->isLocked;
-        ofs << pR->getOtherMap();
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExits();
+        } else {
+            QMultiMap<int, QString> oldSpecialExits;
+            QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+            while (itSpecialExit.hasNext()) {
+                itSpecialExit.next();
+                oldSpecialExits.insert(itSpecialExit.value(),
+                                       (pR->hasSpecialExitLock(itSpecialExit.key())
+                                                ? QLatin1Char('1')
+                                                : QLatin1Char('0'))
+                                               % itSpecialExit.key());
+            }
+            ofs << oldSpecialExits;
+        }
         if (mSaveVersion >= 19) {
             ofs << pR->mSymbol;
         } else {
@@ -1208,6 +1262,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
             ofs << oldCharacterCode;
         }
+        if (mSaveVersion >= 21) {
+            ofs << pR->mSymbolColor;
+        } else {
+            if (pR->mSymbolColor.isValid()) {
+                pR->userData.insert(QLatin1String("system.fallback_symbol_color"), pR->mSymbolColor.name());
+            }
+        }
+
         ofs << pR->userData;
         if (mSaveVersion >= 20) {
             // Before version 20 stored the style as an Latin1 string, the color
@@ -1315,6 +1377,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
             }
             ofs << oldLineStyleData;
+        }
+        if (mSaveVersion >= 21) {
+            ofs << pR->getSpecialExitLocks();
         }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
@@ -1428,16 +1493,36 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
                 ifs >> mMapSymbolFont;
+                if (mVersion < 21 && mMapSymbolFont.toString().split(QLatin1Char(',')).count() > 15) {
+                    // We need to clean up the effects of using QFont(string)
+                    // for a format 17 or 18 below - as this fix went in before
+                    // 21 was used it only has to be used for map formats 19 and
+                    // 20:
+                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1Char(',')).mid(0, 10).join(QLatin1Char(',')));
+                }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
             } else {
                 // Fallback to reading the data from the map user data - and
                 // remove it from the data the user will see:
-                QString fontString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFont"));
+                // BUGFIX: Using QFont::toString() and then using that to
+                // construct a font again afterwards via a QFont(string) was
+                // incorrect as it seemed to cause the last to duplicated the
+                // last nine elements each time. The details of the ::toString()
+                // ::fromString() methods are not currently documented so the
+                // only details are documented in the source:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
+                // and:
+                // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
+                // this suggests that only one or ten elements are accepted so
+                // we CAN fix past mistakes by only considering the first ten
+                // elements:
+                QStringList fontStrings{mUserData.take(QStringLiteral("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
                 QString fontFudgeFactorString = mUserData.take(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"));
                 QString onlyUseSymbolFontString = mUserData.take(QStringLiteral("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
-                    mMapSymbolFont = QFont(fontString);
+                    mMapSymbolFont.fromString(fontString);
                 }
                 if (!fontFudgeFactorString.isEmpty()) {
                     mMapSymbolFontFudgeFactor = fontFudgeFactorString.toDouble();
@@ -1506,6 +1591,23 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 if (mVersion >= 17) {
                     ifs >> pA->mUserData;
                 }
+                if (mVersion >= 21) {
+                    int mapLabelsCount = -1;
+                    ifs >> mapLabelsCount;
+                    for (int i = 0; i < mapLabelsCount; ++i) {
+                        int labelId = -1;
+                        ifs >> labelId;
+                        TMapLabel label;
+                        ifs >> label.size;
+                        ifs >> label.text;
+                        ifs >> label.fgColor;
+                        ifs >> label.bgColor;
+                        ifs >> label.pix;
+                        ifs >> label.noScaling;
+                        ifs >> label.showOnTop;
+                        pA->mMapLabels.insert(labelId, label);
+                    }
+                }
                 mpRoomDB->restoreSingleArea(areaID, pA);
             }
         }
@@ -1532,29 +1634,35 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             mRoomIdHash[mProfileName] = oldRoomId;
         }
 
-        if (mVersion >= 11) {
-            int size;
-            ifs >> size; //size of mapLabels
-            int areaLabelCount = 0;
-            while (!ifs.atEnd() && areaLabelCount < size) {
-                int areaID;
-                int size_labels;
-                ifs >> size_labels;
+        if (mVersion >= 11 && mVersion <= 20) {
+            // After version 20 the map labels have been moved to each area
+            int areasWithLabelsTotal = 0;
+            ifs >> areasWithLabelsTotal;
+            int areasWithLabelsCounter = 0;
+            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+                int areaID = -1;
+                int areaLabelsTotal = 0;
+                ifs >> areaLabelsTotal;
+                // Only used to identify the area for this batch of labels:
                 ifs >> areaID;
-                int labelCount = 0;
-                QMap<int, TMapLabel> _map;
-                while (!ifs.atEnd() && labelCount < size_labels) {
+                int areaLabelCounter = 0;
+                auto pA = mpRoomDB->getArea(areaID);
+                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
                     int labelID;
                     ifs >> labelID;
                     TMapLabel label;
                     if (mVersion >= 12) {
+                        // From version 12 labels could be placed on any level,
+                        // so they have a z coordinate:
                         ifs >> label.pos;
                     } else {
-                        QPointF __label_pos;
-                        ifs >> __label_pos;
-                        label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                        QPointF labelPos2D;
+                        ifs >> labelPos2D;
+                        label.pos = QVector3D(labelPos2D);
                     }
-                    ifs >> label.pointer;
+                    // There was an unused QPointF in versions prior to 21
+                    QPointF dummyPointF;
+                    ifs >> dummyPointF;
                     ifs >> label.size;
                     ifs >> label.text;
                     ifs >> label.fgColor;
@@ -1564,11 +1672,15 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                     }
-                    _map.insert(labelID, label);
-                    labelCount++;
+                    if (pA) {
+                        pA->mMapLabels.insert(labelID, label);
+                    }
+                    ++areaLabelCounter;
+                    // Else: we dump labels for areas not in map - this should
+                    // not be happening nowadays but did in the past - see
+                    // PR #4369
                 }
-                mapLabels[areaID] = _map;
-                areaLabelCount++;
+                ++areasWithLabelsCounter;
             }
         }
 
@@ -1777,6 +1889,23 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             if (otherProfileVersion >= 17) {
                 ifs >> pA.mUserData;
             }
+            if (otherProfileVersion >= 21) {
+                int mapLabelsCount = -1;
+                ifs >> mapLabelsCount;
+                for (int i = 0; i < mapLabelsCount; ++i) {
+                    int labelId = -1;
+                    ifs >> labelId;
+                    TMapLabel label;
+                    ifs >> label.pos;
+                    ifs >> label.size;
+                    ifs >> label.text;
+                    ifs >> label.fgColor;
+                    ifs >> label.bgColor;
+                    ifs >> label.pix;
+                    ifs >> label.noScaling;
+                    ifs >> label.showOnTop;
+                }
+            }
         }
     }
 
@@ -1801,28 +1930,29 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         }
     }
 
-    if (otherProfileVersion >= 11) {
-        int size;
-        ifs >> size; //size of mapLabels
-        int areaLabelCount = 0;
-        while (!ifs.atEnd() && areaLabelCount < size) {
-            int areaID;
-            int size_labels;
-            ifs >> size_labels;
+    if (otherProfileVersion >= 11 && otherProfileVersion <= 20) {
+        int areasWithLabelsTotal = 0;
+        ifs >> areasWithLabelsTotal;
+        int areasWithLabelsCounter = 0;
+        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+            int areaID = -1;
+            int areaLabelsTotal = 0;
+            ifs >> areaLabelsTotal;
             ifs >> areaID;
-            int labelCount = 0;
-            while (!ifs.atEnd() && labelCount < size_labels) {
+            int areaLabelCounter = 0;
+            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
                 int labelID;
                 ifs >> labelID;
                 TMapLabel label;
                 if (otherProfileVersion >= 12) {
                     ifs >> label.pos;
                 } else {
-                    QPointF __label_pos;
-                    ifs >> __label_pos;
-                    label.pos = QVector3D(__label_pos.x(), __label_pos.y(), 0);
+                    QPointF oldLabelPos;
+                    ifs >> oldLabelPos;
+                    label.pos = QVector3D(oldLabelPos);
                 }
-                ifs >> label.pointer;
+                QPointF dummyPointF;
+                ifs >> dummyPointF;
                 ifs >> label.size;
                 ifs >> label.text;
                 ifs >> label.fgColor;
@@ -1832,9 +1962,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
                     ifs >> label.noScaling;
                     ifs >> label.showOnTop;
                 }
-                labelCount++;
+                ++areaLabelCounter;
             }
-            areaLabelCount++;
+            ++areasWithLabelsCounter;
         }
     }
 
@@ -1860,7 +1990,12 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
 int TMap::createMapLabel(int area, QString text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize)
 {
-    if (!mpRoomDB->getArea(area)) {
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
+        return -1;
+    }
+
+    if (text.isEmpty()) {
         return -1;
     }
 
@@ -1874,9 +2009,6 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
 
-    if (label.text.length() < 1) {
-        return -1;
-    }
     QRectF lr = QRectF(0, 0, 1000, 1000);
     QPixmap pix(lr.size().toSize());
     pix.fill(Qt::transparent);
@@ -1897,34 +2029,22 @@ int TMap::createMapLabel(int area, QString text, float x, float y, float z, QCol
     QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
-    if (!mpRoomDB->getArea(area)) {
-        return -1;
-    }
 
-    int label_id;
-
-    // No labels exist for this area, so start from zero.
-    if (!mapLabels.contains(area)) {
-        QMap<int, TMapLabel> m;
-        label_id = 0;
-        m[label_id] = label;
-        mapLabels[area] = m;
-    } else {
-        label_id = createMapLabelID(area);
-        if (label_id > -1) {
-            mapLabels[area].insert(label_id, label);
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >= 0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
         }
     }
 
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
-    }
-    return label_id;
+    return labelId;
 }
 
-int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool noScaling)
+int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop)
 {
-    if (!mpRoomDB->getArea(area)) {
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
         return -1;
     }
 
@@ -1932,7 +2052,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
-    label.noScaling = noScaling;
+    // This method is only called from the TLuaInterpreter class and the value
+    // passed was hard-coded to this value:
+    label.noScaling = false;
 
     QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
@@ -1942,61 +2064,26 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size().toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
-    if (!mpRoomDB->getArea(area)) {
-        return -1;
-    }
 
-    int label_id;
-
-    // No labels exist for this area, so start from zero.
-    if (!mapLabels.contains(area)) {
-        QMap<int, TMapLabel> m;
-        label_id = 0;
-        m[label_id] = label;
-        mapLabels[area] = m;
-    } else {
-        label_id = createMapLabelID(area);
-        if (label_id > -1) {
-            mapLabels[area].insert(label_id, label);
+    int labelId = pA->createLabelId();
+    if (Q_LIKELY(labelId >=0)) {
+        pA->mMapLabels.insert(labelId, label);
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
         }
     }
 
-    if (mpMapper) {
-        mpMapper->mp2dMap->update();
-    }
-    return label_id;
+    return labelId;
 }
 
-
-int TMap::createMapLabelID(int area)
+void TMap::deleteMapLabel(int area, int labelId)
 {
-    if (mapLabels.contains(area)) {
-        const QList<int> idList = mapLabels.value(area).keys();
-        int id = 0;
-        // protect against integer overflow
-        while (id >= 0) {
-            if (!idList.contains(id)) {
-                return id;
-            }
-            id++;
-        }
+    auto pA = mpRoomDB->getArea(area);
+    if (!pA) {
+        return;
     }
-    return -1;
-}
 
-void TMap::deleteMapLabel(int area, int labelID)
-{
-    if (!mpRoomDB->getArea(area)) {
-        return;
-    }
-    if (!mapLabels.contains(area)) {
-        return;
-    }
-    if (!mapLabels[area].contains(labelID)) {
-        return;
-    }
-    mapLabels[area].remove(labelID);
-    if (mpMapper) {
+    if (pA->mMapLabels.remove(labelId) && mpMapper) {
         mpMapper->mp2dMap->update();
     }
 }
@@ -2244,7 +2331,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     // Not used:    connect(mpNetworkReply, &QNetworkReply::readyRead, this, &TMap::slot_readyRead);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
+#else
     connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
+#endif
     // Not used:    connect(mpNetworkReply, &QNetworkReply::sslErrors, this, &TMap::slot_sslErrors);
     connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
@@ -2576,3 +2667,59 @@ void TMap::update()
     }
 }
 
+QColor TMap::getColor(int id)
+{
+    QColor color;
+
+    TRoom* room = mpRoomDB->getRoom(id);
+    if (!room) {
+        return color;
+    }
+
+    int env = room->environment;
+    if (envColors.contains(env)) {
+        env = envColors[env];
+    } else {
+        if (!customEnvColors.contains(env)) {
+            env = 1;
+        }
+    }
+    switch (env) {
+    case 1:     color = mpHost->mRed_2;             break;
+    case 2:     color = mpHost->mGreen_2;           break;
+    case 3:     color = mpHost->mYellow_2;          break;
+    case 4:     color = mpHost->mBlue_2;            break;
+    case 5:     color = mpHost->mMagenta_2;         break;
+    case 6:     color = mpHost->mCyan_2;            break;
+    case 7:     color = mpHost->mWhite_2;           break;
+    case 8:     color = mpHost->mBlack_2;           break;
+    case 9:     color = mpHost->mLightRed_2;        break;
+    case 10:    color = mpHost->mLightGreen_2;      break;
+    case 11:    color = mpHost->mLightYellow_2;     break;
+    case 12:    color = mpHost->mLightBlue_2;       break;
+    case 13:    color = mpHost->mLightMagenta_2;    break;
+    case 14:    color = mpHost->mLightCyan_2;       break;
+    case 15:    color = mpHost->mLightWhite_2;      break;
+    case 16:    color = mpHost->mLightBlack_2;      break;
+    default: //user defined room color
+        if (!customEnvColors.contains(env)) {
+            if (16 < env && env < 232) {
+                quint8 base = env - 16;
+                quint8 r = base / 36;
+                quint8 g = (base - (r * 36)) / 6;
+                quint8 b = (base - (r * 36)) - (g * 6);
+
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
+                color = QColor(r, g, b, 255);
+            } else if (231 < env && env < 256) {
+                quint8 k = ((env - 232) * 10) + 8;
+                color = QColor(k, k, k, 255);
+            }
+            break;
+        }
+        color = customEnvColors[env];
+    }
+    return color;
+}

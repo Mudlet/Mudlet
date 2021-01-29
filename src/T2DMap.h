@@ -23,6 +23,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgRoomSymbol.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -55,11 +56,8 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    void paintMap();
     void setMapZoom(qreal zoom);
-    QColor getColor(int id);
     void init();
-    void exportAreaImage(int);
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
@@ -81,7 +79,12 @@ public:
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
-    void addSymbolToPixmapCache(const QString, const bool);
+    void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
+    void setPlayerRoomStyle(const int style);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+    // This is NOT used as a slot in newer versions
+    void switchArea(const QString& newAreaName);
+#endif
 
 
     TMap* mpMap;
@@ -153,6 +156,10 @@ public:
 
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+
+    // Controls if the mapper is in view-only mode
+    bool mMapViewOnly;
+
     bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
@@ -162,7 +169,6 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
-    void setPlayerRoomStyle(const int style);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -171,17 +177,22 @@ public slots:
     void slot_deleteLabel();
     void slot_editLabel();
     void slot_setPlayerLocation();
+    void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void slot_switchArea(const QString&);
+#if (QT_VERSION) < (QT_VERSION_CHECK(5, 15, 0))
+    // This is ONLY used as a slot in older versions
+    void slot_switchArea(const QString& newAreaName);
+#endif
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();
     void shiftLeft();
     void shiftRight();
-    void slot_setSymbol();
+    void slot_showSymbolSelection();
+    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -253,6 +264,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
+    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
 
 private slots:
     void slot_createRoom();

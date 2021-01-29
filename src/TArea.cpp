@@ -92,7 +92,7 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
         if (!kS[x].contains(y)) {
             kS[x][y] = _z;
         }
-        kS[x][y].insertMulti(z, id);
+        kS[x][y].insert(z, id);
     }
     //qDebug()<< "kS="<<kS;
     return kS;
@@ -171,73 +171,71 @@ void TArea::determineAreaExitsOfRoom(int id)
     // the list and hence the area.
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTH);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getNortheast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHEAST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getEast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_EAST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getSoutheast();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHEAST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getSouth();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTH);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getSouthwest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHWEST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getWest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_WEST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getNorthwest();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHWEST);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getUp();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_UP);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getDown();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_DOWN);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getIn();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_IN);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
     exitId = pR->getOut();
     if (exitId > 0 && !rooms.contains(exitId)) {
         QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
-        exits.insertMulti(id, p);
+        exits.insert(id, p);
     }
-    const QMap<int, QString> otherMap = pR->getOtherMap();
-    QMapIterator<int, QString> it(otherMap);
+    QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int _exit = it.key();
-        TRoom* pO = mpRoomDB->getRoom(_exit);
+        TRoom* pO = mpRoomDB->getRoom(it.value());
         if (pO) {
             if (pO->getArea() != getAreaID()) {
                 QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
-                exits.insertMulti(id, p);
+                exits.insert(id, p);
             }
         }
     }
@@ -257,73 +255,71 @@ void TArea::determineAreaExits()
         int exitId = pR->getNorth();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTH);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getNortheast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHEAST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getEast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_EAST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getSoutheast();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHEAST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getSouth();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTH);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getSouthwest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_SOUTHWEST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getWest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_WEST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getNorthwest();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_NORTHWEST);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getUp();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_UP);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getDown();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_DOWN);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getIn();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_IN);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
         exitId = pR->getOut();
         if (exitId > 0 && !rooms.contains(exitId)) {
             QPair<int, int> p = QPair<int, int>(exitId, DIR_OUT);
-            exits.insertMulti(id, p);
+            exits.insert(id, p);
         }
-        const QMap<int, QString> otherMap = pR->getOtherMap();
-        QMapIterator<int, QString> it(otherMap);
-        while (it.hasNext()) {
-            it.next();
-            int _exit = it.key();
-            TRoom* pO = mpRoomDB->getRoom(_exit);
+        QMapIterator<QString, int> itSpecialExit(pR->getSpecialExits());
+        while (itSpecialExit.hasNext()) {
+            itSpecialExit.next();
+            TRoom* pO = mpRoomDB->getRoom(itSpecialExit.value());
             if (pO) {
                 if (pO->getArea() != getAreaID()) {
                     QPair<int, int> p = QPair<int, int>(pO->getId(), DIR_OTHER);
-                    exits.insertMulti(id, p);
+                    exits.insert(id, p);
                 }
             }
         }
@@ -560,19 +556,15 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         int fromRoomId = itRoomWithOtherAreaSpecialExit.next();
         TRoom* pFromRoom = mpRoomDB->getRoom(fromRoomId);
         if (pFromRoom) {
-            QMapIterator<int, QString> itOtherExit = pFromRoom->getOtherMap();
-            while (itOtherExit.hasNext()) {
-                itOtherExit.next();
+            QMapIterator<QString, int> itSpecialExit(pFromRoom->getSpecialExits());
+            while (itSpecialExit.hasNext()) {
+                itSpecialExit.next();
                 QPair<QString, int> exitData;
-                exitData.second = itOtherExit.key();
+                exitData.first = itSpecialExit.key();
                 TRoom* pToRoom = mpRoomDB->getRoom(exitData.second);
                 if (pToRoom && mpRoomDB->getArea(pToRoom->getArea()) != this) {
                     // Note that pToRoom->getArea() is misnamed, should be getAreaId() !
-                    if (itOtherExit.value().mid(0, 1) == QStringLiteral("0") || itOtherExit.value().mid(0, 1) == QStringLiteral("1")) {
-                        exitData.first = itOtherExit.value().mid(1);
-                    } else {
-                        exitData.first = itOtherExit.value();
-                    }
+                    exitData.second = itSpecialExit.value();
                     if (!exitData.first.isEmpty()) {
                         results.insert(fromRoomId, exitData);
                     }
@@ -581,4 +573,14 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
         }
     }
     return results;
+}
+
+int TArea::createLabelId() const
+{
+    int labelId = -1;
+    do {} while (mMapLabels.contains(++labelId));
+    if (labelId < 0) {
+        labelId = -1;
+    }
+    return labelId;
 }
