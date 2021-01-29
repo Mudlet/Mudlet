@@ -10063,7 +10063,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="3890"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Nie można odtworzyć powtórki, inna może być już w toku. Spróbuj ponownie po jej zakończeniu.</translation>
     </message>
   </context>
   <context>
@@ -10084,7 +10084,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager_unpack.ui" line="24"/>
       <source>unpacking please wait ...</source>
-      <translation type="unfinished"/>
+      <translation>rozpakowywanie proszę czekać...</translation>
     </message>
   </context>
   <context>
@@ -10097,7 +10097,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
       <source>General</source>
-      <translation type="unfinished"/>
+      <translation>Ogólne</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="61"/>
@@ -10642,7 +10642,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="229"/>
       <source>Notify on new data</source>
-      <translation type="unfinished"/>
+      <translation>Powiadamiaj o nowych danych</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="232"/>
@@ -10652,7 +10652,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="246"/>
       <source>Auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Automatycznie zapisuj przy wyjściu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
@@ -10677,7 +10677,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="504"/>
       <source>Highlight history</source>
-      <translation type="unfinished"/>
+      <translation>Podświetl historię</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="741"/>
@@ -11042,17 +11042,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2162"/>
       <source>Show room borders</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż krawędzie pokoju</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2238"/>
       <source>Room border color:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor krawędzi pomieszczenia:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2558"/>
       <source>Chat</source>
-      <translation type="unfinished"/>
+      <translation>Czat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3250"/>
