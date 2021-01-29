@@ -837,7 +837,7 @@ void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
 
 void cTelnet::interfaceDownloadCancelled()
 {
-    mpProgressDialog->close();
+    mpProgressDialog->cancel();
 }
 
 // Helper to identify which protocol is being negotiated!
@@ -1637,6 +1637,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 packageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpProgressDialog, &QProgressDialog::canceled, this, &cTelnet::interfaceDownloadCancelled);
                 mpProgressDialog->show();
             }
             return;
@@ -2004,6 +2005,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(packageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpProgressDialog, &QProgressDialog::canceled, this, &cTelnet::interfaceDownloadCancelled);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"))) {
