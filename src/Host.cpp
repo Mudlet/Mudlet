@@ -2700,7 +2700,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
+        return {false, QStringLiteral("label with the name \"%1\" exists already: userwindow name has to be unique").arg(name)};
     }
 
     auto hostName(getName());
@@ -2803,10 +2803,10 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         if (!pW) {
             pC->resize(width, height);
             pC->move(x, y);
-            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+            return {false, QStringLiteral("miniconsole \"%1\" exists already: moving/resizing \"%1\".").arg(name)};
         }
     }
-    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
+    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already").arg(name)};
 }
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
@@ -2823,9 +2823,9 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
             return {true, QString()};
         }
     } else if (pL) {
-        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+        return {false, QStringLiteral("label \"%1\" exists already").arg(name)};
     } else if (pC) {
-        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
+        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already: label name has to be unique.").arg(name)};
     }
     return {false, QString()};
 
