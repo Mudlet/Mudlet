@@ -7,6 +7,7 @@
 
 #include "TMxpContext.h"
 #include "TMxpClient.h"
+#include "TMediaData.h"
 
 class TMxpStubContext : public TMxpContext {
 public:
