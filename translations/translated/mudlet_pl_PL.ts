@@ -3802,7 +3802,8 @@ use. Mudlet will attempt to send the data using the ASCII encoding
 but will be limited to only unaccented characters of basic English.
 Note: this warning will only be issued once, until the encoding is
 changed.</source>
-      <translation type="unfinished"/>
+      <translation>[BŁĄD] - Błąd wewnętrzny, nie znaleziono kodera-dekodera dla bieżącego ustawienia {&quot;%1&quot;}, więc Mudlet nie może wysłać danych w tym formacie na serwer gry. Proszę sprawdzić, czy istnieje alternatywa, której MUD i Mudlet mogą użyć. Mudlet podejmie próbę wysłania danych przy użyciu kodowania ASCII, ale będzie ograniczony tylko do podstawowych znaków bez akcentu języka angielskiego.
+Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie zmienione.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2319"/>
@@ -4036,7 +4037,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
       <location filename="../src/ui/connection_profiles.ui" line="503"/>
       <source>A unique name for the profile but which is limited to a subset of ascii characters only.</source>
       <comment>Using lower case letters for &apos;ASCII&apos; may make speech synthesisers say &apos;askey&apos; which is quicker than &apos;Aay Ess Cee Eye Eye&apos;!</comment>
-      <translation type="unfinished"/>
+      <translation>Unikalna nazwa profilu, która jest ograniczona tylko do podzbioru znaków ascii.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="513"/>
@@ -4046,12 +4047,12 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="535"/>
       <source>Game server URL</source>
-      <translation type="unfinished"/>
+      <translation>Adres URL serwera gry</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="538"/>
       <source>The Internet host name or IP address</source>
-      <translation type="unfinished"/>
+      <translation>Wpisz nazwę hosta lub adres IP</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="545"/>
@@ -4061,22 +4062,22 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="573"/>
       <source>Game server port</source>
-      <translation type="unfinished"/>
+      <translation>Port serwera gry</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="576"/>
       <source>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</source>
-      <translation type="unfinished"/>
+      <translation>Port, który jest używany wraz z nazwą serwera do nawiązania połączenia z serwerem gry. Jeśli nie podano, dla połączeń &quot;Telnet&quot; jest używana wartość domyślna 23. Bezpieczne połączenia mogą wymagać innego numeru portu.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="595"/>
       <source>Connect via a secure protocol</source>
-      <translation type="unfinished"/>
+      <translation>Połącz się za pomocą bezpiecznego protokołu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="598"/>
       <source>Make Mudlet use a secure SSL/TLS protocol instead of an unencrypted one</source>
-      <translation type="unfinished"/>
+      <translation>Spraw, aby Mudlet używał bezpiecznego protokołu SSL/TLS zamiast niezaszyfrowanego</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="604"/>
@@ -4121,27 +4122,27 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="694"/>
       <source>If provided will be sent, along with password to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Jeśli zostanie podane, zostanie wysłane wraz z hasłem, aby zidentyfikować użytkownika w grze.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="713"/>
       <source>Auto-open profile</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczne otwieranie profilu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="716"/>
       <source>Automatically start this profile when Mudlet is run</source>
-      <translation type="unfinished"/>
+      <translation>Automatycznie uruchom ten profil po uruchomieniu Mudletu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="729"/>
       <source>Auto-reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczne łączenie ponowne</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="732"/>
       <source>Automatically reconnect this profile if it should become disconnected for any reason other than the user disconnecting from the game server.</source>
-      <translation type="unfinished"/>
+      <translation>Automatycznie połącz ten profil ponownie, gdyby został on odłączony z jakiegokolwiek innego powodu niż odłączenie się użytkownika z serwera gry.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="748"/>
@@ -4151,7 +4152,7 @@ komunikat o błędzie to: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="751"/>
       <source>If provided will be sent, along with the character name to identify the user in the game.</source>
-      <translation type="unfinished"/>
+      <translation>Jeśli zostanie podane, zostanie wysłane wraz z imieniem postaci, aby zidentyfikować użytkownika w grze.</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="764"/>
