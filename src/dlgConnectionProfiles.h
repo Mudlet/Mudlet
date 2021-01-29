@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2020-2021 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +25,7 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
-#include "QDir"
+#include <QKeyEvent>
 #include <pugixml.hpp>
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
 #include <../3rdparty/qtkeychain/keychain.h>
@@ -33,6 +34,8 @@
 #endif
 #include "post_guard.h"
 
+class QDir;
+
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
     Q_OBJECT
@@ -40,12 +43,14 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     dlgConnectionProfiles(QWidget* parent = nullptr);
+    ~dlgConnectionProfiles();
+
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
-
+    QList<int> findProfilesBeginningWith(const QChar&) const;
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
@@ -83,6 +88,11 @@ public slots:
     void slot_copy_profile();
     void slot_copy_profilesettings_only();
 
+
+protected:
+    bool eventFilter(QObject*, QEvent*) override;
+
+
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
@@ -107,6 +117,7 @@ private:
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
+    void moveToNextProfileBeginningWith(const int);
 
 
     // split into 3 properties so each one can be checked individually

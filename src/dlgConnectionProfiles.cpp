@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2016-2018, 2020-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -32,6 +32,7 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QDir>
 #include <QRandomGenerator>
 #include <QSettings>
 #include <sstream>
@@ -282,6 +283,13 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         mCustomIconColors.append(QColor::fromHsv(i, 192, 255));
         mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
     }
+
+    QCoreApplication::instance()->installEventFilter(this);
+}
+
+dlgConnectionProfiles::~dlgConnectionProfiles()
+{
+    QCoreApplication::instance()->removeEventFilter(this);
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -1885,10 +1893,12 @@ void dlgConnectionProfiles::slot_load()
     loadProfile(false);
     QDialog::accept();
 }
+
 void dlgConnectionProfiles::slot_connectToServer()
 {
     loadProfile(true);
 }
+
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     QString profile_name = profile_name_entry->text().trimmed();
@@ -2253,6 +2263,17 @@ QList<QListWidgetItem*> dlgConnectionProfiles::findData(const QListWidget& listW
     return results;
 }
 
+QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QChar& what) const
+{
+    QList<int> results;
+    for (int index = 0, total = profiles_tree_widget->count(); index < total; ++index) {
+        if (profiles_tree_widget->item(index)->data(csmNameRole).toString().startsWith(what, Qt::CaseInsensitive)) {
+            results.append(index);
+        }
+    }
+    return results;
+}
+
 void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name) const
 {
     if (!pI) {
@@ -2260,23 +2281,7 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
         return;
     }
 
-// This section of code not currently wanted but retained for another day
-//    // Set to one larger than wanted so that do loop can contain the decrementor
-//    int fontSize = 11;
-//    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
-//    // For an icon of size 120x30 allow another 20 underneath it for the text:
-//    QRect textRectangle(0, 0, 119, 19);
-//    QRect testRect;
-//    do {
-//        font.setPointSize(--fontSize);
-//        QFontMetrics fm(font);
-//        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, name);
-//    } while (fontSize > 1 && !textRectangle.contains(testRect));
-
-    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
-    pI->setFont(font);
     pI->setData(csmNameRole, name);
-    pI->setText(name);
     pI->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(name));
     pI->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
 }
@@ -2336,4 +2341,113 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
         pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextWordWrap, text);
     }
     return QIcon(background);
+}
+
+bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == profiles_tree_widget && event->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        switch (keyEvent->key()) {
+            // Process all the keys that could be used in a profile name
+            // fortunately we limit this to a sub-set of ASCII because we also use
+            // it for a directory name - based on "allowedChars" list in
+            // validateProfile() i.e.:
+            // ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
+        default:
+            // For other keys handle them as normal:
+            return QObject::eventFilter(obj, event);
+
+        case Qt::Key_Period:
+        case Qt::Key_Space:
+        case Qt::Key_Underscore:
+        case Qt::Key_0:
+        case Qt::Key_1:
+        case Qt::Key_2:
+        case Qt::Key_3:
+        case Qt::Key_4:
+        case Qt::Key_5:
+        case Qt::Key_6:
+        case Qt::Key_7:
+        case Qt::Key_8:
+        case Qt::Key_9:
+        case Qt::Key_Minus:
+        case Qt::Key_NumberSign:
+        case Qt::Key_Ampersand:
+        case Qt::Key_A:
+        case Qt::Key_B:
+        case Qt::Key_C:
+        case Qt::Key_D:
+        case Qt::Key_E:
+        case Qt::Key_F:
+        case Qt::Key_G:
+        case Qt::Key_H:
+        case Qt::Key_I:
+        case Qt::Key_J:
+        case Qt::Key_K:
+        case Qt::Key_L:
+        case Qt::Key_M:
+        case Qt::Key_N:
+        case Qt::Key_O:
+        case Qt::Key_P:
+        case Qt::Key_Q:
+        case Qt::Key_R:
+        case Qt::Key_S:
+        case Qt::Key_T:
+        case Qt::Key_U:
+        case Qt::Key_V:
+        case Qt::Key_W:
+        case Qt::Key_X:
+        case Qt::Key_Y:
+        case Qt::Key_Z:
+            if (keyEvent->modifiers() & ~(Qt::ShiftModifier)) {
+                // There is a modifier in play OTHER than the shift one so treat
+                // it as normal:
+                return QObject::eventFilter(obj, event);
+            }
+
+            moveToNextProfileBeginningWith(keyEvent->key());
+            // Eat (filter) this event so it goes no further:
+            return true;
+        }
+    }
+
+    // standard event processing
+    return QObject::eventFilter(obj, event);
+}
+
+void dlgConnectionProfiles::moveToNextProfileBeginningWith(const int key)
+{
+    if (key < 0 || key > 128) {
+        // out of range of normal ASCII keys
+        return;
+    }
+
+    // As it happens the values for key correspond to those of the corresponding
+    // ASCII (upper-case for letters) character codes
+    auto currentIndex = profiles_tree_widget->currentIndex().row();
+    auto indexes = findProfilesBeginningWith(QLatin1Char(static_cast<unsigned char>(key)));
+    if (indexes.isEmpty()) {
+        // No matches at all so nothing to do
+        return;
+    }
+
+    if (currentIndex < 0 || indexes.last() <= currentIndex) {
+        // No current item or the current item is on or after the last one in
+        // the list - so use the first one in the list:
+        profiles_tree_widget->setCurrentRow(indexes.first());
+        return;
+    }
+
+    int i = 0;
+    int total = indexes.count();
+    while (i < total && indexes.at(i) <= currentIndex) {
+        ++i;
+    }
+
+    if (Q_UNLIKELY(i >= total)) {
+        // This shouldn't happen but prevent crashes if it does occur
+        return;
+    }
+
+    profiles_tree_widget->setCurrentRow(indexes.at(i));
 }
