@@ -1397,13 +1397,13 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15467"/>
       <source>Lua error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Błąd Lua: %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15469"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można znaleźć modułu Lua %1.%2%3%4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15483"/>
@@ -1439,7 +1439,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16232"/>
       <source>Lua error: %1.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd Lua: %1.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16234"/>
@@ -1553,19 +1553,19 @@ próbowałem te miejsca:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1047"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Okno użytkownika - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1095"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1102"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1199"/>
