@@ -2733,7 +2733,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         console->setFontSize(10);
     }
     if (!console || !dockwidget) {
-        return {false, QStringLiteral("cannot create userwindow \"%1\": name collision").arg(name)};
+        return {false, QStringLiteral("cannot create userwindow \"%1\": it already exists").arg(name)};
     }
 
     // The name is used in BOTH the QMaps of all user created TConsole
