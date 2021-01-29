@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>У вас еще нет карты - загрузите ее или начните создавать карту с нуля.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
@@ -594,7 +594,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1248"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>У вас еще нет карты - загрузите ее или начните создавать карту с нуля.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1248"/>
@@ -969,13 +969,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2943"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Перейти в режим редактирования</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Перейти в режим просмотра</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
