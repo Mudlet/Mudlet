@@ -889,7 +889,7 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Déplacer le groupe sélectionné vers une position donnée</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
