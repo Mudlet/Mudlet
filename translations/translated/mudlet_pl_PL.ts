@@ -590,7 +590,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="1248"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Nie masz jeszcze mapy - załaduj jedną lub rozpocznij mapowanie od zera, aby rozpocząć.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1248"/>
@@ -956,13 +956,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2943"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przełącz do trybu edycji</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przełącz do trybu wyświetlania</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -1335,12 +1335,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="913"/>
       <source>Replay recording has started. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Rozpoczęto nagrywanie powtórki. Plik: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="916"/>
       <source>Replay recording has been stopped. File: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nagrywanie powtórki zostało zatrzymane. Plik: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1919"/>
@@ -3361,7 +3361,7 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="20"/>
       <source>%APPNAME% update</source>
-      <translation type="unfinished"/>
+      <translation>Aktualizacja %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="50"/>
@@ -4921,22 +4921,22 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1068"/>
       <source>Technical information:</source>
-      <translation type="unfinished"/>
+      <translation>Informacje techniczne:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1069"/>
       <source>Version</source>
-      <translation type="unfinished"/>
+      <translation>Wersja</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1070"/>
       <source>OS</source>
-      <translation type="unfinished"/>
+      <translation>System operacyjny</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1071"/>
       <source>CPU</source>
-      <translation type="unfinished"/>
+      <translation>Procesor</translation>
     </message>
   </context>
   <context>
@@ -5088,7 +5088,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="267"/>
       <source>Game name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa gry: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1201"/>
@@ -5139,22 +5139,22 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="141"/>
       <source>copy profile</source>
-      <translation type="unfinished"/>
+      <translation>kopiuj profil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="142"/>
       <source>copy the entire profile to new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>skopiuj cały profil do nowego, który będzie wymagał nowej, zmienionej nazwy.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="146"/>
       <source>copy profile settings</source>
-      <translation type="unfinished"/>
+      <translation>kopiuj ustawienia profilu</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="147"/>
       <source>copy the settings and some other parts of the profile to a new one that will require a different new name.</source>
-      <translation type="unfinished"/>
+      <translation>skopiuj ustawienia i inne części profilu na nowy, który będzie wymagał nowej, zmienionej nazwy.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="211"/>
@@ -5169,17 +5169,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="264"/>
       <source>Click to load but not connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby załadować, ale nie połączyć wybranego profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="265"/>
       <source>Click to load and connect the selected profile.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby wczytać i połączyć wybrany profil.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="266"/>
       <source>Need to have a valid profile name, game server address and port before this button can be enabled.</source>
-      <translation type="unfinished"/>
+      <translation>Aby możliwe było włączenie tego przycisku, należy mieć poprawną nazwę profilu, adres serwera gry i port.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="268"/>
