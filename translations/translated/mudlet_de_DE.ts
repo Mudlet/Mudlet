@@ -970,13 +970,13 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2943"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Bearbeiten starten</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Bearbeiten beenden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -10752,7 +10752,8 @@ try again when it has finished.</source>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>Dies ist keine Monospace-Schriftart, was bei manchen Textspielen vielleicht nicht ideal ist: 
+Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textspalten geben</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1268"/>
