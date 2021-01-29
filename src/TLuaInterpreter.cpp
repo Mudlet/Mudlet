@@ -12539,6 +12539,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     QString inputText = lua_tostring(L, 1);
 
+<<<<<<< HEAD
     inputText = inputText.trimmed();
     if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
         lua_pushnil(L);
@@ -12554,6 +12555,10 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
             }
         }
+=======
+    if (inputText.trimmed().isEmpty()) { // there's nothing more to say
+        return 0;
+>>>>>>> don't speak when given whitespace
     }
 
     int index;
