@@ -2427,12 +2427,12 @@ Mudlet - is your system running out of memory?</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="680"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation>[ ALERT ] - Obszar z id: %1 spodziewany, ale nie znaleziony, zostanie utworzony.</translation>
+      <translation>[ UWAGA ] - Obszar z id: %1 oczekiwany, ale nie znaleziony, zostanie utworzony.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="683"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation>[ ALERT ] - Obszar o tym id oczekiwany, ale nie znaleziony zostanie utworzony.</translation>
+      <translation>[ UWAGA ] - Obszar o tym id oczekiwany, ale nie znaleziony, zostanie utworzony.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="712"/>
@@ -2461,8 +2461,7 @@ Mudlet - is your system running out of memory?</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ ALERT ] - Zły, (mniej niż +1 i nie zastrzeżone -1) identyfikatory obszaru znaleziono (liczba wystąpień: %1)
-na mapie, teraz kombinuję, jakie nowe numery użyć ...</translation>
+      <translation>[ UWAGA ] - Znaleziono złe (mniej niż +1 i nie zastrzeżone -1) identyfikatory pokoju (liczba wystąpień: %1) na mapie, teraz ustalam, jakich nowych numerów identyfikatorów użyć...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="768"/>
