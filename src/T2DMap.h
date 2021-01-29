@@ -156,6 +156,10 @@ public:
 
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+
+    // Controls if the mapper is in view-only mode
+    bool mMapViewOnly;
+
     bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
@@ -169,7 +173,6 @@ public:
     QColor mClosedDoorColor = QColor(155, 155, 10);
     QColor mLockedDoorColor = QColor(155, 10, 10);
 
-
 public slots:
     void slot_roomSelectionChanged();
     void slot_deleteCustomExitLine();
@@ -177,6 +180,7 @@ public slots:
     void slot_deleteLabel();
     void slot_editLabel();
     void slot_setPlayerLocation();
+    void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
     void shiftZup();
@@ -265,7 +269,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
-    dlgRoomSymbol* mDlgRoomSymbol;
+    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
 
 private slots:
     void slot_createRoom();
