@@ -32,7 +32,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation type="unfinished"/>
+      <translation>Nie masz jeszcze mapy - załaduj jedną lub rozpocznij mapowanie od zera, aby rozpocząć.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
@@ -46,7 +46,7 @@
       <location filename="../src/Host.cpp" line="831"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - %1 Wielkie dzięki za korzystanie z kompilacji do testów publicznych!</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="832"/>
@@ -89,7 +89,7 @@ please wait...</source>
       <location filename="../src/Host.cpp" line="2628"/>
       <location filename="../src/Host.cpp" line="3542"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mapa - %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3558"/>
@@ -108,7 +108,7 @@ please wait...</source>
       <location filename="../src/KeyUnit.cpp" line="333"/>
       <source>%1undefined key (code: 0x%2)</source>
       <comment>%1 is a string describing the modifier keys (e.g. &quot;shift&quot; or &quot;control&quot;) used with the key, whose &apos;code&apos; number, in %2 is not one that we have a name for. This is probably one of those extra keys around the edge of the keyboard that some people have.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 niezdefiniowany klucz (kod: 0x%2)</translation>
     </message>
   </context>
   <context>
