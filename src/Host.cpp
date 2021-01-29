@@ -618,7 +618,7 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
@@ -631,7 +631,7 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
         QStringList moduleStringList = mInstalledModules[moduleName];
         return {true, moduleStringList[1]};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -1168,7 +1168,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1207,7 +1207,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1246,7 +1246,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1379,7 +1379,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
         if (currentName.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(currentName));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(currentName));
         }
     }
 
@@ -2681,7 +2681,7 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     auto pC = mpConsole->mSubConsoleMap.value(windowName);
     if (!pC) {
         QStringList failMessage;
-        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
+        failMessage << QStringLiteral("mini console, user window or buffer '%1' not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
     return qMakePair(true, pC->getLines(lineFrom, lineTo));
@@ -3098,7 +3098,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pN = mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
-        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+        return {false, QStringLiteral("Window '%1' not found.").arg(windowname)};
     }
 
     if (pD) {
@@ -3137,7 +3137,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {true, QString()};
     }
 
-    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+    return {false, QStringLiteral("Element '%1' not found.").arg(name)};
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)

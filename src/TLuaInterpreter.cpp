@@ -15742,7 +15742,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
         auto ids = mpHost->getScriptUnit()->findScriptId(parent);
         auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
         if (!pParentScript) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent)); //parent not found
         }
         pS = new TScript(pParentScript, mpHost);
     }
@@ -15799,7 +15799,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
         // API to handle more than one potential parent with the same name:
         auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
         if (!pParentTimer) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTimer(pParentTimer, mpHost);
     }
@@ -15858,7 +15858,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     } else {
         TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TAlias(pP, mpHost);
     }
@@ -15899,7 +15899,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TKey(pP, mpHost);
     }
@@ -16090,7 +16090,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16118,7 +16118,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16146,7 +16146,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16173,7 +16173,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
