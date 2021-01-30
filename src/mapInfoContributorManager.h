@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TMAPINFOPAINTER_H
-#define TMAPINFOPAINTER_H
+#ifndef TMAPINFOCONTRIBUTORMANAGER_H
+#define TMAPINFOCONTRIBUTORMANAGER_H
 
 #include "pre_guard.h"
 #include <QMap>
@@ -36,11 +36,11 @@ struct mapInfoProperties
     QColor color;
 };
 
-class mapInfoPainter : QObject
+class mapInfoContributorManager : QObject
 {
 public:
-    mapInfoPainter(QObject* parent, Host* ph);
-    ~mapInfoPainter();
+    mapInfoContributorManager(QObject* parent, Host* ph);
+    ~mapInfoContributorManager();
 
     QMap<QString, std::function<mapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)>> contributors;
     mapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);

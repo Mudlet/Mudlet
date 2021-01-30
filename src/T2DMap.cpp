@@ -2189,7 +2189,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 // Work out text for information box, need to offset if room selection widget is present
 void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor)
 {
-    if (!mpMap->mpMapper->mMapInfoPainter->contributors.keys().toSet().intersects(mpHost->mMapInfoProviders)) {
+    if (!mpMap->mpMapper->mMapInfoContributorManager->contributors.keys().toSet().intersects(mpHost->mMapInfoProviders)) {
         return;
     }
 
@@ -2203,9 +2203,9 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
     TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
     int yOffset = 10;
-    for (auto key : mpMap->mpMapper->mMapInfoPainter->contributors.keys()) {
+    for (auto key : mpMap->mpMapper->mMapInfoContributorManager->contributors.keys()) {
         if (mpHost->mMapInfoProviders.contains(key)) {
-            auto properties = mpMap->mpMapper->mMapInfoPainter->contributors.value(key)(roomID, mMultiSelectionSet.size(), room->getArea(), showingCurrentArea, infoColor);
+            auto properties = mpMap->mpMapper->mMapInfoContributorManager->contributors.value(key)(roomID, mMultiSelectionSet.size(), room->getArea(), showingCurrentArea, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }

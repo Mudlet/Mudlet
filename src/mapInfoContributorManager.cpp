@@ -17,11 +17,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "mapInfoPainter.h"
+#include "mapInfoContributorManager.h"
 #include "TArea.h"
 #include "TRoomDB.h"
 
-mapInfoPainter::mapInfoPainter(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
+mapInfoContributorManager::mapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
     contributors[QStringLiteral("Short")] = [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, showingCurrentArea, infoColor);
@@ -31,15 +31,14 @@ mapInfoPainter::mapInfoPainter(QObject* parent, Host* pH) : QObject(parent), mpH
     };
 }
 
-mapInfoPainter::~mapInfoPainter() {}
+mapInfoContributorManager::~mapInfoContributorManager() {}
 
-mapInfoProperties mapInfoPainter::shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+mapInfoProperties mapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
 {
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         int areaId = room->getArea();
-        TArea* area = mpHost->mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         infoText = QStringLiteral("%1 (%3)\n")
                            .arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId()))
@@ -49,7 +48,7 @@ mapInfoProperties mapInfoPainter::shortInfo(int roomID, int selectionSize, int a
     return mapInfoProperties{infoText, false, false, infoColor};
 }
 
-mapInfoProperties mapInfoPainter::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+mapInfoProperties mapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
 {
     QString infoText;
     bool isBold;

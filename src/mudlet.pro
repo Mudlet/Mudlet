@@ -537,6 +537,7 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
@@ -641,6 +642,7 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
+    mapInfoContributorManager.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \

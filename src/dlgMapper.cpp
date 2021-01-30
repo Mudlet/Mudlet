@@ -140,8 +140,8 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
 
-    mMapInfoPainter = new mapInfoPainter(this, pH);
-    slot_updateInfoContributors();
+    mMapInfoContributorManager = new mapInfoContributorManager(this, pH);
+    updateInfoContributors();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -332,8 +332,8 @@ void dlgMapper::slot_switchArea(const int index)
 }
 #endif
 
-void dlgMapper::slot_updateInfoContributors() {
-    QMapIterator iterator(mMapInfoPainter->contributors);
+void dlgMapper::updateInfoContributors() {
+    QMapIterator iterator(mMapInfoContributorManager->contributors);
     info_pushButton->menu()->clear();
     QAction* clearAction = new QAction(tr("None"), info_pushButton);
     info_pushButton->menu()->addAction(clearAction);
