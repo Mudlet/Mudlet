@@ -12857,12 +12857,25 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     QString textToSay;
     textToSay = lua_tostring(L, 1);
 
-    if (textToSay.trimmed().isEmpty()) { // there's nothing more to say
-        return 0;
+    QString sanitizedText = textToSay.trimmed();
+    if (sanitizedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+        lua_pushnil(L);
+        lua_pushfstring(L, "skipped empty text to speak (TTS)");
+        return 2;
     }
 
-    speechUnit->say(textToSay);
-    speechCurrent = textToSay;
+    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
+    for (QString dropThis : dontSpeak) {
+        if (santizedText.contains(dropThis)) {
+            sanitizedText.replace(dropThis; QString());
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
+            }
+        }
+    }
+
+    speechUnit->say(sanitizedText);
+    speechCurrent = sanitizedText;
 
     return 0;
 }
@@ -13134,8 +13147,25 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     QString textToSay;
     textToSay = speechQueue.takeFirst();
 
-    speechUnit->say(textToSay);
-    speechCurrent = textToSay;
+    QString sanitizedText = textToSay.trimmed();
+    if (sanitizedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+        lua_pushnil(L);
+        lua_pushfstring(L, "skipped empty text to speak (TTS)");
+        return 2;
+    }
+
+    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
+    for (QString dropThis : dontSpeak) {
+        if (santizedText.contains(dropThis)) {
+            sanitizedText.replace(dropThis; QString());
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
+            }
+        }
+    }
+
+    speechUnit->say(sanitizedText);
+    speechCurrent = sanitizedText;
 
     return;
 }
