@@ -252,7 +252,6 @@ public:
     void stopSounds();
     void playSound(const QString &s, int);
     QStringList getAvailableFonts();
-    void updateMudletDiscordInvite();
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     std::pair<bool, QString> resetProfileIcon(const QString& profile);
 #if defined(Q_OS_WIN32)
@@ -648,7 +647,7 @@ private:
     // The collection of words in the above:
     QSet<QString> mWordSet_shared;
 
-    QString mMudletDiscordInvite = QStringLiteral("https://discord.com/invite/kuYvMQ9");
+    QString mMudletDiscordInvite = QStringLiteral("https://www.mudlet.org/chat");
 
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};

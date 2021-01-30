@@ -157,6 +157,10 @@ public:
 
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
+
+    // Controls if the mapper is in view-only mode
+    bool mMapViewOnly;
+
     bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
@@ -167,7 +171,6 @@ public:
     bool isCenterViewCall;
     QString mHelpMsg;
 
-
 public slots:
     void slot_roomSelectionChanged();
     void slot_deleteCustomExitLine();
@@ -175,6 +178,7 @@ public slots:
     void slot_deleteLabel();
     void slot_editLabel();
     void slot_setPlayerLocation();
+    void slot_toggleMapViewOnly();
     void slot_createLabel();
     void slot_customLineColor();
     void shiftZup();
