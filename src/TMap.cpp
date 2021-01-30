@@ -2958,10 +2958,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
                 QString key = keys.at(i);
                 bool isOk = false;
                 int index = key.toInt(&isOk);
-                if (isOk && envColorObj.value(key).isString() && envColorObj.value(key).toString().toInt(&isOk) && isOk) {
-                    // isOk is reused and can be modified in the third test
-                    // which is why it is retested!
-                    int value = envColorObj.value(key).toString().toInt();
+                if (isOk && envColorObj.value(key).isDouble()) {
+                    int value = envColorObj.value(key).toInt();
                     envColors.insert(index, value);
                 }
             }
