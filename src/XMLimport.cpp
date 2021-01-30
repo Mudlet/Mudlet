@@ -1828,6 +1828,7 @@ void XMLimport::readStopWatchMap()
 
 void XMLimport::readMapInfoProviders()
 {
+    mpHost->mMapInfoProviders.clear();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
