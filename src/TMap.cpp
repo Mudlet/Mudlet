@@ -2653,6 +2653,22 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+/*
+ * Notes on the format version numbers in JSON files - we use this to track any
+ * changes in a major.minor number format, the minor number is to be three
+ * digits long.
+ *
+ * 0.002 was the first published draft
+ * 0.003 changed the format to encapsulate the room symbol as an object
+ * which contains text and a color which was added separately during the
+ * development of the JSON handling code. Also refactored the storage of
+ * colors to identify whether there is an alpha component or not in the
+ * array of values.
+ * 1.000 is identical to 0.003 - but changed to make sense from a release point
+ * of view.
+ *
+ * Currently only version 1.000 is expected or handled
+ */
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     QString destination{dest};
@@ -2696,7 +2712,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
     mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
     QFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text|QFile::WriteOnly))) {
@@ -2708,14 +2724,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     QJsonObject mapObj;
-    // Use this to track any changes. in a major.minor number format, minor
-    // is to be three digits long.
-    // 0.002 was the first published draft
-    // 0.003 changed the format to encapsulte the room symbol text, it also
-    // include the room symbol color that was added during the development and
-    // refactored the storage of colors to identify whether there is an alpha
-    // component or not in the array of values.
-    mapObj.insert(scFORMAT_VERSION, static_cast<double>(0.003));
+    mapObj.insert(scFORMAT_VERSION, static_cast<double>(1.000));
 
     writeJsonUserData(mapObj);
 
@@ -2877,7 +2886,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     }
 
     if (doc.isEmpty()) {
-        qDebug() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
         return {false, QStringLiteral("empty Json file, no map data detected")};
     }
 
@@ -2886,14 +2895,15 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     double formatVersion = 0.0f;
     if (mapObj.contains(scFORMAT_VERSION) && mapObj[scFORMAT_VERSION].isDouble()) {
         formatVersion = mapObj[scFORMAT_VERSION].toDouble();
-        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 0.0030 || formatVersion > 0.0030) {
-            // We only handle 0.003f right now (0.001f was borked, 0.002f
-            // didn't include room symbol color):
-            qDebug() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
+        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 1.0000 || formatVersion > 1.0000) {
+            // We only handle 1.000f right now (0.001f was borked, 0.002f
+            // didn't include room symbol color, 0.003 is the same as 1.000
+            // but the numbered was changed for release into the wild):
+            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
             return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))};
         }
     } else {
-        qDebug() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
         return {false, QStringLiteral("no version number detected")};
     }
 
@@ -2927,7 +2937,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
     mpProgressDialog->setAutoReset(false);
-    mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
+    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
 
     mDefaultAreaName = mapObj[scDEFAULT_AREA_NAME].toString();

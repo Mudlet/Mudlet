@@ -795,10 +795,10 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
           && pLabel->bgColor.red() == defaultLabelBackground.blue())) {
 
         // For an image the colors are not used and tend to be set to black, if
-        // so skip them. Ufortunately because of the way QColour s are assembled
-        // the operator== is too picky for our purposes as even the way the
-        // colour was put together (color spec type) can make them NOT seem to
-        // be the same when we'd think they were...
+        // so skip them. Unfortunately because of the way QColour s are
+        // assembled the operator== is too picky for our purposes as even the
+        // way the colour was put together (color spec type) can make them NOT
+        // seem to be the same when we'd think they were...
         QJsonArray colorsArray;
         QJsonObject foregroundColorObj;
         QJsonObject backgroundColorObj;
@@ -846,10 +846,10 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 
     if (labelObj.contains(scCOLORS) && labelObj.value(scCOLORS).isArray() && labelObj.value(scCOLORS).toArray().size() == 2) {
         // For an image the colors are not used and tend to be set to black, if
-        // so skip them. Ufortunately because of the way QColour s are assembled
-        // the operator== is too picky for our purposes as even the way the
-        // colour was put together (color spec type) can make them NOT seem to
-        // be the same when we'd think they were...
+        // so skip them. Unfortunately because of the way QColour s are
+        // assembled the operator== is too picky for our purposes as even the
+        // way the colour was put together (color spec type) can make them NOT
+        // seem to be the same when we'd think they were...
         QJsonArray colorsArray = labelObj.value(scCOLORS).toArray();
         label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject());
         label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject());
