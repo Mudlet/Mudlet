@@ -12484,7 +12484,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
+void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
     if (state != speechState) {
         speechState = state;
@@ -12515,33 +12515,16 @@ int TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 
     if (state != QTextToSpeech::Ready || speechQueue.empty()) {
         bSpeechQueueing = false;
-        return 0;
+        return;
     }
 
     QString textToSay;
     textToSay = speechQueue.takeFirst();
 
-    QString sanitizedText = textToSay.trimmed();
-    if (sanitizedText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        lua_pushnil(L);
-        lua_pushfstring(L, "skipped empty text to speak (TTS)");
-        return 2;
-    }
+    speechUnit->say(textToSay);
+    speechCurrent = textToSay;
 
-    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (QString dropThis : dontSpeak) {
-        if (sanitizedText.contains(dropThis)) {
-            sanitizedText.replace(dropThis, QString());
-            if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
-            }
-        }
-    }
-
-    speechUnit->say(sanitizedText);
-    speechCurrent = sanitizedText;
-
-    return 0;
+    return;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
@@ -12556,8 +12539,21 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     QString inputText = lua_tostring(L, 1);
 
-    if (inputText.trimmed().isEmpty()) { // there's nothing more to say
-        return 0;
+    inputText = inputText.trimmed();
+    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+        lua_pushnil(L);
+        lua_pushfstring(L, "skipped empty text to speak (TTS)");
+        return 2;
+    }
+
+    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
+    for (QString dropThis : dontSpeak) {
+        if (inputText.contains(dropThis)) {
+            inputText.replace(dropThis, QString());
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
+            }
+        }
     }
 
     int index;
