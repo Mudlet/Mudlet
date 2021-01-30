@@ -118,7 +118,7 @@ void TMxpNodeBuilder::processAttribute()
     if (mCurrentTagName.empty()) {
         mCurrentTagName = mCurrentAttrName;
     } else if (!mCurrentAttrName.empty()) {
-        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName.c_str(),mCurrentAttrValue.c_str()));
+        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName.c_str(), mCurrentAttrValue.c_str()));
     }
 }
 void TMxpNodeBuilder::resetCurrentTag()
