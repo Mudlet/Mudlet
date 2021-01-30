@@ -29,7 +29,7 @@
 #include <QMainWindow>
 #include <QPointer>
 #include "post_guard.h"
-
+#include "mapInfoPainter.h"
 
 class Host;
 class TMap;
@@ -51,7 +51,9 @@ public:
     void updateAreaComboBox();
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
-    void resetAreaComboBoxToPlayerRoomArea();
+    void resetAreaComboBoxToPlayerRoomArea();    
+
+    mapInfoPainter* mMapInfoPainter;
 
 public slots:
     void slot_bubbles();
@@ -67,6 +69,7 @@ public slots:
     // Only used in newer Qt versions
     void slot_switchArea(const int);
 #endif
+    void slot_updateInfoContributors();
 
 private:
     TMap* mpMap;

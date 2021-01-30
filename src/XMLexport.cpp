@@ -552,6 +552,14 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLineSize").text().set(QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData());
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
+    {
+        auto mapInfoProviders = host.append_child("mMapInfoProviders");
+        QSetIterator<QString> iterator(pHost->mMapInfoProviders);
+        while (iterator.hasNext()) {
+            auto mapInfoProvider = mapInfoProviders.append_child("mapInfoProvider");
+            mapInfoProvider.text().set(iterator.next().toUtf8().constData());
+        }
+    }
 
     {
         auto stopwatches = host.append_child("stopwatches");

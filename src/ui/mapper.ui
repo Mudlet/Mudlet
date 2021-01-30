@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>403</width>
+    <width>460</width>
     <height>387</height>
    </rect>
   </property>
@@ -602,21 +602,12 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="showInfo">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>50</width>
-                <height>0</height>
-               </size>
-              </property>
+             <widget class="QPushButton" name="info_pushButton">
               <property name="text">
                <string>Info</string>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
               </property>
              </widget>
             </item>

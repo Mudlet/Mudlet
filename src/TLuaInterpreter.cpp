@@ -15958,6 +15958,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "registerMapInfoProvider", TLuaInterpreter::registerMapInfoProvider);
+    lua_register(pGlobalLua, "killMapInfoProvider", TLuaInterpreter::killMapInfoProvider);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17657,5 +17659,62 @@ int TLuaInterpreter::showNotification(lua_State* L)
     }
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfoProvider
+int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    if (!lua_isstring(L, 1)) {
+
+    }
+    auto name = lua_tostring(L, 1);
+
+    int callback;
+    if(lua_isfunction(L, 2)) {
+        callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    host.mpMap->mpMapper->mMapInfoPainter->contributors.insert(name, [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+        if (roomID > 0) {
+            lua_pushinteger(L, roomID);
+        } else {
+            lua_pushnil(L);
+        }
+        lua_pushinteger(L, selectionSize);
+        lua_pushinteger(L, areaId);
+        lua_pushboolean(L, showingCurrentArea);
+        
+        lua_pcall(L, 4, 4, 0);
+
+        auto nResult = lua_gettop(L);
+        auto index = -nResult;
+        QString text;
+        text = lua_tostring(L, index);
+        bool isBold = lua_toboolean(L, ++index);
+        bool isItalic = lua_toboolean(L, ++index);
+        QColor color = QColor(lua_tostring(L, ++index));
+        lua_pop(L, nResult);
+        return mapInfoProperties{ text, isBold, isItalic, color };
+    });
+    host.mpMap->mpMapper->slot_updateInfoContributors();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killMapInfoProvider
+int TLuaInterpreter::killMapInfoProvider(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    if (!lua_isstring(L, 1)) {
+
+    }
+    auto name = lua_tostring(L, 1);
+    host.mpMap->mpMapper->mMapInfoPainter->contributors.remove(name);
+    host.mpMap->mpMapper->slot_updateInfoContributors();
+    host.mMapInfoProviders.remove(name);
     return 0;
 }

@@ -31,10 +31,10 @@
 
 #include "pre_guard.h"
 #include <QListWidget>
+#include <QMenu>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include "post_guard.h"
-
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget( parent )
@@ -75,7 +75,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     d3buttons->setVisible(false);
     roomSize->setValue(mpHost->mRoomSize * 10);
     lineSize->setValue(mpHost->mLineSize);
-    showInfo->setChecked(mpHost->mShowInfo);
+    //showInfo->setChecked(mpHost->mShowInfo);
     mp2dMap->mShowInfo = mpHost->mShowInfo;
 
     showRoomIDs->setChecked(mpHost->mShowRoomID);
@@ -86,7 +86,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
+    //connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
     connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
     connect(shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftLeft);
@@ -131,12 +131,19 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
+
+    auto menu = new QMenu(this);
+    info_pushButton->setMenu(menu);
+    
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
+
+    mMapInfoPainter = new mapInfoPainter(this, pH);
+    slot_updateInfoContributors();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -231,7 +238,7 @@ void dlgMapper::show2dView()
         connect(shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::shiftRight);
         connect(shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::shiftUp);
         connect(shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftDown);
-        connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
+        //connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
         connect(defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::defaultView);
         connect(sideView, &QAbstractButton::clicked, glWidget, &GLWidget::sideView);
         connect(topView, &QAbstractButton::clicked, glWidget, &GLWidget::topView);
@@ -281,7 +288,7 @@ void dlgMapper::slot_bubbles()
 
 void dlgMapper::slot_info()
 {
-    mp2dMap->mShowInfo = showInfo->isChecked();
+    //mp2dMap->mShowInfo = showInfo->isChecked();
     mp2dMap->mpHost->mShowInfo = mp2dMap->mShowInfo;
     mp2dMap->update();
 }
@@ -329,3 +336,32 @@ void dlgMapper::slot_switchArea(const int index)
     mp2dMap->switchArea(areaName);
 }
 #endif
+
+void dlgMapper::slot_updateInfoContributors() {
+    QHashIterator iterator(mMapInfoPainter->contributors);
+    info_pushButton->menu()->clear();
+    QAction* clearAction = new QAction(tr("None"), info_pushButton);
+    info_pushButton->menu()->addAction(clearAction);
+    connect(clearAction, &QAction::triggered, this, [=]() {
+        for (auto action : info_pushButton->menu()->actions()) {
+            action->setChecked(false);
+        }
+    });
+
+    while (iterator.hasNext()) {
+        auto name = iterator.next().key();
+        qDebug().noquote() << name;
+        QAction* action = new QAction(name, info_pushButton);
+        action->setCheckable(true);
+        action->setChecked(mpHost->mMapInfoProviders.contains(name));
+        connect(action, &QAction::toggled, this, [=](bool isToggled) {
+            if (isToggled) {
+                mpHost->mMapInfoProviders.insert(name);
+            } else {
+                mpHost->mMapInfoProviders.remove(name);
+            }
+            mp2dMap->update();
+        });
+        info_pushButton->menu()->addAction(action);
+    }
+}

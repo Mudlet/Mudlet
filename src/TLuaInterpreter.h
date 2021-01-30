@@ -586,6 +586,8 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
+    static int registerMapInfoProvider(lua_State*);
+    static int killMapInfoProvider(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

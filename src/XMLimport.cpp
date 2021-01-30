@@ -813,7 +813,6 @@ void XMLimport::readHostPackage(Host* pHost)
     bool enableUserDictionary = attributes().value(QStringLiteral("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(QStringLiteral("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
-    pHost->mShowInfo = attributes().value(QStringLiteral("mShowInfo")) == YES;
     pHost->mAcceptServerGUI = attributes().value(QStringLiteral("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(QStringLiteral("mAcceptServerMedia")) == YES;
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;
@@ -1085,6 +1084,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "mMapInfoProviders") {
+                readMapInfoProviders();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1818,6 +1819,21 @@ void XMLimport::readStopWatchMap()
                 readElementText();
             } else {
                 readUnknownHostElement();
+            }
+        }
+    }
+
+}
+
+void XMLimport::readMapInfoProviders()
+{
+    while (!atEnd()) {
+        readNext();
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "mapInfoProvider") {
+                mpHost->mMapInfoProviders.insert(readElementText());
             }
         }
     }
