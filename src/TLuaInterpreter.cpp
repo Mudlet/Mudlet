@@ -13218,7 +13218,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
-        return TLuaInterpreter::ttsStateChanged(speechUnit->state());
+        TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
 
     return 0;
