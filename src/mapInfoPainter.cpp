@@ -41,9 +41,12 @@ mapInfoProperties mapInfoPainter::shortInfo(int roomID, int selectionSize, int a
         int areaId = room->getArea();
         TArea* area = mpHost->mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        infoText = QStringLiteral("%1 (%3)\n").arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId())) : QString::number(room->getId()), areaName);
+        infoText = QStringLiteral("%1 (%3)\n")
+                           .arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId()))
+                                                                                                      : QString::number(room->getId()),
+                                areaName);
     }
-    return mapInfoProperties{ infoText, false, false, infoColor };
+    return mapInfoProperties{infoText, false, false, infoColor};
 }
 
 mapInfoProperties mapInfoPainter::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)

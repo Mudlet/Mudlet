@@ -21,33 +21,32 @@
 #define TMAPINFOPAINTER_H
 
 #include "pre_guard.h"
-#include <QObject>
 #include <QHash>
+#include <QObject>
 #include <QString>
 #include "post_guard.h"
 
 #include "Host.h"
 
-struct mapInfoProperties {
-	QString text;
-	bool isBold;
-	bool isItalic;
-	QColor color;
+struct mapInfoProperties
+{
+    QString text;
+    bool isBold;
+    bool isItalic;
+    QColor color;
 };
 
 class mapInfoPainter : QObject
 {
-	public:
-		mapInfoPainter(QObject* parent, Host* ph);
-		~mapInfoPainter();
+public:
+    mapInfoPainter(QObject* parent, Host* ph);
+    ~mapInfoPainter();
 
-		QHash<QString, std::function<mapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)>> contributors;
-		mapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
-		mapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
-	
-	private:
-		Host* mpHost;
-		
-	
+    QHash<QString, std::function<mapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)>> contributors;
+    mapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
+    mapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
+
+private:
+    Host* mpHost;
 };
 #endif
