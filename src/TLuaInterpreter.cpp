@@ -12866,8 +12866,8 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (QString dropThis : dontSpeak) {
-        if (santizedText.contains(dropThis)) {
-            sanitizedText.replace(dropThis; QString());
+        if (sanitizedText.contains(dropThis)) {
+            sanitizedText.replace(dropThis, QString());
             if (mudlet::debugMode) {
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
             }
@@ -13110,7 +13110,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
+int TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
     if (state != speechState) {
         speechState = state;
@@ -13141,7 +13141,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 
     if (state != QTextToSpeech::Ready || speechQueue.empty()) {
         bSpeechQueueing = false;
-        return;
+        return 0;
     }
 
     QString textToSay;
@@ -13156,8 +13156,8 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (QString dropThis : dontSpeak) {
-        if (santizedText.contains(dropThis)) {
-            sanitizedText.replace(dropThis; QString());
+        if (sanitizedText.contains(dropThis)) {
+            sanitizedText.replace(dropThis, QString());
             if (mudlet::debugMode) {
                 TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
             }
@@ -13167,7 +13167,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     speechUnit->say(sanitizedText);
     speechCurrent = sanitizedText;
 
-    return;
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
@@ -13222,7 +13222,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
-        TLuaInterpreter::ttsStateChanged(speechUnit->state());
+        return TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
 
     return 0;

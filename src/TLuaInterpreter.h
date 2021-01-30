@@ -533,7 +533,7 @@ public:
     static int ttsGetCurrentLine(lua_State* L);
     static int ttsGetState(lua_State* L);
     static void ttsBuild();
-    static void ttsStateChanged(QTextToSpeech::State state);
+    static int ttsStateChanged(QTextToSpeech::State state);
 #endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
