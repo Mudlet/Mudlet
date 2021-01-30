@@ -17691,7 +17691,7 @@ int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
         lua_pushinteger(L, areaId);
         lua_pushboolean(L, showingCurrentArea);
         
-        lua_pcall(L, 4, 4, 0);
+        lua_pcall(L, 4, 6, 0);
 
         auto nResult = lua_gettop(L);
         auto index = -nResult;
@@ -17699,7 +17699,22 @@ int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
         text = lua_tostring(L, index);
         bool isBold = lua_toboolean(L, ++index);
         bool isItalic = lua_toboolean(L, ++index);
-        QColor color = QColor(lua_tostring(L, ++index));
+        int r = -1;
+        int g = -1;
+        int b = -1;
+        if(!lua_isnil(L, ++index)) {
+            r = lua_tonumber(L, index);
+        }
+        if(!lua_isnil(L, ++index)) {
+            g = lua_tonumber(L, index);
+        }
+        if(!lua_isnil(L, ++index)) {
+            b = lua_tonumber(L, index);
+        }
+        QColor color;
+        if (r >= 0 && r <= 255 && b >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            color = QColor(r, g, b);
+        }
         lua_pop(L, nResult);
         return mapInfoProperties{ text, isBold, isItalic, color };
     });
