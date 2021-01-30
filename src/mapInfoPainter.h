@@ -21,7 +21,7 @@
 #define TMAPINFOPAINTER_H
 
 #include "pre_guard.h"
-#include <QHash>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include "post_guard.h"
@@ -42,7 +42,7 @@ public:
     mapInfoPainter(QObject* parent, Host* ph);
     ~mapInfoPainter();
 
-    QHash<QString, std::function<mapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)>> contributors;
+    QMap<QString, std::function<mapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)>> contributors;
     mapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
     mapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
 

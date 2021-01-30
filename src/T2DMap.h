@@ -138,7 +138,6 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    bool mShowInfo;
     QComboBox* mapInfo_combobox;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;

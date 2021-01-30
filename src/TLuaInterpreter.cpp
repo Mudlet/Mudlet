@@ -15960,6 +15960,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     lua_register(pGlobalLua, "registerMapInfoProvider", TLuaInterpreter::registerMapInfoProvider);
     lua_register(pGlobalLua, "killMapInfoProvider", TLuaInterpreter::killMapInfoProvider);
+    lua_register(pGlobalLua, "toggleMapInfoProvider", TLuaInterpreter::toggleMapInfoProvider);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17667,14 +17668,17 @@ int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-
+        lua_pushfstring(L, "registerMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
+
+    if (!lua_isfunction(L, 2)) {
+        lua_pushfstring(L, "registerMapInfoProvider: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
     auto name = lua_tostring(L, 1);
-
-    int callback;
-    if(lua_isfunction(L, 2)) {
-        callback = luaL_ref(L, LUA_REGISTRYINDEX);
-    }
+    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     host.mpMap->mpMapper->mMapInfoPainter->contributors.insert(name, [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
@@ -17710,11 +17714,51 @@ int TLuaInterpreter::killMapInfoProvider(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-
+        lua_pushfstring(L, "killMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
+
     auto name = lua_tostring(L, 1);
+    
     host.mpMap->mpMapper->mMapInfoPainter->contributors.remove(name);
     host.mpMap->mpMapper->slot_updateInfoContributors();
     host.mMapInfoProviders.remove(name);
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#toggleMapInfoProvider
+int TLuaInterpreter::toggleMapInfoProvider(lua_State* L)
+{
+    int n = lua_gettop(L);
+    auto& host = getHostFromLua(L);
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "toggleMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    auto name = lua_tostring(L, 1);
+    bool state = host.mMapInfoProviders.contains(name);
+
+    if (n >= 2) {
+        if (lua_isboolean(L, 2)) {
+            state = !lua_toboolean(L, 2);
+        } else {
+            lua_pushfstring(L, "toggleMapInfoProvider: bad argument #2 type (toggle state as string expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+    }
+
+    if (state) {
+        host.mMapInfoProviders.remove(name);
+        lua_pushboolean(L, false);
+    } else {
+        host.mMapInfoProviders.insert(name);
+        lua_pushboolean(L, true);
+    }
+
+    host.mpMap->mpMapper->slot_updateInfoContributors();
+    host.mpMap->update();
+    return 1;
 }

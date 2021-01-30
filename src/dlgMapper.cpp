@@ -73,10 +73,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     bubbles->setChecked(mpHost->mBubbleMode);
     mp2dMap->mBubbleMode = mpHost->mBubbleMode;
     d3buttons->setVisible(false);
+    d2buttons->setVisible(true);
     roomSize->setValue(mpHost->mRoomSize * 10);
     lineSize->setValue(mpHost->mLineSize);
-    //showInfo->setChecked(mpHost->mShowInfo);
-    mp2dMap->mShowInfo = mpHost->mShowInfo;
 
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
@@ -86,7 +85,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    //connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
     connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
     connect(shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftLeft);
@@ -238,7 +236,6 @@ void dlgMapper::show2dView()
         connect(shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::shiftRight);
         connect(shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::shiftUp);
         connect(shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftDown);
-        //connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
         connect(defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::defaultView);
         connect(sideView, &QAbstractButton::clicked, glWidget, &GLWidget::sideView);
         connect(topView, &QAbstractButton::clicked, glWidget, &GLWidget::topView);
@@ -253,14 +250,19 @@ void dlgMapper::show2dView()
     glWidget->setVisible(!glWidget->isVisible());
     if (glWidget->isVisible()) {
         d3buttons->setVisible(true);
+        d2buttons->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
-        QTimer::singleShot(100, [this]() { d3buttons->setVisible(false); });
+        QTimer::singleShot(100, [this]() {
+            d3buttons->setVisible(false);
+            d2buttons->setVisible(true);
+        });
     }
 
 #else
     mp2dMap->setVisible(true);
     d3buttons->setVisible(false);
+    d2buttons->setVisible(true);
     dim2->setDisabled(true);
     dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
 #endif
@@ -283,13 +285,6 @@ void dlgMapper::slot_bubbles()
 {
     mp2dMap->mBubbleMode = bubbles->isChecked();
     mp2dMap->mpHost->mBubbleMode = mp2dMap->mBubbleMode;
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_info()
-{
-    //mp2dMap->mShowInfo = showInfo->isChecked();
-    mp2dMap->mpHost->mShowInfo = mp2dMap->mShowInfo;
     mp2dMap->update();
 }
 
@@ -338,7 +333,7 @@ void dlgMapper::slot_switchArea(const int index)
 #endif
 
 void dlgMapper::slot_updateInfoContributors() {
-    QHashIterator iterator(mMapInfoPainter->contributors);
+    QMapIterator iterator(mMapInfoPainter->contributors);
     info_pushButton->menu()->clear();
     QAction* clearAction = new QAction(tr("None"), info_pushButton);
     info_pushButton->menu()->addAction(clearAction);
@@ -350,7 +345,6 @@ void dlgMapper::slot_updateInfoContributors() {
 
     while (iterator.hasNext()) {
         auto name = iterator.next().key();
-        qDebug().noquote() << name;
         QAction* action = new QAction(name, info_pushButton);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoProviders.contains(name));
