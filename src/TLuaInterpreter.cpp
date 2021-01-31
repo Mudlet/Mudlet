@@ -852,7 +852,7 @@ int TLuaInterpreter::selectString(lua_State* L)
     int s = 1;
     QString windowName;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, s++);        
+        windowName = WINDOW_NAME(L, s++);
     }
 
     QString searchText = getVerifiedString(L, __func__, s++, "text to select");
@@ -1704,12 +1704,12 @@ int TLuaInterpreter::paste(lua_State* L)
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!lua_isstring(L, 1)) {	
-        lua_pushfstring(L,	
-                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"	
-                        "expected, got %s!)",	
-                        luaL_typename(L, 1));	
-        return lua_error(L);	
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L,
+                        "feedTriggers: bad argument #1 type (imitation game server text as string\n"
+                        "expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
     }
     QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
@@ -3092,10 +3092,11 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     int n = lua_gettop(L);
     QString name = getVerifiedString(L, __func__, 1, "name");
 
-    bool loadLayout = true, autoDock = true;
+    bool loadLayout = true;
     if (n > 1) {
         loadLayout = getVerifiedBool(L, __func__, 2, "loadLayout", true);
     }
+    bool autoDock = true;
     if (n > 2) {
         autoDock = getVerifiedBool(L, __func__, 3, "autoDock", true);
     }
@@ -4085,7 +4086,7 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     if (n > 1) {
         name = getVerifiedString(L, __func__, 1, "command line name", true);
     }
-    QString styleSheet = getVerifiedString(L, __func__, n, "StyleSheet", true);
+    QString styleSheet = getVerifiedString(L, __func__, n, "StyleSheet");
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setCmdLineStyleSheet(name, styleSheet); !success) {
@@ -5972,7 +5973,9 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
-        repeating = getVerifiedBool(L, __func__, 3, "repeating", true);
+        if (lua_isboolean(L, 3)) {
+            repeating = lua_toboolean(L, 3);
+        }
         QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, QString(), repeating);
         if (result.first == -1) {
             lua_pushnumber(L, -1);
@@ -5993,7 +5996,9 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
 
     QString luaCode = getVerifiedString(L, __func__, 2, "script or function name");
-    repeating = getVerifiedBool(L, __func__, 3, "repeating", true);
+    if (lua_isboolean(L, 3)) {
+        repeating = lua_toboolean(L, 3);
+    }
     QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode, repeating);
     lua_pushnumber(L, result.first);
     if (result.first == -1) {
@@ -7047,7 +7052,7 @@ int TLuaInterpreter::permKey(lua_State* L)
 {
     QString keyName = getVerifiedString(L, __func__, 1, "key name");
     QString parentGroup = getVerifiedString(L, __func__, 2, "key parent group");
-    
+
     uint_fast8_t argIndex = 3;
     int keyModifier = Qt::NoModifier;
     if (lua_gettop(L) > 4) {
@@ -9937,7 +9942,7 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setUserWindowStyleSheet
 int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 {
     QString userWindowName = getVerifiedString(L, __func__, 1, "userwindow name");
@@ -10114,7 +10119,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
     QString inputText = getVerifiedString(L, __func__, 1, "id").trimmed();
     // Treat it as a UTF-8 string because although it is likely to be an
     // unsigned long long integer (0 to 18446744073709551615) we want to
-    // be able to handle any input so we can report bad input strings back.    
+    // be able to handle any input so we can report bad input strings back.
     if (inputText.isEmpty()) {
         // Empty string input - to reset to default the same as the no
         // argument case:
@@ -10133,11 +10138,11 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
         }
         lua_pushnil(L);
         lua_pushfstring(L, "%s does not appear to be a valid Discord application id", inputText.toUtf8().constData());
-        return 2;    
+        return 2;
     }
     lua_pushnil(L);
     lua_pushfstring(L, "%s can not be converted to the expected numeric Discord application id", inputText.toUtf8().constData());
-    return 2;        
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
