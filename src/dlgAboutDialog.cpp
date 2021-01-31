@@ -830,7 +830,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif
 
     QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
-                             "<h3>Copyright © 2008-2016 The Communi Project</h3>"));
+                             "<h3>Copyright © 2008-2020 The Communi Project</h3>"));
 
     QString communiKonverstionSuppliment(tr("<p>Parts of <tt>irctextformat.cpp</t> code come from Konversation and are copyrighted to:<br>"
                                             "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
@@ -1008,7 +1008,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {"Joshua C. Burt", "Qwindor Rousseau", "Maiyannah Bishop"};
+    QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
     QStringList on_a_plaque = {"Vadim Peretokin"};
     int image_counter{1};
 

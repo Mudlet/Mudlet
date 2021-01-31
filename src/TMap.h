@@ -34,7 +34,6 @@
 #include <QColor>
 #include <QFont>
 #include <QMap>
-#include <QMutex>
 #include <QNetworkReply>
 #include <QPixmap>
 #include <QPointer>
@@ -99,15 +98,14 @@ public:
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(QString& msg);
-    void tidyMap(int area);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    void update();
 
     // Was init( Host * ) but host pointer was not used and it does not initialise a map!
     void audit();
 
     QList<int> detectRoomCollisions(int id);
-    void solveRoomCollision(int id, int creationDirection, bool PCheck = true);
     void setRoom(int);
     bool findPath(int from, int to);
     bool gotoRoom(int);
@@ -133,14 +131,14 @@ public:
     // from the operation.
     void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
-    // Moved and revised from dlgMapper:
+    // Downloads a map, then installs it via readXmlMapFile().
+    // Protected from running twice by 'mImportRunning' flag
     void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
-    // Also uses readXmlMapFile(...) but for local files:
+    // like 'downloadMap' but for local files:
     bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
 
-    // Used at end of downloadMap(...) OR as part of importMap(...) but not by
-    // both at the same time thanks to mXmlImportMutex
+    // Used at end of downloadMap(...) OR as part of importMap(...)
     bool readXmlMapFile(QFile&, QString* errMsg = Q_NULLPTR);
 
     // Use progress dialog for post-download operations.
@@ -234,6 +232,12 @@ public:
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
 
+    // has setRoomNamesShown ever been called on this map?
+    bool getRoomNamesPresent();
+    // show room labels on the map?
+    bool getRoomNamesShown();
+    void setRoomNamesShown(bool shown);
+
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 
@@ -284,7 +288,7 @@ private:
     QNetworkReply* mpNetworkReply;
     QString mLocalMapFileName;
     int mExpectedFileSize;
-    QMutex mXmlImportMutex;
+    bool mImportRunning;
 };
 
 #endif // MUDLET_TMAP_H

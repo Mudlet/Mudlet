@@ -25,7 +25,6 @@
 
 #include "pre_guard.h"
 #include <QMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -49,8 +48,12 @@ public:
 
     std::list<TAction*> getActionRootNodeList()
     {
-        QMutexLocker locker(&mActionUnitLock);
         return mActionRootNodeList;
+    }
+
+    QMap<int, TAction*> getActionList()
+    {
+        return mActionMap;
     }
 
     TAction* getAction(int id);
@@ -73,7 +76,6 @@ public:
     void showToolBar(const QString&);
     void hideToolBar(const QString&);
 
-    QMutex mActionUnitLock;
     QList<TAction*> uninstallList;
 
 private:

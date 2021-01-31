@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2008-2016 The Communi Project
+  Copyright (C) 2008-2020 The Communi Project
 
   You may use this file under the terms of BSD license as follows:
 
@@ -62,8 +62,8 @@ class IRC_MODEL_EXPORT IrcBuffer : public QObject
     Q_PROPERTY(QVariantMap userData READ userData WRITE setUserData NOTIFY userDataChanged)
 
 public:
-    Q_INVOKABLE explicit IrcBuffer(QObject* parent = 0);
-    virtual ~IrcBuffer();
+    Q_INVOKABLE explicit IrcBuffer(QObject* parent = nullptr);
+    ~IrcBuffer() override;
 
     QString title() const;
     QString name() const;

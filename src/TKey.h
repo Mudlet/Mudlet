@@ -55,7 +55,7 @@ public:
     bool compileScript();
     void execute();
     QString getScript() { return mScript; }
-    bool setScript(QString& script);
+    bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
     QString getCommand() { return mCommand; }
 
@@ -64,6 +64,7 @@ public:
 
     bool exportItem;
     bool mModuleMasterFolder;
+    bool mRegisteredAnonymousLuaFunction;
 
 private:
     TKey() = default;
@@ -71,12 +72,14 @@ private:
     QString mName;
     QString mCommand;
 
-    /*Qt::NoModifier 0x00000000 No modifier key is pressed.
-      Qt::ShiftModifier 0x02000000 A Shift key on the keyboard is pressed.
-      Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
-      Qt::AltModifier 0x08000000 An Alt key on the keyboard is pressed.
-      Qt::MetaModifier 0x10000000 A Meta key on the keyboard is pressed.
-      Qt::KeypadModifier 0x20000000 A keypad button is pressed. */
+    /*
+     * Qt::NoModifier      0x00000000 No modifier key is pressed.
+     * Qt::ShiftModifier   0x02000000 A Shift key on the keyboard is pressed.
+     * Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
+     * Qt::AltModifier     0x08000000 An Alt key on the keyboard is pressed.
+     * Qt::MetaModifier    0x10000000 A Meta key on the keyboard is pressed.
+     * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
+     */
 
     int mKeyCode;
     int mKeyModifier;

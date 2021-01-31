@@ -773,6 +773,11 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->getKeyUnit()->mRunAllKeyMatches = (attributes().value("runAllKeyMatches") == "yes");
     pHost->mNoAntiAlias = (attributes().value("mNoAntiAlias") == "yes");
     pHost->mEchoLuaErrors = (attributes().value("mEchoLuaErrors") == "yes");
+    if (attributes().hasAttribute("HighlightHistory")) {
+        pHost->mHighlightHistory = attributes().value("HighlightHistory") == "yes";
+    } else {
+        pHost->mHighlightHistory = true;
+    }
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringRef ambiguousWidthSetting(attributes().value("AmbigousWidthGlyphsToBeWide"));
         if (ambiguousWidthSetting == QStringLiteral("yes")) {
@@ -930,6 +935,9 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("EditorSearchOptions"))) {
         pHost->setSearchOptions(static_cast<dlgTriggerEditor::SearchOptions>(attributes().value("EditorSearchOptions").toInt()));
     }
+    if (attributes().hasAttribute(QLatin1String("DebugShowAllProblemCodepoints"))) {
+        pHost->setDebugShowAllProblemCodepoints(attributes().value("DebugShowAllProblemCodepoints") == "yes");
+    }
     pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
     pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
     if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
@@ -941,7 +949,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
 
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
-    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
     pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
     pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");

@@ -156,7 +156,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
         displayResultMessage(tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but the code cannot open it.")
-                             .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
+                             .arg(fileSystemFileName, zip_strerror(archive)), false);
         return false;
     }
 
@@ -164,7 +164,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
         displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". Error message was: \"%3\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
-                             .arg(archiveFileName, mPackagePathFileName, QString::fromUtf8(zip_strerror(archive))), false);
+                             .arg(archiveFileName, mPackagePathFileName, zip_strerror(archive)), false);
         return false;
     }
 
@@ -346,7 +346,7 @@ void dlgPackageExporter::slot_export_package()
             displayResultMessage(tr("Failed to open package file. Error is: \"%1\".",
                                     // Intentional comment to separate arguments
                                     "This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
-                                 .arg(QString::fromUtf8(zip_error_strerror(&error))), false);
+                                 .arg(zip_error_strerror(&error)), false);
             zip_error_fini(&error);
             isOk = false;
             // The above flag will now cause execution to drop down to the bottom of
@@ -438,7 +438,7 @@ void dlgPackageExporter::slot_export_package()
                 // added directory item in the archive or -1 on error:
                 if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
                     displayResultMessage(tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
-                                         .arg(directoryName, QString::fromUtf8(zip_strerror(archive))), false);
+                                         .arg(directoryName, zip_strerror(archive)), false);
                     zip_close(archive);
                     isOk = false;
                 }
@@ -510,7 +510,7 @@ void dlgPackageExporter::slot_export_package()
                 // If it fails to write out the new file 'archive' is left
                 // unchanged (and we can still access it to get the error
                 // details):
-                // Change the cursor to a system busy one whilst we are working:
+                // Change the cursor to a system busy one while we are working:
                 QApplication::setOverrideCursor(Qt::BusyCursor);
                 ze = zip_close(archive);
                 QApplication::restoreOverrideCursor();
@@ -518,7 +518,7 @@ void dlgPackageExporter::slot_export_package()
                     displayResultMessage(tr("Failed to write files into and then close the package. Error is: \"%1\".",
                                             // Intentional comment to separate arguments
                                             "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                         .arg(QString::fromUtf8(zip_strerror(archive))), false);
+                                         .arg(zip_strerror(archive)), false);
                     // In libzip 0.11 a function was added to clean up
                     // (deallocate) the memory associated with an archive
                     // - which would normally occur upon a successful close
@@ -576,7 +576,7 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
         triggerMap.insert(pItem, pChild);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qTrig->addChild(pItem);
         recurseTriggers(pChild, pItem);
@@ -597,7 +597,7 @@ void dlgPackageExporter::listTriggers()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
         triggerMap.insert(pItem, pChild);
@@ -620,7 +620,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qItem->addChild(pItem);
         aliasMap.insert(pItem, pChild);
@@ -642,7 +642,7 @@ void dlgPackageExporter::listAliases()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         top->addChild(pItem);
         aliasMap.insert(pItem, pChild);
@@ -662,7 +662,7 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -681,7 +681,7 @@ void dlgPackageExporter::listScripts()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         scriptMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -704,7 +704,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -726,7 +726,7 @@ void dlgPackageExporter::listKeys()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         keyMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -746,7 +746,7 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -765,7 +765,7 @@ void dlgPackageExporter::listActions()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         actionMap.insert(pItem, pChild);
         top->addChild(pItem);
@@ -788,7 +788,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
         qItem->addChild(pItem);
@@ -810,7 +810,7 @@ void dlgPackageExporter::listTimers()
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsAutoTristate | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         timerMap.insert(pItem, pChild);
         top->addChild(pItem);

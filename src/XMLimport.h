@@ -52,6 +52,7 @@ class XMLimport : public QXmlStreamReader
 
 public:
     XMLimport(Host*);
+    virtual ~XMLimport() {}
     bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 

@@ -30,10 +30,13 @@
 
 static jmp_buf buf;
 
-LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
+LuaInterface::LuaInterface(Host* pH)
+: mpHost(pH)
+, mHostID(pH->getHostID())
+, depth()
+, interpreter(pH->getLuaInterpreter())
+, L()
 {
-    interpreter = mpHost->getLuaInterpreter();
-    mHostID = mpHost->getHostID();
     varUnit.reset(new VarUnit());
     //set our panic function
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
@@ -45,7 +48,7 @@ int LuaInterface::onPanic(lua_State* L)
 {
     QString error = "Lua Panic, No error information";
     if (lua_isstring(L, -1)) {
-        error = QString::fromUtf8(lua_tostring(L, -1));
+        error = lua_tostring(L, -1);
         //there's never anything but the error on the stack, nothing to report
     }
     //FIXME: report error to user qDebug()<<"PANIC ERROR:"<<error;
@@ -689,7 +692,7 @@ QString LuaInterface::getValue(TVar* var)
         if (vType == LUA_TBOOLEAN) {
             value = lua_toboolean(L, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
         } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
-            value = QString::fromUtf8(lua_tostring(L, -1));
+            value = lua_tostring(L, -1);
         }
         lua_pop(L, pCount);
         return value;
@@ -712,7 +715,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             lrefs.append(keyName.toInt());
             var->setReference(true);
         } else {
-            keyName = QString::fromUtf8(lua_tostring(L, -1));
+            keyName = lua_tostring(L, -1);
             if (kType == LUA_TFUNCTION && keyName.isEmpty()) {
                 //we lost the reference
                 keyName = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
@@ -758,7 +761,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             }
         } else if (vType == LUA_TSTRING || vType == LUA_TNUMBER) {
             lua_pushvalue(L, -1);
-            valueName = QString::fromUtf8(lua_tostring(L, -1));
+            valueName = lua_tostring(L, -1);
             var->setValue(valueName);
             lua_pop(L, 1);
         } else if (vType == LUA_TBOOLEAN) {
@@ -781,8 +784,8 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 void LuaInterface::getVars(bool hide)
 {
     //returns the base item
-    QTime t;
-    t.start();
+    // QElapsedTimer t;
+    // t.start();
     L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
@@ -798,5 +801,5 @@ void LuaInterface::getVars(bool hide)
     varUnit->setBase(g);
     varUnit->addVariable(g);
     iterateTable(L, LUA_GLOBALSINDEX, g, hide);
-    //FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
+    // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }
