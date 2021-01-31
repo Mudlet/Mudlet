@@ -1041,16 +1041,25 @@ function verbosePackageInstall(fileName)
   end
 end
 
+local oldInstallPackage = installPackage
+
+-- Override of original installPackage to allow installs from URL
+-- @param target - file path or url (starting with http(s):// and ending with package file extensions)
+function installPackage(target)
+  if target:sub(1,7) == "http://" or target:sub(1,8) == "https://" then
+    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
+    if suffix and table.contains(acceptableSuffix, suffix) then
+      local file = string.format("%s.%s", fileName, suffix)
+      return installPackageFromUrl(file, target)
+    end
+  end
+  return oldInstallPackage(target)
+end
 
 --- Installs package from url
 -- @param url
-function installPackageFromUrl(url)
-  local fileName, suffix = url:gmatch("([^/]+)%.([^.]+)$")()
-  if suffix and not table.contains(acceptableSuffix, suffix) then
-    return
-  end
-
-  local destination = string.format("%s/%s.%s", lfs.currentdir(), fileName, suffix)
+function installPackageFromUrl(file, url)
+  local destination = string.format("%s/%s", getMudletHomeDir(), file)
 
   registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
     if saveTo ~= destination then return end
@@ -1094,7 +1103,7 @@ function packageUrlDrop(event, url, schema)
     return
   end
 
-  installPackageFromUrl(url)
+  installPackage(url)
 end
 registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 
