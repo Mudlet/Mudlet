@@ -983,6 +983,7 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   languageCode = languageCode or mudlet.translations.interfacelanguage
   -- get the right folder
   folder = folder or io.exists("../translations/lua") and "../translations/lua/"
+  folder = folder or io.exists("../../translations/lua") and "../../translations/lua/"
   folder = folder or io.exists(luaGlobalPath.."/../../translations/lua") and luaGlobalPath.."/../../translations/lua/"
   folder = folder or luaGlobalPath.."/translations/"
 
@@ -1017,15 +1018,9 @@ function loadTranslations(packageName, fileName, languageCode, folder)
   return translation
 end
 
---- Installs packages which are dropped on MainConsole or UserWindow
--- @param event Drag and Drop Event
--- @param fileName name and location of the file
--- @param suffix suffix of the file
-function packageDrop(event, fileName, suffix)
-  local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
-  if not table.contains(acceptableSuffix, suffix) then
-    return
-  end
+local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
+
+function verbosePackageInstall(fileName)
   local installationSuccessful = installPackage(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
@@ -1045,7 +1040,63 @@ function packageDrop(event, fileName, suffix)
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
   end
 end
+
+
+--- Installs package from url
+-- @param url
+function installPackageFromUrl(url)
+  local fileName, suffix = url:gmatch("([^/]+)%.([^.]+)$")()
+  if suffix and not table.contains(acceptableSuffix, suffix) then
+    return
+  end
+
+  local destination = string.format("%s/%s.%s", lfs.currentdir(), fileName, suffix)
+
+  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
+    if saveTo ~= destination then return end
+    verbosePackageInstall(destination)
+    os.remove(destination)
+  end, true)
+
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+
+  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return end
+    local warnPrefix = (mudlet.Locale.prefixWarn and mudlet.Locale.prefixWarn.message or "[ WARN ]  - ")
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
+  end, true)
+
+  downloadFile(destination, url)
+  local infoMessage = mudlet.Locale.packageDownloading.message or "Downloading package from %s"
+  local infoPrefix = mudlet.Locale.prefixInfo.message or "[ INFO ]  - "
+    decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+end
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param fileName name and location of the file
+-- @param suffix suffix of the file
+function packageDrop(event, fileName, suffix)
+  if not table.contains(acceptableSuffix, suffix) then
+    return
+  end
+  verbosePackageInstall(fileName)
+end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+
+--- Installs packages which are dropped on MainConsole or UserWindow
+-- @param event Drag and Drop Event
+-- @param url package url to download from
+-- @param schema url schema
+function packageUrlDrop(event, url, schema)
+  local acceptedSchemas = {"http", "https"}
+  if not table.contains(acceptedSchemas, schema) then
+    return
+  end
+
+  installPackageFromUrl(url)
+end
+registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 
 -- Add dummy functions for the TTS functions if Mudlet has been compiled without them
 -- This is to prevent scripts erroring if they've been written with TTS capabilities
