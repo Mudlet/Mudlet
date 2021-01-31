@@ -1047,7 +1047,7 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
-  if target:sub(1,7) == "http://" or target:sub(1,8) == "https://" then
+  if target:starts("http://") or target:starts("https://") then
     local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
     if suffix and table.contains(acceptableSuffix, suffix) then
       local file = string.format("%s.%s", fileName, suffix)
