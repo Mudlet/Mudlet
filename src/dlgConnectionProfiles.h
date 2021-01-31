@@ -50,7 +50,7 @@ public:
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
-    QList<int> findProfilesBeginningWith(const QChar&) const;
+    QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
 
     QString btn_connect_enabled_accessDesc;
@@ -117,7 +117,7 @@ private:
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
-    void moveToNextProfileBeginningWith(const int);
+    void addLetterToProfileSearch(const int);
 
 
     // split into 3 properties so each one can be checked individually
@@ -143,6 +143,7 @@ private:
     bool mCopyingProfile {};
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
+    QString searchText;
 
 
 private slots:

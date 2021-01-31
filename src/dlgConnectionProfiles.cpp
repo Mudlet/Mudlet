@@ -2263,7 +2263,7 @@ QList<QListWidgetItem*> dlgConnectionProfiles::findData(const QListWidget& listW
     return results;
 }
 
-QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QChar& what) const
+QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QString& what) const
 {
     QList<int> results;
     for (int index = 0, total = profiles_tree_widget->count(); index < total; ++index) {
@@ -2357,6 +2357,20 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
             // For other keys handle them as normal:
             return QObject::eventFilter(obj, event);
 
+        case Qt::Key_Escape:
+            // Clear the search:
+            searchText.clear();
+            for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+                profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
+            }
+            notificationArea->hide();
+            notificationAreaIconLabelWarning->hide();
+            notificationAreaIconLabelError->hide();
+            notificationAreaIconLabelInformation->hide();
+            notificationAreaMessageBox->clear();
+            // Eat (filter) this event so it goes no further:
+            return true;
+
         case Qt::Key_Period:
         case Qt::Key_Space:
         case Qt::Key_Underscore:
@@ -2405,7 +2419,7 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
                 return QObject::eventFilter(obj, event);
             }
 
-            moveToNextProfileBeginningWith(keyEvent->key());
+            addLetterToProfileSearch(keyEvent->key());
             // Eat (filter) this event so it goes no further:
             return true;
         }
@@ -2415,39 +2429,51 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
     return QObject::eventFilter(obj, event);
 }
 
-void dlgConnectionProfiles::moveToNextProfileBeginningWith(const int key)
+void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
 {
-    if (key < 0 || key > 128) {
+    if ((key < 0) || (key > 128)) {
         // out of range of normal ASCII keys
         return;
     }
 
     // As it happens the values for key correspond to those of the corresponding
     // ASCII (upper-case for letters) character codes
-    auto currentIndex = profiles_tree_widget->currentIndex().row();
-    auto indexes = findProfilesBeginningWith(QLatin1Char(static_cast<unsigned char>(key)));
+    searchText.append(QLatin1Char(static_cast<unsigned char>(key)));
+    auto indexes = findProfilesBeginningWith(searchText);
+
     if (indexes.isEmpty()) {
-        // No matches at all so nothing to do
+        // No matches at all so clearing search term and reset all profiles to
+        // be enabled:
+        searchText.clear();
+        for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+            profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
+        }
+        notificationArea->hide();
+        notificationAreaIconLabelWarning->hide();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->clear();
         return;
     }
 
-    if (currentIndex < 0 || indexes.last() <= currentIndex) {
-        // No current item or the current item is on or after the last one in
-        // the list - so use the first one in the list:
-        profiles_tree_widget->setCurrentRow(indexes.first());
-        return;
+    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        auto flags = profiles_tree_widget->item(i)->flags();
+        if (indexes.isEmpty() || !indexes.contains(i)) {
+            flags &= ~Qt::ItemIsEnabled;
+        } else {
+            flags |= Qt::ItemIsEnabled;
+        }
+        profiles_tree_widget->item(i)->setFlags(flags);
     }
 
-    int i = 0;
-    int total = indexes.count();
-    while (i < total && indexes.at(i) <= currentIndex) {
-        ++i;
-    }
-
-    if (Q_UNLIKELY(i >= total)) {
-        // This shouldn't happen but prevent crashes if it does occur
-        return;
-    }
-
-    profiles_tree_widget->setCurrentRow(indexes.at(i));
+    profiles_tree_widget->setCurrentRow(indexes.first());
+    notificationArea->show();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(tr("As you type more letters in the name of a profile all the non-matching ones "
+                                           "will be disabled and the first that matches will be selected. Press <tt>Escape</tt> "
+                                           "to clear the entry and re-enabled all the profiles; this will also happen when there "
+                                           "are no more profiles that match what has been typed."));
 }
