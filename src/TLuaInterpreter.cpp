@@ -453,11 +453,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
+            event.mArgumentList << QLatin1String("Couldn't open the destination file for writing (permission errors?)");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
@@ -466,11 +466,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't write downloaded content into the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
@@ -487,7 +487,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         } else {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
