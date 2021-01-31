@@ -12876,7 +12876,7 @@ void TLuaInterpreter::ttsBuild()
     bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-
+    connect(speechUnit, &QTextToSpeech::localeChanged, &TLuaInterpreter::ttsLocaleChanged);
 
     speechUnit->setVolume(1.0);
     speechUnit->setRate(0.0);
@@ -13134,6 +13134,11 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
     speechCurrent = textToSay;
 
     return;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::ttsLocaleChanged(const QLocale &locale)
+{ // TODO - Tim   If current voice is not in list of available voices then set voice to first in list of available.
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
