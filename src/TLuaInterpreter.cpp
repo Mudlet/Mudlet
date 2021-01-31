@@ -13138,7 +13138,24 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsLocaleChanged(const QLocale &locale)
-{ // TODO - Tim   If current voice is not in list of available voices then set voice to first in list of available.
+{
+    QString currentVoice = speechUnit->voice().name();
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    int sz = speechVoices.size();
+
+    if (!sz) {
+        return;
+    }
+        
+    for (auto voice : speechVoices) {
+        if (voice.name() == currentVoice) {
+            return;
+        }
+    }
+
+    speechUnit->setVoice(speechVoices.at(0));
+
+    return;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
