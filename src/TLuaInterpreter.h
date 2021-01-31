@@ -534,6 +534,7 @@ public:
     static int ttsGetState(lua_State* L);
     static void ttsBuild();
     static void ttsStateChanged(QTextToSpeech::State state);
+    static void ttsLocaleChanged(const QLocale &locale);
 #endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
