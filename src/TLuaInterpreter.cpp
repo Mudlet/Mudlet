@@ -15960,7 +15960,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
-    lua_register(pGlobalLua, "toggleMapInfo", TLuaInterpreter::toggleMapInfo);
+    lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
+    lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17742,38 +17743,34 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#toggleMapInfo
-int TLuaInterpreter::toggleMapInfo(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableMapInfo
+int TLuaInterpreter::enableMapInfo(lua_State* L)
 {
-    int n = lua_gettop(L);
-    auto& host = getHostFromLua(L);
-
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "toggleMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "enableMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
     auto name = lua_tostring(L, 1);
-    bool state = host.mMapInfoContributors.contains(name);
-
-    if (n >= 2) {
-        if (lua_isboolean(L, 2)) {
-            state = !lua_toboolean(L, 2);
-        } else {
-            lua_pushfstring(L, "toggleMapInfo: bad argument #2 type (toggle state as string expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-    }
-
-    if (state) {
-        host.mMapInfoContributors.remove(name);
-        lua_pushboolean(L, false);
-    } else {
-        host.mMapInfoContributors.insert(name);
-        lua_pushboolean(L, true);
-    }
-
+    auto& host = getHostFromLua(L);
+    host.mMapInfoContributors.insert(name);
     host.mpMap->mpMapper->updateInfoContributors();
     host.mpMap->update();
-    return 1;
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableMapInfo
+int TLuaInterpreter::disableMapInfo(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    auto name = lua_tostring(L, 1);
+    auto& host = getHostFromLua(L);
+    host.mMapInfoContributors.remove(name);
+    host.mpMap->mpMapper->updateInfoContributors();
+    host.mpMap->update();
+    return 0;
 }

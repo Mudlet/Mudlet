@@ -588,7 +588,8 @@ public:
     static int showNotification(lua_State*);
     static int registerMapInfo(lua_State*);
     static int killMapInfo(lua_State*);
-    static int toggleMapInfo(lua_State*);
+    static int enableMapInfo(lua_State*);
+    static int disableMapInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
