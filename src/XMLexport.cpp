@@ -553,11 +553,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
     {
-        auto mapInfoProviders = host.append_child("mMapInfoProviders");
-        QSetIterator<QString> iterator(pHost->mMapInfoProviders);
+        auto mapInfoContributors = host.append_child("mMapInfoContributors");
+        QSetIterator<QString> iterator(pHost->mMapInfoContributors);
         while (iterator.hasNext()) {
-            auto mapInfoProvider = mapInfoProviders.append_child("mapInfoProvider");
-            mapInfoProvider.text().set(iterator.next().toUtf8().constData());
+            auto mapInfoContributor = mapInfoContributors.append_child("mapInfoContributor");
+            mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
 

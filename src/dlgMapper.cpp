@@ -347,12 +347,12 @@ void dlgMapper::updateInfoContributors() {
         auto name = iterator.next().key();
         QAction* action = new QAction(name, info_pushButton);
         action->setCheckable(true);
-        action->setChecked(mpHost->mMapInfoProviders.contains(name));
+        action->setChecked(mpHost->mMapInfoContributors.contains(name));
         connect(action, &QAction::toggled, this, [=](bool isToggled) {
             if (isToggled) {
-                mpHost->mMapInfoProviders.insert(name);
+                mpHost->mMapInfoContributors.insert(name);
             } else {
-                mpHost->mMapInfoProviders.remove(name);
+                mpHost->mMapInfoContributors.remove(name);
             }
             mp2dMap->update();
         });

@@ -15958,9 +15958,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
-    lua_register(pGlobalLua, "registerMapInfoProvider", TLuaInterpreter::registerMapInfoProvider);
-    lua_register(pGlobalLua, "killMapInfoProvider", TLuaInterpreter::killMapInfoProvider);
-    lua_register(pGlobalLua, "toggleMapInfoProvider", TLuaInterpreter::toggleMapInfoProvider);
+    lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
+    lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
+    lua_register(pGlobalLua, "toggleMapInfo", TLuaInterpreter::toggleMapInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -17663,17 +17663,17 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfoProvider
-int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
+int TLuaInterpreter::registerMapInfo(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "registerMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "registerMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
     if (!lua_isfunction(L, 2)) {
-        lua_pushfstring(L, "registerMapInfoProvider: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "registerMapInfo: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -17724,12 +17724,12 @@ int TLuaInterpreter::registerMapInfoProvider(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killMapInfoProvider
-int TLuaInterpreter::killMapInfoProvider(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killMapInfo
+int TLuaInterpreter::killMapInfo(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "killMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "killMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -17737,39 +17737,39 @@ int TLuaInterpreter::killMapInfoProvider(lua_State* L)
     
     host.mpMap->mpMapper->mMapInfoContributorManager->contributors.remove(name);
     host.mpMap->mpMapper->updateInfoContributors();
-    host.mMapInfoProviders.remove(name);
+    host.mMapInfoContributors.remove(name);
     lua_pushboolean(L, true);
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#toggleMapInfoProvider
-int TLuaInterpreter::toggleMapInfoProvider(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#toggleMapInfo
+int TLuaInterpreter::toggleMapInfo(lua_State* L)
 {
     int n = lua_gettop(L);
     auto& host = getHostFromLua(L);
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "toggleMapInfoProvider: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "toggleMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
     auto name = lua_tostring(L, 1);
-    bool state = host.mMapInfoProviders.contains(name);
+    bool state = host.mMapInfoContributors.contains(name);
 
     if (n >= 2) {
         if (lua_isboolean(L, 2)) {
             state = !lua_toboolean(L, 2);
         } else {
-            lua_pushfstring(L, "toggleMapInfoProvider: bad argument #2 type (toggle state as string expected, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "toggleMapInfo: bad argument #2 type (toggle state as string expected, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
     }
 
     if (state) {
-        host.mMapInfoProviders.remove(name);
+        host.mMapInfoContributors.remove(name);
         lua_pushboolean(L, false);
     } else {
-        host.mMapInfoProviders.insert(name);
+        host.mMapInfoContributors.insert(name);
         lua_pushboolean(L, true);
     }
 

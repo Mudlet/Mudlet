@@ -2191,7 +2191,13 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 // Work out text for information box, need to offset if room selection widget is present
 void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor)
 {
-    if (!mpMap->mpMapper->mMapInfoContributorManager->contributors.keys().toSet().intersects(mpHost->mMapInfoProviders)) {
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QList<QString> contributorList{mpMap->mpMapper->mMapInfoContributorManager->contributors.keys()};
+    QSet<QString> contributorKeys{contributorList.begin(), contributorList.end()};
+    #else
+    QSet<QString> contributorKeys = mpMap->mpMapper->mMapInfoContributorManager->contributors.keys().toSet();
+    #endif
+    if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
         return;
     }
 
@@ -2206,17 +2212,17 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
     int yOffset = 10;
     for (auto key : mpMap->mpMapper->mMapInfoContributorManager->contributors.keys()) {
-        if (mpHost->mMapInfoProviders.contains(key)) {
+        if (mpHost->mMapInfoContributors.contains(key)) {
             auto properties = mpMap->mpMapper->mMapInfoContributorManager->contributors.value(key)(roomID, mMultiSelectionSet.size(), room->getArea(), showingCurrentArea, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
-            yOffset += paintMapInfoProvider(painter, yOffset, properties);
+            yOffset += paintMapInfoContributor(painter, yOffset, properties);
         }
     }
 
 #ifdef QT_DEBUG
-    paintMapInfoProvider(painter,
+    paintMapInfoContributor(painter,
                          yOffset,
                          {(tr("render time: %1S mO: (%2,%3,%4)",
                               // Intentional comment to separate arguments
@@ -2233,11 +2239,11 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 #endif
 }
 
-int T2DMap::paintMapInfoProvider(QPainter& painter, int yOffset, mapInfoProperties properties)
+int T2DMap::paintMapInfoContributor(QPainter& painter, int yOffset, mapInfoProperties properties)
 {
     painter.save();
 
-    if (properties.text.length() == 0) {
+    if (properties.text.isEmpty()) {
         return 0;
     }
 

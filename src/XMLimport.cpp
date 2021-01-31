@@ -1085,8 +1085,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
-            } else if (name() == "mMapInfoProviders") {
-                readMapInfoProviders();
+            } else if (name() == "mMapInfoContributors") {
+                readMapInfoContributors();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1826,16 +1826,16 @@ void XMLimport::readStopWatchMap()
 
 }
 
-void XMLimport::readMapInfoProviders()
+void XMLimport::readMapInfoContributors()
 {
-    mpHost->mMapInfoProviders.clear();
+    mpHost->mMapInfoContributors.clear();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
             break;
         } else if (isStartElement()) {
-            if (name() == "mapInfoProvider") {
-                mpHost->mMapInfoProviders.insert(readElementText());
+            if (name() == "mapInfoContributor") {
+                mpHost->mMapInfoContributors.insert(readElementText());
             }
         }
     }

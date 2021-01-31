@@ -90,7 +90,7 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
-    void readMapInfoProviders();
+    void readMapInfoContributors();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);
