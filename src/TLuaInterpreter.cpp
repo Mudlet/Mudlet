@@ -3496,7 +3496,11 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
         }
     }
 
-    QString commandLineName = getVerifiedString(L, __func__, counter, "commandLine name");
+    if (lua_type(L, counter) != LUA_TSTRING) {
+        lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", counter, luaL_typename(L, counter));
+        return lua_error(L);
+    }
+    QString commandLineName{lua_tostring(L, counter)};
     counter++;
     int x = getVerifiedInt(L, __func__, counter, "commandline x-coordinate");
     counter++;
