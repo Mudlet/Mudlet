@@ -5969,12 +5969,13 @@ int TLuaInterpreter::tempTimer(lua_State* L)
 {
     bool repeating{};
     double time = getVerifiedDouble(L, __func__, 1, "time in seconds {maybe decimal}");
+    int n = lua_gettop(L);
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
-        if (lua_isboolean(L, 3)) {
-            repeating = lua_toboolean(L, 3);
+        if (n > 2) {
+            repeating = getVerifiedBool(L, __func__, 3, "repeating", true);
         }
         QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, QString(), repeating);
         if (result.first == -1) {
@@ -5996,7 +5997,7 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
 
     QString luaCode = getVerifiedString(L, __func__, 2, "script or function name");
-    if (lua_gettop(L) > 2) {
+    if (n > 2) {
         repeating = getVerifiedBool(L, __func__, 3, "repeating", true);
     }
     QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode, repeating);
