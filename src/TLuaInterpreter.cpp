@@ -5996,8 +5996,8 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     }
 
     QString luaCode = getVerifiedString(L, __func__, 2, "script or function name");
-    if (lua_isboolean(L, 3)) {
-        repeating = lua_toboolean(L, 3);
+    if (lua_gettop(L) > 2) {
+        repeating = getVerifiedBool(L, __func__, 3, "repeating", true);
     }
     QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode, repeating);
     lua_pushnumber(L, result.first);
