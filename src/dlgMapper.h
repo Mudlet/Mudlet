@@ -53,7 +53,7 @@ public:
     bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();    
 
-    mapInfoContributorManager* mMapInfoContributorManager;
+    MapInfoContributorManager* mMapInfoContributorManager;
     void updateInfoContributors();
 
 public slots:

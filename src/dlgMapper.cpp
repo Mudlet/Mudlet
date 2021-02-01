@@ -140,7 +140,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
 
-    mMapInfoContributorManager = new mapInfoContributorManager(this, pH);
+    mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
     updateInfoContributors();
 }
 
@@ -332,8 +332,8 @@ void dlgMapper::slot_switchArea(const int index)
 }
 #endif
 
-void dlgMapper::updateInfoContributors() {
-    QMapIterator iterator(mMapInfoContributorManager->contributors);
+void dlgMapper::updateInfoContributors() 
+{
     info_pushButton->menu()->clear();
     QAction* clearAction = new QAction(tr("None"), info_pushButton);
     info_pushButton->menu()->addAction(clearAction);
@@ -343,8 +343,7 @@ void dlgMapper::updateInfoContributors() {
         }
     });
 
-    while (iterator.hasNext()) {
-        auto name = iterator.next().key();
+    for (auto name : mMapInfoContributorManager->getContributorKeys()) {
         QAction* action = new QAction(name, info_pushButton);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));

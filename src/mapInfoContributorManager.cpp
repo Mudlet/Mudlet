@@ -21,19 +21,44 @@
 #include "TArea.h"
 #include "TRoomDB.h"
 
-mapInfoContributorManager::mapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
+MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
-    contributors[QStringLiteral("Short")] = [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
+    registerContributor(QStringLiteral("Short"), [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, showingCurrentArea, infoColor);
-    };
-    contributors[QStringLiteral("Full")] = [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
+    });
+    registerContributor(QStringLiteral("Full"), [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
         return fullInfo(roomID, selectionSize, areaId, showingCurrentArea, infoColor);
-    };
+    });
 }
 
-mapInfoContributorManager::~mapInfoContributorManager() {}
+MapInfoContributorManager::~MapInfoContributorManager() {}
 
-mapInfoProperties mapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+void MapInfoContributorManager::registerContributor(QString name, MapInfoCallback callback)
+{   
+    if (contributors.contains(name)) {
+        removeContributor(name);
+    }
+    ordering.append(name);
+    contributors.insert(name, callback);
+}
+
+void MapInfoContributorManager::removeContributor(QString name)
+{
+    ordering.removeOne(name);
+    contributors.remove(name);
+}
+
+MapInfoCallback MapInfoContributorManager::getContributor(QString name)
+{
+    return contributors.value(name);
+}
+
+QList<QString> &MapInfoContributorManager::getContributorKeys()
+{
+    return ordering;
+}
+
+MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
 {
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
@@ -45,10 +70,10 @@ mapInfoProperties mapInfoContributorManager::shortInfo(int roomID, int selection
                                                                                                       : QString::number(room->getId()),
                                 areaName);
     }
-    return mapInfoProperties{infoText, false, false, infoColor};
+    return MapInfoProperties{infoText, false, false, infoColor};
 }
 
-mapInfoProperties mapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
 {
     QString infoText;
     bool isBold;
@@ -158,5 +183,5 @@ mapInfoProperties mapInfoContributorManager::fullInfo(int roomID, int selectionS
         }
     }
 
-    return mapInfoProperties{infoText, isBold, isItalic, color};
+    return MapInfoProperties{infoText, isBold, isItalic, color};
 }

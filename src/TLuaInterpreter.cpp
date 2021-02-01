@@ -17681,7 +17681,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto name = lua_tostring(L, 1);
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    host.mpMap->mpMapper->mMapInfoContributorManager->contributors.insert(name, [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
+    host.mpMap->mpMapper->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
@@ -17717,7 +17717,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
             color = QColor(r, g, b);
         }
         lua_pop(L, nResult);
-        return mapInfoProperties{ text, isBold, isItalic, color };
+        return MapInfoProperties{ text, isBold, isItalic, color };
     });
     host.mpMap->mpMapper->updateInfoContributors();
 
@@ -17736,7 +17736,7 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
 
     auto name = lua_tostring(L, 1);
     
-    host.mpMap->mpMapper->mMapInfoContributorManager->contributors.remove(name);
+    host.mpMap->mpMapper->mMapInfoContributorManager->removeContributor(name);
     host.mpMap->mpMapper->updateInfoContributors();
     host.mMapInfoContributors.remove(name);
     lua_pushboolean(L, true);
