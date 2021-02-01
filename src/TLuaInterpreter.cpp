@@ -271,8 +271,10 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
     }
     return lua_tonumber(L, pos);
 }
+
 // No documentation available in wiki - internal function
-// See also: verifyBoolean
+// Raises a Lua error in case of an API usage mistake
+// See also: verifyBoolean, warnArgumentValue
 void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
@@ -282,6 +284,44 @@ void TLuaInterpreter::announceWrongArgumentType(lua_State* L, const char* functi
         lua_pushfstring(L, "%s: bad argument #%d type (%s as %s expected, got %s!)",
             functionName, pos, publicName, publicType, luaL_typename(L, pos));
     }
+}
+
+// No documentation available in wiki - internal function
+// returns nil+msg in case of a data mistake, for example a missing room. Should not raise a Lua error
+// See also: announceWrongArgumentType
+int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil)
+{
+    if (Q_LIKELY(!useFalseInsteadofNil)) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    lua_pushstring(L, message.toUtf8().constData());
+    if (mudlet::debugMode) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColor(Qt::white), QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#endif
+    }
+    return 2;
+}
+int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
+{
+    if (Q_LIKELY(!useFalseInsteadofNil)) {
+        lua_pushnil(L);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    lua_pushstring(L, message);
+    if (mudlet::debugMode) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColor(Qt::white), QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> 0;
+#endif
+    }
+    return 2;
 }
 
 // No documentation available in wiki - internal function
@@ -1141,15 +1181,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
     if (result.first == 1) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' not found").arg(windowName));
     }
 
     if (result.first == 2) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "current selection invalid in window \"%s\"", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("current selection invalid in window '%1'").arg(windowName));
     }
 
     lua_newtable(L);
@@ -1224,9 +1260,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
     lua_pushstring(L, value.toString().toUtf8().constData());
     return 1;
 #else
-    lua_pushnil(L);
-    lua_pushstring(L, "this function is only needed on Windows, and does not work here");
-    return 2;
+    return warnArgumentValue(L, __func__, "this function is only needed on Windows, and does not work here");
 #endif
 }
 
@@ -1340,18 +1374,15 @@ int TLuaInterpreter::getLines(lua_State* L)
     QPair<bool, QStringList> result = host.getLines(windowName, lineFrom, lineTo);
     if (!result.first) {
         // Only one QString in .second - the error message
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.at(0).toUtf8().constData());
-        return 2;
-    } else {
-        lua_newtable(L);
-        for (int i = 0, total = result.second.size(); i < total; ++i) {
-            lua_pushnumber(L, i + 1);
-            lua_pushstring(L, result.second.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, result.second.at(0));
     }
+    lua_newtable(L);
+    for (int i = 0, total = result.second.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, result.second.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -1364,9 +1395,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     }
     QString replayFileName{lua_tostring(L, 1)};
     if (replayFileName.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a blank string is not a valid replay file name");
-        return 2;
+        return warnArgumentValue(L, __func__, "a blank string is not a valid replay file name");
     }
 
     Host& host = getHostFromLua(L);
@@ -1375,11 +1404,9 @@ int TLuaInterpreter::loadReplay(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushnil(L);
         // Although we only use English text for Lua messages the errMsg could
         // contain a Windows pathFileName which may use non-ASCII characters:
-        lua_pushfstring(L, "unable to start replay, reason: '%s'", errMsg.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to start replay, reason: '%1'").arg(errMsg));
     }
 }
 
@@ -1393,28 +1420,21 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     }
     QString iconPath{lua_tostring(L, 1)};
     if (iconPath.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a blank string is not a valid icon file location");
-        return 2;
+        return warnArgumentValue(L, __func__, "a blank string is not a valid icon file path");
     }
 
     if (!QFileInfo::exists(iconPath)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "'%s' doesn't exist", iconPath.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("path '%1' doesn't exist").arg(iconPath));
     }
 
     Host& host = getHostFromLua(L);
 
     auto[success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
-    if (success) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+    if (!success) {
+        return warnArgumentValue(L, __func__, message);
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetProfileIcon
@@ -1423,14 +1443,11 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
     Host& host = getHostFromLua(L);
 
     auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
-    if (success) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+    if (!success) {
+        return warnArgumentValue(L, __func__, message);
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
@@ -1468,8 +1485,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
     if (console->setFontSize(size)) {
         lua_pushboolean(L, true);
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(Setting font size of "%s" failed)", windowName.toUtf8().constData());
+        return warnArgumentValue(L, __func__, QStringLiteral("setting font size of '%1' failed").arg(windowName));
     }
     return 0;
 }
@@ -1709,9 +1725,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        lua_pushnil(L);
-        lua_pushstring(L, "centerview: you haven't opened a map yet");
-        return 2;
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -1739,9 +1753,7 @@ int TLuaInterpreter::centerview(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "centerview: bad argument #1 value (%d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id.").arg(roomId));
     }
 }
 
@@ -1751,16 +1763,12 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
-        lua_pushnil(L);
-        lua_pushstring(L, "you haven't opened a map yet");
-        return 2;
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
     auto roomID = host.mpMap->mRoomIdHash.value(host.getName(), -1);
     if (roomID == -1) {
-        lua_pushnil(L);
-        lua_pushstring(L, "the player does not have a valid room id set");
-        return 2;
+        return warnArgumentValue(L, __func__, "the player does not have a valid room id set");
     }
     lua_pushnumber(L, roomID);
     return 1;
@@ -1844,9 +1852,9 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
         if (!(currentEncoding.isEmpty() || currentEncoding == "ASCII")) {
             if (!pDataCodec->canEncode(dataQString)) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.constData());
-                return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of '%2'")
+                    .arg(data.constData(), currentEncoding.constData()));
             }
 
             std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
@@ -1858,9 +1866,9 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // else plain, raw ASCII, we hope!
         for (int i = 0, total = dataQString.size(); i < total; ++i) {
             if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"ASCII\"", data.constData());
-                return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "cannot send '%1' as it contains one or more characters that cannot be conveyed in the current game server encoding of 'ASCII'")
+                    .arg(data.constData()));
             }
         }
 
@@ -1980,9 +1988,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         result = host.getStopWatchTime(watchId);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
         }
 
     } else {
@@ -1990,22 +1996,19 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
         // Using an empty string will return the first unnamed stopwatch:
         watchId = host.findStopWatchId(name);
         if (!watchId) {
-            lua_pushnil(L);
             if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
+                return warnArgumentValue(L, __func__, "no unnamed stopwatches found");
             }
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
 
         result = host.getStopWatchTime(watchId);
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!result.first)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with name \"%s\" (id: %d) has disappeared - this should not happen, please report it to Mudlet developers", name.toUtf8().constData(), watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "stopwatch with name '%1' (id: %2) has disappeared - this should not happen, please report it to Mudlet developers")
+                .arg(name, QString::number(watchId)));
         }
     }
 
@@ -2048,9 +2051,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
     Host& host = getHostFromLua(L);
     QPair<int, QString> result = host.createStopWatch(name);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     if (autoStart) {
@@ -2075,27 +2076,23 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
         watchId = static_cast<int>(lua_tointeger(L, 1));
         QPair<bool, QString> result = host.stopStopWatch(watchId);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
     } else {
         QString name{lua_tostring(L, 1)};
         QPair<bool, QString> result = host.stopStopWatch(name);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         watchId = host.findStopWatchId(name);
         // We have already validated the name to get the watchId - so for things
         // to fail now is, unlikely?
         if (Q_UNLIKELY(!watchId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "stopwatch with name \"%s\" (id: %d) has disappeared - this should not happen, please report it to Mudlet developers", name.toUtf8().constData(), watchId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "stopwatch with name '%1' (id: %2) has disappeared - this should not happen, please report it to Mudlet developers")
+                .arg(name, QString::number(watchId)));
         }
     }
 
@@ -2135,9 +2132,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
             result = host.startStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         }
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         lua_pushboolean(L, true);
@@ -2146,9 +2141,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
 
     QPair<bool, QString> result = host.startStopWatch(lua_tostring(L, 1));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -2167,9 +2160,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
     if (lua_type(L, 1) == LUA_TNUMBER) {
         QPair<bool, QString> result = host.resetStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
 
         lua_pushboolean(L, true);
@@ -2178,9 +2169,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 
     QPair<bool, QString> result = host.resetStopWatch(lua_tostring(L, 1));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -2204,7 +2193,7 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         if (name.isEmpty()) {
             lua_pushstring(L, "no unnamed stopwatches found");
         } else {
-            lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
+            lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
         return std::make_tuple(false, 0);
     }
@@ -2230,9 +2219,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2256,9 +2243,7 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
     bool result = host.destroyStopWatch(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2286,9 +2271,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
     bool isPersistent = lua_toboolean(L, 2);
     // This is only likely to fail when a numeric first argument was given:
     if (!host.makeStopWatchPersistent(watchId, isPersistent)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "stopwatch with id %d not found", watchId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("stopwatch with id %1 not found").arg(watchId));
     }
 
     lua_pushboolean(L, true);
@@ -2328,9 +2311,7 @@ int TLuaInterpreter::setStopWatchName(lua_State* L)
     }
 
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, true);
@@ -2391,9 +2372,7 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
     QPair<bool, QString> result = host.getBrokenDownStopWatchTime(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     const QStringList splitTimeString(result.second.split(QLatin1Char(':')));
@@ -2480,9 +2459,7 @@ int TLuaInterpreter::getSelection(lua_State* L)
     std::tie(valid, text, start, length) = console->getSelection();
 
     if (!valid) {
-        lua_pushnil(L);
-        lua_pushstring(L, text.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, text);
     }
 
     lua_pushstring(L, text.toUtf8().constData());
@@ -2737,9 +2714,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getExitStubs: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -2751,25 +2726,19 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getExitStubs: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        QList<int> stubs = pR->exitStubs;
-        if (!stubs.empty()) {
-            lua_newtable(L);
-            for (int i = 0, total = stubs.size(); i < total; ++i) {
-                lua_pushnumber(L, i);
-                lua_pushnumber(L, stubs.at(i));
-                lua_settable(L, -3);
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getExitStubs: no stubs in this room with id %d.", roomId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    QList<int> stubs = pR->exitStubs;
+    if (stubs.empty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
+    }
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i);
+        lua_pushnumber(L, stubs.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitStubs1
@@ -2777,9 +2746,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getExitStubs1: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -2791,25 +2758,19 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     // Previously threw a Lua error on non-existent room!
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getExitStubs1: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        QList<int> stubs = pR->exitStubs;
-        if (!stubs.empty()) {
-            lua_newtable(L);
-            for (int i = 0, total = stubs.size(); i < total; ++i) {
-                lua_pushnumber(L, i + 1);
-                lua_pushnumber(L, stubs.at(i));
-                lua_settable(L, -3);
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getExitStubs1: no stubs in this room with id %d.", roomId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    QList<int> stubs = pR->exitStubs;
+    if (stubs.empty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
+    }
+    lua_newtable(L);
+    for (int i = 0, total = stubs.size(); i < total; ++i) {
+        lua_pushnumber(L, i + 1);
+        lua_pushnumber(L, stubs.at(i));
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getModulePath
@@ -2858,13 +2819,10 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
     int modulePriority = lua_tonumber(L, 2);
 
     Host& host = getHostFromLua(L);
-    if (host.mInstalledModules.contains(moduleName)) {
-        host.mModulePriorities[moduleName] = modulePriority;
-    } else {
-        lua_pushnil(L);
-        lua_pushstring(L, "module doesn't exist");
-        return 2;
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, "module doesn't exist");
     }
+    host.mModulePriorities[moduleName] = modulePriority;
     return 0;
 }
 
@@ -3041,9 +2999,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
         }
     }
     if (cnt == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("script '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -3069,9 +3025,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
         }
     }
     if (cnt == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("script '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -3118,20 +3072,15 @@ int TLuaInterpreter::remainingTime(lua_State* L)
     }
 
     if (result == -1) {
-        lua_pushnil(L);
-        lua_pushstring(L, "timer is inactive or expired");
-        return 2;
+        return warnArgumentValue(L, __func__, "timer is inactive or expired");
     }
 
     if (result == -2) {
-        lua_pushnil(L);
         if (timerName.isNull()) {
             // timerName was never set so we must have used the number
-            lua_pushfstring(L, "timer id %d not found", timerId);
-        } else {
-            lua_pushfstring(L, "timer named \"%s\" not found", timerName.toUtf8().constData());
+            return warnArgumentValue(L, __func__, QStringLiteral("timer id %1 not found").arg(timerId));
         }
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("timer named '%1' not found").arg(timerName));
     }
 
     lua_pushnumber(L, result / 1000.0);
@@ -3178,13 +3127,8 @@ int TLuaInterpreter::saveProfile(lua_State* L)
         lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
         return 2;
     } else {
-        auto message = QString("Couldn't save %1 to %2 because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
-        lua_pushnil(L);
-        lua_pushstring(L, message.toUtf8().constData());
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: saveProfile: " << message << "\n" >> 0;
-        }
-        return 2;
+        auto message = QString("Couldn't save '%1' to '%2' because: %3").arg(host.getName(), std::get<1>(result), std::get<2>(result));
+        return warnArgumentValue(L, __func__, message);
     }
 }
 
@@ -3206,9 +3150,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     QString font{lua_tostring(L, s)};
 
     if (!mudlet::self()->getAvailableFonts().contains(font, Qt::CaseInsensitive)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "font '%s' is not available)", font.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("font '%1' is not available").arg(font));
     }
 
 #if defined(Q_OS_LINUX)
@@ -3223,9 +3165,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         // apply changes to main console and its while-scrolling component too.
         auto result = host.setDisplayFont(QFont(font, host.getDisplayFont().pointSize()));
         if (!result.first) {
-            lua_pushboolean(L, false);
-            lua_pushstring(L, result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, result.second);
         }
         console->refreshView();
     } else {
@@ -3266,9 +3206,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     size = lua_tointeger(L, s);
     if (size <= 0) {
         // just throw an error, no default needed.
-        lua_pushnil(L);
-        lua_pushstring(L, "size cannot be 0 or negative");
-        return 2;
+        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
     }
 
     auto console = CONSOLE(L, windowName);
@@ -3342,9 +3280,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     //Don't create Userwindow if there is a Label with the same name already. It breaks the UserWindow
 
     if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3370,9 +3306,7 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->setUserWindowTitle(name, title); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3393,9 +3327,7 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.setMapperTitle(title); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3416,7 +3348,7 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
                 encodingName.remove(0, 2);
             }
 
-            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName, originalEncoding);
+            return (originalEncoding == encodingName) ? originalEncoding : QStringLiteral("%1 (%2)").arg(encodingName).arg(originalEncoding);
         };
         // cTelnet::getEncodingsList() returns a QByteArrayList NOT a QStringList/QList<QString>:
         for (const auto& encoding : host.mTelnet.getEncodingsList()) {
@@ -3500,9 +3432,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -3590,9 +3520,7 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowNa
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, "createLabel", message, true);
     }
 
     lua_pushboolean(L, true);
@@ -3656,9 +3584,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     if (auto [success, message] = host.createLabel(windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
         // We should, perhaps be returning a nil here but the published API
         // says the function returns true or false and we cannot change that now
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, "createLabel", message, true);
     }
 
     lua_pushboolean(L, true);
@@ -3674,9 +3600,7 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     QString labelName{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->deleteLabel(labelName); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3703,9 +3627,7 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3728,9 +3650,7 @@ int TLuaInterpreter::setLabelCursor(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelCursor(labelName, labelCursor); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3768,9 +3688,7 @@ int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3826,9 +3744,7 @@ int TLuaInterpreter::createMapper(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createMapper(windowName, x, y, width, height); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -3892,9 +3808,7 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -4209,9 +4123,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.setWindow(windowname, name, x, y, show); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4259,9 +4171,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.openMapWidget(area.toLower(), x, y, width, height); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4271,9 +4181,7 @@ int TLuaInterpreter::closeMapWidget(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.closeMapWidget(); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4310,17 +4218,13 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else {
         lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -4334,9 +4238,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -4346,9 +4248,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -4362,18 +4262,14 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     }
 
     if (!validRange(alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("alpha value %1 needs to be between 0-255").arg(alpha));
     }
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
         host.mpConsole->setConsoleBgColor(r, g, b, alpha);
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(window/label "%s" not found)", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("window/label '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4515,20 +4411,17 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     }
 
     if (mode < 1 || mode > 4) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBackgroundImage: %d is not a valid mode! Valid modes are 1 \"border\", 2 \"center\", 3 \"tile\", 4 \"style\")", mode);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "%1 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style'").arg(mode));
     }
 
     Host* host = &getHostFromLua(L);
-    if (host->setBackgroundImage(windowName, imgPath, mode)) {
-        lua_pushboolean(L, true);
-        return 1;
+    if (!host->setBackgroundImage(windowName, imgPath, mode)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("console or label '%1' not found").arg(windowName));
     }
 
-    lua_pushnil(L);
-    lua_pushfstring(L, R"(console or label "%s" not found)", windowName.toUtf8().constData());
-    return 2;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetBackgroundImage
@@ -4545,15 +4438,11 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
     }
 
     Host* host = &getHostFromLua(L);
-    if (host->resetBackgroundImage(windowName)) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(console "%s" not found)", windowName.toUtf8().constData());
-        return 2;
+    if (!host->resetBackgroundImage(windowName)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("console '%1' not found").arg(windowName));
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getImageSize
@@ -4565,18 +4454,15 @@ int TLuaInterpreter::getImageSize(lua_State* L)
     }
     QString imageLocation{lua_tostring(L, 1)};
     if (imageLocation.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "bad argument #1 value (image location cannot be an empty string)");
-        return 2;
+        return warnArgumentValue(L, __func__, "image location cannot be an empty string");
     }
 
-    if (auto size = mudlet::self()->getImageSize(imageLocation)) {
-        lua_pushnumber(L, size->width());
-        lua_pushnumber(L, size->height());
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "couldn't retrieve image size, is the location '%s' correct?", imageLocation.toUtf8().constData());
+    auto size = mudlet::self()->getImageSize(imageLocation);
+    if (!size) {
+        return warnArgumentValue(L, __func__, QStringLiteral("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
     }
+    lua_pushnumber(L, size->width());
+    lua_pushnumber(L, size->height());
     return 2;
 }
 
@@ -4591,9 +4477,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setCmdLineAction: bad argument #1 value (command line name cannot be an empty string.)");
-        return 2;
+        return warnArgumentValue(L, __func__, "command line name cannot be an empty string");
     }
     lua_remove(L, 1);
 
@@ -4605,9 +4489,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
     func = luaL_ref(L, LUA_REGISTRYINDEX);
 
     if (!host.setCmdLineAction(name, func)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"("setCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("command line name '%1' not found").arg(name));
     }
 
     lua_pushboolean(L, true);
@@ -4624,9 +4506,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
     }
     QString name{lua_tostring(L, 1)};
     if (name.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "resetCmdAction: bad argument #1 value (command line name cannot be an empty string.)");
-        return 2;
+        return warnArgumentValue(L, __func__, "command line name cannot be an empty string");
     }
 
     bool lua_result = false;
@@ -4635,9 +4515,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L){
         lua_pushboolean(L, true);
         return 1;
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"("resetCmdLineAction": bad argument #1 value (command line name "%s" not found.))", name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("command line name '%1' not found").arg(name));
     }
 }
 
@@ -4663,9 +4541,7 @@ int TLuaInterpreter::setCmdLineStyleSheet(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setCmdLineStyleSheet(name, styleSheet); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -4684,9 +4560,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     }
     QString labelName{lua_tostring(L, 1)};
     if (labelName.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "%s: bad argument #1 value (label name cannot be an empty string.)", funcName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
     }
     lua_remove(L, 1);
 
@@ -4713,19 +4587,14 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     else if (funcName == QStringLiteral("setLabelOnLeave"))
         lua_result = host.setLabelOnLeave(labelName, func);
     else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"("%s" is not a known function name - bug in Mudlet, please report it)", funcName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
 
     if (lua_result) {
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"("%s": bad argument #1 value (label name "%s" not found.))", funcName.toUtf8().constData(), labelName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("label name '%1' not found").arg(labelName));
     }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelClickCallback
@@ -4925,9 +4794,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
                                       QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
                                       QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
                                       flags)) {
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("window '%1' does not exist").arg(windowName), true);
     }
 
     lua_pushboolean(L, true);
@@ -4978,15 +4845,12 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->environment = env;
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room %d doesn't exist", id);
-        return 2;
+    if (!pR) {
+        return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(id));
     }
+    pR->environment = env;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
@@ -4994,9 +4858,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setRoomName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -5012,16 +4874,13 @@ int TLuaInterpreter::setRoomName(lua_State* L)
     QString name{lua_tostring(L, 2)};
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
-        pR->name = name;
-        updateMap(L);
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setRoomName: bad argument #1 value (number %d is not a valid room id).", id);
-        return 2;
+    if (!pR) {
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
+    pR->name = name;
+    updateMap(L);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomName
@@ -5029,9 +4888,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -5042,13 +4899,10 @@ int TLuaInterpreter::getRoomName(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
-        lua_pushstring(L, pR->name.toUtf8().constData());
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room %d doesn't exist", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(id));
     }
+    lua_pushstring(L, pR->name.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomWeight
@@ -5091,9 +4945,8 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         }
         port = lua_tointeger(L, 2);
         if (port > 65535 || port < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}", port);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid port number %1 given, if supplied it must be in range 1 to 65535, {defaults to 23 if not provided}").arg(port));
         }
     }
 
@@ -5109,16 +4962,12 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     if (isToSaveToProfile) {
         QPair<bool, QString> result = host.writeProfileData(QLatin1String("url"), url);
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "unable to save host name, reason: %s", result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("unable to save host name, reason: %1").arg(result.second));
         }
 
         result = host.writeProfileData(QLatin1String("port"), QString::number(port));
         if (!result.first) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "unable to save port number, reason: %s", result.second.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("unable to save port number, reason: %1").arg(result.second));
         }
     }
 
@@ -5180,14 +5029,12 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
-        QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
-        lua_pushstring(L, retHash.toUtf8().constData());
-        return 1;
+    if (!host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no hash for room %1").arg(id));
     }
-    lua_pushnil(L);
-    lua_pushfstring(L, "no hash for room %d", id);
-    return 2;
+    QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
+    lua_pushstring(L, retHash.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomLocked
@@ -5264,9 +5111,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     if (!lua_isboolean(L, 4)) {
@@ -5278,14 +5123,11 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
     if (!pR->setSpecialExitLock(dir, b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command %1 does not exist in room id %2")
+            .arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, true);
@@ -5311,21 +5153,17 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "the special exit name/command cannot be empty");
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
     if (!pR->getSpecialExits().contains(dir)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("the special exit name/command '%1' does not exist in room id %2")
+            .arg(dir, QString::number(fromRoomID)));
     }
 
     lua_pushboolean(L, pR->hasSpecialExitLock(dir));
@@ -5438,15 +5276,11 @@ int TLuaInterpreter::getAllRoomEntrances(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllRoomEntrances: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllRoomEntrances: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
     lua_newtable(L);
     QList<int> entrances = host.mpMap->mpRoomDB->getEntranceHash().values(roomId);
@@ -5467,9 +5301,7 @@ int TLuaInterpreter::searchRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchRoom: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int room_id = 0;
@@ -5556,9 +5388,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key = QString();
@@ -5679,9 +5509,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "searchAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key = QString();
@@ -5798,9 +5626,7 @@ int TLuaInterpreter::getAreaTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaTable: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5821,9 +5647,7 @@ int TLuaInterpreter::getAreaTableSwap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaTableSwap: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QMapIterator<int, QString> it(host.mpMap->mpRoomDB->getAreaNamesMap());
@@ -5900,9 +5724,7 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
     Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAreaExits: bad argument #1 value (number %d is not a valid area id).", area);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(area));
     }
 
     lua_newtable(L);
@@ -5974,26 +5796,19 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "gotoRoom: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "gotoRoom: bad argument #1 value (number %d is not a valid target room id).", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid target room id").arg(targetRoomId));
     }
 
-    if (host.mpMap->gotoRoom(targetRoomId)) {
-        host.startSpeedWalk();
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
+    if (!host.mpMap->gotoRoom(targetRoomId)) {
         int totalWeight = host.assemblePath(); // Needed if unsucessful to clear lua speedwalk tables
         Q_UNUSED(totalWeight);
-        lua_pushboolean(L, false);
-        lua_pushfstring(L, "gotoRoom: no path found from current room to room with id %d!", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
+    host.startSpeedWalk();
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPath
@@ -6013,17 +5828,11 @@ int TLuaInterpreter::getPath(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getPath: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoom(originRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getPath: bad argument #1 value (number %d is not a valid source room id).", originRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid source room id").arg(originRoomId));
     } else if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getPath: bad argument #2 value (number %d is not a valid target room id).", targetRoomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid target room id").arg(targetRoomId));
     }
 
     bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
@@ -6135,9 +5944,7 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
 // inactive and has been removed
 int TLuaInterpreter::showUnzipProgress(lua_State* L)
 {
-    lua_pushnil(L);
-    lua_pushstring(L, "showUnzipProgress: removed command, this function is now inactive and does nothing!");
-    return 2;
+    return warnArgumentValue(L, __func__, "removed command, this function is now inactive and does nothing");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
@@ -6550,16 +6357,12 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     output += TN_SE;
 
     if (!host.mTelnet.isATCPEnabled()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "ATCP is not currently enabled");
-        return 2;
+        return warnArgumentValue(L, __func__, "ATCP is not currently enabled");
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "unable to send all of the ATCP message");
-        return 2;
+        return warnArgumentValue(L, __func__, "unable to send all of the ATCP message");
     }
 
     lua_pushboolean(L, true);
@@ -6573,9 +6376,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     std::string msg;
 
     if (!host.mTelnet.isMSPEnabled()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "MSP is not currently enabled");
-        return 2;
+        return warnArgumentValue(L, __func__, "MSP is not currently enabled");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -6631,16 +6432,12 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
     output += TN_SE;
 
     if (!host.mTelnet.isGMCPEnabled()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "GMCP is not currently enabled");
-        return 2;
+        return warnArgumentValue(L, __func__, "GMCP is not currently enabled");
     }
 
     // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "unable to send all of the GMCP message");
-        return 2;
+        return warnArgumentValue(L, __func__, "unable to send all of the GMCP message");
     }
 
     lua_pushboolean(L, true);
@@ -6697,10 +6494,9 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     }
     std::string msg = lua_tostring(L, 1);
     if (msg.length() != 2) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "invalid message of length %d supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)",
-                        msg.length());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)")
+            .arg(msg.length()));
     }
 
     std::string output;
@@ -6712,23 +6508,20 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
     output += TN_SE;
 
     Host& host = getHostFromLua(L);
-    if (host.mTelnet.isChannel102Enabled()) {
-        // We have already validated output to contain a 2 byte payload so we
-        // should not need to worry about the "encoding" in this use of
-        // socketOutRaw(...) - with the exception of handling any occurance of
-        // 0xFF as either of the bytes to send - however Aardwolf does not use
-        // *THAT* value so, though it is probably okay to not worry about the
-        // need to "escape" it to get it through the telnet protocol unscathed
-        // it is trival to fix:
-        output = mudlet::replaceString(output, "\xff", "\xff\xff");
-        host.mTelnet.socketOutRaw(output);
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to send message as the 102 subchannel support has not been enabled by the MUD Server");
-        return 2;
+    if (!host.mTelnet.isChannel102Enabled()) {
+        return warnArgumentValue(L, __func__, "unable to send message as the 102 subchannel support has not been enabled by the game server");
     }
+    // We have already validated output to contain a 2 byte payload so we
+    // should not need to worry about the "encoding" in this use of
+    // socketOutRaw(...) - with the exception of handling any occurance of
+    // 0xFF as either of the bytes to send - however Aardwolf does not use
+    // *THAT* value so, though it is probably okay to not worry about the
+    // need to "escape" it to get it through the telnet protocol unscathed
+    // it is trival to fix:
+    output = mudlet::replaceString(output, "\xff", "\xff\xff");
+    host.mTelnet.socketOutRaw(output);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getButtonState
@@ -6870,9 +6663,8 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempExactMatchTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -6916,9 +6708,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempBeginOfLineTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -6962,10 +6753,10 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 
     if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
+
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -7004,15 +6795,13 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 2);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #2 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-
 
     if (lua_isstring(L, 1)) {
         triggerID = pLuaInterpreter->startTempPromptTrigger(QString(lua_tostring(L, 1)), expiryCount);
@@ -7112,8 +6901,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     }
 
     if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
-        lua_pushnil(L);
-        lua_pushstring(L, "only one of foreground and background colors can be -1 (ignored)");
+        return warnArgumentValue(L, __func__, "only one of foreground and background colors can be -1 (ignored)");
     }
 
     int triggerID;
@@ -7123,9 +6911,8 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 4);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempColorTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
@@ -7176,28 +6963,24 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     {   // separate block so that "value" is not scoped to the whole function
         int value = lua_tointeger(L, s);
         if (value == TTrigger::scmIgnored && lua_gettop(L) < 2) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, it cannot be used (to ignore the foreground color) if the background color is ommitted",
-                            value);
-        } else {
-            // At present we limit the range to (Trigger::scmIgnored),
-            // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
-            // extend it to other "coded" values for locally generated textual
-            // content
-            if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "bad argument #%d: invalid ANSI color number %d, only %d (ignore foreground color), %d (default foregroud color) or 0 to 255 recognised",
-                                s, value, TTrigger::scmIgnored, TTrigger::scmDefault);
-                return 2;
-            } else if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
-                lua_pushnil(L);
-                lua_pushfstring(L, "invalid ANSI color number %d, you cannot ignore both foreground and background color (omitted)",
-                                value);
-                return 2;
-            } else {
-                ansiFgColor = value;
-            }
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, it cannot be used (to ignore the foreground color) if the background color is ommitted")
+                .arg(value));
         }
+        // At present we limit the range to (Trigger::scmIgnored),
+        // (Trigger::scmDefault) and 0-255 ANSI colors - in the future we could
+        // extend it to other "coded" values for locally generated textual
+        // content
+        if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, only %2 (ignore foreground color), %3 (default foregroud color) or 0 to 255 recognised")
+                .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
+        }
+        if (value == TTrigger::scmIgnored && lua_gettop(L) < 4) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, you cannot ignore both foreground and background color (omitted)").arg(value));
+        }
+        ansiFgColor = value;
     }
 
     // s=1 at this point. If top=4 the next argument must be the BG color number,
@@ -7211,15 +6994,13 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     } else {
         int value = lua_tointeger(L, s);
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, only %d (ignore background color), %d (default background color) or 0 to 255 recognised",
-                            value, TTrigger::scmIgnored, TTrigger::scmDefault);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "invalid ANSI color number %1, only %2 (ignore background color), %3 (default background color) or 0 to 255 recognised")
+                .arg(QString::number(value), QString::number(TTrigger::scmIgnored), QString::number(TTrigger::scmDefault)));
         } else if (value == TTrigger::scmIgnored && ansiFgColor == TTrigger::scmIgnored) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid ANSI color number %d, you cannot ignore both forground and background color",
-                            value);
-            return 2;
+                return warnArgumentValue(L, __func__, QStringLiteral(
+                    "invalid ANSI color number %1, you cannot ignore both foreground and background color")
+                    .arg(value));
         } else {
             ansiBgColor = value;
         }
@@ -7238,9 +7019,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     if (lua_isnumber(L, ++s)) {
         expiryCount = lua_tonumber(L, s);
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, ++s)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #%d value (trigger expiration count must be a number, got %s!)", s, luaL_typename(L, s));
@@ -7283,9 +7063,8 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 4);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #4 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 4)) {
         lua_pushfstring(L, "tempLineTrigger: bad argument #4 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 4));
@@ -7398,9 +7177,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 14);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #14 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 14)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 14));
@@ -7537,9 +7315,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     Host& host = getHostFromLua(L);
     auto actionsList = host.getActionUnit()->findActionsByName(name);
     if (actionsList.empty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "No button named \"%s\" found.", name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no button named '%1' found").arg(name));
     }
     for (auto action : actionsList) {
         action->css = css;
@@ -7615,9 +7391,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "bad argument #3 value (trigger expiration count must be nil or greater than zero, got %d)", expiryCount);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "trigger expiration count must be nil or greater than zero, got %1").arg(expiryCount));
         }
     } else if (!lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "tempRegexTrigger: bad argument #3 value (trigger expiration count must be nil or a number, got %s!)", luaL_typename(L, 3));
@@ -7781,8 +7556,8 @@ int TLuaInterpreter::isActive(lua_State* L)
             }
         }
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "invalid type '%s' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'", type.toUtf8().constData());
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -8299,9 +8074,8 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
     }
     luaLine = lua_tointeger(L, n);
     if (luaLine < 1) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "line number %d invalid, it should be greater than zero", luaLine);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "line number %1 invalid, it should be greater than zero").arg(luaLine));
     }
 
     Host& host = getHostFromLua(L);
@@ -8316,18 +8090,15 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return 1;
     } else {
         auto pC = host.mpConsole->mSubConsoleMap.value(name);
-        if (pC) {
-            if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
-                lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
-            } else {
-                lua_pushstring(L, "getTimestamp: invalid line number");
-            }
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "mini console, user window or buffer \"%s\" not found", name.toUtf8().constData());
-            return 2;
+        if (!pC) {
+            return warnArgumentValue(L, __func__, QStringLiteral("mini console, user window or buffer '%1' not found)").arg(name));
         }
+        if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
+            lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        } else {
+            lua_pushstring(L, "getTimestamp: invalid line number");
+        }
+        return 1;
     }
 }
 
@@ -8378,49 +8149,33 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     QString existingName;
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setAreaName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_isnumber(L, 1)) {
         id = lua_tonumber(L, 1);
         if (id < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #1 value (number %d is not a valid area id as it is\n"
-                            "less than 1).",
-                            id);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "number %1 is not a valid area id as it is less than 1)").arg(id));
         }
         // Strangely, previous code allowed this command to create a NEW area's name
         // with this ID, but without a TArea instance to accompany it (the latter was/is
         // instantiated as needed when a room is moved to the relevent area...) and we
         // need to continue to allow this - Slysven
         //        else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id)) {
-        //            lua_pushnil(L);
-        //            lua_pushstring(L, "setAreaName: bad argument #1 value (number %d is not a valid area id)."
-        //                           id);
-        //            return 2;
+        //            return warnArgumentValue(L, __func__, QStringLiteral(
+        //                "number %1 is not a valid area id").arg(id));
         //        }
     } else if (lua_isstring(L, 1)) {
         existingName = lua_tostring(L, 1);
         id = host.mpMap->mpRoomDB->getAreaNamesMap().key(existingName, 0);
         if (existingName.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setAreaName: bad argument #1 value (area name cannot be empty).");
-            return 2;
+            return warnArgumentValue(L, __func__, "area name cannot be empty");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(existingName)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(setAreaName: bad argument #1 value (area name "%s" does not exist).)", existingName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("area name '%1' does not exist").arg(existingName));
         } else if (host.mpMap->mpRoomDB->getAreaNamesMap().value(-1).contains(existingName)) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #1 value (area name \"%s\" is reserved and\n"
-                            "protected - it cannot be changed).",
-                            existingName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
         lua_pushfstring(L,
@@ -8439,29 +8194,20 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     if (newName.isEmpty()) {
         // Empty name not allowed (any more)
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "setAreaName: bad argument #2 value (area names may not be empty strings\n"
-                        "{and spaces are trimmed from the ends})!");
-        return 2;
+        return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(newName) > 0) {
         // That name is already IN the areaNamesMap, and since we now enforce
         // uniqueness there can be only one of it - so we can check if this is a
         // problem or just pointless quite easily...!
         if (host.mpMap->mpRoomDB->getAreaNamesMap().value(id) != newName) {
-            lua_pushnil(L);
             // And it isn't the trivial case, where the given areaID already IS that name
-            lua_pushfstring(L,
-                            "setAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                            "id %d already has the name \"%s\").",
-                            host.mpMap->mpRoomDB->getAreaNamesMap().key(newName),
-                            newName.toUtf8().constData());
-            return 2;
-        } else {
-            // Renaming an area to the same name is pointlessly successful!
-            lua_pushboolean(L, true);
-            return 1;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "area names may not be duplicated and area id %1 already has the name '%2'")
+                .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(newName)), newName));
         }
+        // Renaming an area to the same name is pointlessly successful!
+        lua_pushboolean(L, true);
+        return 1;
     }
 
     bool isCurrentAreaRenamed = false;
@@ -8490,9 +8236,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomAreaName: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int id;
@@ -8516,10 +8260,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         if (result != -1) {
             return 1;
         } else {
-            lua_pushfstring(L,
-                            "getRoomAreaName: bad argument #1 value (string \"%s\" is\n"
-                            "not a valid area name).",
-                            name.toUtf8().constData());
+            lua_pushfstring(L, "getRoomAreaName: string '%s' is not a valid area name", name.toUtf8().constData());
             return 2;
         }
     } else {
@@ -8528,7 +8269,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
             return 1;
         } else {
             lua_pushnumber(L, -1);
-            lua_pushfstring(L, "getRoomAreaName: bad argument #1 value (number %d is not a valid area id).", id);
+            lua_pushfstring(L, "getRoomAreaName: number %d is not a valid area id", id);
             return 2;
         }
     }
@@ -8545,25 +8286,14 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if ((!host.mpMap) || (!host.mpMap->mpRoomDB)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "addAreaName: error, no map seems to be loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (name.isEmpty()) {
         // Empty names now not allowed
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "addAreaName: bad argument #1 value (area names may not be empty strings {and\n"
-                        "spaces are trimmed from the ends})!");
-        return 2;
+        return warnArgumentValue(L, __func__, "area names may not be empty strings (and spaces are trimmed from the ends)");
     } else if (host.mpMap->mpRoomDB->getAreaNamesMap().values().count(name) > 0) {
         // That name is already IN the areaNamesMap
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "addAreaName: bad argument #2 value (area names may not be duplicated and area\n"
-                        "id %d already has the name \"%s\").",
-                        host.mpMap->mpRoomDB->getAreaNamesMap().key(name),
-                        name.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("area names may not be duplicated and area id %1 already has the name '%2'")
+            .arg(QString::number(host.mpMap->mpRoomDB->getAreaNamesMap().key(name)), name));
     }
 
     // Note that adding an area name implicitly creates an underlying TArea instance
@@ -8585,43 +8315,25 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "deleteArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_isnumber(L, 1)) {
         id = lua_tonumber(L, 1);
         if (id < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (number %d is not a valid area id greater\n"
-                            "than zero).",
-                            id);
-            return 2;
-        } else if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "deleteArea: bad argument #1 value (number %d is not a valid area id).", id);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id greater than zero").arg(id));
+        }
+        if (!host.mpMap->mpRoomDB->getAreaIDList().contains(id) && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(id)) {
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(id));
         }
     } else if (lua_isstring(L, 1)) {
         name = lua_tostring(L, 1);
         if (name.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "deleteArea: bad argument #1 value (an empty string is not a valid area name).");
-            return 2;
+            return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (string \"%s\" is not a valid\n"
-                            "area name).",
-                            name.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("string '%1' is not a valid area name").arg(name));
         } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "deleteArea: bad argument #1 value (you can't delete the default area).");
-            return 2;
+            return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
         lua_pushfstring(L,
@@ -8752,9 +8464,7 @@ int TLuaInterpreter::createRoomID(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "createRoomID: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (lua_gettop(L) > 0) {
@@ -8767,12 +8477,8 @@ int TLuaInterpreter::createRoomID(lua_State* L)
         }
         int minId = lua_tointeger(L, 1);
         if (minId < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "createRoomID: bad argument #1 value (minimum room id %d is an optional value\n"
-                            "but if provided it must be greater than zero.)",
-                            minId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "minimum room id %1 is an optional value but if provided it must be greater than zero").arg(minId));
         }
         lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
     } else {
@@ -8913,9 +8619,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setDoor: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     TRoom* pR;
@@ -8926,9 +8630,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     int roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setDoor: bad argument #1 value (number %d is not a valid room id.)", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -8950,13 +8652,9 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // means we must treat the exitCmd as a SPECIAL exit
         if (!(pR->getSpecialExits().contains(exitCmd))) {
             // And NOT a special one either
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setDoor: bad argument #2 value (room with id %d does not have a special\n"
-                            "exit in direction \"%s\".)",
-                            roomId,
-                            exitCmd.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "room with id %1 does not have a special exit in direction '%2'")
+                .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid special exit - so fall out of if and continue
     } else {
@@ -8974,13 +8672,9 @@ int TLuaInterpreter::setDoor(lua_State* L)
                 || ((!exitCmd.compare(QStringLiteral("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
                 || ((!exitCmd.compare(QStringLiteral("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
             // No there IS NOT a stub or real exit in the exitCmd direction
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setDoor: bad argument #2 value (room with id %d does not have a normal exit\n"
-                            "or a stub exit in direction \"%s\".)",
-                            roomId,
-                            exitCmd.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "room with id %1 does not have a normal exit or a stub exit in direction '%2'")
+                .arg(QString::number(roomId), exitCmd));
         }
         // else IS a valid stub or real normal exit -fall through to continue
     }
@@ -8994,12 +8688,8 @@ int TLuaInterpreter::setDoor(lua_State* L)
     }
     int doorStatus = lua_tointeger(L, 3);
     if (doorStatus < 0 || doorStatus > 3) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "setDoor: bad argument #3 value (door type %d is not one of 0=\"none\", 1=\"open\",\n"
-                        "2=\"closed\" or 3=\"locked\".)",
-                        doorStatus);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
     }
 
     bool result = pR->setDoor(exitCmd, doorStatus);
@@ -9017,9 +8707,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getDoors: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int roomId;
@@ -9031,9 +8719,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     roomId = lua_tointeger(L, 1);
     pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getDoors: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
 
     lua_newtable(L);
@@ -9059,9 +8745,7 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", roomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomID));
     }
 
     QString direction(dirToString(L, 2));
@@ -9070,9 +8754,8 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomID, lua_tostring(L, 2));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit that can be identified from '%2'")
+            .arg(QString::number(roomID), lua_tostring(L, 2)));
     }
 
     qint64 weight;
@@ -9082,9 +8765,9 @@ int TLuaInterpreter::setExitWeight(lua_State* L)
     }
     weight = lua_tonumber(L, 3);
     if (weight < 0 || weight > std::numeric_limits<int>::max()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "weight %d is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %d", weight, std::numeric_limits<int>::max());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "weight %1 is outside of the usable range of 0 (which resets the weight back to that of the destination room) to %2")
+            .arg(QString::number(weight), QString::number(std::numeric_limits<int>::max())));
     }
 
     pR->setExitWeight(direction, weight);
@@ -9116,9 +8799,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not exist").arg(id_from));
     }
 
     if (!lua_isnumber(L, 2) && !lua_istable(L, 2)) {
@@ -9129,27 +8810,20 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         id_to = lua_tointeger(L, 2);
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
         if (!pR_to) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "target room id %d does not exist", id_to);
-            return 2;
-        } else {
-            int area = pR->getArea();
-            int area_to = pR_to->getArea();
-            if (area != area_to) {
-                lua_pushnil(L);
-                lua_pushfstring(L,
-                                "target room is in area \"%s\" (id: %d) which is not the one \"%s\" (id: %d) in which this custom line is to be drawn",
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to).toUtf8().constData(),
-                                area_to,
-                                (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area).toUtf8().constData(),
-                                area);
-                return 2;
-            }
-
-            x.append(static_cast<qreal>(pR_to->x));
-            y.append(static_cast<qreal>(pR_to->y));
-            z.append(pR->z);
+            return warnArgumentValue(L, __func__, QStringLiteral("target room id %1 does not exist").arg(id_to));
         }
+        int area = pR->getArea();
+        int area_to = pR_to->getArea();
+        if (area != area_to) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "target room is in area '%1' (id: %2) which is not the one '%3' (id: %4) in which this custom line is to be drawn")
+                .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to), QString::number(area_to),
+                        (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area), QString::number(area)));
+        }
+
+        x.append(static_cast<qreal>(pR_to->x));
+        y.append(static_cast<qreal>(pR_to->y));
+        z.append(pR->z);
     } else if (lua_istable(L, 2)) {
         lua_pushnil(L);
         int i = 0; // Indexes groups of coordinates in the table
@@ -9216,9 +8890,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", id_from, lua_tostring(L, 3));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 does not have an exit that can be identified from '%2'")
+            .arg(QString::number(id_from), lua_tostring(L, 3)));
     }
 
     if (!lua_isstring(L, 4)) {
@@ -9237,10 +8910,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
         line_style = Qt::DashDotDotLine;
     } else {
-        lua_pushnil(L);
-        lua_pushfstring(
-                L, "invalid line style \"%s\", only use one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"", lineStyleString.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'")
+            .arg(lineStyleString));
     }
 
     if (!lua_istable(L, 5)) {
@@ -9261,26 +8933,22 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
                 qint64 component = lua_tonumber(L, -1);
                 if (component < 0 || component > 255) {
-                    lua_pushnil(L);
-                    lua_pushfstring(L,
-                                    "%s color component in the table of the fourth argument is %d which is out of the valid range (0 to 255)",
-                                    (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
-                                    component);
-                    return 2;
-                } else {
-                    switch (tind) {
-                    case 1:
-                        r = component;
-                        break;
-                    case 2:
-                        g = component;
-                        break;
-                    case 3:
-                        b = component;
-                        break;
-                    default:
-                        Q_UNREACHABLE();
-                    }
+                    return warnArgumentValue(L, __func__, QStringLiteral(
+                        "%1 color component in the table of the fourth argument is %2 which is out of the valid range (0 to 255)")
+                        .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
+                }
+                switch (tind) {
+                case 1:
+                    r = component;
+                    break;
+                case 2:
+                    g = component;
+                    break;
+                case 3:
+                    b = component;
+                    break;
+                default:
+                    Q_UNREACHABLE();
                 }
             }
             lua_pop(L, 1);
@@ -9299,9 +8967,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     points.append(QPointF(x.at(0), y.at(0)));
     for (int i = 1, total = z.size(); i < total; ++i) {
         if (lz != z.at(i)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "the z values are not all on the same level (first wrong value is %d at index %d)", z.at(i), i + 1);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "the z values are not all on the same level (first wrong value is %1 at index %2)")
+                .arg(QString::number(z.at(i)), QString::number(i + 1)));
         }
         points.append(QPointF(x.at(i), y.at(i)));
     }
@@ -9342,9 +9010,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not exist", roomId);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room id %1 doesn't exist").arg(roomId));
     }
 
     direction = dirToString(L, 2);
@@ -9353,27 +9019,26 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
         return lua_error(L);
     }
     if (!pR->hasExitOrSpecialExit(direction)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not have an exit that can be identified from \"%s\"", roomId, lua_tostring(L, 2));
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "room id %1 does not have an exit that can be identified from '%2'").arg(QString::number(roomId), lua_tostring(L, 2)));
     }
 
-    if ((pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction) + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction)) > 0) {
-        // Need to update the TRoom {min|max}_{x|y} settings as they are used during
-        // the painting process:
-        pR->calcRoomDimensions();
-        // Better refresh the 2D map to show the new line:
-        if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-            host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
-        lua_pushboolean(L, true);
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room id %d does not appear to have a custom exit line for the exit indentifed from  \"%s\"", roomId, lua_tostring(L, 2));
-        return 2;
+    if (0 >= (pR->customLines.remove(direction) + pR->customLinesArrow.remove(direction)
+        + pR->customLinesStyle.remove(direction) + pR->customLinesColor.remove(direction))) {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "room id %1 does not appear to have a custom exit line for the exit indentifed from '%2'")
+            .arg(QString::number(roomId), lua_tostring(L, 2)));
     }
+    // Need to update the TRoom {min|max}_{x|y} settings as they are used during
+    // the painting process:
+    pR->calcRoomDimensions();
+    // Better refresh the 2D map to show the new line:
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
+        host.mpMap->mpMapper->mp2dMap->update();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
@@ -9387,73 +9052,70 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
-    if (pR) {
-        lua_newtable(L); //return table customLines[]
-        QStringList exits = pR->customLines.keys();
-        for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
-            lua_pushstring(L, exits.at(i).toUtf8().constData());
-            lua_newtable(L); //customLines[direction]
-            lua_pushstring(L, "attributes");
-            lua_newtable(L); //customLines[attributes]
-            lua_pushstring(L, "style");
-            switch (pR->customLinesStyle.value(exits.at(i))) {
-            case Qt::DotLine:
-                lua_pushstring(L, "dot line");
-                break;
-            case Qt::DashLine:
-                lua_pushstring(L, "dash line");
-                break;
-            case Qt::DashDotLine:
-                lua_pushstring(L, "dash dot line");
-                break;
-            case Qt::DashDotDotLine:
-                lua_pushstring(L, "dash dot dot line");
-                break;
-            case Qt::SolidLine:
-                [[fallthrough]];
-            default:
-                lua_pushstring(L, "solid line");
-            }
-            lua_settable(L, -3);
-            lua_pushstring(L, "arrow");
-            lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
-            lua_settable(L, -3);
-            lua_pushstring(L, "color");
-            lua_newtable(L);
-            lua_pushstring(L, "r");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
-            lua_settable(L, -3);
-            lua_pushstring(L, "g");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
-            lua_settable(L, -3);
-            lua_pushstring(L, "b");
-            lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
-            lua_settable(L, -3);
-            lua_settable(L, -3); //color
-            lua_settable(L, -3); //attributes
-            lua_pushstring(L, "points");
-            lua_newtable(L); //customLines[points]
-            QList<QPointF> pointL = pR->customLines.value(exits.at(i));
-            for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
-                lua_pushnumber(L, k);
-                lua_newtable(L);
-                lua_pushstring(L, "x");
-                lua_pushnumber(L, pointL.at(k).x());
-                lua_settable(L, -3);
-                lua_pushstring(L, "y");
-                lua_pushnumber(L, pointL.at(k).y());
-                lua_settable(L, -3);
-                lua_settable(L, -3);
-            }
-            lua_settable(L, -3); //customLines[direction][points]
-            lua_settable(L, -3); //customLines[direction]
-        }
-        return 1;
-    } else {
-        lua_pushnil(L); //if the room doesnt exist return nil
-        lua_pushfstring(L, "room %d doesn't exist", roomID);
-        return 2;
+    if (!pR) { //if the room doesnt exist return nil
+        return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(roomID));
     }
+    lua_newtable(L); //return table customLines[]
+    QStringList exits = pR->customLines.keys();
+    for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
+        lua_pushstring(L, exits.at(i).toUtf8().constData());
+        lua_newtable(L); //customLines[direction]
+        lua_pushstring(L, "attributes");
+        lua_newtable(L); //customLines[attributes]
+        lua_pushstring(L, "style");
+        switch (pR->customLinesStyle.value(exits.at(i))) {
+        case Qt::DotLine:
+            lua_pushstring(L, "dot line");
+            break;
+        case Qt::DashLine:
+            lua_pushstring(L, "dash line");
+            break;
+        case Qt::DashDotLine:
+            lua_pushstring(L, "dash dot line");
+            break;
+        case Qt::DashDotDotLine:
+            lua_pushstring(L, "dash dot dot line");
+            break;
+        case Qt::SolidLine:
+            [[fallthrough]];
+        default:
+            lua_pushstring(L, "solid line");
+        }
+        lua_settable(L, -3);
+        lua_pushstring(L, "arrow");
+        lua_pushboolean(L, pR->customLinesArrow.value(exits.at(i)));
+        lua_settable(L, -3);
+        lua_pushstring(L, "color");
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, pR->customLinesColor.value(exits.at(i)).blue());
+        lua_settable(L, -3);
+        lua_settable(L, -3); //color
+        lua_settable(L, -3); //attributes
+        lua_pushstring(L, "points");
+        lua_newtable(L); //customLines[points]
+        QList<QPointF> pointL = pR->customLines.value(exits.at(i));
+        for (int k = 0, kTotal = pointL.size(); k < kTotal; ++k) {
+            lua_pushnumber(L, k);
+            lua_newtable(L);
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, pointL.at(k).x());
+            lua_settable(L, -3);
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, pointL.at(k).y());
+            lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3); //customLines[direction][points]
+        lua_settable(L, -3); //customLines[direction]
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getExitWeights
@@ -9519,10 +9181,8 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
     if (lua_type(L, 2) == LUA_TNUMBER) {
         labelId = lua_tointeger(L, 2);
         if (labelId < 0) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "labelID %d is invalid, it must be zero or greater", labelId);
+            return warnArgumentValue(L, __func__, QStringLiteral("labelID %1 is invalid, it must be zero or greater").arg(labelId));
         }
-
     } else {
         labelText = lua_tostring(L, 2);
         // Can be an empty string as image labels have no text!
@@ -9538,9 +9198,8 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 
     if (labelId >= 0) {
         if (!pA->mMapLabels.contains(labelId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "labelID %d does not exist in area with areaID %d", labelId, area);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("labelID %1 does not exist in area with areaID %2")
+                .arg(QString::number(labelId), QString::number(area)));
         }
         lua_newtable(L);
         auto label = pA->mMapLabels.value(labelId);
@@ -9625,9 +9284,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     int fromRoomID = lua_tointeger(L, 1);
     TRoom* pR_from = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR_from) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -9637,9 +9294,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     int toRoomID = lua_tointeger(L, 2);
     TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoomID);
     if (!pR_to) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "entrance room id %d does not exist)", toRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("entrance room id %1 does not exist").arg(toRoomID));
     }
 
     if (!lua_isstring(L, 3)) {
@@ -9648,9 +9303,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 3);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
 
     pR_from->setSpecialExit(toRoomID, dir);
@@ -9669,9 +9322,7 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     int fromRoomID = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "exit room id %d does not exist)", fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("exit room id %1 does not exist").arg(fromRoomID));
     }
 
     if (!lua_isstring(L, 2)) {
@@ -9680,15 +9331,12 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     }
     QString dir = lua_tostring(L, 2);
     if (dir.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the exit command cannot be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "the exit command cannot be empty");
     }
 
     if (!pR->getSpecialExits().contains(dir)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the special exit name/command \"%s\" does not exist in room id %d", dir.toUtf8().constData(), fromRoomID);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "the special exit name/command '%1' does not exist in room id %2").arg(dir, QString::number(fromRoomID)));
     }
     pR->setSpecialExit(-1, dir);
     lua_pushboolean(L, true);
@@ -9700,9 +9348,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9711,21 +9357,17 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     int roomId = lua_tointeger(L, 1);
 
-
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        if (!pR->userData.isEmpty()) {
-            pR->userData.clear();
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    if (!pR->userData.isEmpty()) {
+        pR->userData.clear();
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearRoomUserDataItem
@@ -9733,9 +9375,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearRoomUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9755,24 +9395,21 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearRoomUserDataItem: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        // Turns out that an empty key IS possible, but if this changes this should be uncommented
-        //        if (key.isEmpty()) {
-        //            // If the user accidently supplied an white-space only or empty key
-        //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
-        //            lua_pushboolean( L, false );
-        //        }
-        /*      else */ if (pR->userData.contains(key)) {
-            pR->userData.remove(key);
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    // Turns out that an empty key IS possible, but if this changes this should be uncommented
+    //        if (key.isEmpty()) {
+    //            // If the user accidently supplied an white-space only or empty key
+    //            // string we don't do anything, but we, sucessfully, fail to do it... 8-)
+    //            lua_pushboolean( L, false );
+    //        }
+    /*      else */ if (pR->userData.contains(key)) {
+        pR->userData.remove(key);
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserData
@@ -9780,9 +9417,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9793,18 +9428,15 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (!pA->mUserData.isEmpty()) {
-            pA->mUserData.clear();
-            lua_pushboolean(L, true);
-        } else {
-            lua_pushboolean(L, false);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
+    if (!pA->mUserData.isEmpty()) {
+        pA->mUserData.clear();
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearAreaUserDataItem
@@ -9812,9 +9444,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearAreaUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -9831,19 +9461,13 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "clearAreaUserDataItem: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (key.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(clearAreaUserDataItem: bad argument #2 value ("key" can not be an empty string).)");
-            return 2;
-        } else {
-            lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "key can not be an empty string");
+    }
+    lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearMapUserData
@@ -9851,9 +9475,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
@@ -9870,9 +9492,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "clearMapUserDataItem: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -9881,9 +9501,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(clearMapUserDataItem: bad argument #1 value ("key" can not be an empty string).)");
-        return 2;
+        return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
     return 1;
@@ -9918,9 +9536,7 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
     int id_from = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id_from));
     }
 
     bool showAllExits = false;
@@ -10013,9 +9629,7 @@ int TLuaInterpreter::getSpecialExitsSwap(lua_State* L)
     int id_from = lua_tointeger(L, 1);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id_from);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id_from));
     }
 
     QMapIterator<QString, int> it(pR->getSpecialExits());
@@ -10047,9 +9661,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10078,29 +9690,22 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        if (isBackwardCompatibilityRequired) {
-            lua_pushstring(L, QString().toUtf8().constData());
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L, "getRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-            return 2;
+        if (!isBackwardCompatibilityRequired) {
+            return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
         }
-    } else {
-        if (pR->userData.contains(key)) {
-            lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
-            return 1;
-        } else {
-            if (isBackwardCompatibilityRequired) {
-                lua_pushstring(L, QString().toUtf8().constData());
-                return 1;
-            } else {
-                lua_pushnil(L);
-                lua_pushfstring(L, R"(getRoomUserData: bad argument #2 value (no user data with key:"%s" in room with id: %d).)", key.toUtf8().constData(), roomId);
-                return 2;
-            }
-        }
+        lua_pushstring(L, QString().toUtf8().constData());
+        return 1;
     }
+    if (!pR->userData.contains(key)) {
+        if (!isBackwardCompatibilityRequired) {
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "no user data with key '%1' in room with id %2").arg(key, QString::number(roomId)));
+        }
+        lua_pushstring(L, QString().toUtf8().constData());
+        return 1;
+    }
+    lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaUserData
@@ -10119,38 +9724,23 @@ int TLuaInterpreter::getAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                        "getAreaUserData: bad argument #2 value (\"key\" is not allowed to be an\n"
-                        "empty string).");
-        return 2;
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        if (pA->mUserData.contains(key)) {
-            lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "getAreaUserData: bad argument #2 value (no user data with key:\"%s\"\n"
-                            "in area with id:%d).",
-                            key.toUtf8().constData(),
-                            areaId);
-            return 2;
-        }
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
+    if (!pA->mUserData.contains(key)) {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "no user data with key '%1' in area with id %2").arg(key, QString::number(areaId)));
+    }
+    lua_pushstring(L, pA->mUserData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapUserData
@@ -10158,9 +9748,7 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -10169,14 +9757,11 @@ int TLuaInterpreter::getMapUserData(lua_State* L)
     }
     QString key{lua_tostring(L, 1)};
 
-    if (host.mpMap->mUserData.contains(key)) {
-        lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
-        return 1;
-    } else {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(getMapUserData: bad argument #1 value (no user data with key:"%s" in map).)", key.toUtf8().constData());
-        return 2;
+    if (!host.mpMap->mUserData.contains(key)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no user data with key '%1' in map").arg(key));
     }
+    lua_pushstring(L, host.mpMap->mUserData.value(key).toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomUserData
@@ -10184,9 +9769,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10210,14 +9793,11 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        pR->userData[key] = value;
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    pR->userData[key] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaUserData
@@ -10236,11 +9816,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
     }
     key = lua_tostring(L, 2);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                        "setAreaUserData: bad argument #2 value (\"key\" is not allowed to be an\n"
-                        "empty string).");
-        return 2;
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     if (!lua_isstring(L, 3)) {
@@ -10251,21 +9827,16 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        pA->mUserData[key] = value;
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
+    pA->mUserData[key] = value;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapUserData
@@ -10273,9 +9844,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QString key;
@@ -10285,9 +9854,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     }
     key = lua_tostring(L, 1);
     if (key.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, R"(setMapUserData: bad argument #1 value ("key" is not allowed to be an empty string).)");
-        return 2;
+        return warnArgumentValue(L, __func__, "key is not allowed to be an empty string");
     }
 
     if (!lua_isstring(L, 2)) {
@@ -10306,9 +9873,7 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getRoomUserDataKeys: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10320,19 +9885,16 @@ int TLuaInterpreter::getRoomUserDataKeys(lua_State* L)
     QStringList keys;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getRoomUserDataKeys: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        keys = pR->userData.keys();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushnumber(L, i + 1);
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    keys = pR->userData.keys();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllRoomUserData
@@ -10340,9 +9902,7 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllRoomUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10355,20 +9915,17 @@ int TLuaInterpreter::getAllRoomUserData(lua_State* L)
     QStringList values;
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllRoomUserData: bad argument #1 value (number %d is not a valid room id).", roomId);
-        return 2;
-    } else {
-        keys = pR->userData.keys();
-        values = pR->userData.values();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_pushstring(L, values.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
     }
+    keys = pR->userData.keys();
+    values = pR->userData.values();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_pushstring(L, values.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllAreaUserData
@@ -10376,9 +9933,7 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllAreaUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10391,20 +9946,17 @@ int TLuaInterpreter::getAllAreaUserData(lua_State* L)
     QStringList values;
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "getAllAreaUserData: bad argument #1 value (number %d is not a valid area id).", areaId);
-        return 2;
-    } else {
-        keys = pA->mUserData.keys();
-        values = pA->mUserData.values();
-        lua_newtable(L);
-        for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys.at(i).toUtf8().constData());
-            lua_pushstring(L, values.at(i).toUtf8().constData());
-            lua_settable(L, -3);
-        }
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid area id").arg(areaId));
     }
+    keys = pA->mUserData.keys();
+    values = pA->mUserData.values();
+    lua_newtable(L);
+    for (int i = 0; i < keys.size(); i++) {
+        lua_pushstring(L, keys.at(i).toUtf8().constData());
+        lua_pushstring(L, values.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAllMapUserData
@@ -10412,9 +9964,7 @@ int TLuaInterpreter::getAllMapUserData(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getAllMapUserData: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     QStringList keys;
@@ -10450,12 +10000,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "downloadFile: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -10486,9 +10031,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setRoomArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     int id;
@@ -10498,9 +10041,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     }
     id = lua_tointeger(L, 1);
     if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
 
     int areaId;
@@ -10508,30 +10049,22 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     if (lua_isnumber(L, 2)) {
         areaId = lua_tonumber(L, 2);
         if (areaId < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L,
-                            "setRoomArea: bad argument #2 value (number %d is not a valid area id greater\n"
-                            "than zero.  To remove a room's area, use resetRoomArea( roomId ) ).",
-                            areaId);
-            return 2;
-        } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setRoomArea: bad argument #2 value (number %d is not a valid area id as it does not exist).", areaId);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral(
+                "number %1 is not a valid area id greater than zero. "
+                "To remove a room's area, use resetRoomArea( roomId )").arg(areaId));
+        }
+        if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
+            return warnArgumentValue(L, __func__, QStringLiteral("area id %1 does not exist").arg(areaId));
         }
     } else if (lua_isstring(L, 2)) {
         areaName = lua_tostring(L, 2);
         // areaId will be zero if not found!
         if (areaName.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "setRoomArea: bad argument #2 value (area name cannot be empty).");
-            return 2;
+            return warnArgumentValue(L, __func__, "area name cannot be empty");
         }
         areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key(areaName, 0);
         if (!areaId) {
-            lua_pushnil(L);
-            lua_pushfstring(L, R"(setRoomArea: bad argument #2 value (area name "%s" does not exist).)", areaName.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("area name '%1' does not exist").arg(areaName));
         }
     } else {
         lua_pushfstring(L,
@@ -10573,13 +10106,9 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "resetRoomArea: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "resetRoomArea: bad argument #1 value (number %d is not a valid room id).", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(id));
     }
     bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
@@ -10619,21 +10148,19 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        if (symbol.isEmpty()) {
-            // Allow an empty string to be used to clear the symbol:
-            pR->mSymbol.clear();
-        } else {
-            // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
-            // handle/use/allow:
-            pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-        }
-        lua_pushboolean(L, true);
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+
+    if (symbol.isEmpty()) {
+        // Allow an empty string to be used to clear the symbol:
+        pR->mSymbol.clear();
+    } else {
+        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // handle/use/allow:
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomChar
@@ -10649,13 +10176,11 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        lua_pushstring(L, pR->mSymbol.toUtf8().constData());
-        return 1;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+
+    lua_pushstring(L, pR->mSymbol.toUtf8().constData());
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomCharColor
@@ -10700,9 +10225,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
 
     pR->mSymbolColor = QColor(r, g, b);
@@ -10725,9 +10248,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
 
     // Reset it to the default (and invalid) QColor:
@@ -10752,15 +10273,13 @@ int TLuaInterpreter::getRoomCharColor(lua_State* L)
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "room with id %d does not exist", id);
-        return 2;
-    } else {
-        lua_pushnumber(L, pR->mSymbolColor.red());
-        lua_pushnumber(L, pR->mSymbolColor.green());
-        lua_pushnumber(L, pR->mSymbolColor.blue());
-        return 3;
+        return warnArgumentValue(L, __func__, QStringLiteral("room with id %1 does not exist").arg(id));
     }
+
+    lua_pushnumber(L, pR->mSymbolColor.red());
+    lua_pushnumber(L, pR->mSymbolColor.green());
+    lua_pushnumber(L, pR->mSymbolColor.blue());
+    return 3;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomsByPosition
@@ -10793,9 +10312,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isnumber(L, 1)) {
@@ -10806,9 +10323,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 
     TArea* area = host.mpMap->mpRoomDB->getArea(id);
     if (!area) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "area with id %d does not exist", id);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("area with id %1 does not exist").arg(id));
     } else {
         lua_pushboolean(L, area->gridMode);
         return 1;
@@ -10857,9 +10372,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaRed = lua_tointeger(L, s);
     if (luaRed < 0 || luaRed >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(luaRed));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10868,9 +10381,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaGreen = lua_tointeger(L, s);
     if (luaGreen< 0 || luaGreen >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(luaGreen));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10880,9 +10391,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
     int luaBlue = lua_tointeger(L, s);
     if (luaBlue < 0 || luaBlue >  255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(luaBlue));
     }
 
     auto console = CONSOLE(L, windowName);
@@ -10909,17 +10418,13 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else if (lua_isnumber(L, s)) {
         r = static_cast<int>(lua_tonumber(L, s));
 
         if (!validRange(r)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (red value needs to be between 0-255, got %d!)", s, r);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
         }
     } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -10933,9 +10438,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     g = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(g)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (green value needs to be between 0-255, got %d!)", s, g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, ++s)) {
@@ -10945,9 +10448,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     b = static_cast<int>(lua_tonumber(L, s));
 
     if (!validRange(b)) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "setBgColor: bad argument #%d value (blue value needs to be between 0-255, got %d!)", s, b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
@@ -10956,9 +10457,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     } else if (lua_isnumber(L, ++s)) {
         alpha = static_cast<int>(lua_tonumber(L, s));
         if (!validRange(alpha)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "setBgColor: bad argument #%d value (alpha value needs to be between 0-255, got %d!)", s, alpha);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("alpha value %1 needs to be between 0-255").arg(alpha));
         }
     } else {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (optional alpha value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
@@ -11149,17 +10648,12 @@ int TLuaInterpreter::echo(lua_State* L)
         // results, we now return a true for that
         lua_pushboolean(L, true);
         return 1;
-    } else {
-        if (host.echoWindow(consoleName, displayText)) {
-            lua_pushboolean(L, true);
-            return 1;
-        } else {
-            lua_pushnil(L);
-            lua_pushfstring(
-                    L, R"(echo: bad argument #1 value (console/label "%s" does not exist, omit this {or use the default "main"} to send text to main console!))", consoleName.toUtf8().constData());
-            return 2;
-        }
     }
+    if (!host.echoWindow(consoleName, displayText)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("console/label '%1' does not exist").arg(consoleName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
@@ -11402,9 +10896,7 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.mpConsole->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -11563,9 +11055,7 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     if (lua_gettop(L)) {
@@ -11583,14 +11073,10 @@ int TLuaInterpreter::setDiscordApplicationID(lua_State* L)
                         lua_pushboolean(L, true);
                         return 1;
                     } else {
-                        lua_pushnil(L);
-                        lua_pushfstring(L, "%s does not appear to be a valid Discord application id", inputText.toUtf8().constData());
-                        return 2;
+                        return warnArgumentValue(L, __func__, QStringLiteral("'%1' does not appear to be a valid Discord application id").arg(inputText));
                     }
                 } else {
-                    lua_pushnil(L);
-                    lua_pushfstring(L, "%s can not be converted to the expected numeric Discord application id", inputText.toUtf8().constData());
-                    return 2;
+                    return warnArgumentValue(L, __func__, QStringLiteral("'%1' can not be converted to the expected numeric Discord application id").arg(inputText));
                 }
             } else {
                 // Empty string input - to reset to default the same as the no
@@ -11619,9 +11105,7 @@ int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     }
 
     lua_pushboolean(L, pMudlet->mDiscord.usingMudletsDiscordID(&host));
@@ -11636,13 +11120,9 @@ int TLuaInterpreter::setDiscordLargeIcon(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11663,13 +11143,9 @@ int TLuaInterpreter::getDiscordLargeIcon(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getLargeImage(&host).toUtf8().constData());
@@ -11684,13 +11160,9 @@ int TLuaInterpreter::setDiscordLargeIconText(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon text is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11711,13 +11183,9 @@ int TLuaInterpreter::getDiscordLargeIconText(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIconText)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon text is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord large icon text is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getLargeImageText(&host).toUtf8().constData());
@@ -11732,13 +11200,9 @@ int TLuaInterpreter::setDiscordSmallIcon(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord small icon is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord small icon is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11759,13 +11223,9 @@ int TLuaInterpreter::getDiscordSmallIcon(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord small icon is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord small icon is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getSmallImage(&host).toUtf8().constData());
@@ -11780,13 +11240,9 @@ int TLuaInterpreter::setDiscordSmallIconText(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord small icon text is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11807,13 +11263,9 @@ int TLuaInterpreter::getDiscordSmallIconText(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetSmallIconText)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord small icon text is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord small icon text is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getSmallImageText(&host).toUtf8().constData());
@@ -11828,13 +11280,9 @@ int TLuaInterpreter::setDiscordDetail(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11855,13 +11303,9 @@ int TLuaInterpreter::getDiscordDetail(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getDetailText(&host).toUtf8().constData());
@@ -11876,17 +11320,11 @@ int TLuaInterpreter::setDiscordGame(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetDetail)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord detail is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord detail is disabled in settings for privacy");
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetLargeIcon)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord large icon is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord large icon is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11908,13 +11346,9 @@ int TLuaInterpreter::setDiscordState(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 
     if (lua_isstring(L, 1)) {
@@ -11935,13 +11369,9 @@ int TLuaInterpreter::getDiscordState(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetState)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord state is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord state is disabled in settings for privacy");
     }
 
     lua_pushfstring(L, pMudlet->mDiscord.getStateText(&host).toUtf8().constData());
@@ -11956,13 +11386,9 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -11972,9 +11398,7 @@ int TLuaInterpreter::setDiscordElapsedStartTime(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushnil(L);
-            lua_pushstring(L, "the timestamp must be zero to clear the \"elapsed:\" time or an epoch time value from the recent past");
-            return 2;
+            return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'elapsed:' time or an epoch time value from the recent past");
         }
     } else {
         lua_pushfstring(L, "setDiscordElapsedStartTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
@@ -11990,13 +11414,9 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
     if (lua_isnumber(L, 1)) {
@@ -12006,9 +11426,7 @@ int TLuaInterpreter::setDiscordRemainingEndTime(lua_State* L)
             lua_pushboolean(L, true);
             return 1;
         } else {
-            lua_pushnil(L);
-            lua_pushstring(L, "the timestamp must be zero to clear the \"remaining:\" time or an epoch time value in the recent future");
-            return 2;
+            return warnArgumentValue(L, __func__, "the timestamp must be zero to clear the 'remaining:' time or an epoch time value in the recent future");
         }
     } else {
         lua_pushfstring(L, "setDiscordRemainingEndTime: bad argument #%d type (epoch time as number, got %s!)", 1, luaL_typename(L, 1));
@@ -12023,13 +11441,9 @@ int TLuaInterpreter::getDiscordTimeStamps(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetTimeInfo)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord time is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord time is disabled in settings for privacy");
     }
 
     QPair<int64_t, int64_t> timeStamps = mudlet::self()->mDiscord.getTimeStamps(&host);
@@ -12046,13 +11460,9 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
 
     auto result = discordApiEnabled(L);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord party info is disabled in settings for privacy");
     }
 
     int64_t partySize = -1;
@@ -12060,9 +11470,7 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     if (lua_isnumber(L, 1)) {
         partySize = lua_tointeger(L, 1);
         if (partySize < 0) {
-            lua_pushnil(L);
-            lua_pushstring(L, "the current party size must be zero or more");
-            return 2;
+            return warnArgumentValue(L, __func__, "the current party size must be zero or more");
         }
     } else {
         lua_pushfstring(L, "setDiscordParty: bad argument #%d type (current party size as number expected, got %s!)", 1, luaL_typename(L, 1));
@@ -12072,9 +11480,7 @@ int TLuaInterpreter::setDiscordParty(lua_State* L)
     if (lua_gettop(L) > 1) {
         partyMax = lua_tointeger(L, 2);
         if (partyMax < 0) {
-            lua_pushnil(L);
-            lua_pushstring(L, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
-            return 2;
+            return warnArgumentValue(L, __func__, "the optional party maximum size must be zero (to remove the party details) or more (to set the maximum)");
         }
 
         pMudlet->mDiscord.setParty(&host, static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partySize)), static_cast<int>(qMin(static_cast<int64_t>(INT_MAX), partyMax)));
@@ -12094,13 +11500,9 @@ int TLuaInterpreter::getDiscordParty(lua_State* L)
 
     auto result = discordApiEnabled(L, true);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, result.second);
     } else if (!(host.mDiscordAccessFlags & Host::DiscordSetPartyInfo)) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Access to Discord party info is disabled in settings for privacy");
-        return 2;
+        return warnArgumentValue(L, __func__, "access to Discord party info is disabled in settings for privacy");
     }
 
     QPair<int, int> partyValues = pMudlet->mDiscord.getParty(&host);
@@ -12351,9 +11753,7 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.changeModuleSync(module, QLatin1String("1")); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     auto moduleTable = mudlet::self()->moduleTable;
@@ -12379,9 +11779,7 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.changeModuleSync(module, QLatin1String("0")); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     auto moduleTable = mudlet::self()->moduleTable;
@@ -12407,9 +11805,7 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
     Host& host = getHostFromLua(L);
 
     if (auto [success, message] = host.getModuleSync(module); !success) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     } else if (message == QLatin1String("1")) {
         lua_pushboolean(L, true);
         return 1;
@@ -12424,9 +11820,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
-        lua_pushnil(L);
-        lua_pushstring(L, "setDefaultAreaVisible: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     if (!lua_isboolean(L, 1)) {
@@ -12620,20 +12014,17 @@ int TLuaInterpreter::sendIrc(lua_State* L)
 
     // wait for our client to be ready before sending messages.
     if (!pHost->mpDlgIRC->mReadyForSending) {
-        lua_pushnil(L);
-        lua_pushstring(L, "not ready to send");
-        return 2;
+        return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    QPair<bool, QString> rval = pHost->mpDlgIRC->sendMsg(target, msg);
+    QPair<bool, QString> result = pHost->mpDlgIRC->sendMsg(target, msg);
 
-    if (rval.first) {
-        lua_pushboolean(L, true);
-    } else {
-        lua_pushnil(L);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
-    lua_pushstring(L, rval.second.toUtf8().constData());
-    return 2;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getIrcNick
@@ -12706,8 +12097,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     }
 
     if (cHostName.isEmpty()) {
-        lua_pushboolean(L, false);
-        lua_pushstring(L, error.toUtf8().constData());
+        return warnArgumentValue(L, __func__, error, true);
     } else {
         lua_pushboolean(L, true);
         lua_pushstring(L, cHostName.toUtf8().constData());
@@ -12725,17 +12115,13 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
     QString nick = lua_tostring(L, 1);
 
     if (nick.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "nick must not be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "nick must not be empty");
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcNickName(pHost, nick);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save nick name, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save nick name, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -12753,9 +12139,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     addr = lua_tostring(L, 1);
     if (addr.empty()) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "hostname must not be empty");
-        return 2;
+        return warnArgumentValue(L, __func__, "hostname must not be empty");
     }
     if (!lua_isnoneornil(L, 2)) {
         if (!lua_isnumber(L, 2)) {
@@ -12764,25 +12148,19 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
         }
         port = lua_tointeger(L, 2);
         if (port > 65535 || port < 1) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "invalid port number %d given, if supplied it must be in range 1 to 65535, {defaults to 6667 if not provided}", port);
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromStdString(addr));
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save hostname, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save hostname, reason: %1").arg(result.second));
     }
 
     result = dlgIRC::writeIrcHostPort(pHost, port);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save port, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save port, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -12810,18 +12188,14 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
         lua_pop(L, 1);
     }
 
-    if (newchannels.count() == 0) {
-        lua_pushnil(L);
-        lua_pushstring(L, "channels must contain at least 1 valid channel name");
-        return 2;
+    if (newchannels.empty()) {
+        return warnArgumentValue(L, __func__, "no (valid) channel names provided");
     }
 
     Host* pHost = &getHostFromLua(L);
     QPair<bool, QString> result = dlgIRC::writeIrcChannels(pHost, newchannels);
     if (!result.first) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "unable to save channels, reason: %s", result.second.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("unable to save channels, reason: %1").arg(result.second));
     }
 
     lua_pushboolean(L, true);
@@ -13260,9 +12634,7 @@ int TLuaInterpreter::ttsClearQueue(lua_State* L)
         index--;
 
         if (index < 0 || index >= speechQueue.size()) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "index (%d) out of bounds for queue size %d", index + 1, speechQueue.size());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("index %1 out of bounds for queue size %2").arg(index + 1, speechQueue.size()));
         }
 
         speechQueue.remove(index);
@@ -13279,13 +12651,9 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (speechUnit->state() == QTextToSpeech::Ready) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "not speaking any text");
-        return 2;
+        return warnArgumentValue(L, __func__, "not speaking any text");
     } else if (speechUnit->state() == QTextToSpeech::BackendError) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "error with the backend");
-        return 2;
+        return warnArgumentValue(L, __func__, "error with the computer's TTS engine");
     }
 
     lua_pushstring(L, speechCurrent.toUtf8().constData());
@@ -13332,14 +12700,12 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
     newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> results = host.mTelnet.setEncoding(newEncoding);
 
-    if (results.first) {
-        lua_pushboolean(L, true);
-        return 1;
+    if (!results.first) {
+        return warnArgumentValue(L, __func__, results.second);
     }
 
-    lua_pushnil(L);
-    lua_pushfstring(L, results.second.toUtf8().constData());
-    return 2;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getServerEncoding
@@ -14956,12 +14322,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "putHTTP: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1.").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -15003,9 +14364,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
         }
 
         fileToUpload = file.readAll();
@@ -15038,12 +14397,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "getHTTP: bad argument #1 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -15106,12 +14460,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
 
     QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "postHTTP: bad argument #2 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -15153,9 +14502,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
-            lua_pushnil(L);
-            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
-            return 2;
+            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
         }
 
         fileToUpload = file.readAll();
@@ -15187,12 +14534,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
-        lua_pushnil(L);
-        lua_pushfstring(L,
-                        "deleteHTTP: bad argument #1 value (url is not deemed valid), validation\n"
-                        "produced the following error message:\n%s.",
-                        url.errorString().toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -15262,10 +14604,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 
     QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create temporary directory to extract the zip into");
-        return 2;
+        return warnArgumentValue(L, __func__, "couldn't create temporary directory to extract the zip into");
     }
 
     extractLocation = QDir::fromNativeSeparators(extractLocation);
@@ -15275,10 +14614,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 
     QDir dir;
     if (!dir.mkpath(extractLocation)) {
-        lua_pushnil(L);
-        lua_pushstring(L,
-                       "couldn't create output directory to put the extracted files into");
-        return 2;
+        return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
 
     auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
@@ -16406,7 +15742,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
         auto ids = mpHost->getScriptUnit()->findScriptId(parent);
         auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
         if (!pParentScript) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent)); //parent not found
         }
         pS = new TScript(pParentScript, mpHost);
     }
@@ -16463,7 +15799,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
         // API to handle more than one potential parent with the same name:
         auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
         if (!pParentTimer) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTimer(pParentTimer, mpHost);
     }
@@ -16522,7 +15858,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     } else {
         TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TAlias(pP, mpHost);
     }
@@ -16563,7 +15899,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     } else {
         TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TKey(pP, mpHost);
     }
@@ -16754,7 +16090,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16782,7 +16118,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16810,7 +16146,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16837,7 +16173,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     } else {
         TTrigger* pP = mpHost->getTriggerUnit()->findTrigger(parent);
         if (!pP) {
-            return std::make_pair(-1, QStringLiteral("parent \"%1\" not found").arg(parent));
+            return std::make_pair(-1, QStringLiteral("parent '%1' not found").arg(parent));
         }
         pT = new TTrigger(pP, mpHost);
         pT->setRegexCodeList(regexList, propertyList);
@@ -16943,9 +16279,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "getMapSelection: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     lua_newtable(L);
@@ -17009,9 +16343,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -17021,10 +16353,8 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     QString text{lua_tostring(L, 1)};
 
     QPair<bool, QString> result = host.mpConsole->addWordToSet(text);
-    if (!result.first){
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
     lua_pushboolean(L, true);
     return 1;
@@ -17038,9 +16368,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     if (!lua_isstring(L, 1)) {
@@ -17050,10 +16378,8 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     QString text{lua_tostring(L, 1)};
 
     QPair<bool, QString> result = host.mpConsole->removeWordFromSet(text);
-    if (!result.first){
-        lua_pushnil(L);
-        lua_pushstring(L, result.second.toUtf8().constData());
-        return 2;
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
     lua_pushboolean(L, true);
     return 1;
@@ -17081,9 +16407,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         }
         useUserDictionary = lua_toboolean(L, 2);
         if (useUserDictionary && !hasUserDictionary) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-            return 2;
+            return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
 
@@ -17095,9 +16419,8 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
-            return 2;
+            return warnArgumentValue(L, __func__,
+                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
@@ -17129,9 +16452,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         }
         useUserDictionary = lua_toboolean(L, 2);
         if (useUserDictionary && !hasUserDictionary) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-            return 2;
+            return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
         }
     }
 
@@ -17145,9 +16466,8 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
         if (!handle) {
-            lua_pushnil(L);
-            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
-            return 2;
+            return warnArgumentValue(L, __func__,
+                "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
 
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
@@ -17172,9 +16492,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!hasUserDictionary) {
-        lua_pushnil(L);
-        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
-        return 2;
+        return warnArgumentValue(L, __func__, "no user dictionary enabled in the preferences for this profile");
     }
 
     // This may stall if this is accessing the shared user dictionary and that
@@ -17542,9 +16860,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int r = lua_tonumber(L, 1);
     if (r < 0 || r > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -17553,9 +16869,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int g = lua_tonumber(L, 2);
     if (g < 0 || g > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, 3)) {
@@ -17564,9 +16878,7 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
     }
     int b = lua_tonumber(L, 3);
     if (b < 0 || b > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     auto& host = getHostFromLua(L);
@@ -17596,9 +16908,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int r = lua_tonumber(L, 1);
     if (r < 0 || r > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", r);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("red value %1 needs to be between 0-255").arg(r));
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -17607,9 +16917,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int g = lua_tonumber(L, 2);
     if (g < 0 || g > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "green component value %d out of range (0 to 255)", g);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("green value %1 needs to be between 0-255").arg(g));
     }
 
     if (!lua_isnumber(L, 3)) {
@@ -17618,9 +16926,7 @@ int TLuaInterpreter::setMapRoomExitsColor(lua_State* L)
     }
     int b = lua_tonumber(L, 3);
     if (b < 0 || b > 255) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "red component value %d out of range (0 to 255)", b);
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("blue value %1 needs to be between 0-255").arg(b));
     }
 
     auto& host = getHostFromLua(L);

@@ -618,7 +618,7 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
@@ -631,7 +631,7 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
         QStringList moduleStringList = mInstalledModules[moduleName];
         return {true, moduleStringList[1]};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -1077,7 +1077,7 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         while (itStopWatch.hasNext()) {
             itStopWatch.next();
             if (itStopWatch.value()->name() == name) {
-                return qMakePair(0, QStringLiteral("a stopwatch with id %1 called \"%2\" already exists").arg(QString::number(itStopWatch.key()), name));
+                return qMakePair(0, QStringLiteral("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
     }
@@ -1168,7 +1168,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1178,12 +1178,12 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already running").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already running").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::startStopWatch(int id)
@@ -1207,7 +1207,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1217,12 +1217,12 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already stopped").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already stopped").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::stopStopWatch(const int id)
@@ -1246,7 +1246,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1259,13 +1259,13 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QStringLiteral("the first unnamed stopwatch (id:%1) was already reset").arg(watchId));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already reset").arg(name, QString::number(watchId)));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already reset").arg(name, QString::number(watchId)));
         }
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::resetStopWatch(const int id)
@@ -1319,7 +1319,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             itStopWatch.next();
             if (itStopWatch.value()->name() == newName) {
                 if (itStopWatch.key() != id) {
-                    return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
+                    return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
                 } else {
                     // Trivial case - the stopwatch is already called by the NEW name:
                     return qMakePair(true, QString());
@@ -1379,12 +1379,12 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
         if (currentName.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(currentName));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(currentName));
         }
     }
 
     if (isAlreadyUsed) {
-        return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
+        return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
     }
 
     if (currentName == newName) {
@@ -2681,7 +2681,7 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     auto pC = mpConsole->mSubConsoleMap.value(windowName);
     if (!pC) {
         QStringList failMessage;
-        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
+        failMessage << QStringLiteral("mini console, user window or buffer '%1' not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
     return qMakePair(true, pC->getLines(lineFrom, lineTo));
@@ -2700,7 +2700,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
+        return {false, QStringLiteral("label with the name '%1' already exists").arg(name)};
     }
 
     auto hostName(getName());
@@ -2733,7 +2733,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         console->setFontSize(10);
     }
     if (!console || !dockwidget) {
-        return {false, QStringLiteral("cannot create userwindow \"%1\": name collision").arg(name)};
+        return {false, QStringLiteral("userwindow '%1' already exists").arg(name)};
     }
 
     // The name is used in BOTH the QMaps of all user created TConsole
@@ -2803,10 +2803,10 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         if (!pW) {
             pC->resize(width, height);
             pC->move(x, y);
-            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+            return {false, QStringLiteral("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
         }
     }
-    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
+    return {false, QStringLiteral("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
@@ -2823,9 +2823,9 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
             return {true, QString()};
         }
     } else if (pL) {
-        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+        return {false, QStringLiteral("label '%1' already exists").arg(name)};
     } else if (pC) {
-        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
+        return {false, QStringLiteral("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
     return {false, QString()};
 
@@ -3098,7 +3098,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pN = mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
-        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+        return {false, QStringLiteral("window '%1' not found").arg(windowname)};
     }
 
     if (pD) {
@@ -3137,7 +3137,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {true, QString()};
     }
 
-    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+    return {false, QStringLiteral("element '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
@@ -3639,4 +3639,3 @@ bool Host::commitLayoutUpdates(bool flush)
     mToolbarLayoutChanges.clear();
     return updated;
 }
-

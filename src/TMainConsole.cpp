@@ -116,7 +116,7 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
         pW->setStyleSheet(userWindowStyleSheet);
         return {true, QString()};
     }
-    return {false, QStringLiteral("userwindow name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("userwindow name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
@@ -131,7 +131,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
         pN->setStyleSheet(styleSheet);
         return {true, QString()};
     }
-    return {false, QStringLiteral("command-line name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("command-line name '%1' not found").arg(name)};
 }
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
@@ -543,7 +543,7 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
@@ -561,7 +561,7 @@ std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, cons
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int shape)
@@ -577,11 +577,11 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
         } else if (shape == -1) {
             pL->unsetCursor();
         } else {
-            return {false, QStringLiteral("cursor shape \"%1\" not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
+            return {false, QStringLiteral("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
         }
         return {true, QString()};
     }
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
@@ -605,7 +605,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
         return {true, QString()};
     }
 
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+    return {false, QStringLiteral("label name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
@@ -1031,7 +1031,7 @@ std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, c
 
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        return {false, QStringLiteral("user window name \"%1\" not found").arg(name)};
+        return {false, QStringLiteral("user window name '%1' not found").arg(name)};
     }
 
     // If it does not have an mType of UserWindow then it does not in a
