@@ -44,6 +44,7 @@ void MapInfoContributorManager::registerContributor(QString name, MapInfoCallbac
 
 void MapInfoContributorManager::removeContributor(QString name)
 {
+    mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
     contributors.remove(name);
 }

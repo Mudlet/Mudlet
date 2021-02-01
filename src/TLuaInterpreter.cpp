@@ -17738,7 +17738,6 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
     
     host.mpMap->mpMapper->mMapInfoContributorManager->removeContributor(name);
     host.mpMap->mpMapper->updateInfoContributors();
-    host.mMapInfoContributors.remove(name);
     lua_pushboolean(L, true);
     return 1;
 }
