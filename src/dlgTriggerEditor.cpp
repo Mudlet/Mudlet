@@ -811,6 +811,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+        if (i == 0) {
+            pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
+        }
     }
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:

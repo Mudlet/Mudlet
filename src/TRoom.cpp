@@ -581,43 +581,36 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 
 void TRoom::calcRoomDimensions()
 {
+    min_x = x;
+    max_x = x;
+    min_y = y;
+    max_y = y;
+
     if (customLines.empty()) {
         return;
     }
-    min_x = 0.0;
-    min_y = 0.0;
-    max_x = 0.0;
-    max_y = 0.0;
-    bool needInit = true;
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
         it.next();
-        const QList<QPointF>& _pL = it.value();
-        if (_pL.empty()) {
+        const QList<QPointF>& pointsInLine = it.value();
+        if (pointsInLine.empty()) {
             continue;
         }
-        if (needInit) {
-            needInit = false;
-            min_x = _pL[0].x();
-            max_x = min_x;
-            min_y = _pL[0].y();
-            max_y = min_y;
-        }
-        for (auto point : _pL) {
-            qreal _x = point.x();
-            qreal _y = point.y();
-            if (_x < min_x) {
-                min_x = _x;
+        for (auto pointInLine : pointsInLine) {
+            qreal pointX = pointInLine.x();
+            qreal pointY = pointInLine.y();
+            if (pointX < min_x) {
+                min_x = pointX;
             }
-            if (_x > max_x) {
-                max_x = _x;
+            if (pointX > max_x) {
+                max_x = pointX;
             }
-            if (_y < min_y) {
-                min_y = _y;
+            if (pointY < min_y) {
+                min_y = pointY;
             }
-            if (_y > max_y) {
-                max_y = _y;
+            if (pointY > max_y) {
+                max_y = pointY;
             }
         }
     }
