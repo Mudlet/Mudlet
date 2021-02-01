@@ -3737,7 +3737,12 @@ int TLuaInterpreter::setWindow(lua_State* L)
     bool show = true;
 
     QString windowname {WINDOW_NAME(L, 1)};
-    QString name = getVerifiedString(L, __func__, 2, "element name");
+
+    if (lua_type(L, 2) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    QString name{lua_tostring(L, 2)};
 
     if (n > 2) {
         x = getVerifiedInt(L, __func__, 3, "x-coordinate");
