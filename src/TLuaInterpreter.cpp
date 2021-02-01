@@ -12233,9 +12233,7 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
 
     textToSay = textToSay.trimmed();
     if (textToSay.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        lua_pushnil(L);
-        lua_pushfstring(L, "skipped empty text to speak (TTS)");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("skipped empty text to speak (TTS)"));
     }
 
     std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
