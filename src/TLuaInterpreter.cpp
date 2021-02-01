@@ -3775,11 +3775,10 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
     int x = -1, y = -1, width = -1, height = -1;
     if (n == 1) {
         if (lua_type(L, 1) != LUA_TSTRING) {
-                lua_pushfstring(L, "openMapWidget: bad argument #1 type (area as string expected, got %s!)", luaL_typename(L, 1));
-                return lua_error(L);
-            }
-            area = lua_tostring(L, 1);
+            lua_pushfstring(L, "openMapWidget: bad argument #1 type (area as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
         }
+        area = lua_tostring(L, 1);
     }
 
     if (n > 1) {
