@@ -21,7 +21,7 @@ function showMultimatches()
   echo("\n-------------------------------------------------------");
   for k, v in ipairs(multimatches) do
     echo("\nregex " .. k .. " captured: (multimatches[" .. k .. "][1-n])");
-    for k2, v2 in ipairs(v) do
+    for k2, v2 in pairs(v) do
       echo("\n          key=" .. k2 .. " value=" .. v2);
     end
   end
