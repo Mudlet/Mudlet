@@ -51,7 +51,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
                  "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
-                 "Cleft of Dimensions"})
+                 "Cleft of Dimensions", "CoreMUD"})
 {
     setupUi(this);
 
@@ -769,7 +769,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
                              "or any of the many RPG systems based on the d20 ruleset.");
     } else if (hostUrl == QStringLiteral("stickmud.com")) {
-        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Upon maturing to level 5, join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
+        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -809,6 +809,10 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QStringLiteral("fierymud.org")) {
         return QStringLiteral(
                 "The original vision of FieryMUD was to create a challanging MUD for advanced players. This new reborne Fiery is a hope to bring back the goals of the past by inflicting certain death on unsuspecting players. FieryMUD will continue to grow and change through the coming years and those players who seek challenge and possess imagination will come in search of what the 3D world fails to offer them.");
+
+    } else if (hostUrl == QStringLiteral("coremud.org")) {
+        return QStringLiteral("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\".\n\nCore is one of the most distant settlements known to mankind, most famous for its lucrative yet oppressive mines, but more than mankind can be found here...\n\nCore is a diverse group of 9 races in total, all vying for recognition or profits, or both, working for The Company, the megalithic entity running the colony itself.\n\nTo The Company, everything is secondary to profits.\n\nIt is up to you to determine how best to survive in this environment, whether that be through combat training, superior mining skills, or technical prowess.\n\nCore MUD is always free to play and features a fun and supportive atmosphere. Roleplaying is encouraged but not mandatory.\n\nMining is your primary source of income, but there are multiple ways to scrape together a few credits... or a few million.\n\nCore Mud also features an economy which is player-driven.  Players own merchandise shops featuring energy weaponry or useful tools, pubs featuring assorted alcoholic (of course) and non-alcoholic beverages, and clinics for healing, to name a few.\n\nCome join us today!");
+
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -900,6 +904,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_url = QStringLiteral("mudlet.org");
+        }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            host_url = QStringLiteral("coremud.org");
         }
     }
     host_name_entry->setText(host_url);
@@ -1007,8 +1014,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("8680");
-            port_ssl_tsl->setChecked(true);
+            host_port = QStringLiteral("7680");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             host_port = QStringLiteral("4000");
@@ -1020,6 +1027,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Fierymud")) {
             host_port = QStringLiteral("4000");
+        }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            host_port = QStringLiteral("4000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_port = QStringLiteral("23");
@@ -1150,6 +1161,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
                                  "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n");
+        }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            val = QStringLiteral("<center><a href='https://coremud.org/'>coremud.org</a></center>");
         }
     }
     website_entry->setText(val);
@@ -1441,6 +1455,12 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("cleftofdimensions.net"), 0, mudServer), QStringLiteral(":/icons/cleftofdimensions.png"));
+    }
+
+    mudServer = QStringLiteral("CoreMUD");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pItem = new QListWidgetItem();
+        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("coremud.org"), 0, mudServer), QStringLiteral(":/icons/coremud_icon.jpg"));
     }
 
 
