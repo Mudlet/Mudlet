@@ -3444,11 +3444,11 @@ int TLuaInterpreter::createMapper(lua_State* L)
     QString windowName = "";
     int counter = 1;
 
-    if (n > 4 && lua_type(L, 1) != LUA_TSTRING) {
-        lua_pushfstring(L, "createMapper: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (n > 4 && lua_type(L, 1) == LUA_TSTRING) {
+    if (n > 4) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "createMapper: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
         windowName = lua_tostring(L, 1);
         counter++;
         if (isMain(windowName)) {
