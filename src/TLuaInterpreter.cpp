@@ -3775,6 +3775,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         if (!validRange(alpha)) {
             return warnArgumentValue(L, __func__, QStringLiteral("alpha value %1 needs to be between 0-255").arg(alpha));
         }
+    }
 
     if (isMain(windowName)) {
         host.mBgColor.setRgb(r, g, b, alpha);
