@@ -1630,10 +1630,11 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     const double longPositionFactor = 0.45;
     const double innerThresholdFactor = 0.225;
     const double outerThresholdFactor = 0.45;
-    const double middleAngleFactor = 170.0;
+    const double middleAngleFactor = 165.0;
     const double middleFiddleFactor = 0.25;
-    const double endAngleFactor = 160.0;
-    const double endFiddleFactor = 0.30;
+    const double endAngleFactor = 150.0;
+    const double endFiddleFactor = 0.50;
+    const float doorWidthFactor = 1.5;
     bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
     bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
     QLineF line{exitLine};
@@ -1668,6 +1669,7 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
 
     painter.save();
     QPen doorPen = painter.pen();
+    doorPen.setWidthF(painter.pen().widthF() * doorWidthFactor);
     doorPen.setCosmetic(mMapperUseAntiAlias);
     doorPen.setStyle(Qt::SolidLine);
     doorPen.setCapStyle(Qt::RoundCap);
