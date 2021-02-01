@@ -3090,7 +3090,11 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString name = getVerifiedString(L, __func__, 1, "name");
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "openUserWindow:  bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name{lua_tostring(L, 1)};
 
     bool loadLayout = true;
     if (n > 1) {
@@ -3102,7 +3106,11 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     }
     QString area = QString();
     if (n > 3) {
-        area = getVerifiedString(L, __func__, 4, "area", true);
+        if (lua_type(L, 4) != LUA_TSTRING) {
+            lua_pushfstring(L, "openUserWindow: bad argument #4 type (area as string expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        }
+        area = lua_tostring(L, 4);
     }
 
     Host& host = getHostFromLua(L);
