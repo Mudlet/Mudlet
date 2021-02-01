@@ -7,7 +7,6 @@
 
 #include "TMxpContext.h"
 #include "TMxpClient.h"
-#include "TMediaData.h"
 
 class TMxpStubContext : public TMxpContext {
 public:
@@ -24,12 +23,12 @@ public:
         return mSupportedElements;
     }
 
-    TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag)
     {
         return MXP_TAG_HANDLED;
     }
 
-    void handleContent(char ch) override
+    virtual void handleContent(char ch)
     {
 
     }

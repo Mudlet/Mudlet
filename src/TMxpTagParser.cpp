@@ -44,11 +44,10 @@ static bool isTag(const QString& tagString)
 QList<QSharedPointer<MxpNode>> TMxpTagParser::parseToMxpNodeList(const QString& tagText, bool ignoreText) const
 {
     TMxpNodeBuilder nodeBuilder(ignoreText);
-    std::string tagStdStr = tagText.toStdString();
 
     QList<QSharedPointer<MxpNode>> result;
     for (int i = 0; i < tagText.length(); ++i) {
-        if (nodeBuilder.accept(tagStdStr[i])) {
+        if (nodeBuilder.accept(tagText.at(i).toLatin1())) {
             result.append(QSharedPointer<MxpNode>(nodeBuilder.buildNode()));
             --i;
         }

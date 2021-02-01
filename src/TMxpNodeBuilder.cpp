@@ -63,7 +63,7 @@ bool TMxpNodeBuilder::accept(char ch)
         }
     } else if (!mOptionIgnoreText) { // text
         mIsInsideText = true;
-        mCurrentText.push_back(ch);
+        mCurrentText.append(ch);
         return false;
     }
 
@@ -80,7 +80,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
         if (!acceptAttribute(ch)) {
             return false;
         } else {
-            if (!mCurrentAttrName.empty()) {
+            if (!mCurrentAttrName.isEmpty()) {
                 processAttribute();
             }
             resetCurrentAttribute();
@@ -97,7 +97,7 @@ bool TMxpNodeBuilder::acceptTag(char ch)
     }
 
     if (ch == '/') {
-        mIsEndTag = mCurrentTagName.empty();
+        mIsEndTag = mCurrentTagName.isEmpty();
         mIsEmptyTag = !mIsEndTag;
         return false;
     }
@@ -115,10 +115,10 @@ bool TMxpNodeBuilder::acceptTag(char ch)
 }
 void TMxpNodeBuilder::processAttribute()
 {
-    if (mCurrentTagName.empty()) {
+    if (mCurrentTagName.isEmpty()) {
         mCurrentTagName = mCurrentAttrName;
-    } else if (!mCurrentAttrName.empty()) {
-        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName.c_str(), mCurrentAttrValue.c_str()));
+    } else if (!mCurrentAttrName.isEmpty()) {
+        mCurrentTagAttrs.append(MxpTagAttribute(mCurrentAttrName, mCurrentAttrValue));
     }
 }
 void TMxpNodeBuilder::resetCurrentTag()
@@ -136,7 +136,7 @@ bool TMxpNodeBuilder::acceptAttribute(char ch)
 {
     mIsInsideAttr = true;
 
-    std::string& buffer = mReadingAttrValue ? mCurrentAttrValue : mCurrentAttrName;
+    QString& buffer = mReadingAttrValue ? mCurrentAttrValue : mCurrentAttrName;
     if (!acceptSequence(ch, buffer)) {
         return false;
     }
@@ -160,7 +160,7 @@ void TMxpNodeBuilder::resetCurrentAttribute()
     mIsInsideAttr = false;
     resetCurrentSequence();
 }
-bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
+bool TMxpNodeBuilder::acceptSequence(char ch, QString& buffer)
 {
     if (mHasSequence) {
         mHasSequence = false;
@@ -203,7 +203,7 @@ bool TMxpNodeBuilder::acceptSequence(char ch, std::string& buffer)
 
     mSequenceHasSpaces = mSequenceHasSpaces || QChar(ch).isSpace();
 
-    buffer.push_back(ch);
+    buffer.append(ch);
     return false;
 }
 void TMxpNodeBuilder::resetCurrentSequence()
@@ -215,14 +215,14 @@ void TMxpNodeBuilder::resetCurrentSequence()
 }
 MxpTag* TMxpNodeBuilder::buildTag()
 {
-    MxpTag* result = mIsEndTag ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName.c_str())) : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName.c_str(), mCurrentTagAttrs, mIsEmptyTag));
+    MxpTag* result = mIsEndTag ? static_cast<MxpTag*>(new MxpEndTag(mCurrentTagName)) : static_cast<MxpTag*>(new MxpStartTag(mCurrentTagName, mCurrentTagAttrs, mIsEmptyTag));
     resetCurrentTag();
 
     return result;
 }
 MxpNode* TMxpNodeBuilder::buildNode()
 {
-    MxpNode* node = mIsText ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText.c_str())) : static_cast<MxpNode*>(buildTag());
+    MxpNode* node = mIsText ? static_cast<MxpNode*>(new MxpTextNode(mCurrentText)) : static_cast<MxpNode*>(buildTag());
     mCurrentText.clear();
     mHasNode = false;
     return node;
