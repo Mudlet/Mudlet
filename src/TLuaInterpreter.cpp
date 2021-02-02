@@ -14549,7 +14549,6 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
                 lua_pushstring(L, name.toUtf8().constData());
                 lua_pushstring(L, capture.toUtf8().constData());
                 lua_settable(L, -3);
-            
             }
             lua_settable(L, -3); //matches in regex
         }
