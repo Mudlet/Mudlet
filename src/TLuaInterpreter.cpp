@@ -10012,13 +10012,13 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file "
-                                                        << reply->url().toString() << "\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: " << bytesDownloaded << "/" << totalBytes
+                                                        << " bytes ready for " << reply->url().toString() << "\n" >> 0;
         }
     });
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: script is downloading from " << reply->url().toString() << "\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: start download from " << reply->url().toString() << "\n" >> 0;
     }
 
     lua_pushboolean(L, true);
