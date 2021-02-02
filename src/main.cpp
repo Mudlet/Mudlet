@@ -496,6 +496,8 @@ int main(int argc, char* argv[])
         if (mudlet::self()->storingPasswordsSecurely()) {
             mudlet::self()->migratePasswordsToSecureStorage();
         }
+
+        mudlet::self()->updateMudletDiscordInvite();
     });
 
     app->restoreOverrideCursor();
