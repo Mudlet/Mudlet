@@ -2351,7 +2351,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDialogLock) {
+    if (mDialogLock || (event->buttons() & Qt::RightButton)) {
         return;
     }
     int x = event->x();
@@ -2821,9 +2821,42 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
         }
 
+        auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+        auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
-            auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+
+            mMultiRect = QRect(event->pos(), event->pos());
+            float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
+            float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+
+            QSetIterator<int> itRoom(pArea->getAreaRooms());
+            while (itRoom.hasNext()) { // Scan to find rooms in selection
+                int currentAreaRoom = itRoom.next();
+                TRoom *room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+                if (!room) {
+                    continue;
+                }
+                int rx = room->x * mRoomWidth + fx;
+                int ry = room->y * -1 * mRoomHeight + fy;
+                int rz = room->z;
+
+                int mx = event->pos().x();
+                int my = event->pos().y();
+                int mz = mOz;
+                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) &&
+                    (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
+                    mMultiSelectionSet.clear();
+                    mMultiSelectionSet.insert(currentAreaRoom);
+                    break;
+                }
+            }
+
+            if (mMultiSelectionSet.empty()) {
+                mMultiSelectionHighlightRoomId = 0;
+            } else {
+                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+            }
 
             if (!playerRoom || !pArea) {
                 auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
