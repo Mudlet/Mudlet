@@ -9250,7 +9250,7 @@ int TLuaInterpreter::echo(lua_State* L)
     int s = 1;
 
     if (n > 1) {
-        QString consoleName = getVerifiedString(L, __func__, s++, "console name", true);
+        consoleName = getVerifiedString(L, __func__, s++, "console name", true);
     }
 
     QString displayText = getVerifiedString(L, __func__, s, "text to display");
