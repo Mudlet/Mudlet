@@ -49,7 +49,7 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
-    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
+    Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
 public:
     XMLimport(Host*);

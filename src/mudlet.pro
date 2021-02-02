@@ -641,8 +641,8 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
-    mudlet.h \
     mapInfoContributorManager.h \
+    mudlet.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \

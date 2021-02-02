@@ -17681,7 +17681,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto name = lua_tostring(L, 1);
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    host.mpMap->mpMapper->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
+    host.mpMap->mpMapper->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
@@ -17690,7 +17690,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         }
         lua_pushinteger(L, selectionSize);
         lua_pushinteger(L, areaId);
-        lua_pushboolean(L, showingCurrentArea);
+        lua_pushinteger(L, displayAreaId);
         
         lua_pcall(L, 4, 6, 0);
 

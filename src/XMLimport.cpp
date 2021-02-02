@@ -813,6 +813,7 @@ void XMLimport::readHostPackage(Host* pHost)
     bool enableUserDictionary = attributes().value(QStringLiteral("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(QStringLiteral("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->mShowInfo = attributes().value(QStringLiteral("mShowInfo")) == YES;
     pHost->mAcceptServerGUI = attributes().value(QStringLiteral("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(QStringLiteral("mAcceptServerMedia")) == YES;
     pHost->mMapperUseAntiAlias = attributes().value(QStringLiteral("mMapperUseAntiAlias")) == YES;

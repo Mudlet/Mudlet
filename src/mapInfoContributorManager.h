@@ -1,3 +1,6 @@
+#ifndef TMAPINFOCONTRIBUTORMANAGER_H
+#define TMAPINFOCONTRIBUTORMANAGER_H
+
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
@@ -17,10 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef TMAPINFOCONTRIBUTORMANAGER_H
-#define TMAPINFOCONTRIBUTORMANAGER_H
-
 #include "pre_guard.h"
+#include <QColor>
 #include <QList>
 #include <QMap>
 #include <QObject>
@@ -37,21 +38,21 @@ struct MapInfoProperties
     QColor color;
 };
 
-typedef std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)> MapInfoCallback;
+typedef std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)> MapInfoCallback;
 
 class MapInfoContributorManager : QObject
 {
+    Q_DECLARE_TR_FUNCTIONS(MapInfoContributorManager)
 
 public:
     MapInfoContributorManager(QObject* parent, Host* ph);
-    ~MapInfoContributorManager();
 
     void registerContributor(QString name, MapInfoCallback callback);
     void removeContributor(QString name);
     MapInfoCallback getContributor(QString name);
     QList<QString> &getContributorKeys();
-    MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
-    MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor);
+    MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+    MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
 
 private:
     QList<QString> ordering;

@@ -1564,7 +1564,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         infoColor = QColor(Qt::white);
     }
 
-    paintMapInfo(renderTimer, painter, playerAreaID == mAreaID, infoColor);
+    paintMapInfo(renderTimer, painter, mAreaID, infoColor);
 
     static bool isAreaWidgetValid = true; // Remember between uses
     QFont _f = mpMap->mpMapper->showArea->font();
@@ -2189,7 +2189,7 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 }
 
 // Work out text for information box, need to offset if room selection widget is present
-void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor)
+void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
 {
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<QString> contributorList = mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys();
@@ -2211,9 +2211,9 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
     TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
     int yOffset = 10;
-    for (auto key : mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys()) {
+    for (const auto& key : mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
-            auto properties = mpMap->mpMapper->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), showingCurrentArea, infoColor);
+            auto properties = mpMap->mpMapper->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
@@ -2239,7 +2239,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 #endif
 }
 
-int T2DMap::paintMapInfoContributor(QPainter& painter, int yOffset, MapInfoProperties properties)
+int T2DMap::paintMapInfoContributor(QPainter& painter, int yOffset, const MapInfoProperties& properties)
 {
     painter.save();
 

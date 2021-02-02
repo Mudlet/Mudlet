@@ -23,15 +23,13 @@
 
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
-    registerContributor(QStringLiteral("Short"), [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
-        return shortInfo(roomID, selectionSize, areaId, showingCurrentArea, infoColor);
+    registerContributor(QStringLiteral("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
-    registerContributor(QStringLiteral("Full"), [=](int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor) {
-        return fullInfo(roomID, selectionSize, areaId, showingCurrentArea, infoColor);
+    registerContributor(QStringLiteral("Full"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        return fullInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
     });
 }
-
-MapInfoContributorManager::~MapInfoContributorManager() {}
 
 void MapInfoContributorManager::registerContributor(QString name, MapInfoCallback callback)
 {   
@@ -59,12 +57,14 @@ QList<QString> &MapInfoContributorManager::getContributorKeys()
     return ordering;
 }
 
-MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
+    Q_UNUSED("selectionSize");
+    Q_UNUSED("displayAreaId");
+
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
-        int areaId = room->getArea();
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         infoText = QStringLiteral("%1 (%3)\n")
                            .arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId()))
@@ -74,16 +74,15 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     return MapInfoProperties{infoText, false, false, infoColor};
 }
 
-MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, bool showingCurrentArea, QColor& infoColor)
+MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
     QString infoText;
-    bool isBold;
-    bool isItalic;
+    bool isBold = false;
+    bool isItalic = false;
     QColor color = infoColor;
 
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
-        int areaId = room->getArea();
         TArea* area = mpHost->mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         if (area) {
@@ -134,7 +133,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                "This text is for when NO rooms are selected, %3 is the room number "
                                "of, and %4-%6 are the x,y and z coordinates for, the current player's room.")
                                     .arg(QChar(160), QString::number(roomID), QString::number(room->x), QString::number(room->y), QString::number(room->z)));
-            if (!showingCurrentArea) {
+            if (areaId != displayAreaId) {
                 isItalic = true;
             } else {
                 isBold = true;

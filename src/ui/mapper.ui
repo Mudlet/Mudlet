@@ -606,9 +606,6 @@
               <property name="text">
                <string>Info</string>
               </property>
-              <property name="flat">
-               <bool>false</bool>
-              </property>
              </widget>
             </item>
             <item>
