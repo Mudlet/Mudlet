@@ -830,7 +830,7 @@ void TMap::initGraph()
                 pTargetR = mpRoomDB->getRoom(target);
                 if (pTargetR && !pTargetR->isLocked) {
                     route r;
-                    r.specialExitName = itSpecialExit.key();
+                    r.specialExitName = itSpecialExit.value();
                     r.cost = exitWeights.value(r.specialExitName, pTargetR->getWeight());
                     if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
                         r.direction = direction;
