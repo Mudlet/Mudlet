@@ -37,7 +37,12 @@
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="383"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Masz załadowaną mapę (%n pokoi(je)), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -595,7 +600,12 @@ please wait...</source>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="1232"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Masz załadowaną mapę (%n pokoi), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi(je)), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi(je)), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+        <numerusform>Masz załadowaną mapę (%n pokoi(je)), ale Mudlet nie wie, gdzie jesteś w tej chwili.</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2200"/>
@@ -12247,7 +12257,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="689"/>
       <source>keep</source>
       <comment>Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button</comment>
-      <translation type="unfinished"/>
+      <translation>zachowaj</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="650"/>
