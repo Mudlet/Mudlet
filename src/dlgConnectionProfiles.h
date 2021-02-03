@@ -25,6 +25,7 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include <QTimer>
 #include <QKeyEvent>
 #include <pugixml.hpp>
 #if defined(INCLUDE_OWN_QT5_KEYCHAIN)
@@ -118,7 +119,8 @@ private:
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
     void addLetterToProfileSearch(const int);
-
+    inline void reenableAllProfileItems();
+    inline void clearNotificationArea();
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -143,7 +145,8 @@ private:
     bool mCopyingProfile {};
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
-    QString searchText;
+    QTimer mSearchTextTimer;
+    QString mSearchText;
 
 
 private slots:
@@ -153,6 +156,7 @@ private slots:
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
+    void slot_searchTimerTimeOut();
 };
 
 

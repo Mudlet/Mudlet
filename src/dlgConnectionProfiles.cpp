@@ -240,11 +240,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
-    notificationArea->hide();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
-    notificationAreaMessageBox->hide();
+    clearNotificationArea();
 
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl()) {
@@ -284,7 +280,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
     }
 
+    mSearchTextTimer.setInterval(1000);
+    mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
+    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_searchTimerTimeOut);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
@@ -1255,12 +1254,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         port_entry->setPalette(mRegularPalette);
 
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
-            notificationAreaMessageBox->setText(QString());
+            clearNotificationArea();
         }
     }
 }
@@ -2024,11 +2018,7 @@ bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
-    notificationArea->hide();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
-    notificationAreaMessageBox->clear();
+    clearNotificationArea();
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
@@ -2159,11 +2149,7 @@ bool dlgConnectionProfiles::validateProfile()
         if (valid) {
             port_entry->setPalette(mOKPalette);
             host_name_entry->setPalette(mOKPalette);
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
+            clearNotificationArea();
             validName = true;
             validPort = true;
             validUrl = true;
@@ -2343,6 +2329,34 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     return QIcon(background);
 }
 
+void dlgConnectionProfiles::clearNotificationArea()
+{
+    notificationArea->hide();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->clear();
+}
+
+void dlgConnectionProfiles::slot_searchTimerTimeOut()
+{
+    reenableAllProfileItems();
+    if (notificationAreaMessageBox->text() == tr("As you type more letters in the name of a profile all the non-matching ones "
+                                                     "will be disabled and the first that matches will be selected. Press <tt>Escape</tt> "
+                                                     "to clear the entry and re-enabled all the profiles; this will also happen when there "
+                                                     "are no more profiles that match what has been typed.")) {
+
+        clearNotificationArea();
+    }
+}
+
+void dlgConnectionProfiles::reenableAllProfileItems()
+{
+    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
+    }
+}
+
 bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
 {
     if (obj == profiles_tree_widget && event->type() == QEvent::KeyPress) {
@@ -2359,15 +2373,9 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
 
         case Qt::Key_Escape:
             // Clear the search:
-            searchText.clear();
-            for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
-                profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
-            }
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->clear();
+            mSearchText.clear();
+            reenableAllProfileItems();
+            clearNotificationArea();
             // Eat (filter) this event so it goes no further:
             return true;
 
@@ -2419,7 +2427,15 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
                 return QObject::eventFilter(obj, event);
             }
 
+            if (!mSearchTextTimer.isActive()) {
+                // Too long since the last keypress so forget any previously
+                // entered keypresses:
+                mSearchText.clear();
+            }
+            mSearchTextTimer.stop();
             addLetterToProfileSearch(keyEvent->key());
+            // Restart the timeout for another keypress:
+            mSearchTextTimer.start();
             // Eat (filter) this event so it goes no further:
             return true;
         }
@@ -2438,21 +2454,15 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
 
     // As it happens the values for key correspond to those of the corresponding
     // ASCII (upper-case for letters) character codes
-    searchText.append(QLatin1Char(static_cast<unsigned char>(key)));
-    auto indexes = findProfilesBeginningWith(searchText);
+    mSearchText.append(QLatin1Char(static_cast<unsigned char>(key)));
+    auto indexes = findProfilesBeginningWith(mSearchText);
 
     if (indexes.isEmpty()) {
         // No matches at all so clearing search term and reset all profiles to
         // be enabled:
-        searchText.clear();
-        for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
-            profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
-        }
-        notificationArea->hide();
-        notificationAreaIconLabelWarning->hide();
-        notificationAreaIconLabelError->hide();
-        notificationAreaIconLabelInformation->hide();
-        notificationAreaMessageBox->clear();
+        mSearchText.clear();
+        reenableAllProfileItems();
+        clearNotificationArea();
         return;
     }
 
