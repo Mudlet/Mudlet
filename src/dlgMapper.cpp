@@ -352,7 +352,6 @@ void dlgMapper::updateInfoContributors()
             } else {
                 mpHost->mMapInfoContributors.remove(name);
             }
-            mpHost->mShowInfo = !mpHost->mMapInfoContributors.isEmpty();
             mp2dMap->update();
         });
         info_pushButton->menu()->addAction(action);
