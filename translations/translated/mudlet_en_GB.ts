@@ -971,13 +971,13 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2943"/>
       <source>Switch to editing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Switch to editing mode</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Switch to viewing mode</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Switch to viewing mode</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
