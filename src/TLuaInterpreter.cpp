@@ -493,11 +493,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
+            event.mArgumentList << QLatin1String("Couldn't open the destination file for writing (permission errors?)");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
@@ -506,11 +506,11 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't write downloaded content into the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
@@ -527,7 +527,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         } else {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFileName;
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -12231,21 +12231,6 @@ int TLuaInterpreter::ttsSpeak(lua_State* L)
     QString textToSay;
     textToSay = lua_tostring(L, 1);
 
-    textToSay = textToSay.trimmed();
-    if (textToSay.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        return warnArgumentValue(L, __func__, QStringLiteral("skipped empty text to speak (TTS)"));
-    }
-
-    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (QString dropThis : dontSpeak) {
-        if (textToSay.contains(dropThis)) {
-            textToSay.replace(dropThis, QString());
-            if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
-            }
-        }
-    }
-
     speechUnit->say(textToSay);
     speechCurrent = textToSay;
 
@@ -12536,22 +12521,6 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     }
 
     QString inputText = lua_tostring(L, 1);
-
-    inputText = inputText.trimmed();
-    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
-        return warnArgumentValue(L, __func__, QStringLiteral("skipped empty text to speak (TTS)"));
-    }
-
-    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
-    for (QString dropThis : dontSpeak) {
-        if (inputText.contains(dropThis)) {
-            inputText.replace(dropThis, QString());
-            if (mudlet::debugMode) {
-                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
-            }
-        }
-    }
-
     int index;
 
     if (lua_gettop(L) > 1) {

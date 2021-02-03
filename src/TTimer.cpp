@@ -81,6 +81,7 @@ TTimer::~TTimer()
         }
     }
 
+    mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
     mpQTimer->deleteLater();
 }
 
