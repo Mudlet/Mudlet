@@ -43,6 +43,8 @@
 #include <QtUiTools>
 #include "post_guard.h"
 
+#include "mapInfoContributorManager.h"
+
 // QStringLiterals cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
 
@@ -2192,10 +2194,10 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
 {
     #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-    QList<QString> contributorList = mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys();
+    QList<QString> contributorList = mpMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> contributorKeys{contributorList.begin(), contributorList.end()};
     #else
-    QSet<QString> contributorKeys = mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys().toSet();
+    QSet<QString> contributorKeys = mpMap->mMapInfoContributorManager->getContributorKeys().toSet();
     #endif
     if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
         return;
@@ -2211,9 +2213,9 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
     TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
     int yOffset = 10;
-    for (const auto& key : mpMap->mpMapper->mMapInfoContributorManager->getContributorKeys()) {
+    for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
-            auto properties = mpMap->mpMapper->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), displayAreaId, infoColor);
+            auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
@@ -2224,17 +2226,17 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 #ifdef QT_DEBUG
     paintMapInfoContributor(painter,
                          yOffset,
-                         {(tr("render time: %1S mO: (%2,%3,%4)",
-                              // Intentional comment to separate arguments
+                         {false,
+                          false,
+                          (tr("render time: %1S mO: (%2,%3,%4)",
+                                  // Intentional comment to separate arguments
                               "This is debug information that is not expected to be seen in release versions, "
                               "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
                               "center of the view (but y will be negative compared to previous room related "
                               "ones as it represents the real coordinate system for this widget which has "
                               "y increasing in a downward direction!)")
-                                   .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                                   .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz))),
-                          false,
-                          false,
+                                  .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
+                                  .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz))),
                           infoColor});
 #endif
 }

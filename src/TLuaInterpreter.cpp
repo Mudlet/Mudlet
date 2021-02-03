@@ -48,6 +48,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "mapInfoContributorManager.h"
 
 #include "math.h"
 #include "pre_guard.h"
@@ -17681,7 +17682,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto name = lua_tostring(L, 1);
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    host.mpMap->mpMapper->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+    host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
             lua_pushinteger(L, roomID);
@@ -17713,11 +17714,11 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
             b = lua_tonumber(L, index);
         }
         QColor color;
-        if (r >= 0 && r <= 255 && b >= 0 && g <= 255 && b >= 0 && b <= 255) {
+        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
             color = QColor(r, g, b);
         }
         lua_pop(L, nResult);
-        return MapInfoProperties{ text, isBold, isItalic, color };
+        return MapInfoProperties{ isBold, isItalic, text, color };
     });
     host.mpMap->mpMapper->updateInfoContributors();
 
@@ -17736,7 +17737,7 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
 
     auto name = lua_tostring(L, 1);
     
-    host.mpMap->mpMapper->mMapInfoContributorManager->removeContributor(name);
+    host.mpMap->mMapInfoContributorManager->removeContributor(name);
     host.mpMap->mpMapper->updateInfoContributors();
     lua_pushboolean(L, true);
     return 1;
@@ -17753,8 +17754,10 @@ int TLuaInterpreter::enableMapInfo(lua_State* L)
     auto name = lua_tostring(L, 1);
     auto& host = getHostFromLua(L);
     host.mMapInfoContributors.insert(name);
-    host.mpMap->mpMapper->updateInfoContributors();
     host.mpMap->update();
+    if (host.mpMap->mpMapper != nullptr) {
+        host.mpMap->mpMapper->updateInfoContributors();
+    }
     return 0;
 }
 
@@ -17769,7 +17772,9 @@ int TLuaInterpreter::disableMapInfo(lua_State* L)
     auto name = lua_tostring(L, 1);
     auto& host = getHostFromLua(L);
     host.mMapInfoContributors.remove(name);
-    host.mpMap->mpMapper->updateInfoContributors();
     host.mpMap->update();
+    if (host.mpMap->mpMapper != nullptr) {
+        host.mpMap->mpMapper->updateInfoContributors();
+    }
     return 0;
 }

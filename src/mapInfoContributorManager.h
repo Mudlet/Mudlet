@@ -26,16 +26,17 @@
 #include <QMap>
 #include <QObject>
 #include <QString>
+#include <QtCore>
 #include "post_guard.h"
 
 #include "Host.h"
 
 struct MapInfoProperties
 {
-    QString text;
     bool isBold;
     bool isItalic;
-    QColor color;
+    const QString& text;
+    QColor& color;
 };
 
 typedef std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)> MapInfoCallback;
@@ -47,9 +48,9 @@ class MapInfoContributorManager : QObject
 public:
     MapInfoContributorManager(QObject* parent, Host* ph);
 
-    void registerContributor(QString name, MapInfoCallback callback);
-    void removeContributor(QString name);
-    MapInfoCallback getContributor(QString name);
+    void registerContributor(const QString& name, MapInfoCallback callback);
+    void removeContributor(const QString& name);
+    MapInfoCallback getContributor(const QString& name);
     QList<QString> &getContributorKeys();
     MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
     MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);

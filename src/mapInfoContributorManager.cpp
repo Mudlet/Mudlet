@@ -31,7 +31,7 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) 
     });
 }
 
-void MapInfoContributorManager::registerContributor(QString name, MapInfoCallback callback)
+void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
 {   
     if (contributors.contains(name)) {
         removeContributor(name);
@@ -40,14 +40,14 @@ void MapInfoContributorManager::registerContributor(QString name, MapInfoCallbac
     contributors.insert(name, callback);
 }
 
-void MapInfoContributorManager::removeContributor(QString name)
+void MapInfoContributorManager::removeContributor(const QString& name)
 {
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
     contributors.remove(name);
 }
 
-MapInfoCallback MapInfoContributorManager::getContributor(QString name)
+MapInfoCallback MapInfoContributorManager::getContributor(const QString& name)
 {
     return contributors.value(name);
 }
@@ -71,7 +71,7 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
                                                                                                       : QString::number(room->getId()),
                                 areaName);
     }
-    return MapInfoProperties{infoText, false, false, infoColor};
+    return MapInfoProperties{false, false, infoText, infoColor};
 }
 
 MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
@@ -183,5 +183,5 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         }
     }
 
-    return MapInfoProperties{infoText, isBold, isItalic, color};
+    return MapInfoProperties{isBold, isItalic, infoText, color};
 }

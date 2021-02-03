@@ -23,11 +23,11 @@
 
 #include "dlgMapper.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "mapInfoContributorManager.h"
 
 #include "pre_guard.h"
 #include <QListWidget>
@@ -140,7 +140,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
 
-    mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
     updateInfoContributors();
 }
 
@@ -343,7 +342,7 @@ void dlgMapper::updateInfoContributors()
         }
     });
 
-    for (auto name : mMapInfoContributorManager->getContributorKeys()) {
+    for (auto name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         QAction* action = new QAction(name, info_pushButton);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));

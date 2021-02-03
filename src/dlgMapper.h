@@ -29,7 +29,6 @@
 #include <QMainWindow>
 #include <QPointer>
 #include "post_guard.h"
-#include "mapInfoContributorManager.h"
 
 class Host;
 class TMap;
@@ -53,7 +52,6 @@ public:
     bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();    
 
-    MapInfoContributorManager* mMapInfoContributorManager;
     void updateInfoContributors();
 
 public slots:
