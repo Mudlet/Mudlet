@@ -34,8 +34,9 @@ MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) 
 void MapInfoContributorManager::registerContributor(const QString& name, MapInfoCallback callback)
 {   
     if (contributors.contains(name)) {
-        removeContributor(name);
+        ordering.removeOne(name);
     }
+
     ordering.append(name);
     contributors.insert(name, callback);
 }

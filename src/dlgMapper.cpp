@@ -334,7 +334,7 @@ void dlgMapper::slot_switchArea(const int index)
 void dlgMapper::updateInfoContributors() 
 {
     info_pushButton->menu()->clear();
-    QAction* clearAction = new QAction(tr("None"), info_pushButton);
+    auto* clearAction = new QAction(tr("None"), info_pushButton);
     info_pushButton->menu()->addAction(clearAction);
     connect(clearAction, &QAction::triggered, this, [=]() {
         for (auto action : info_pushButton->menu()->actions()) {
@@ -342,8 +342,8 @@ void dlgMapper::updateInfoContributors()
         }
     });
 
-    for (auto name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
-        QAction* action = new QAction(name, info_pushButton);
+    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        auto* action = new QAction(name, info_pushButton);
         action->setCheckable(true);
         action->setChecked(mpHost->mMapInfoContributors.contains(name));
         connect(action, &QAction::toggled, this, [=](bool isToggled) {

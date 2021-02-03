@@ -17697,20 +17697,19 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
         auto nResult = lua_gettop(L);
         auto index = -nResult;
-        QString text;
-        text = lua_tostring(L, index);
+        QString text = lua_tostring(L, index);
         bool isBold = lua_toboolean(L, ++index);
         bool isItalic = lua_toboolean(L, ++index);
         int r = -1;
         int g = -1;
         int b = -1;
-        if(!lua_isnil(L, ++index)) {
+        if (!lua_isnil(L, ++index)) {
             r = lua_tonumber(L, index);
         }
-        if(!lua_isnil(L, ++index)) {
+        if (!lua_isnil(L, ++index)) {
             g = lua_tonumber(L, index);
         }
-        if(!lua_isnil(L, ++index)) {
+        if (!lua_isnil(L, ++index)) {
             b = lua_tonumber(L, index);
         }
         QColor color;

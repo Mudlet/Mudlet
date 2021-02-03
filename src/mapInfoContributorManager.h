@@ -35,8 +35,8 @@ struct MapInfoProperties
 {
     bool isBold;
     bool isItalic;
-    const QString& text;
-    QColor& color;
+    QString text;
+    QColor color;
 };
 
 typedef std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)> MapInfoCallback;
