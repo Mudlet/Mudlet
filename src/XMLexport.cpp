@@ -403,7 +403,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     bool useSharedDictionary;
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
-    host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";    
+    host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
