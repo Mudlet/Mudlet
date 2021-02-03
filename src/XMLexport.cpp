@@ -404,7 +404,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
-    host.append_attribute("mShowInfo") = !pHost->mMapInfoContributors.isEmpty() ? "yes" : "no";
+    if (pHost->mMapInfoContributors.isEmpty()) {
+        host.append_attribute("mShowInfo") = "no";
+    }
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
