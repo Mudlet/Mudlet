@@ -4,7 +4,7 @@
 #include "TMxpStubClient.h"
 #include <TMxpTagParser.h>
 #include <TMxpTagProcessor.h>
-
+#include <TMxpProcessor.h>
 
 class TMxpSendTagHandlerTest : public QObject {
 Q_OBJECT
@@ -12,6 +12,45 @@ Q_OBJECT
 private:
 
 private slots:
+    void testSendHrefUTF8FromMxpProcessor()
+    {
+        // issue #4368
+        TMxpStubClient stub;
+        TMxpProcessor processor(&stub);
+
+        std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+        for (char &ch : input) {
+          processor.processMxpInput(ch);
+        }
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "áéíóúñ");
+
+    }
+
+    void testSendHrefUTF8()
+    {
+        // issue #4368
+        QString input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
+
+        TMxpTagParser parser;
+        TMxpTagProcessor processor;
+        TMxpStubClient stub;
+
+        auto nodes = parser.parseToMxpNodeList(input, false);
+        for (const auto &node : nodes) {
+          processor.handleNode(processor, stub, node.get());
+        }
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "áéíóúñ");
+    }
 
     void testStaticText()
     {
