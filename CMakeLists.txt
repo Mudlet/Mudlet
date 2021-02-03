@@ -40,6 +40,8 @@ if(APPLE)
                                            # X supports 10.11 and up, but some
                                            # tools are not provided as bottles
                                            # for that anymore.
+                                           
+  set(CMAKE_OSX_ARCHITECTURES "${ARCHS_STANDARD}")                                           
 endif()
 
 project(mudlet)
