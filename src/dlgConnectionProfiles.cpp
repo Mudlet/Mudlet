@@ -36,7 +36,10 @@
 #include <QRandomGenerator>
 #include <QSettings>
 #include <sstream>
+#include <chrono>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
@@ -280,10 +283,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
     }
 
-    mSearchTextTimer.setInterval(1000);
+    mSearchTextTimer.setInterval(1s);
     mSearchTextTimer.setSingleShot(true);
     QCoreApplication::instance()->installEventFilter(this);
-    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_searchTimerTimeOut);
+    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
 }
 
 dlgConnectionProfiles::~dlgConnectionProfiles()
@@ -2338,19 +2341,7 @@ void dlgConnectionProfiles::clearNotificationArea()
     notificationAreaMessageBox->clear();
 }
 
-void dlgConnectionProfiles::slot_searchTimerTimeOut()
-{
-    reenableAllProfileItems();
-    if (notificationAreaMessageBox->text() == tr("As you type more letters in the name of a profile all the non-matching ones "
-                                                     "will be disabled and the first that matches will be selected. Press <tt>Escape</tt> "
-                                                     "to clear the entry and re-enabled all the profiles; this will also happen when there "
-                                                     "are no more profiles that match what has been typed.")) {
-
-        clearNotificationArea();
-    }
-}
-
-void dlgConnectionProfiles::reenableAllProfileItems()
+void dlgConnectionProfiles::slot_reenableAllProfileItems()
 {
     for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
         profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
@@ -2374,8 +2365,7 @@ bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
         case Qt::Key_Escape:
             // Clear the search:
             mSearchText.clear();
-            reenableAllProfileItems();
-            clearNotificationArea();
+            slot_reenableAllProfileItems();
             // Eat (filter) this event so it goes no further:
             return true;
 
@@ -2461,8 +2451,7 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
         // No matches at all so clearing search term and reset all profiles to
         // be enabled:
         mSearchText.clear();
-        reenableAllProfileItems();
-        clearNotificationArea();
+        slot_reenableAllProfileItems();
         return;
     }
 
@@ -2477,13 +2466,4 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     }
 
     profiles_tree_widget->setCurrentRow(indexes.first());
-    notificationArea->show();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->show();
-    notificationAreaMessageBox->show();
-    notificationAreaMessageBox->setText(tr("As you type more letters in the name of a profile all the non-matching ones "
-                                           "will be disabled and the first that matches will be selected. Press <tt>Escape</tt> "
-                                           "to clear the entry and re-enabled all the profiles; this will also happen when there "
-                                           "are no more profiles that match what has been typed."));
 }

@@ -119,7 +119,6 @@ private:
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
     void addLetterToProfileSearch(const int);
-    inline void reenableAllProfileItems();
     inline void clearNotificationArea();
 
     // split into 3 properties so each one can be checked individually
@@ -156,7 +155,7 @@ private slots:
     void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
-    void slot_searchTimerTimeOut();
+    void slot_reenableAllProfileItems();
 };
 
 
