@@ -642,17 +642,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-            "be encoded into the range that is acceptable for the character\n"
-            "encoding that is currently set {\"%1\"} for the game server.\n"
-            "It may not understand what is sent to it.\n"
-            "Note: this warning will only be issued once, even if this happens again, until\n"
-            "the encoding is changed.";
+        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
         if (!mEncoding.isEmpty()) {
             if (outgoingDataEncoder) {
                 if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                 }
