@@ -672,7 +672,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(data);
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
