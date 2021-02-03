@@ -46,6 +46,10 @@ jobs:
             deploy: 'deploy'
 
     steps:
+    - name: (macOS) Setup XCode that can build universal binaries
+      if: runner.os == 'macOS'
+      run: echo "SDKROOT=macosx11.1" >> $GITHUB_ENV
+
     - name: Restore Qt cache
       uses: actions/cache@v2
       id: cache-qt
