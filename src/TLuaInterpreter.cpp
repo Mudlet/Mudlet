@@ -4898,7 +4898,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     int id = lua_tonumber(L, 1);
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
+    if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(id));
     }
     lua_pushstring(L, pR->name.toUtf8().constData());
@@ -9129,8 +9129,8 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     if (pR) {
         QStringList keys = pR->getExitWeights().keys();
         for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys[i].toUtf8().constData());
-            lua_pushnumber(L, pR->getExitWeight(keys[i]));
+            lua_pushstring(L, keys.at(i).toUtf8().constData());
+            lua_pushnumber(L, pR->getExitWeight(keys.at(i)));
             lua_settable(L, -3);
         }
     }
