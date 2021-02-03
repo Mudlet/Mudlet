@@ -36,7 +36,10 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
-  set(CMAKE_OSX_ARCHITECTURES "${ARCHS_STANDARD}")                                           
+  # only useful if compiling on arm64
+  # set(CMAKE_OSX_ARCHITECTURES "${ARCHS_STANDARD}")                                           
+
+  add_compile_options(-arch x86_64 -arch arm64)
 endif()
 
 project(mudlet)
