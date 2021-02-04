@@ -1465,7 +1465,7 @@ int TLuaInterpreter::addMapMenu(lua_State* L)
 int TLuaInterpreter::removeMapMenu(lua_State* L)
 {
     QString uniqueName = getVerifiedString(L, __func__, 1, "Menu name");
-    if (uniqueName == "") {
+    if (uniqueName.isEmpty()) {
         return 0;
     }
     Host& host = getHostFromLua(L);
