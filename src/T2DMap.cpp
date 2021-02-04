@@ -2733,49 +2733,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mPopupMenu = false;
         }
 
-        // display room selection list widget if more than 1 room has been selected
-        // -> user can manually change current selection if rooms are overlapping
-        if (mMultiSelectionSet.size() > 1) {
-            // We don't want to cause calls to slot_roomSelectionChanged() here!
-            mMultiSelectionListWidget.blockSignals(true);
-            mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
-            mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
-            mMultiSelectionListWidget.clear();
-            // Do NOT sort while inserting items!
-            mMultiSelectionListWidget.setSortingEnabled(false);
-            QSetIterator<int> itRoom = mMultiSelectionSet;
-            mIsSelectionUsingNames = false;
-            while (itRoom.hasNext()) {
-                auto _item = new QTreeWidgetItem;
-                int multiSelectionRoomId = itRoom.next();
-                _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
-                _item->setTextAlignment(0, Qt::AlignRight);
-                TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
-                if (pR_multiSelection) {
-                    QString multiSelectionRoomName = pR_multiSelection->name;
-                    if (!multiSelectionRoomName.isEmpty()) {
-                        _item->setText(1, multiSelectionRoomName);
-                        _item->setTextAlignment(1, Qt::AlignLeft);
-                        mIsSelectionUsingNames = true;
-                    }
-                }
-                mMultiSelectionListWidget.addTopLevelItem(_item);
-            }
-            mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
-            // Can't sort if nothing to sort on, switch to sorting by room number
-            if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
-                mIsSelectionSortByNames = false;
-            }
-            mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
-            mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
-            resizeMultiSelectionWidget();
-            mMultiSelectionListWidget.selectAll();
-            mMultiSelectionListWidget.blockSignals(false);
-            mMultiSelectionListWidget.show();
-            update();
-        } else {
-            mMultiSelectionListWidget.hide();
-        }
     }
 
 
@@ -2844,18 +2801,31 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 int mx = event->pos().x();
                 int my = event->pos().y();
                 int mz = mOz;
-                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) &&
-                    (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                    mMultiSelectionSet.clear();
-                    mMultiSelectionSet.insert(currentAreaRoom);
-                    break;
+                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
+                    if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
+                        mMultiSelectionSet.remove(currentAreaRoom);
+                    } else {
+                        mMultiSelectionSet.insert(currentAreaRoom);
+                    }
+
+                    if (!mMultiSelectionSet.empty()) {
+                        mMultiSelection = false;
+                    }
                 }
             }
 
-            if (mMultiSelectionSet.empty()) {
-                mMultiSelectionHighlightRoomId = 0;
-            } else {
-                mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+
+            switch (mMultiSelectionSet.size()) {
+                case 0:
+                    mMultiSelectionHighlightRoomId = 0;
+                    break;
+                case 1:
+                    mMultiSelection = false; // OK, found one room so stop
+                    mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+                    break;
+                default:
+                    mMultiSelection = false; // OK, found more than one room so stop
+                    getCenterSelection();
             }
 
             if (!playerRoom || !pArea) {
@@ -3112,6 +3082,51 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
     }
+
+    // display room selection list widget if more than 1 room has been selected
+    // -> user can manually change current selection if rooms are overlapping
+    if (mMultiSelectionSet.size() > 1) {
+        // We don't want to cause calls to slot_roomSelectionChanged() here!
+        mMultiSelectionListWidget.blockSignals(true);
+        mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
+        mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
+        mMultiSelectionListWidget.clear();
+        // Do NOT sort while inserting items!
+        mMultiSelectionListWidget.setSortingEnabled(false);
+        QSetIterator<int> itRoom = mMultiSelectionSet;
+        mIsSelectionUsingNames = false;
+        while (itRoom.hasNext()) {
+            auto _item = new QTreeWidgetItem;
+            int multiSelectionRoomId = itRoom.next();
+            _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
+            _item->setTextAlignment(0, Qt::AlignRight);
+            TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
+            if (pR_multiSelection) {
+                QString multiSelectionRoomName = pR_multiSelection->name;
+                if (!multiSelectionRoomName.isEmpty()) {
+                    _item->setText(1, multiSelectionRoomName);
+                    _item->setTextAlignment(1, Qt::AlignLeft);
+                    mIsSelectionUsingNames = true;
+                }
+            }
+            mMultiSelectionListWidget.addTopLevelItem(_item);
+        }
+        mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+        // Can't sort if nothing to sort on, switch to sorting by room number
+        if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
+            mIsSelectionSortByNames = false;
+        }
+        mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
+        mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
+        resizeMultiSelectionWidget();
+        mMultiSelectionListWidget.selectAll();
+        mMultiSelectionListWidget.blockSignals(false);
+        mMultiSelectionListWidget.show();
+        update();
+    } else {
+        mMultiSelectionListWidget.hide();
+    }
+
     update();
 }
 
