@@ -22,13 +22,13 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   # setup macOS keychain for code signing on development builds only,
   # as Travis does not allow signing on usual PR builds
-  if [ ! -z "$CERT_PW" ]; then
+  if [ ! -z "$MACOS_SIGNING_PASS" ]; then
     KEYCHAIN=build.keychain
     security create-keychain -p travis $KEYCHAIN
     security default-keychain -s $KEYCHAIN
     security unlock-keychain -p travis $KEYCHAIN
     security set-keychain-settings -t 3600 -u $KEYCHAIN
-    security import Certificates.p12 -k $KEYCHAIN -P "$CERT_PW" -T /usr/bin/codesign
+    security import Certificates.p12 -k $KEYCHAIN -P "$MACOS_SIGNING_PASS" -T /usr/bin/codesign
     OSX_VERSION=$(sw_vers -productVersion | cut -d '.' -f 1,2)
     if [ "${OSX_VERSION}" != "10.11" ]; then
       # This is a new command on 10.12 and above, so don't run it on 10.11 (lowest supported version)
@@ -53,7 +53,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     ./make-installer.sh "${appBaseName}.app"
 
-    if [ ! -z "$CERT_PW" ]; then
+    if [ ! -z "$MACOS_SIGNING_PASS" ]; then
       codesign --deep -s "$IDENTITY" "${HOME}/Desktop/${appBaseName}.dmg"
       echo "Signed final .dmg"
     fi
@@ -98,7 +98,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       ./make-installer.sh -r "${VERSION}" "$app"
     fi
 
-    if [ ! -z "$CERT_PW" ]; then
+    if [ ! -z "$MACOS_SIGNING_PASS" ]; then
       if [ "${public_test_build}" == "true" ]; then
         codesign --deep -s "$IDENTITY" "${HOME}/Desktop/Mudlet PTB.dmg"
       else
@@ -144,7 +144,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   fi
 
   # delete keychain just in case
-  if [ ! -z "$CERT_PW" ]; then
+  if [ ! -z "$MACOS_SIGNING_PASS" ]; then
     security delete-keychain $KEYCHAIN
   fi
 
