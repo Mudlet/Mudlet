@@ -3083,7 +3083,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
     }
 
-    toggleSelectionWidget()
+    toggleSelectionWidget();
     update();
 }
 
