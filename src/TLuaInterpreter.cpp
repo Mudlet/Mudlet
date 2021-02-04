@@ -3403,7 +3403,7 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
         if (lua_type(L, 1) != LUA_TSTRING) {
             lua_pushfstring(L, "createCommandLine: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
-        }        
+        }
         windowName = lua_tostring(L, 1);
         counter++;
         if (isMain(windowName)) {
@@ -7614,7 +7614,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
         // else IS a valid stub or real normal exit -fall through to continue
     }
 
-    int doorStatus = getVerifiedInt(L, __func__, 3, "door type  {0=\"none\", 1=\"open\", 2=\"closed\", 3=\"locked\"}");
+    int doorStatus = getVerifiedInt(L, __func__, 3, "door type  {0='none', 1='open', 2='closed' or 3='locked'}");
     if (doorStatus < 0 || doorStatus > 3) {
         return warnArgumentValue(L, __func__, QStringLiteral(
             "door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
@@ -8215,7 +8215,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    int roomId = getVerifiedInt(L, __func__, 1, "room id");  
+    int roomId = getVerifiedInt(L, __func__, 1, "room id");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
