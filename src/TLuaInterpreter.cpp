@@ -4276,7 +4276,7 @@ int TLuaInterpreter::getRoomName(lua_State* L)
     int id = getVerifiedInt(L, __func__, 1, "room id");
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR) {
+    if (!pR) {
         return warnArgumentValue(L, __func__, QStringLiteral("room %1 doesn't exist").arg(id));
     }
     lua_pushstring(L, pR->name.toUtf8().constData());
@@ -8013,8 +8013,8 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     if (pR) {
         QStringList keys = pR->getExitWeights().keys();
         for (int i = 0; i < keys.size(); i++) {
-            lua_pushstring(L, keys[i].toUtf8().constData());
-            lua_pushnumber(L, pR->getExitWeight(keys[i]));
+            lua_pushstring(L, keys.at(i).toUtf8().constData());
+            lua_pushnumber(L, pR->getExitWeight(keys.at(i)));
             lua_settable(L, -3);
         }
     }
@@ -8736,13 +8736,13 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "\n" << bytesDownloaded << "/" << totalBytes << " for file "
-                                                        << reply->url().toString() << "\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: " << bytesDownloaded << "/" << totalBytes
+                                                        << " bytes ready for " << reply->url().toString() << "\n" >> 0;
         }
     });
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: script is downloading from " << reply->url().toString() << "\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: start download from " << reply->url().toString() << "\n" >> 0;
     }
 
     lua_pushboolean(L, true);
@@ -10616,7 +10616,21 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 int TLuaInterpreter::ttsSpeak(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QString textToSay = getVerifiedString(L, __func__, 1, "text to say");
+    QString textToSay = getVerifiedString(L, __func__, 1, "text to say").trimmed();
+    if (textToSay.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+        return warnArgumentValue(L, __func__, QStringLiteral("skipped empty text to speak (TTS)"));
+    }
+
+    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
+    for (const QString dropThis : dontSpeak) {
+        if (textToSay.contains(dropThis)) {
+            textToSay.replace(dropThis, QString());
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
+            }
+        }
+    }
+
     speechUnit->say(textToSay);
     speechCurrent = textToSay;
     return 0;
@@ -10878,9 +10892,22 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 int TLuaInterpreter::ttsQueue(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QString inputText = getVerifiedString(L, __func__, 1, "input");
-    int index;
+    QString inputText = getVerifiedString(L, __func__, 1, "input").trimmed();
+    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+        return warnArgumentValue(L, __func__, QStringLiteral("skipped empty text to speak (TTS)"));
+    }
 
+    std::vector<QString> dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
+    for (const QString dropThis : dontSpeak) {
+        if (inputText.contains(dropThis)) {
+            inputText.replace(dropThis, QString());
+            if (mudlet::debugMode) {
+                TDebug(QColor(Qt::white), QColor(Qt::darkGreen)) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> 0;
+            }
+        }
+    }
+
+    int index;
     if (lua_gettop(L) > 1) {
         index = getVerifiedInt(L, __func__, 2, "index");
         index--;
