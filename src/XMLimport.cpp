@@ -924,8 +924,6 @@ void XMLimport::readHostPackage(Host* pHost)
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
 
-    bool shouldSetLegacyInfo = attributes().value(QStringLiteral("mShowInfo")) == YES;
-
     while (!atEnd()) {
         readNext();
 
@@ -1088,17 +1086,12 @@ void XMLimport::readHostPackage(Host* pHost)
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readMapInfoContributors();
-                shouldSetLegacyInfo = false;
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
                 readUnknownHostElement();
             }
         }
-    }
-    if (shouldSetLegacyInfo) {
-        mpHost->mMapInfoContributors.clear();
-        mpHost->mMapInfoContributors.insert(QStringLiteral("Full"));
     }
 }
 

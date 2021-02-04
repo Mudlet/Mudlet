@@ -15237,20 +15237,15 @@ int TLuaInterpreter::showNotification(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
 int TLuaInterpreter::registerMapInfo(lua_State* L)
 {
-    auto& host = getHostFromLua(L);
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "registerMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
+    auto name = getVerifiedString(L, __func__, 1, "label");
 
     if (!lua_isfunction(L, 2)) {
         lua_pushfstring(L, "registerMapInfo: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-
-    auto name = lua_tostring(L, 1);
     int callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
+    auto& host = getHostFromLua(L);
     host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
         if (roomID > 0) {
@@ -15298,14 +15293,10 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 int TLuaInterpreter::killMapInfo(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "killMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-
-    auto name = lua_tostring(L, 1);
-    
-    host.mpMap->mMapInfoContributorManager->removeContributor(name);
     host.mpMap->mpMapper->updateInfoContributors();
     lua_pushboolean(L, true);
     return 1;
@@ -15314,35 +15305,23 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableMapInfo
 int TLuaInterpreter::enableMapInfo(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "enableMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
-    auto name = lua_tostring(L, 1);
+    auto name = getVerifiedString(L, __func__, 1, "label");
     auto& host = getHostFromLua(L);
-    host.mMapInfoContributors.insert(name);
-    host.mpMap->update();
-    if (host.mpMap->mpMapper != nullptr) {
-        host.mpMap->mpMapper->updateInfoContributors();
+    if (!host.mpMap->mMapInfoContributorManager->enableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableMapInfo
 int TLuaInterpreter::disableMapInfo(lua_State* L)
 {
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "disableMapInfo: bad argument #1 type (label as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-
-    auto name = lua_tostring(L, 1);
+    auto name = getVerifiedString(L, __func__, 1, "label");
     auto& host = getHostFromLua(L);
-    host.mMapInfoContributors.remove(name);
-    host.mpMap->update();
-    if (host.mpMap->mpMapper != nullptr) {
-        host.mpMap->mpMapper->updateInfoContributors();
+    if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }

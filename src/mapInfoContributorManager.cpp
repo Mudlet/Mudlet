@@ -20,6 +20,7 @@
 #include "mapInfoContributorManager.h"
 #include "TArea.h"
 #include "TRoomDB.h"
+#include "dlgMapper.h"
 
 MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
 {
@@ -36,16 +37,39 @@ void MapInfoContributorManager::registerContributor(const QString& name, MapInfo
     if (contributors.contains(name)) {
         ordering.removeOne(name);
     }
-
     ordering.append(name);
     contributors.insert(name, callback);
 }
 
-void MapInfoContributorManager::removeContributor(const QString& name)
+bool MapInfoContributorManager::removeContributor(const QString& name)
 {
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
-    contributors.remove(name);
+    return contributors.remove(name) > 0;
+}
+
+bool MapInfoContributorManager::enableContributor(const QString &name) {
+    if (!contributors.contains(name)) {
+        return false;
+    }
+    mpHost->mMapInfoContributors.insert(name);
+    mpHost->mpMap->update();
+    if (mpHost->mpMap->mpMapper != nullptr) {
+        mpHost->mpMap->mpMapper->updateInfoContributors();
+    }
+    return true;
+}
+
+bool MapInfoContributorManager::disableContributor(const QString &name) {
+    if (!contributors.contains(name)) {
+        return false;
+    }
+    mpHost->mMapInfoContributors.remove(name);
+    mpHost->mpMap->update();
+    if (mpHost->mpMap->mpMapper != nullptr) {
+        mpHost->mpMap->mpMapper->updateInfoContributors();
+    }
+    return true;
 }
 
 MapInfoCallback MapInfoContributorManager::getContributor(const QString& name)

@@ -2193,12 +2193,12 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, 
 // Work out text for information box, need to offset if room selection widget is present
 void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor)
 {
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<QString> contributorList = mpMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> contributorKeys{contributorList.begin(), contributorList.end()};
-    #else
+#else
     QSet<QString> contributorKeys = mpMap->mMapInfoContributorManager->getContributorKeys().toSet();
-    #endif
+#endif
     if (!contributorKeys.intersects(mpHost->mMapInfoContributors)) {
         return;
     }
@@ -2212,19 +2212,29 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     }
 
     TRoom* room = mpMap->mpRoomDB->getRoom(roomID);
-    int yOffset = 10;
+    int yOffset = 20;
+    // Left margin for info widget:
+    int xOffset = 10;
+    if (mMultiSelectionListWidget.isVisible()) {
+        // Room Selection Widget showing, so increase margin to avoid:
+        xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
+    }
+
+    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, QColor(150, 150, 150, 120));
+
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
             auto properties = mpMap->mMapInfoContributorManager->getContributor(key)(roomID, mMultiSelectionSet.size(), room->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
-            yOffset += paintMapInfoContributor(painter, yOffset, properties);
+            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties);
         }
     }
 
 #ifdef QT_DEBUG
     paintMapInfoContributor(painter,
+                         xOffset,
                          yOffset,
                          {false,
                           false,
@@ -2241,7 +2251,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 #endif
 }
 
-int T2DMap::paintMapInfoContributor(QPainter& painter, int yOffset, const MapInfoProperties& properties)
+int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
 {
     painter.save();
 
@@ -2255,28 +2265,18 @@ int T2DMap::paintMapInfoContributor(QPainter& painter, int yOffset, const MapInf
     font.setBold(properties.isBold);
     font.setItalic(properties.isItalic);
 
-    // Left margin for info widget:
-    int infoLeftSideAvoid = 10;
-    if (mMultiSelectionListWidget.isVisible()) {
-        // Room Selection Widget showing, so increase margin to avoid:
-        infoLeftSideAvoid += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
-    }
-
     int infoHeight = mFontHeight; // Account for first iteration
     QRect testRect;
     // infoRect has a 10 margin on either side and on top to widget frame.
-    mMapInfoRect = QRect(infoLeftSideAvoid, yOffset, width() - 10 - infoLeftSideAvoid, infoHeight);
-    infoHeight += mFontHeight;
-    mMapInfoRect.setHeight(infoHeight);
-    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
-
-    mMapInfoRect.setHeight(testRect.height() + 20);
+    mMapInfoRect = QRect(xOffset, yOffset, width() - 10 - xOffset, infoHeight);
+    testRect = painter.boundingRect(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    mMapInfoRect.setHeight(testRect.height() + 10);
 
     // Restore Grey translucent background, was useful for debugging!
     painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 120));
     painter.setPen(properties.color);
     painter.setFont(font);
-    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top(), mMapInfoRect.width() - 20, mMapInfoRect.height() - 10, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
     //forget about font size changing and bolding/italicisation:
     painter.restore();
 

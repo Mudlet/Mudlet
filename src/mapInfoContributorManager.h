@@ -39,7 +39,7 @@ struct MapInfoProperties
     QColor color;
 };
 
-typedef std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)> MapInfoCallback;
+using MapInfoCallback = std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)>;
 
 class MapInfoContributorManager : QObject
 {
@@ -49,7 +49,9 @@ public:
     MapInfoContributorManager(QObject* parent, Host* ph);
 
     void registerContributor(const QString& name, MapInfoCallback callback);
-    void removeContributor(const QString& name);
+    bool removeContributor(const QString& name);
+    bool enableContributor(const QString& name);
+    bool disableContributor(const QString& name);
     MapInfoCallback getContributor(const QString& name);
     QList<QString> &getContributorKeys();
     MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
