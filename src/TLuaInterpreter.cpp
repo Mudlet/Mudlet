@@ -221,7 +221,7 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool
+// See also: getVerifiedBool
 QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isstring(L, pos)) {
@@ -234,7 +234,7 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool
+// See also: getVerifiedBool
 int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
@@ -247,7 +247,7 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool
+// See also: getVerifiedBool
 float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
@@ -260,7 +260,7 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
 }
 
 // No documentation available in wiki - internal function
-// See also: verifyBool
+// See also: getVerifiedBool
 double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
 {
     if (!lua_isnumber(L, pos)) {
@@ -274,7 +274,7 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
 
 // No documentation available in wiki - internal function
 // Raises a Lua error in case of an API usage mistake
-// See also: verifyBoolean, warnArgumentValue
+// See also: getVerifiedBool, warnArgumentValue
 void TLuaInterpreter::errorArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional)
 {
     if (isOptional) {
