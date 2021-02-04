@@ -65,13 +65,10 @@ end
 function extract_historical_sha1s()
   local history, command
   if github_workspace then
-    local parentid = os.capture(string.format([[git rev-parse --short "%s^2")]], os.getenv("GITHUB_SHA"))
-    command = string.format("git log --pretty=%%H -n %d %s", MAX_COMMITS_PER_CHANGELOG, parentid)
-    print("[temporary debug information: "..command.."]")
+    command = string.format("git log --pretty=%%H -n %d %s", MAX_COMMITS_PER_CHANGELOG, os.getenv("GITHUB_SHA"))
     history = string.split(os.capture(command))
   else
     command = "git log --pretty=%H -n "..MAX_COMMITS_PER_CHANGELOG
-    print("[temporary debug information: "..command.."]")
     history = string.split(os.capture(command))
   end
 

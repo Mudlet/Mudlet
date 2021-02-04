@@ -1976,7 +1976,7 @@ void TConsole::setProfileName(const QString& newName)
 
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
-    if (e->mimeData()->hasUrls()) {
+    if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
         e->acceptProposedAction();
     }
 }
@@ -1993,6 +1993,25 @@ void TConsole::dropEvent(QDropEvent* e)
             mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
             mudletEvent.mArgumentList.append(fname);
             mudletEvent.mArgumentList.append(info.suffix().trimmed());
+            mudletEvent.mArgumentList.append(QString::number(pos.x()));
+            mudletEvent.mArgumentList.append(QString::number(pos.y()));
+            mudletEvent.mArgumentList.append(mConsoleName);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mudletEvent);
+        }
+    }
+    if (e->mimeData()->hasText()) {
+        if (QUrl url(e->mimeData()->text()); url.isValid()) {
+            QPoint pos = e->pos();
+            TEvent mudletEvent{};
+            mudletEvent.mArgumentList.append(QLatin1String("sysDropUrlEvent"));
+            mudletEvent.mArgumentList.append(url.toString());
+            mudletEvent.mArgumentList.append(url.scheme());
             mudletEvent.mArgumentList.append(QString::number(pos.x()));
             mudletEvent.mArgumentList.append(QString::number(pos.y()));
             mudletEvent.mArgumentList.append(mConsoleName);
