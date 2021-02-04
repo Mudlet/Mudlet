@@ -258,6 +258,7 @@ jobs:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
 
 
     # - name: Setup tmate session for debugging
