@@ -346,17 +346,16 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     }
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
-        ;// Do something?
-    } else {
-        unsigned char* tabptr;
+    if (namecount > 0) {
+        // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
+        // Retrieves char table end entry size and extracts name of group  and captures from
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-        tabptr = name_table;
+        char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
             int n = (tabptr[0] << 8) | tabptr[1];
-            auto name = QString::asprintf("%*s", name_entry_size - 3, tabptr + 2).trimmed();
-            auto capture = QString::asprintf("%.*s", ovector[2*n+1] - ovector[2*n], subject + ovector[2*n]);
+            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed();
+            auto capture = QString::fromUtf8(subject + ovector[2*n], ovector[2*n+1] - ovector[2*n]);
             nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
         }
@@ -463,8 +462,7 @@ END : {
         pC->reset();
     }
     if (mIsMultiline) {
-        NameGroupMatches* ng = &nameGroups;
-        updateMultistates(regexNumber, captureList, posList, ng);
+        updateMultistates(regexNumber, captureList, posList, &nameGroups);
         return true;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
