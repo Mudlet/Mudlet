@@ -15256,8 +15256,21 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         lua_pushinteger(L, selectionSize);
         lua_pushinteger(L, areaId);
         lua_pushinteger(L, displayAreaId);
-        
-        lua_pcall(L, 4, 6, 0);
+
+        int error = lua_pcall(L, 4, 6, 0);
+        if (error) {
+            int errorCount = lua_gettop(L);
+            if (mudlet::debugMode) {
+                for (int i = 1; i <= errorCount; i++) {
+                    if (lua_isstring(L, i)) {
+                        auto errorMessage = lua_tostring(L, i);
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
+                    }
+                }
+            }
+            lua_pop(L, errorCount);
+            return MapInfoProperties{};
+        }
 
         auto nResult = lua_gettop(L);
         auto index = -nResult;
