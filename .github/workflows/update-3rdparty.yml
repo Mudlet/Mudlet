@@ -132,47 +132,6 @@ jobs:
           commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-qtkeychain-fork:
-    runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: development
-          submodules: true
-          fetch-depth: 0
-
-      - name: update submodule to latest
-        run: git submodule update --remote 3rdparty/qtkeychain/
-
-      # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
-      # to see in github UI's if PR creation was skipped when we have an explicit pre-check
-      - name: check if we have any updates
-        id: getdiff
-        run: |
-          lines_changed=$(git diff --patch --unified=0 3rdparty/qtkeychain/ | wc --lines)
-          echo "$lines_changed lines changed."
-          echo ::set-output name=lines_changed::$lines_changed
-
-      - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
-        if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          title: "Update qtkeychain to latest in our fork"
-          body: |
-            #### Brief overview of PR changes/additions
-            :crown: An automated PR to update qtkeychain to its latest version in our fork.
-            #### Motivation for adding to Mudlet
-            Get new features, bugfixes, improvements! Stay modern.
-            #### Other info (issues closed, discussion etc)
-            _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-qtkeychain-${{ github.sha }}
-          path: 3rdparty/qtkeychain
-          commit-message: (autocommit) Updated qtkeychain submodule to latest in our fork
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
-
   update-lcf-source-51:
     runs-on: ubuntu-latest
     if: github.repository == 'Mudlet/Mudlet'
