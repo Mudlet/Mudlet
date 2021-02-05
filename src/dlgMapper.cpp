@@ -138,7 +138,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
     //stops inheritance of palette from mpConsole->mpMainFrame
-    setPalette(QApplication::palette(new QWidget()));
+    setPalette(QApplication::palette());
 }
 
 void dlgMapper::updateAreaComboBox()
