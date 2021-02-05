@@ -230,7 +230,7 @@
     "insertPopup": "insertPopup([windowName], text, {commands}, {hints}, [useCurrentLinkFormat])",
     "insertText": "insertText([windowName], text)",
     "installModule": "installModule(location)",
-    "installPackage": "installPackage(location)",
+    "installPackage": "installPackage(location or url)",
     "invokeFileDialog": "invokeFileDialog(fileOrFolder, dialogTitle)",
     "ioprint": "ioprint(text, some more text, ...)",
     "isActive": "isActive(name, type)",
