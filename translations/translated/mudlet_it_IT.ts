@@ -7701,7 +7701,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="64"/>
       <source>Lua code to run (return true to match)</source>
-      <translation type="unfinished"/>
+      <translation>Codice Lua da eseguire (restituire true in caso di corrispondenza)</translation>
     </message>
   </context>
   <context>
