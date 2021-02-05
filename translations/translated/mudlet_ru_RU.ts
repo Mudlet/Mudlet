@@ -6889,7 +6889,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="815"/>
       <source>Text to find (trigger pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Текст для поиска (шаблон триггера)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2785"/>
@@ -7695,27 +7695,27 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="52"/>
       <source>Text to find (anywhere in the game output)</source>
-      <translation type="unfinished"/>
+      <translation>Текст для поиска (в любом местe строки)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="55"/>
       <source>Text to find (as a regular expression pattern)</source>
-      <translation type="unfinished"/>
+      <translation>Текст для поиска (как шаблон регулярного выражения)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="58"/>
       <source>Text to find (from beginning of the line)</source>
-      <translation type="unfinished"/>
+      <translation>Текст для поиска (от начала строки)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="61"/>
       <source>Exact line to match</source>
-      <translation type="unfinished"/>
+      <translation>Точное совпадение</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerPatternEdit.cpp" line="64"/>
       <source>Lua code to run (return true to match)</source>
-      <translation type="unfinished"/>
+      <translation>Код Lua для запуска (возвращает true для соответствия)</translation>
     </message>
   </context>
   <context>
