@@ -331,7 +331,7 @@ end
 --- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
     local label = self.adjLabel
-    local menuTxt = self.Locale.connectTo and self.Locale.connectTo.message or "Connect To:"
+    local menuTxt = self.Locale.connectTo.message
     label:addMenuLabel("Connect To: ")
     label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
     local menuParent = self.rCLabel.MenuItems
@@ -344,7 +344,7 @@ function Adjustable.Container:addConnectMenu()
         label:findMenuElement("Connect To: ."..v):echo(menuTxt, "nocolor")
         label:setMenuAction("Connect To: ."..v, function() closeAllLevels(self.rCLabel) self:connectToBorder(v) end)
     end
-    menuTxt = self.Locale.disconnect and self.Locale.disconnect.message or "Disconnect "
+    menuTxt = self.Locale.disconnect.message
     label:addMenuLabel("Disconnect ")
     label:setMenuAction("Disconnect ", function() closeAllLevels(self.rCLabel) self:disconnect() end)
     label:findMenuElement("Disconnect "):echo(menuTxt, "nocolor", "c")
