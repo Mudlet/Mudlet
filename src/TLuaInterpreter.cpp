@@ -428,8 +428,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        auto replyText = QString(reply->readAll());
-        event.mArgumentList << replyText;
+        event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
@@ -443,9 +442,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        auto replyText = QString(reply->readAll());
-        event.mArgumentList << replyText;
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::PutOperation:
@@ -453,8 +451,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        auto replyText = QString(reply->readAll());
-        event.mArgumentList << replyText;
+        event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
@@ -472,8 +469,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            auto replyText = QString(reply->readAll());
-            event.mArgumentList << replyText;
+            event.mArgumentList << QString(reply->readAll());
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
