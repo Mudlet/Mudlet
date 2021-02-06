@@ -7072,8 +7072,8 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 int TLuaInterpreter::setBorderColor(lua_State* L)
 {
     int luaRed = getVerifiedInt(L, __func__, 1, "red");
-    int luaGreen = getVerifiedInt(L, __func__, 1, "green");
-    int luaBlue = getVerifiedInt(L, __func__, 1, "blue");
+    int luaGreen = getVerifiedInt(L, __func__, 2, "green");
+    int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
