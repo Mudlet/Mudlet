@@ -1026,17 +1026,15 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if installationSuccessful then
-    local successText = (mudlet.Locale.packageInstallSuccess
-      and mudlet.Locale.packageInstallSuccess.message or "Package '%s' installed successfully.")
+    local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
-    local okPrefix = (mudlet.Locale.prefixOk and mudlet.Locale.prefixOk.message or "[  OK  ]  - ")
+    local okPrefix = mudlet.Locale.prefixOk.message
     decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
-    local failureText = (mudlet.Locale.packageInstallFail
-      and mudlet.Locale.packageInstallFail.message or "Package '%s' installation failed.")
+    local failureText = mudlet.Locale.packageInstallFail.message
     failureText = string.format(failureText, packageName)
-    local warnPrefix = (mudlet.Locale.prefixWarn and mudlet.Locale.prefixWarn.message or "[ WARN ]  - ")
+    local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
   end
@@ -1072,13 +1070,13 @@ function installPackageFromUrl(file, url)
 
   registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
     if saveTo ~= destination then return end
-    local warnPrefix = (mudlet.Locale.prefixWarn and mudlet.Locale.prefixWarn.message or "[ WARN ]  - ")
+    local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
   end, true)
 
   downloadFile(destination, url)
-  local infoMessage = mudlet.Locale.packageDownloading.message or "Downloading package from %s"
-  local infoPrefix = mudlet.Locale.prefixInfo.message or "[ INFO ]  - "
+  local infoMessage = mudlet.Locale.packageDownloading.message
+  local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
 end
 
