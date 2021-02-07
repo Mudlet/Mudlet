@@ -4,7 +4,8 @@
 
 mudlet = mudlet or {}
 mudlet.supports = {
-  coroutines = true
+  coroutines = true,
+  namedPatterns = true
 }
 
 -- enforce uniform locale so scripts don't get

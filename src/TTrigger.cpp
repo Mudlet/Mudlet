@@ -307,6 +307,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
+    NameGroupMatches nameGroups;
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
     rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
@@ -345,20 +346,20 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     }
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
-        ;// Do something?
-    } else {
-        unsigned char* tabptr;
+    if (namecount > 0) {
+        // Based on snippet https://github.com/vmg/pcre/blob/master/pcredemo.c#L216
+        // Retrieves char table end entry size and extracts name of group  and captures from
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
-
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-
-        tabptr = name_table;
+        char* tabptr = reinterpret_cast<char*>(name_table);
         for (i = 0; i < namecount; i++) {
+            int n = (tabptr[0] << 8) | tabptr[1];
+            auto name = QString::fromUtf8( tabptr + 2, name_entry_size - 3).trimmed();
+            auto capture = QString::fromUtf8(subject + ovector[2*n], ovector[2*n+1] - ovector[2*n]);
+            nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
         }
     }
-    //TODO: add named groups seperately later as Lua::namedGroups
     if (mIsColorizerTrigger || mFilterTrigger) {
         numberOfCaptureGroups = captureList.size();
     }
@@ -461,11 +462,12 @@ END : {
         pC->reset();
     }
     if (mIsMultiline) {
-        updateMultistates(regexNumber, captureList, posList);
+        updateMultistates(regexNumber, captureList, posList, &nameGroups);
         return true;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
+        pL->setCaptureNameGroups(nameGroups);
         execute();
         pL->clearCaptureGroups();
         if (mFilterTrigger) {
@@ -560,7 +562,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
     return false;
 }
 
-inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList)
+inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches)
 {
     if (regexNumber == 0) {
         // automatically set to #1
@@ -568,6 +570,7 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
         pCondition->multiCapturePosList.push_back(posList);
+        pCondition->nameCaptures.push_back(*nameMatches);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkYellow), QColor(Qt::black)) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber
                                                               << "/" << mRegexCodeList.size() << ") regex=" << mRegexCodeList[regexNumber] << "\n"
@@ -586,6 +589,9 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
                 matchStatePair.second->conditionMatched();
                 matchStatePair.second->multiCaptureList.push_back(captureList);
                 matchStatePair.second->multiCapturePosList.push_back(posList);
+                if (nameMatches != nullptr) {
+                    matchStatePair.second->nameCaptures.push_back(*nameMatches);
+                }
             }
         }
     }
@@ -1057,7 +1063,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
                     removeList.push_back(matchStatePair.first);
                     conditionMet = true;
                     TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-                    pL->setMultiCaptureGroups(matchStatePair.second->multiCaptureList, matchStatePair.second->multiCapturePosList);
+                    pL->setMultiCaptureGroups(matchStatePair.second->multiCaptureList, matchStatePair.second->multiCapturePosList, matchStatePair.second->nameCaptures);
                     execute();
                     pL->clearCaptureGroups();
                     if (mFilterTrigger) {
