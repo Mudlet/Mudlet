@@ -1505,7 +1505,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
@@ -2496,7 +2497,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);

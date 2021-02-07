@@ -7073,8 +7073,8 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 int TLuaInterpreter::setBorderColor(lua_State* L)
 {
     int luaRed = getVerifiedInt(L, __func__, 1, "red");
-    int luaGreen = getVerifiedInt(L, __func__, 1, "green");
-    int luaBlue = getVerifiedInt(L, __func__, 1, "blue");
+    int luaGreen = getVerifiedInt(L, __func__, 2, "green");
+    int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
@@ -11381,10 +11381,11 @@ std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool w
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList)
+void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<QVector<QPair<QString, QString>>>& nameGroups)
 {
     mMultiCaptureGroupList = captureList;
     mMultiCaptureGroupPosList = posList;
+    mMultiCaptureNameGroups = nameGroups;
 
     /*
      * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
@@ -11417,6 +11418,11 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
      */
 }
 
+void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups)
+{
+    mCapturedNameGroups = nameGroups;
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
@@ -11424,6 +11430,8 @@ void TLuaInterpreter::clearCaptureGroups()
     mCaptureGroupPosList.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
+    mCapturedNameGroups.clear();
+    mMultiCaptureNameGroups.clear();
 
     lua_State* L = pGlobalLua;
     lua_newtable(L);
@@ -11955,6 +11963,11 @@ void TLuaInterpreter::setMatches(lua_State* L)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
+        for (auto [name, capture] : mCapturedNameGroups) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
+        }
         lua_setglobal(L, "matches");
     }
 }
@@ -12256,6 +12269,11 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
                 lua_pushnumber(L, i);
                 lua_pushstring(L, (*it).c_str());
                 lua_settable(L, -3); //match in matches
+            }
+            for (auto [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+                lua_pushstring(L, name.toUtf8().constData());
+                lua_pushstring(L, capture.toUtf8().constData());
+                lua_settable(L, -3);
             }
             lua_settable(L, -3); //matches in regex
         }

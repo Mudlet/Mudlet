@@ -132,14 +132,15 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     auto menu = new QMenu(this);
     info_pushButton->setMenu(menu);
-    
+
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
     }
-
+    //stops inheritance of palette from mpConsole->mpMainFrame
+    setPalette(QApplication::palette());
     updateInfoContributors();
 }
 
@@ -331,7 +332,7 @@ void dlgMapper::slot_switchArea(const int index)
 }
 #endif
 
-void dlgMapper::updateInfoContributors() 
+void dlgMapper::updateInfoContributors()
 {
     info_pushButton->menu()->clear();
     auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), info_pushButton);
