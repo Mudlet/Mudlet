@@ -3087,7 +3087,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     update();
 }
 
-void T2DMap::updateSelectionWidget() {
+void T2DMap::updateSelectionWidget()
+{
     // display room selection list widget if more than 1 room has been selected
     // -> user can manually change current selection if rooms are overlapping
     if (mMultiSelectionSet.size() > 1) {
@@ -3105,7 +3106,7 @@ void T2DMap::updateSelectionWidget() {
             int multiSelectionRoomId = itRoom.next();
             _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
             _item->setTextAlignment(0, Qt::AlignRight);
-            TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
+            TRoom *pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
             if (pR_multiSelection) {
                 QString multiSelectionRoomName = pR_multiSelection->name;
                 if (!multiSelectionRoomName.isEmpty()) {
