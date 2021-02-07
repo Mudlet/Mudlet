@@ -121,7 +121,6 @@ T2DMap::T2DMap(QWidget* parent)
 , mCurrentLineArrow(true)
 , mBubbleMode()
 , mMapperUseAntiAlias(true)
-, mMapViewOnly(true)
 , mLabelHighlighted(false)
 , mMoveLabel()
 , mCustomLineSelectedRoom()
@@ -165,6 +164,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
+    setCursor(Qt::OpenHandCursor);
 }
 
 void T2DMap::init()
@@ -178,6 +178,11 @@ void T2DMap::init()
     eSize = mpMap->mpHost->mLineSize;
     rSize = mpMap->mpHost->mRoomSize;
     mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    if (mMapViewOnly != mpHost->mMapViewOnly) {
+        // If it was initialised in one state but the stored setting is the
+        // opposite then we need to toggle the mode:
+        slot_toggleMapViewOnly();
+    }
     flushSymbolPixmapCache();
 }
 
@@ -2457,6 +2462,11 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* e)
     //move map with left mouse button + ALT (->
     if (mpMap->mLeftDown) {
         mpMap->mLeftDown = false;
+        if (mMapViewOnly) {
+            setCursor(Qt::OpenHandCursor);
+        } else {
+            unsetCursor();
+        }
     }
 
     if (e->button() & Qt::LeftButton) {
@@ -2509,6 +2519,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     if (event->buttons() & Qt::LeftButton) {
         // move map with left mouse button + ALT, or just a left mouse button in viewOnly mode
         if (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly) {
+            setCursor(Qt::ClosedHandCursor);
             mpMap->mLeftDown = true;
         }
 
@@ -3418,8 +3429,18 @@ void T2DMap::slot_setPlayerLocation()
 void T2DMap::slot_toggleMapViewOnly()
 {
     if (mpHost) {
+        // If the local state did not match the profile stored state (in Host)
+        // then we get called once from init() - this will toggle the state to
+        // match:
         mMapViewOnly = !mMapViewOnly;
+        // In the init() case this is a no-op, otherwise it ensures the profile
+        // state matches the local copy (so it gets saved with the profile):
         mpHost->mMapViewOnly = mMapViewOnly;
+        if (mMapViewOnly) {
+            setCursor(Qt::OpenHandCursor);
+        } else {
+            unsetCursor();
+        }
         TEvent mapModeEvent{};
         mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
