@@ -42,7 +42,7 @@ jobs:
             buildname: 'windows'
             triplet: x64-mingw-dynamic
             # compiler: flag not used in windows pipeline
-            qt: '5.15.2'
+            qt: '5.14.1'
             deploy: 'deploy'
 
     steps:
