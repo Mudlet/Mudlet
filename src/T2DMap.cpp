@@ -2351,7 +2351,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDialogLock || (event->buttons() & Qt::RightButton)) {
+    if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
     int x = event->x();
