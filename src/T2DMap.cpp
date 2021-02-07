@@ -3083,11 +3083,11 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
     }
 
-    toggleSelectionWidget();
+    updateSelectionWidget();
     update();
 }
 
-void T2DMap::toggleSelectionWidget() {
+void T2DMap::updateSelectionWidget() {
     // display room selection list widget if more than 1 room has been selected
     // -> user can manually change current selection if rooms are overlapping
     if (mMultiSelectionSet.size() > 1) {
@@ -3127,10 +3127,10 @@ void T2DMap::toggleSelectionWidget() {
         mMultiSelectionListWidget.selectAll();
         mMultiSelectionListWidget.blockSignals(false);
         mMultiSelectionListWidget.show();
-        update();
     } else {
         mMultiSelectionListWidget.hide();
     }
+    update();
 }
 
 // returns the current mouse position as X, Y coordinates on the map
