@@ -158,7 +158,7 @@ public:
     bool mMapperUseAntiAlias;
 
     // Controls if the mapper is in view-only mode
-    bool mMapViewOnly;
+    bool mMapViewOnly = true;
 
     bool mLabelHighlighted;
     bool mMoveLabel;
