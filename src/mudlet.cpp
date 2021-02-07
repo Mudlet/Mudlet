@@ -1505,7 +1505,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
