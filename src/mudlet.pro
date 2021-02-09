@@ -283,6 +283,7 @@ unix:!macx {
         }
         LIBS +=  \
             -L"$${MINGW_BASE_DIR_TEST}\\bin" \
+            -L"$${MINGW_BASE_DIR_TEST}\\lib" \
             -llua51 \
             -llibhunspell-1.6
 
