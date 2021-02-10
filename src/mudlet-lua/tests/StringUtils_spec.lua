@@ -196,4 +196,54 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals(str, str:trim())
     end)
   end)
+
+  describe("f(str)", function()
+    it("should return a string with no interpolation as itself", function()
+      local str = "This is a test"
+      local expected = str
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should return a string with simple interpolation", function()
+      local str = "This is a {'test'}"
+      local expected = "This is a test"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should execute simple expressions within the interpolation characters", function()
+      local str = "2 + 2 = {2+2}"
+      local expected = "2 + 2 = 4"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should be able to interpolate local variables", function()
+      local str = "The secret sauce is {secret}"
+      local secret = "well known"
+      local expected = "The secret sauce is well known"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should evaluate more complex expressions/functions in interpolation", function()
+      local testFunc = function(msg)
+        return msg:title()
+      end
+      local mesg = "sir"
+      local str = "This is just a test, good {testFunc(mesg)}"
+      local expected = "This is just a test, good Sir"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should be able to handle two or more interpolations in a single string", function()
+      local str = "This is a {test}. Do make sure to check {2+2} your belongings. {getMudletVersion('string')}"
+      local test = "complete success"
+      local expected = "This is a complete success. Do make sure to check 4 your belongings. " .. getMudletVersion('string')
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+  end)
 end)
