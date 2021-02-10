@@ -533,7 +533,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     pHost->raiseEvent(event);
 }
 
-void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes) {
+void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
+{
     Host& host = getHostFromLua(L);
 
     TEvent event {};
@@ -8472,7 +8473,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     QString key = getVerifiedString(L, __func__, 2, "key");
     bool isBackwardCompatibilityRequired = true;
     if (lua_gettop(L) > 2) {
-        isBackwardCompatibilityRequired = !getVerifiedBool(L, __func__, 1, "enableFullErrorReporting {default = false}", true);
+        isBackwardCompatibilityRequired = !getVerifiedBool(L, __func__, 3, "enableFullErrorReporting {default = false}", true);
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -8480,7 +8481,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
         if (!isBackwardCompatibilityRequired) {
             return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
         }
-        lua_pushstring(L, QString().toUtf8().constData());
+        lua_pushstring(L, "");
         return 1;
     }
     if (!pR->userData.contains(key)) {
@@ -8488,7 +8489,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "no user data with key '%1' in room with id %2").arg(key, QString::number(roomId)));
         }
-        lua_pushstring(L, QString().toUtf8().constData());
+        lua_pushstring(L, "");
         return 1;
     }
     lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
