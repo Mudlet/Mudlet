@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2021 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,31 +27,82 @@
 #include <QColor>
 #include <QList>
 #include <QMap>
+#include <QQueue>
 #include <QString>
 #include "post_guard.h"
 
+class Host;
+
+struct TDebugMessage
+{
+    TDebugMessage(const QString& text, const QChar& tag, const QColor& fg, const QColor& bg)
+    : mMessage(text)
+    , mTag(tag)
+    , mForeground(fg)
+    , mBackground(bg)
+    {}
+
+    QString mMessage;
+    QChar mTag;
+    QColor mForeground;
+    QColor mBackground;
+
+};
 
 class TDebug
 {
+    // A shared map that is uses to put a single character identifier on each
+    // debug message - the first value is used to create a table to display on
+    // changes and the second value is what short identifier is used:
+    static QMap<const Host*, QPair<QString, QChar>> smIdentifierMap;
+    // Used to prevent reuse of the same identifier in the same application run:
+    static QSet<QChar> smUsedIdentifiers;
+    // This is a temporary bodge until we can decouple the Central Debug
+    // Console from having to be associated with a Host (Profile) instance,
+    // as that prevents it from being created until a profile has - which makes
+    // displaying details from that first profile being loaded harder:
+    static QQueue<TDebugMessage> smMessageQueue;
+
     QString msg;
     QColor fgColor;
     QColor bgColor;
 
 public:
-    TDebug(const QColor&, const QColor&);
+    explicit TDebug(const QColor&, const QColor&);
     ~TDebug() = default;
-    TDebug& operator>>(int);
-    TDebug& operator<<(const QString& t);
-    TDebug& operator<<(const int& t);
-    TDebug& operator<<(const QMap<QString, QString>& map);
-    TDebug& operator<<(const QMap<QString, int>& map);
-    TDebug& operator<<(const QMap<int, QString>& map);
-    TDebug& operator<<(const QMap<int, int>& map);
-    TDebug& operator<<(const QList<QString>& list);
-    TDebug& operator<<(const QList<int>& list);
+
+    static void addHost(Host*);
+    static void removeHost(Host*);
+    static void changeHostName(const Host*, const QString&);
+    static void flushMessageQueue();
+
+    // Used to flush/print out the accumulated message:
+    TDebug& operator>>(Host*);
+
+    // Used to append the argument type to the message:
+    TDebug& operator<<(const QString&);
+    TDebug& operator<<(const QChar&);
+    TDebug& operator<<(const int&);
+    // These should all be used with a preceding operator<<(const QString&)
+    // that provides an opening '(' to match the one that these all append
+    // after the content they add to the message:
+    TDebug& operator<<(const QMap<QString, QString>&);
+    TDebug& operator<<(const QMap<QString, int>&);
+    TDebug& operator<<(const QMap<int, QString>&);
+    TDebug& operator<<(const QMap<int, int>&);
+    TDebug& operator<<(const QList<QString>&);
+    TDebug& operator<<(const QList<int>&);
+
+    // one of two Unicode BMP non-characters, prepend this to any continuation
+    // message to suppress the insertion of the profile identifying marking.
+    const static QChar csmContinue;
+
 
 private:
     TDebug() = default;
+
+    static QString displayNewTable();
+    static QChar deduceProfileTag(QString&, Host*);
 };
 
 #endif // MUDLET_TDEBUG_H

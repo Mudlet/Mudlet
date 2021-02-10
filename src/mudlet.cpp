@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -266,6 +266,7 @@ mudlet::mudlet()
     menuHelp->setToolTipsVisible(true);
     menuAbout->setToolTipsVisible(true);
 
+    // FIXME: add a command line option to change this?
     mudlet::debugMode = false;
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -3227,7 +3228,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> 0;
+            TDebug(Qt::white, Qt::red) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> pHost;
             return;
         }
 

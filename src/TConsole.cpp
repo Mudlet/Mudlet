@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -1546,9 +1546,8 @@ int TConsole::select(const QString& text, int numOfMatch)
     }
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: " >> 0;
-        TDebug(QColor(Qt::red), QColor(Qt::black)) << mUserCursor.y() << "#:" >> 0;
-        TDebug(QColor(Qt::gray), QColor(Qt::black)) << buffer.line(mUserCursor.y()) << "\n" >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor (" << mUserCursor.y() << "):\n" >> mpHost;
+        TDebug(Qt::gray, Qt::black) << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
     int begin = -1;
@@ -1575,9 +1574,9 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+        TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
                                                        << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
-                >> 0;
+                >> mpHost;
     }
     return begin;
 }
@@ -1585,7 +1584,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: \n\"" << buffer.line(mUserCursor.y()) << "\"\n" >> mpHost;
     }
     if (from < 0) {
         return false;
@@ -1603,9 +1602,9 @@ bool TConsole::selectSection(int from, int to)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                                           << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
-                >> 0;
+        TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
+                                           << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
+                >> mpHost;
     }
     return true;
 }

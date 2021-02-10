@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -29,6 +29,7 @@
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
@@ -396,6 +397,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
+    TDebug::addHost(this);
+
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
 
@@ -468,6 +471,7 @@ Host::~Host()
     mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
+    TDebug::removeHost(this);
 }
 
 void Host::saveModules(int sync, bool backup)
@@ -2477,6 +2481,7 @@ void Host::setName(const QString& newName)
         return;
     }
 
+    TDebug::changeHostName(this, newName);
     int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
