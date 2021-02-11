@@ -60,6 +60,8 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.0'
+
 
     - name: Checkout Mudlet source code
       uses: actions/checkout@v2
@@ -251,7 +253,7 @@ jobs:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 -y
         fi
-                
+
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
