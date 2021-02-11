@@ -203,6 +203,7 @@ jobs:
         cmakeAppendedArgs: >-
           --target test
           -G Ninja
+          --config RelWithDebInfo
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
