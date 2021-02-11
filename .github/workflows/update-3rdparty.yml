@@ -8,7 +8,7 @@ on:
 jobs:
   update-iremapper-source:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -52,7 +52,7 @@ jobs:
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -93,7 +93,7 @@ jobs:
 
   update-dblsqd-fork:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -134,7 +134,7 @@ jobs:
 
   update-lcf-source-51:
     runs-on: ubuntu-latest
-    if: github.repository == 'Mudlet/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -179,7 +179,7 @@ jobs:
   update-widecharwidth-source:
     runs-on: ubuntu-latest
     # Disabled for the time being due to https://github.com/Mudlet/Mudlet/pull/4299
-    if: github.repository == 'Mudlet/Mudlet' && false
+    if: ${{ github.repository_owner == 'Mudlet' }} && false
     steps:
       - uses: actions/checkout@v2
         with:
