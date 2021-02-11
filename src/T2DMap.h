@@ -222,6 +222,7 @@ public slots:
     void slot_newMap();
 
 private:
+    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
