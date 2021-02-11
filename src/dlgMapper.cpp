@@ -23,18 +23,18 @@
 
 #include "dlgMapper.h"
 
-
 #include "Host.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "mapInfoContributorManager.h"
 
 #include "pre_guard.h"
 #include <QListWidget>
+#include <QMenu>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include "post_guard.h"
-
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget( parent )
@@ -73,10 +73,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     bubbles->setChecked(mpHost->mBubbleMode);
     mp2dMap->mBubbleMode = mpHost->mBubbleMode;
     d3buttons->setVisible(false);
+    d2buttons->setVisible(true);
     roomSize->setValue(mpHost->mRoomSize * 10);
     lineSize->setValue(mpHost->mLineSize);
-    showInfo->setChecked(mpHost->mShowInfo);
-    mp2dMap->mShowInfo = mpHost->mShowInfo;
 
     showRoomIDs->setChecked(mpHost->mShowRoomID);
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
@@ -86,7 +85,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
-    connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
     connect(shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftZdown);
     connect(shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::shiftLeft);
@@ -131,6 +129,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
+
+    auto menu = new QMenu(this);
+    info_pushButton->setMenu(menu);
+
     if (mpHost) {
         qDebug() << "dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
@@ -139,6 +141,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     //stops inheritance of palette from mpConsole->mpMainFrame
     setPalette(QApplication::palette());
+    updateInfoContributors();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -233,7 +236,6 @@ void dlgMapper::show2dView()
         connect(shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::shiftRight);
         connect(shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::shiftUp);
         connect(shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::shiftDown);
-        connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
         connect(defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::defaultView);
         connect(sideView, &QAbstractButton::clicked, glWidget, &GLWidget::sideView);
         connect(topView, &QAbstractButton::clicked, glWidget, &GLWidget::topView);
@@ -248,14 +250,19 @@ void dlgMapper::show2dView()
     glWidget->setVisible(!glWidget->isVisible());
     if (glWidget->isVisible()) {
         d3buttons->setVisible(true);
+        d2buttons->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
-        QTimer::singleShot(100, [this]() { d3buttons->setVisible(false); });
+        QTimer::singleShot(100, [this]() {
+            d3buttons->setVisible(false);
+            d2buttons->setVisible(true);
+        });
     }
 
 #else
     mp2dMap->setVisible(true);
     d3buttons->setVisible(false);
+    d2buttons->setVisible(true);
     dim2->setDisabled(true);
     dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
 #endif
@@ -278,13 +285,6 @@ void dlgMapper::slot_bubbles()
 {
     mp2dMap->mBubbleMode = bubbles->isChecked();
     mp2dMap->mpHost->mBubbleMode = mp2dMap->mBubbleMode;
-    mp2dMap->update();
-}
-
-void dlgMapper::slot_info()
-{
-    mp2dMap->mShowInfo = showInfo->isChecked();
-    mp2dMap->mpHost->mShowInfo = mp2dMap->mShowInfo;
     mp2dMap->update();
 }
 
@@ -331,3 +331,30 @@ void dlgMapper::slot_switchArea(const int index)
     mp2dMap->switchArea(areaName);
 }
 #endif
+
+void dlgMapper::updateInfoContributors()
+{
+    info_pushButton->menu()->clear();
+    auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), info_pushButton);
+    info_pushButton->menu()->addAction(clearAction);
+    connect(clearAction, &QAction::triggered, this, [=]() {
+        for (auto action : info_pushButton->menu()->actions()) {
+            action->setChecked(false);
+        }
+    });
+
+    for (const auto& name : mpMap->mMapInfoContributorManager->getContributorKeys()) {
+        auto* action = new QAction(name, info_pushButton);
+        action->setCheckable(true);
+        action->setChecked(mpHost->mMapInfoContributors.contains(name));
+        connect(action, &QAction::toggled, this, [=](bool isToggled) {
+            if (isToggled) {
+                mpHost->mMapInfoContributors.insert(name);
+            } else {
+                mpHost->mMapInfoContributors.remove(name);
+            }
+            mp2dMap->update();
+        });
+        info_pushButton->menu()->addAction(action);
+    }
+}
