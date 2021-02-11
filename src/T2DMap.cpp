@@ -2356,7 +2356,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDialogLock) {
+    if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
     int x = event->x();
@@ -2744,49 +2744,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mPopupMenu = false;
         }
 
-        // display room selection list widget if more than 1 room has been selected
-        // -> user can manually change current selection if rooms are overlapping
-        if (mMultiSelectionSet.size() > 1) {
-            // We don't want to cause calls to slot_roomSelectionChanged() here!
-            mMultiSelectionListWidget.blockSignals(true);
-            mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
-            mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
-            mMultiSelectionListWidget.clear();
-            // Do NOT sort while inserting items!
-            mMultiSelectionListWidget.setSortingEnabled(false);
-            QSetIterator<int> itRoom = mMultiSelectionSet;
-            mIsSelectionUsingNames = false;
-            while (itRoom.hasNext()) {
-                auto _item = new QTreeWidgetItem;
-                int multiSelectionRoomId = itRoom.next();
-                _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
-                _item->setTextAlignment(0, Qt::AlignRight);
-                TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
-                if (pR_multiSelection) {
-                    QString multiSelectionRoomName = pR_multiSelection->name;
-                    if (!multiSelectionRoomName.isEmpty()) {
-                        _item->setText(1, multiSelectionRoomName);
-                        _item->setTextAlignment(1, Qt::AlignLeft);
-                        mIsSelectionUsingNames = true;
-                    }
-                }
-                mMultiSelectionListWidget.addTopLevelItem(_item);
-            }
-            mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
-            // Can't sort if nothing to sort on, switch to sorting by room number
-            if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
-                mIsSelectionSortByNames = false;
-            }
-            mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
-            mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
-            resizeMultiSelectionWidget();
-            mMultiSelectionListWidget.selectAll();
-            mMultiSelectionListWidget.blockSignals(false);
-            mMultiSelectionListWidget.show();
-            update();
-        } else {
-            mMultiSelectionListWidget.hide();
-        }
     }
 
 
@@ -2832,9 +2789,55 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
         }
 
+        auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+        auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
-            auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+
+            mMultiRect = QRect(event->pos(), event->pos());
+            float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
+            float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+
+            QSetIterator<int> itRoom(pArea->getAreaRooms());
+            while (itRoom.hasNext()) { // Scan to find rooms in selection
+                int currentAreaRoom = itRoom.next();
+                TRoom *room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+                if (!room) {
+                    continue;
+                }
+                int rx = room->x * mRoomWidth + fx;
+                int ry = room->y * -1 * mRoomHeight + fy;
+                int rz = room->z;
+
+                int mx = event->pos().x();
+                int my = event->pos().y();
+                int mz = mOz;
+                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
+                    if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
+                        mMultiSelectionSet.remove(currentAreaRoom);
+                    } else {
+                        mMultiSelectionSet.insert(currentAreaRoom);
+                    }
+
+                    if (!mMultiSelectionSet.empty()) {
+                        mMultiSelection = false;
+                    }
+                }
+            }
+
+
+            switch (mMultiSelectionSet.size()) {
+                case 0:
+                    mMultiSelectionHighlightRoomId = 0;
+                    break;
+                case 1:
+                    mMultiSelection = false; // OK, found one room so stop
+                    mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+                    break;
+                default:
+                    mMultiSelection = false; // OK, found more than one room so stop
+                    getCenterSelection();
+            }
 
             if (!playerRoom || !pArea) {
                 auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
@@ -3089,6 +3092,55 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
         connect(mapper, SIGNAL(mapped(QString)), this, SLOT(slot_userAction(QString)));
+    }
+
+    updateSelectionWidget();
+    update();
+}
+
+void T2DMap::updateSelectionWidget()
+{
+    // display room selection list widget if more than 1 room has been selected
+    // -> user can manually change current selection if rooms are overlapping
+    if (mMultiSelectionSet.size() > 1) {
+        // We don't want to cause calls to slot_roomSelectionChanged() here!
+        mMultiSelectionListWidget.blockSignals(true);
+        mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
+        mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
+        mMultiSelectionListWidget.clear();
+        // Do NOT sort while inserting items!
+        mMultiSelectionListWidget.setSortingEnabled(false);
+        QSetIterator<int> itRoom = mMultiSelectionSet;
+        mIsSelectionUsingNames = false;
+        while (itRoom.hasNext()) {
+            auto _item = new QTreeWidgetItem;
+            int multiSelectionRoomId = itRoom.next();
+            _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
+            _item->setTextAlignment(0, Qt::AlignRight);
+            TRoom *pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
+            if (pR_multiSelection) {
+                QString multiSelectionRoomName = pR_multiSelection->name;
+                if (!multiSelectionRoomName.isEmpty()) {
+                    _item->setText(1, multiSelectionRoomName);
+                    _item->setTextAlignment(1, Qt::AlignLeft);
+                    mIsSelectionUsingNames = true;
+                }
+            }
+            mMultiSelectionListWidget.addTopLevelItem(_item);
+        }
+        mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+        // Can't sort if nothing to sort on, switch to sorting by room number
+        if ((!mIsSelectionUsingNames) && mIsSelectionSortByNames && mIsSelectionSorting) {
+            mIsSelectionSortByNames = false;
+        }
+        mMultiSelectionListWidget.sortByColumn(mIsSelectionSortByNames ? 1 : 0, Qt::AscendingOrder);
+        mMultiSelectionListWidget.setSortingEnabled(mIsSelectionSorting);
+        resizeMultiSelectionWidget();
+        mMultiSelectionListWidget.selectAll();
+        mMultiSelectionListWidget.blockSignals(false);
+        mMultiSelectionListWidget.show();
+    } else {
+        mMultiSelectionListWidget.hide();
     }
     update();
 }
