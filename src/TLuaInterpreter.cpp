@@ -48,6 +48,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "mapInfoContributorManager.h"
 
 #include "math.h"
 #include "pre_guard.h"
@@ -13624,6 +13625,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
+    lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
+    lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
+    lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15231,4 +15236,109 @@ int TLuaInterpreter::showNotification(lua_State* L)
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
+int TLuaInterpreter::registerMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+
+    if (!lua_isfunction(L, 2)) {
+        lua_pushfstring(L, "registerMapInfo: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    auto& host = getHostFromLua(L);
+    host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+        if (roomID > 0) {
+            lua_pushinteger(L, roomID);
+        } else {
+            lua_pushnil(L);
+        }
+        lua_pushinteger(L, selectionSize);
+        lua_pushinteger(L, areaId);
+        lua_pushinteger(L, displayAreaId);
+
+        int error = lua_pcall(L, 4, 6, 0);
+        if (error) {
+            int errorCount = lua_gettop(L);
+            if (mudlet::debugMode) {
+                for (int i = 1; i <= errorCount; i++) {
+                    if (lua_isstring(L, i)) {
+                        auto errorMessage = lua_tostring(L, i);
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
+                    }
+                }
+            }
+            lua_pop(L, errorCount);
+            return MapInfoProperties{};
+        }
+
+        auto nResult = lua_gettop(L);
+        auto index = -nResult;
+        QString text = lua_tostring(L, index);
+        bool isBold = lua_toboolean(L, ++index);
+        bool isItalic = lua_toboolean(L, ++index);
+        int r = -1;
+        int g = -1;
+        int b = -1;
+        if (!lua_isnil(L, ++index)) {
+            r = lua_tonumber(L, index);
+        }
+        if (!lua_isnil(L, ++index)) {
+            g = lua_tonumber(L, index);
+        }
+        if (!lua_isnil(L, ++index)) {
+            b = lua_tonumber(L, index);
+        }
+        QColor color;
+        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            color = QColor(r, g, b);
+        }
+        lua_pop(L, nResult);
+        return MapInfoProperties{ isBold, isItalic, text, color };
+    });
+    host.mpMap->mpMapper->updateInfoContributors();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killMapInfo
+int TLuaInterpreter::killMapInfo(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    host.mpMap->mpMapper->updateInfoContributors();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableMapInfo
+int TLuaInterpreter::enableMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    auto& host = getHostFromLua(L);
+    if (!host.mpMap->mMapInfoContributorManager->enableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableMapInfo
+int TLuaInterpreter::disableMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    auto& host = getHostFromLua(L);
+    if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }

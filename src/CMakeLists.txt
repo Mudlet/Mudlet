@@ -80,6 +80,7 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
+    mapInfoContributorManager.cpp
     mudlet.cpp
     ScriptUnit.cpp
     T2DMap.cpp
@@ -211,6 +212,7 @@ set(mudlet_HDRS
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
+    mapInfoContributorManager.h
     mudlet.h
     post_guard.h
     pre_guard.h

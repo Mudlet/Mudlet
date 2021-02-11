@@ -500,7 +500,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="a" native="true">
+          <widget class="QWidget" name="d2buttons" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -602,19 +602,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="showInfo">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>50</width>
-                <height>0</height>
-               </size>
-              </property>
+             <widget class="QPushButton" name="info_pushButton">
               <property name="text">
                <string>Info</string>
               </property>

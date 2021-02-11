@@ -22,7 +22,6 @@
 
 #include "TMap.h"
 
-
 #include "Host.h"
 #include "TArea.h"
 #include "TConsole.h"
@@ -32,6 +31,7 @@
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "mapInfoContributorManager.h"
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
@@ -142,6 +142,8 @@ TMap::TMap(Host* pH, const QString& profileName)
     // TLuaInterpreter; each profile's ctelnet and now each profile's TMap
     // (was dlgMapper) instance has one...!
     mpNetworkAccessManager = new QNetworkAccessManager(this);
+
+    mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
 
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }

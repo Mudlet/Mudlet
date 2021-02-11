@@ -1,10 +1,8 @@
-#ifndef MUDLET_DLGMAPPER_H
-#define MUDLET_DLGMAPPER_H
+#ifndef TMAPINFOCONTRIBUTORMANAGER_H
+#define TMAPINFOCONTRIBUTORMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,56 +20,46 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "pre_guard.h"
-#include "ui_mapper.h"
-#include <QDir>
-#include <QMainWindow>
-#include <QPointer>
+#include <QColor>
+#include <QList>
+#include <QMap>
+#include <QObject>
+#include <QString>
+#include <QtCore>
 #include "post_guard.h"
 
-class Host;
-class TMap;
-#if defined(INCLUDE_3DMAPPER)
-class GLWidget;
-#endif
+#include "Host.h"
 
-
-class dlgMapper : public QWidget, public Ui::mapper
+struct MapInfoProperties
 {
-    Q_OBJECT
-
-public:
-    Q_DISABLE_COPY(dlgMapper)
-    dlgMapper(QWidget*, Host*, TMap*);
-#if defined(INCLUDE_3DMAPPER)
-    GLWidget* glWidget;
-#endif
-    void updateAreaComboBox();
-    void setDefaultAreaShown(bool);
-    bool getDefaultAreaShown() { return mShowDefaultArea; }
-    void resetAreaComboBoxToPlayerRoomArea();    
-
-    void updateInfoContributors();
-
-public slots:
-    void slot_bubbles();
-    void slot_toggleShowRoomIDs(int s);
-    void slot_toggleShowRoomNames(int s);
-    void slot_toggleStrongHighlight(int v);
-    void show2dView();
-    void slot_togglePanel();
-    void slot_roomSize(int d);
-    void slot_lineSize(int d);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    // Only used in newer Qt versions
-    void slot_switchArea(const int);
-#endif
-
-private:
-    TMap* mpMap;
-    QPointer<Host> mpHost;
-    bool mShowDefaultArea;
+    bool isBold;
+    bool isItalic;
+    QString text;
+    QColor color;
 };
 
-#endif // MUDLET_DLGMAPPER_H
+using MapInfoCallback = std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)>;
+
+class MapInfoContributorManager : QObject
+{
+    Q_DECLARE_TR_FUNCTIONS(MapInfoContributorManager)
+
+public:
+    MapInfoContributorManager(QObject* parent, Host* ph);
+
+    void registerContributor(const QString& name, MapInfoCallback callback);
+    bool removeContributor(const QString& name);
+    bool enableContributor(const QString& name);
+    bool disableContributor(const QString& name);
+    MapInfoCallback getContributor(const QString& name);
+    QList<QString> &getContributorKeys();
+    MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+    MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+
+private:
+    QList<QString> ordering;
+    QMap<QString, MapInfoCallback> contributors;
+    Host* mpHost;
+};
+#endif

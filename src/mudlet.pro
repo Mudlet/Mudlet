@@ -537,6 +537,7 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
@@ -640,6 +641,7 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
     pre_guard.h \
     post_guard.h \
