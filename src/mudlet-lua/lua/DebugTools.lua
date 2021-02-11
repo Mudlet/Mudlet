@@ -361,6 +361,9 @@ end
 
 setmetatable(inspect, { __call = function(_, ...) return inspect.inspect(...) end })
 
+-- maintain backwards compatibility with prettywrite
+prettywrite = inspect
+
 -- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#display
 function display(...)
   local arg = {...}
