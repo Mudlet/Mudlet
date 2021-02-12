@@ -334,8 +334,6 @@ void dlgMapper::slot_switchArea(const int index)
 
 void dlgMapper::updateInfoContributors()
 {
-    return;
-
     info_pushButton->menu()->clear();
     auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), info_pushButton);
     info_pushButton->menu()->addAction(clearAction);
