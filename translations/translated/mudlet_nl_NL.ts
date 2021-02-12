@@ -128,7 +128,8 @@ wacht aub...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="138"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Kamernaam: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="151"/>
