@@ -128,7 +128,8 @@ veuillez patienter...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="138"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nom de la salle: %1
+</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="151"/>
