@@ -392,7 +392,7 @@ function Geyser.MiniConsole:display(...)
       self:display(arg[i])
     end
   else
-    self:echo((prettywrite(arg[1], '  ') or 'nil') .. '\n')
+    self:echo((inspect(arg[1]) or 'nil') .. '\n')
   end
 end
 
