@@ -29,7 +29,7 @@ jobs:
 
     steps:
     - name: Restore Qt cache
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{env.qt}}
