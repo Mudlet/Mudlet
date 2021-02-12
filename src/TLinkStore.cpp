@@ -19,13 +19,14 @@
 
 #include "TLinkStore.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList)
 {
     if (++mLinkID > maxLinks) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
+    mIsFunction[mLinkID] = isFunctionList;
 
     return mLinkID;
 }
@@ -48,6 +49,11 @@ QStringList& TLinkStore::getLinks(int id)
 QStringList& TLinkStore::getHints(int id)
 {
     return mHintStore[id];
+}
+
+QVector<bool> TLinkStore::getIsLinkFunction(int id) const
+{
+    return mIsFunction.value(id);
 }
 
 QStringList TLinkStore::getLinksConst(int id) const

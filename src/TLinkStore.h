@@ -31,6 +31,7 @@ class TLinkStore {
 
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
+    QMap<int, QVector<bool>> mIsFunction;
 
     int mLinkID;
     int maxLinks;
@@ -40,12 +41,13 @@ public:
 
     explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
-    int addLinks(const QStringList& links, const QStringList& hints);
+    int addLinks(const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList = QVector<bool>());
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
     QStringList getLinksConst(int id) const;
     QStringList getHintsConst(int id) const;
+    QVector<bool> getIsLinkFunction(int id) const;
 
     int getCurrentLinkID() const;
 

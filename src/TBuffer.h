@@ -150,7 +150,7 @@ public:
     int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
-    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format);
+    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<bool> isFunctionList = QVector<bool>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     QString& line(int n);

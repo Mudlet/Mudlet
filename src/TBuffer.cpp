@@ -261,9 +261,9 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<bool> isFunctionList)
 {
-    int id = mLinkStore.addLinks(command, hint);
+    int id = mLinkStore.addLinks(command, hint, isFunctionList);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
