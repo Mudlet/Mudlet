@@ -217,7 +217,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             if (!re) {
                 if (mudlet::debugMode) {
                     TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
-                    TDebug(Qt::red, Qt::white) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
+                    TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
@@ -246,7 +246,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
-                    TDebug(Qt::red, Qt::white) << TDebug::csmContinue << R"(in lua condition function: ")" << regexList.at(i) << "\"\n" >> mpHost;
+                    TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in lua condition function: ")" << regexList.at(i) << "\"\n" >> mpHost;
                 }
             } else {
                 mLuaConditionMap[i] = funcName;
@@ -322,7 +322,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
         if (mudlet::debugMode) {
-            TDebug(Qt::blue, Qt::white) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
+            TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> mpHost;
         }
     }
 

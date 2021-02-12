@@ -26,9 +26,7 @@
 #include "mudlet.h"
 
 // This is a Unicode NON-character code which is explicitly undisplayable but
-// can be embedded for our own internal purposes - in this case to flag that
-// the text is a continuation of a previous one and should NOT have a marking
-// prepended to indicate from which profile it came.
+// can be embedded for our own internal purposes:
 const QChar TDebug::csmContinue = QChar(0xFFFF);
 
 QMap<const Host*, QPair<QString, QChar>> TDebug::smIdentifierMap;
@@ -42,10 +40,9 @@ TDebug::TDebug(const QColor& c, const QColor& d)
 }
 
 // This is the method that pushes the accumulated text out to the Central Debug
-// Console. If the accumulated message text (in msg) begins with csmContinue
-// then this message is appended onto a previous one and should NOT include
-// any indicator (at the beginning) of the profile from which it came - which
-// is now deduced from the supplied Host pointer.
+// Console. Handles 'msg' beginning with 'csmContinue', otherwise if more than 1
+// profile active, prepends msg with an indicator of the profile from which it
+// came, which is deduced from the supplied Host pointer.
 TDebug& TDebug::operator>>(Host* pHost)
 {
     if (Q_UNLIKELY(!mudlet::mpDebugConsole)) {
@@ -185,6 +182,11 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     } while (tryCount < maxIdCount);
 
     QString hostName = pHost->getName();
+    // Take a deep-copy to prevent RVO of the Host::getName() method from
+    // stopping deleting the 'Host::mHostName` when the profile is destroyed
+    // - so this copy can persist independently of the original when the latter
+    // goes away:
+    hostName.detach();
     if (TDebug::smUsedIdentifiers.contains(validIdentifiers.at(tryCount))) {
         // Run out of identifers - fall back to '?'
         QPair<QString, QChar> newIdentifier = qMakePair(hostName, QLatin1Char('?'));
@@ -195,7 +197,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
     TDebug localMessage(Qt::blue, Qt::white);
-    localMessage << QStringLiteral("Profile: '%1' started.\n").arg(hostName) >> nullptr;
+    localMessage << QStringLiteral("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
 }
@@ -204,7 +206,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 {
     TDebug::smIdentifierMap.remove(pHost);
     TDebug localMessage(Qt::darkGray, Qt::white);
-    localMessage << QStringLiteral("Profile: '%1' ended.\n").arg(pHost->getName()) >> nullptr;
+    localMessage << QStringLiteral("Profile '%1' ended.\n").arg(pHost->getName()) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
 }
@@ -226,12 +228,11 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     }
     messageLines.prepend(QStringLiteral(" [*] = System message, not belonging to a specific profile"));
     if (TDebug::smIdentifierMap.count() > 1) {
-        messageLines.prepend(QStringLiteral("There are %1 profiles active now, so each message from a profile will be "
-                                            "prefixed with a single character inside a pair of '['...']'s as follows:").arg(TDebug::smIdentifierMap.count()));
+        messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile will be prefixed as follows:")
+                                     .arg(TDebug::smIdentifierMap.count()));
     } else {
-        messageLines.prepend(QStringLiteral("There is only a single profile active right now, so only messages not from that "
-                                            "profile will be prefixed though the indicated character will be retained and "
-                                            "used should another profile be opened:"));
+        messageLines.prepend(QStringLiteral("Only 1 profile active now. Only non-profile messages will be prefixed until "
+                                            "another profile is started but then its will be marked as follows:"));
     }
 
     return messageLines.join(QChar::LineFeed).append(QChar::LineFeed);

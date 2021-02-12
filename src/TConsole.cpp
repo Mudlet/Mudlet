@@ -1546,8 +1546,9 @@ int TConsole::select(const QString& text, int numOfMatch)
     }
 
     if (mudlet::debugMode) {
-        TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor (" << mUserCursor.y() << "):\n" >> mpHost;
-        TDebug(Qt::gray, Qt::black) << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+        TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >>  mpHost;
     }
 
     int begin = -1;
@@ -1584,7 +1585,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: \n\"" << buffer.line(mUserCursor.y()) << "\"\n" >> mpHost;
+        TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
     if (from < 0) {
         return false;

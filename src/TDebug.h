@@ -93,8 +93,8 @@ public:
     TDebug& operator<<(const QList<QString>&);
     TDebug& operator<<(const QList<int>&);
 
-    // one of two Unicode BMP non-characters, prepend this to any continuation
-    // message to suppress the insertion of the profile identifying marking.
+    // Prepend this to any continuation message to suppress the insertion of the
+    // profile identifying marking.
     static const QChar csmContinue;
 
 
