@@ -95,7 +95,7 @@ public:
 
     // one of two Unicode BMP non-characters, prepend this to any continuation
     // message to suppress the insertion of the profile identifying marking.
-    const static QChar csmContinue;
+    static const QChar csmContinue;
 
 
 private:
