@@ -37,6 +37,7 @@
 #include "TForkedProcess.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -796,6 +797,11 @@ int TLuaInterpreter::getProfileName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushstring(L, host.getName().toUtf8().constData());
+    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
+    if (profileIndex != -1) {
+        lua_pushnumber(L, profileIndex + 1);
+        return 2;
+    }
     return 1;
 }
 

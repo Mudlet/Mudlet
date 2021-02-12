@@ -147,15 +147,15 @@ QString TTabBar::tabName(const int index) const
     return result;
 }
 
-int TTabBar::tabIndex(const QString& name) const
+int TTabBar::tabIndex(const QString& profileName) const
 {
     int index = -1;
-    if (name.isEmpty()) {
+    if (profileName.isEmpty()) {
         return index;
     }
     const int total = count();
     while (++index < total) {
-        if (!tabData(index).toString().compare(name)) {
+        if (!tabData(index).toString().compare(profileName)) {
             return index;
         }
     }
