@@ -5457,7 +5457,7 @@ Nutzungen</translation>
       <location filename="../src/dlgMapper.cpp" line="338"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation type="unfinished"/>
+      <translation>Ohne</translation>
     </message>
   </context>
   <context>
