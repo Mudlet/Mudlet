@@ -134,7 +134,7 @@ please wait...</source>
       <location filename="../src/mapInfoContributorManager.cpp" line="138"/>
       <source>Room Name: %1
 </source>
-      <translation>Название комнаты: %1
+      <translation>Комната: %1
 </translation>
     </message>
     <message>
@@ -5480,7 +5480,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="338"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation>Ни одного</translation>
+      <translation>Ничего</translation>
     </message>
   </context>
   <context>
