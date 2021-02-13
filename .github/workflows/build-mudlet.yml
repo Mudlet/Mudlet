@@ -49,7 +49,14 @@ jobs:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/Boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.7z/download
 
+
     steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
     - name: Restore Qt cache
       uses: pat-s/always-upload-cache@v2.1.3
       id: cache-qt
@@ -79,12 +86,6 @@ jobs:
         ls ${{env.BOOST_ROOT}}
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
-
-    - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-        fetch-depth: 0
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
