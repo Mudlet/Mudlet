@@ -77,9 +77,10 @@ jobs:
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
-        key: boost-removeme4
+        key: boost
 
     - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
           # fix up paths to be forward slashes consistently
@@ -92,7 +93,6 @@ jobs:
         cd $BOOST_ROOT && mv -r boost_*/* .
         rm download.tar.bz2 download.tar
       shell: bash
-      if: steps.cache-boost.outputs.cache-hit != 'true'
 
     - name: Setup tmate session
       uses: mxschmitt/action-tmate@v3
