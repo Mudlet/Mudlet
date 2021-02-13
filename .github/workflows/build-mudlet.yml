@@ -47,7 +47,7 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/Boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.7z/download
 
     steps:
     - name: Restore Qt cache
@@ -74,9 +74,9 @@ jobs:
 
     - name: Install Boost
       run: |
-        # $env:PATH="C:\msys64\usr\bin;${env:PATH}"
-        wget -O - ${{env.BOOST_URL}} | tar -xj
-        ls ${{env.BOOST_URL}}
+        curl -x -o ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_URL}}
+        7z e ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_ROOT}}
+        ls ${{env.BOOST_ROOT}}
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
 
