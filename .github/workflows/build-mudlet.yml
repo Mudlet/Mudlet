@@ -51,7 +51,7 @@ jobs:
 
     steps:
     - name: Restore Qt cache
-      uses: actions/cache@v2.1.4
+      uses: pat-s/always-upload-cache@v2.1.3
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -66,14 +66,16 @@ jobs:
         cached: ${{steps.cache-qt.outputs.cache-hit}}
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.4
+      uses: pat-s/always-upload-cache@v2.1.3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
         key: boost
 
     - name: Install Boost
-      run: wget --quiet -O - ${{env.BOOST_URL}} | tar -xj
+      run: |
+        $env:PATH="C:\msys64\usr\bin;${env:PATH}"
+        wget --quiet -O - ${{env.BOOST_URL}} | tar -xj
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
 
@@ -231,7 +233,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2.1.4
+      uses: pat-s/always-upload-cache@v2.1.3
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
