@@ -48,7 +48,7 @@ jobs:
     env:
       BOOST_ROOT: ${{runner.workspace}}/Boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-    
+
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
