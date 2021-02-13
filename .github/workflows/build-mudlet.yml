@@ -81,6 +81,7 @@ jobs:
 
     - name: Install Boost
       run: |
+        mkdir -p ${{env.BOOST_ROOT}}
         curl -o ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_URL}}
         7z e ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_ROOT}}
         ls ${{env.BOOST_ROOT}}
