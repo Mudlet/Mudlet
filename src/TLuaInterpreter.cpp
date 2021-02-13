@@ -15254,26 +15254,16 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "exportJsonMap: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "exportJsonMap: bad argument #1 type (export pathFileName as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString dest = lua_tostring(L, 1);
+    auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
     if (dest.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a non-empty path and file name to write to must be provided");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to write to must be provided"));
     }
 
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
@@ -15284,26 +15274,16 @@ int TLuaInterpreter::importJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "importJsonMap: no map present or loaded!");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
     }
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "importJsonMap: bad argument #1 type (import pathFileName as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    QString source = lua_tostring(L, 1);
+    auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
     if (source.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "a non-empty path and file name to read to must be provided");
-        return 2;
+        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to read to must be provided"));
     }
 
     if (auto [result, message] = pHost->mpMap->readJsonMapFile(source); !result) {
-        lua_pushnil(L);
-        lua_pushfstring(L, message.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, message);
     }
 
     lua_pushboolean(L, true);
