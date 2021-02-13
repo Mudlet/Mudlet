@@ -1119,7 +1119,7 @@ void TTextEdit::slot_popupMenu()
     if (!isFunction) {
         mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
     } else {
-        mpHost->mLuaInterpreter.callAction(cmd.toInt());
+        mpHost->mLuaInterpreter.callAnonymousFunction(cmd.toInt(), QStringLiteral("echoPopup"));
     }
 }
 
@@ -1181,7 +1181,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                         if (!isFunction){
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
-                            mpHost->mLuaInterpreter.callAction(func.toInt());
+                            mpHost->mLuaInterpreter.callAnonymousFunction(func.toInt(), QStringLiteral("echoLink"));
                         }
                         return;
                     }

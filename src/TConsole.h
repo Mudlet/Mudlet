@@ -90,8 +90,8 @@ public:
     void insertHTML(const QString&);
     void insertText(const QString&);
     void insertText(const QString&, QPoint);
-    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false);
-    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false);
+    void insertLink(const QString&, QStringList&, QStringList&, QPoint, bool customFormat = false, QVector<bool> isFunctionList = QVector<bool>());
+    void insertLink(const QString&, QStringList&, QStringList&, bool customFormat = false, QVector<bool> isFunctionList = QVector<bool>());
     void echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat = false, QVector<bool> isFunctionList = QVector<bool>());
     void copy();
     void cut();

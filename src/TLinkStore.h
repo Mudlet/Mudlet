@@ -25,6 +25,7 @@
 #include <QStringList>
 #include "post_guard.h"
 
+class Host;
 // Keep together lists of links and hints associated
 class TLinkStore {
     inline static const int scmMaxLinks = 2000;
@@ -41,7 +42,7 @@ public:
 
     explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
-    int addLinks(const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList = QVector<bool>());
+    int addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList = QVector<bool>());
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);

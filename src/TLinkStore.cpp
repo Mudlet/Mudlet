@@ -18,12 +18,25 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
+#include "Host.h"
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList)
+int TLinkStore::addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList)
 {
     if (++mLinkID > maxLinks) {
         mLinkID = 1;
     }
+
+    // Used to unref lua objects in the registry to avoid memory leaks
+    if (mLinkStore.contains(mLinkID)){
+        QStringList oldLinks = mLinkStore.value(mLinkID);
+        QVector<bool> oldIsFunction = mIsFunction.value(mLinkID);
+        for (int i = 0, total = oldLinks.size(); i < total; ++i) {
+            if (oldIsFunction.value(i, false)){
+                pH->mLuaInterpreter.freeLuaRegistryIndex(oldLinks.at(i).toInt());
+            }
+        }
+    }
+
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
     mIsFunction[mLinkID] = isFunctionList;
