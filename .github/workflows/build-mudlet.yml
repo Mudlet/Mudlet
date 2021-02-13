@@ -66,11 +66,11 @@ jobs:
         cached: ${{steps.cache-qt.outputs.cache-hit}}
 
     - name: Restore Boost cache
-      uses: pat-s/always-upload-cache@v2.1.3
+      uses: actions/cache@v22
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
-        key: boost-removeme2
+        key: boost-removeme3
 
     - name: Install Boost
       run: |
