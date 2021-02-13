@@ -74,8 +74,9 @@ jobs:
 
     - name: Install Boost
       run: |
-        $env:PATH="C:\msys64\usr\bin;${env:PATH}"
-        wget --quiet -O - ${{env.BOOST_URL}} | tar -xj
+        # $env:PATH="C:\msys64\usr\bin;${env:PATH}"
+        wget -O - ${{env.BOOST_URL}} | tar -xj
+        ls ${{env.BOOST_URL}}
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
 
