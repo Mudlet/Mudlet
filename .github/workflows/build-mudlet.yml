@@ -45,6 +45,10 @@ jobs:
             qt: '5.14.1'
             deploy: 'deploy'
 
+    env:
+      BOOST_ROOT: ${{runner.workspace}}/Boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+    
     steps:
     - name: Restore Qt cache
       uses: actions/cache@v2.1.4
@@ -60,6 +64,18 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+
+    - name: Restore Boost cache
+      uses: actions/cache@v2.1.4
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      run: wget --quiet -O - ${{env.BOOST_URL}} | tar -xj
+      shell: bash
+      if: steps.cache-boost.outputs.cache-hit != 'true'
 
     - name: Checkout Mudlet source code
       uses: actions/checkout@v2
@@ -142,9 +158,6 @@ jobs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        # Use pre-installed Boost
-        echo "BOOST_ROOT=$env:BOOST_ROOT_1_72_0" >> $env:GITHUB_ENV
-
         # Install dependencies not available on machine
         $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
         $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
