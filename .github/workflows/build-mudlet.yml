@@ -46,7 +46,7 @@ jobs:
             deploy: 'deploy'
 
     env:
-      BOOST_ROOT: ${{github.workspace}}/3rdparty/Boost
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.7z/download
 
 
