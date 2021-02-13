@@ -293,7 +293,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     // TODO: Do not enable this option currently - although the user can drag
-    // the tabs the underlying main TConsoles do not move with multiview enabled
+    // the tabs, the underlying main TConsoles do not move with multiview enabled
     mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
