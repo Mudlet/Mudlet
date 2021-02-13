@@ -70,7 +70,7 @@ jobs:
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
-        key: boost
+        key: boost-removeme
 
     - name: Install Boost
       run: |
