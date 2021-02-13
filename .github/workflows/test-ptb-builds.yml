@@ -1,11 +1,11 @@
-name: Build Mudlet
+name: Build PTB test Mudlet
 on:
   push:
     branches: [master, development]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
   compile-mudlet:
@@ -260,16 +260,16 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
 
-    # - name: Setup tmate session for debugging
-    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-    #   uses: mxschmitt/action-tmate@v3
-    #   env:
-    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-    #     RUNNER_OS: ${{runner.os}}
-    #     DEPLOY: ${{matrix.deploy}}
-    #     DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-    #     DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-    #     DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+    - name: Setup tmate session for debugging
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      uses: mxschmitt/action-tmate@v3
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
 
     - name: (Linux/macOS) package Mudlet

@@ -55,6 +55,8 @@ extern "C" {
 #include <string>
 #include <memory>
 
+#include "TTrigger.h"
+
 
 class Host;
 class TEvent;
@@ -113,8 +115,8 @@ public:
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
-    void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList);
-
+    void setCaptureNameGroups(const NameGroupMatches&);
+    void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -588,6 +590,10 @@ public:
     static int showNotification(lua_State*);
     static int exportJsonMap(lua_State*);
     static int importJsonMap(lua_State*);
+    static int registerMapInfo(lua_State*);
+    static int killMapInfo(lua_State*);
+    static int enableMapInfo(lua_State*);
+    static int disableMapInfo(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -606,7 +612,7 @@ private:
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static float getVerifiedFloat(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
-    static void announceWrongArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
+    static void errorArgumentType(lua_State* L, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State* L, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
     void logError(std::string& e, const QString&, const QString& function);
@@ -639,8 +645,9 @@ private:
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
-
     std::list<std::list<int>> mMultiCaptureGroupPosList;
+    QVector<QPair<QString, QString>> mCapturedNameGroups;
+    QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
 
     QMap<QNetworkReply*, QString> downloadMap;
 

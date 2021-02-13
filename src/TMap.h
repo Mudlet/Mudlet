@@ -57,7 +57,7 @@ class TRoomDB;
 class QFile;
 class QNetworkAccessManager;
 class QProgressDialog;
-
+class MapInfoContributorManager;
 
 class TMap : public QObject
 {
@@ -253,6 +253,8 @@ public:
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage = 70;
 
+
+    MapInfoContributorManager* mMapInfoContributorManager;
 
 public slots:
     // Moved and revised from dlgMapper:
