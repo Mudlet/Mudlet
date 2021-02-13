@@ -83,11 +83,15 @@ jobs:
       run: |
         mkdir -p ${{env.BOOST_ROOT}}
         echo "curl -o ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_URL}}"
-        ls ${{env.BOOST_ROOT}}
         curl -o ${{env.BOOST_ROOT}}/download.7z ${{env.BOOST_URL}}
+        ls ${{env.BOOST_ROOT}}
         7z e ${{env.BOOST_ROOT}}/download.7z -o${{env.BOOST_ROOT}}
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: error()
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
