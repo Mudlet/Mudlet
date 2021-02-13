@@ -90,7 +90,7 @@ jobs:
         curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
         7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
         7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
-        cd $BOOST_ROOT && mv -r boost_*/* .
+        cd $BOOST_ROOT && mv -f boost_*/* .
         rm download.tar.bz2 download.tar
       shell: bash
 
