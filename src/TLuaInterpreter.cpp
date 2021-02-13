@@ -11178,7 +11178,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
             e += lua_tostring(L, 1);
         }
         if (mudlet::debugMode) {
-            q << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
+            qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
         QString _n = "error in Lua code";
         QString _n2 = "no debug data available";
