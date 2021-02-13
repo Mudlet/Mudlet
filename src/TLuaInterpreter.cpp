@@ -48,6 +48,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "mapInfoContributorManager.h"
 
 #include "math.h"
 #include "pre_guard.h"
@@ -428,12 +429,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
-
-            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
-            event.mArgumentList << replyText;
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        }
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::CustomOperation:
@@ -446,11 +443,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
-            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
-            event.mArgumentList << replyText;
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        }
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::PutOperation:
@@ -458,12 +452,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
-
-            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
-            event.mArgumentList << replyText;
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        }
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::GetOperation:
@@ -480,12 +470,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
-
-                // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
-                event.mArgumentList << replyText;
-                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            }
+            event.mArgumentList << QString(reply->readAll());
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         }
 
@@ -548,7 +534,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     pHost->raiseEvent(event);
 }
 
-void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes) {
+void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
+{
     Host& host = getHostFromLua(L);
 
     TEvent event {};
@@ -2565,7 +2552,7 @@ int TLuaInterpreter::getExitStubs(lua_State* L)
     }
     QList<int> stubs = pR->exitStubs;
     if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %1").arg(roomId));
     }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
@@ -2593,7 +2580,7 @@ int TLuaInterpreter::getExitStubs1(lua_State* L)
     }
     QList<int> stubs = pR->exitStubs;
     if (stubs.empty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %d").arg(roomId));
+        return warnArgumentValue(L, __func__, QStringLiteral("no stubs in this room with id %1").arg(roomId));
     }
     lua_newtable(L);
     for (int i = 0, total = stubs.size(); i < total; ++i) {
@@ -7072,8 +7059,8 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 int TLuaInterpreter::setBorderColor(lua_State* L)
 {
     int luaRed = getVerifiedInt(L, __func__, 1, "red");
-    int luaGreen = getVerifiedInt(L, __func__, 1, "green");
-    int luaBlue = getVerifiedInt(L, __func__, 1, "blue");
+    int luaGreen = getVerifiedInt(L, __func__, 2, "green");
+    int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     Host& host = getHostFromLua(L);
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
@@ -8487,7 +8474,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
     QString key = getVerifiedString(L, __func__, 2, "key");
     bool isBackwardCompatibilityRequired = true;
     if (lua_gettop(L) > 2) {
-        isBackwardCompatibilityRequired = !getVerifiedBool(L, __func__, 1, "enableFullErrorReporting {default = false}", true);
+        isBackwardCompatibilityRequired = !getVerifiedBool(L, __func__, 3, "enableFullErrorReporting {default = false}", true);
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -8495,7 +8482,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
         if (!isBackwardCompatibilityRequired) {
             return warnArgumentValue(L, __func__, QStringLiteral("number %1 is not a valid room id").arg(roomId));
         }
-        lua_pushstring(L, QString().toUtf8().constData());
+        lua_pushstring(L, "");
         return 1;
     }
     if (!pR->userData.contains(key)) {
@@ -8503,7 +8490,7 @@ int TLuaInterpreter::getRoomUserData(lua_State* L)
             return warnArgumentValue(L, __func__, QStringLiteral(
                 "no user data with key '%1' in room with id %2").arg(key, QString::number(roomId)));
         }
-        lua_pushstring(L, QString().toUtf8().constData());
+        lua_pushstring(L, "");
         return 1;
     }
     lua_pushstring(L, pR->userData.value(key).toUtf8().constData());
@@ -11380,10 +11367,11 @@ std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool w
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList)
+void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<QVector<QPair<QString, QString>>>& nameGroups)
 {
     mMultiCaptureGroupList = captureList;
     mMultiCaptureGroupPosList = posList;
+    mMultiCaptureNameGroups = nameGroups;
 
     /*
      * std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
@@ -11416,6 +11404,11 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
      */
 }
 
+void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups)
+{
+    mCapturedNameGroups = nameGroups;
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::clearCaptureGroups()
 {
@@ -11423,6 +11416,8 @@ void TLuaInterpreter::clearCaptureGroups()
     mCaptureGroupPosList.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
+    mCapturedNameGroups.clear();
+    mMultiCaptureNameGroups.clear();
 
     lua_State* L = pGlobalLua;
     lua_newtable(L);
@@ -11954,6 +11949,11 @@ void TLuaInterpreter::setMatches(lua_State* L)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
+        for (auto [name, capture] : mCapturedNameGroups) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
+        }
         lua_setglobal(L, "matches");
     }
 }
@@ -12255,6 +12255,11 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
                 lua_pushnumber(L, i);
                 lua_pushstring(L, (*it).c_str());
                 lua_settable(L, -3); //match in matches
+            }
+            for (auto [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+                lua_pushstring(L, name.toUtf8().constData());
+                lua_pushstring(L, capture.toUtf8().constData());
+                lua_settable(L, -3);
             }
             lua_settable(L, -3); //matches in regex
         }
@@ -13620,6 +13625,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
+    lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
+    lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
+    lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15227,4 +15236,109 @@ int TLuaInterpreter::showNotification(lua_State* L)
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
+int TLuaInterpreter::registerMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+
+    if (!lua_isfunction(L, 2)) {
+        lua_pushfstring(L, "registerMapInfo: bad argument #2 type (callback as function expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    int callback = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    auto& host = getHostFromLua(L);
+    host.mpMap->mMapInfoContributorManager->registerContributor(name, [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
+        if (roomID > 0) {
+            lua_pushinteger(L, roomID);
+        } else {
+            lua_pushnil(L);
+        }
+        lua_pushinteger(L, selectionSize);
+        lua_pushinteger(L, areaId);
+        lua_pushinteger(L, displayAreaId);
+
+        int error = lua_pcall(L, 4, 6, 0);
+        if (error) {
+            int errorCount = lua_gettop(L);
+            if (mudlet::debugMode) {
+                for (int i = 1; i <= errorCount; i++) {
+                    if (lua_isstring(L, i)) {
+                        auto errorMessage = lua_tostring(L, i);
+                        TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> 0;
+                    }
+                }
+            }
+            lua_pop(L, errorCount);
+            return MapInfoProperties{};
+        }
+
+        auto nResult = lua_gettop(L);
+        auto index = -nResult;
+        QString text = lua_tostring(L, index);
+        bool isBold = lua_toboolean(L, ++index);
+        bool isItalic = lua_toboolean(L, ++index);
+        int r = -1;
+        int g = -1;
+        int b = -1;
+        if (!lua_isnil(L, ++index)) {
+            r = lua_tonumber(L, index);
+        }
+        if (!lua_isnil(L, ++index)) {
+            g = lua_tonumber(L, index);
+        }
+        if (!lua_isnil(L, ++index)) {
+            b = lua_tonumber(L, index);
+        }
+        QColor color;
+        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            color = QColor(r, g, b);
+        }
+        lua_pop(L, nResult);
+        return MapInfoProperties{ isBold, isItalic, text, color };
+    });
+    host.mpMap->mpMapper->updateInfoContributors();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killMapInfo
+int TLuaInterpreter::killMapInfo(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    host.mpMap->mpMapper->updateInfoContributors();
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableMapInfo
+int TLuaInterpreter::enableMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    auto& host = getHostFromLua(L);
+    if (!host.mpMap->mMapInfoContributorManager->enableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableMapInfo
+int TLuaInterpreter::disableMapInfo(lua_State* L)
+{
+    auto name = getVerifiedString(L, __func__, 1, "label");
+    auto& host = getHostFromLua(L);
+    if (!host.mpMap->mMapInfoContributorManager->disableContributor(name)) {
+        return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
