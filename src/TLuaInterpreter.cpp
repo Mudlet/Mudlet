@@ -6578,17 +6578,17 @@ int TLuaInterpreter::exists(lua_State* L)
     int count = 0;
     type = type.toLower();
     if (type == QStringLiteral("timer")) {
-        count += host.getTimerUnit()->mLookupTable.count(name);
+        count = host.getTimerUnit()->mLookupTable.count(name);
     } else if (type == QStringLiteral("trigger")) {
-        count += host.getTriggerUnit()->mLookupTable.count(name);
+        count = host.getTriggerUnit()->mLookupTable.count(name);
     } else if (type == QStringLiteral("alias")) {
-        count += host.getAliasUnit()->mLookupTable.count(name);
+        count = host.getAliasUnit()->mLookupTable.count(name);
     } else if (type == QStringLiteral("keybind")) {
-        count += host.getKeyUnit()->mLookupTable.count(name);
+        count = host.getKeyUnit()->mLookupTable.count(name);
     } else if (type == QStringLiteral("button")) {
-        count += host.getActionUnit()->findActionsByName(name).size();
+        count = host.getActionUnit()->findActionsByName(name).size();
     } else if (type == QStringLiteral("script")) {
-        count += host.getScriptUnit()->findScriptId(name).size();
+        count = host.getScriptUnit()->findScriptId(name).size();
     } else {
         return warnArgumentValue(L, __func__, QStringLiteral(
             "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
