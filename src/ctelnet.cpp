@@ -2742,7 +2742,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
-            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
