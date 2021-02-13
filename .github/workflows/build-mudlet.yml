@@ -47,7 +47,7 @@ jobs:
 
     steps:
     - name: Restore Qt cache
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
@@ -218,7 +218,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
