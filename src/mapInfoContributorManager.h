@@ -1,11 +1,8 @@
-#ifndef MUDLET_TMAPLABEL_H
-#define MUDLET_TMAPLABEL_H
+#ifndef TMAPINFOCONTRIBUTORMANAGER_H
+#define TMAPINFOCONTRIBUTORMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,32 +20,46 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "pre_guard.h"
-#include <QtGlobal>
 #include <QColor>
-#include <QPixmap>
-#include <QSizeF>
-#include <QVector3D>
+#include <QList>
+#include <QMap>
+#include <QObject>
+#include <QString>
+#include <QtCore>
 #include "post_guard.h"
 
+#include "Host.h"
 
-class TMapLabel
+struct MapInfoProperties
 {
-public:
-
-    QVector3D pos;
-    QSizeF size;
-    QSizeF clickSize;
+    bool isBold;
+    bool isItalic;
     QString text;
-    QColor fgColor {Qt::black};
-    QColor bgColor {Qt::black};
-    QPixmap pix;
-    bool highlight {};
-    bool showOnTop {};
-    bool noScaling {};
-
-    QByteArray base64EncodePixmap() const;
+    QColor color;
 };
 
-#endif // MUDLET_TMAPLABEL_H
+using MapInfoCallback = std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)>;
+
+class MapInfoContributorManager : QObject
+{
+    Q_DECLARE_TR_FUNCTIONS(MapInfoContributorManager)
+
+public:
+    MapInfoContributorManager(QObject* parent, Host* ph);
+
+    void registerContributor(const QString& name, MapInfoCallback callback);
+    bool removeContributor(const QString& name);
+    bool enableContributor(const QString& name);
+    bool disableContributor(const QString& name);
+    MapInfoCallback getContributor(const QString& name);
+    QList<QString> &getContributorKeys();
+    MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+    MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+
+private:
+    QList<QString> ordering;
+    QMap<QString, MapInfoCallback> contributors;
+    Host* mpHost;
+};
+#endif

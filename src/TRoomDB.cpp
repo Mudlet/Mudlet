@@ -38,12 +38,10 @@ const QString ROOM_UI_NAMESIZE = QStringLiteral("room.ui_nameSize");
 TRoomDB::TRoomDB(TMap* pMap)
 : mpMap(pMap)
 , mpTempRoomDeletionSet(nullptr)
-, mUnnamedAreaName(tr("Unnamed Area"))
-, mDefaultAreaName(tr("Default Area"))
 {
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
-    addArea(-1, mDefaultAreaName);
+    addArea(-1, mpMap->getDefaultAreaName());
 }
 
 TRoom* TRoomDB::getRoom(int id)
@@ -491,19 +489,19 @@ bool TRoomDB::addArea(int id)
         areas[id] = new TArea(mpMap, this);
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area
-            QString newAreaName = mUnnamedAreaName;
+            QString newAreaName = mpMap->getUnnamedAreaName();
             if (areaNamesMap.values().contains(newAreaName)) {
                 // We already have an "unnamed area"
                 uint deduplicateSuffix = 0;
                 do {
-                    newAreaName = QStringLiteral("%1_%2").arg(mUnnamedAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+                    newAreaName = QStringLiteral("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
                 } while (areaNamesMap.values().contains(newAreaName));
             }
             areaNamesMap.insert(id, newAreaName);
         }
         return true;
     } else {
-        QString error = tr("Area with ID=%1 already exists!").arg(id);
+        QString error = tr("Area with ID %1 already exists!").arg(id);
         mpMap->logError(error);
         return false;
     }
@@ -560,6 +558,20 @@ bool TRoomDB::addArea(int id, QString name)
     } else {
         return false;
     }
+}
+
+// Used by TMap::readJsonMapFile(...) to insert an already populated area in:
+bool TRoomDB::addArea(TArea* pA, const int id, const QString& name)
+{
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    areas.insert(id, pA);
+    areaNamesMap.insert(id, name);
+    // Need to force recalculation of limits:
+    pA->mIsDirty = true;
+    return true;
 }
 
 const QList<TArea*> TRoomDB::getAreaPtrList() const
@@ -807,12 +819,12 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                 // I think this is unlikely but better provide code to cover it
                 // if it does arise that we need a new area but do not have a
                 // provided name
-                QString newAreaName = mUnnamedAreaName;
+                QString newAreaName = mpMap->getUnnamedAreaName();
                 if (areaNamesMap.values().contains(newAreaName)) {
                     // We already have an "unnamed area"
                     uint deduplicateSuffix = 0;
                     do {
-                        newAreaName = QStringLiteral("%1_%2").arg(mUnnamedAreaName).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+                        newAreaName = QStringLiteral("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
                     } while (areaNamesMap.values().contains(newAreaName));
                 }
                 areaNamesMap.insert(replacementAreaId, newAreaName);
@@ -1134,7 +1146,7 @@ void TRoomDB::clearMapDB()
     }
     assert(areas.empty());
     // Must now reinsert areaId -1 name = "Default Area"
-    addArea(-1, mDefaultAreaName);
+    addArea(-1, mpMap->getDefaultAreaName());
     qDebug() << "TRoomDB::clearMapDB() run time:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";
 }
 
@@ -1155,7 +1167,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         QString nonEmptyAreaName;
         if (itArea.value().isEmpty()) {
             isEmptyAreaNamePresent = true;
-            nonEmptyAreaName = mUnnamedAreaName;
+            nonEmptyAreaName = mpMap->getUnnamedAreaName();
             // Will trip following if more than one
         } else {
             nonEmptyAreaName = itArea.value();
@@ -1234,7 +1246,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "another that exists at the time.\n"
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"
-                                 "%2").arg(mUnnamedAreaName, extraTextForMatchingSuffixAlreadyUsed);
+                                 "%2").arg(mpMap->getUnnamedAreaName(), extraTextForMatchingSuffixAlreadyUsed);
         } else if (!renamedMap.empty()) {
             // Duplicates but no unnnamed area
             alertText = tr("[ ALERT ] - Duplicate area names detected in the Map file!");
@@ -1267,7 +1279,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "change these, perhaps by adding more meaningful area names but it is\n"
                                  "entirely up to you what is used, other then you will not be able to\n"
                                  "set one area's name to that of another that exists at the time.")
-                                      .arg(mUnnamedAreaName);
+                                      .arg(mpMap->getUnnamedAreaName());
         }
         mpMap->mpHost->postMessage(alertText);
         mpMap->appendErrorMsgWithNoLf(alertText, true);
@@ -1279,10 +1291,10 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
     }
 
     if (!areaNamesMap.contains(-1)) {
-        areaNamesMap.insert(-1, mDefaultAreaName);
+        areaNamesMap.insert(-1, mpMap->getDefaultAreaName());
         QString defaultAreaNameInsertionMsg = tr("[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an\n"
                                                  "area) not found, adding \"%1\" against the reserved -1 id.")
-                                                      .arg(mDefaultAreaName);
+                                                      .arg(mpMap->getDefaultAreaName());
         mpMap->mpHost->postMessage(defaultAreaNameInsertionMsg);
         mpMap->appendErrorMsgWithNoLf(defaultAreaNameInsertionMsg, false);
     }

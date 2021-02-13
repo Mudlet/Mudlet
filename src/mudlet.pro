@@ -502,7 +502,6 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     AltFocusMenuBarDisable.cpp \
-    TTextCodec.cpp \
     ctelnet.cpp \
     discord.cpp \
     dlgAboutDialog.cpp \
@@ -537,7 +536,9 @@ SOURCES += \
     KeyUnit.cpp \
     LuaInterface.cpp \
     main.cpp \
+    mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MxpTag.cpp \
     ScriptUnit.cpp \
     T2DMap.cpp \
     TAction.cpp \
@@ -563,11 +564,11 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
     TMxpFormattingTagsHandler.cpp \
-    TMxpBRTagHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
     TMxpFontTagHandler.cpp \
@@ -579,19 +580,20 @@ SOURCES += \
     TMxpProcessor.cpp \
     TMxpSendTagHandler.cpp \
     TMxpSupportTagHandler.cpp \
-    MxpTag.cpp \
     TMxpTagHandler.cpp \
     TMxpTagParser.cpp \
     TMxpTagProcessor.cpp \
-    TMxpVarTagHandler.cpp \
     TMxpVersionTagHandler.cpp \
+    TMxpVarTagHandler.cpp \
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
     TScript.cpp \
     TSplitter.cpp \
     TSplitterHandle.cpp \
+    TStringUtils.cpp \
     TTabBar.cpp \
+    TTextCodec.cpp \
     TTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
@@ -600,14 +602,12 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    TStringUtils.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    TTextCodec.h \
     ctelnet.h \
     discord.h \
     dlgAboutDialog.h \
@@ -640,7 +640,9 @@ HEADERS += \
     ircmessageformatter.h \
     KeyUnit.h \
     LuaInterface.h \
+    mapInfoContributorManager.h \
     mudlet.h \
+    MxpTag.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
@@ -689,7 +691,6 @@ HEADERS += \
     TMxpNodeBuilder.h \
     TMxpProcessor.h \
     TMxpSendTagHandler.h \
-    MxpTag.h \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
@@ -703,7 +704,9 @@ HEADERS += \
     TScript.h \
     TSplitter.h \
     TSplitterHandle.h \
+    TStringUtils.h \
     TTabBar.h \
+    TTextCodec.h \
     TTextEdit.h \
     TTimer.h \
     TToolBar.h \
@@ -715,8 +718,7 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h \
-    TStringUtils.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
