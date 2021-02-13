@@ -36,7 +36,7 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
 project(mudlet)
