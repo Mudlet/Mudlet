@@ -83,9 +83,10 @@ jobs:
       run: |
         mkdir -p ${{env.BOOST_ROOT}}
         curl --progress-bar --location --output ${{env.BOOST_ROOT}}/download.tar.bz2 ${{env.BOOST_URL}}
-        7z -o${{env.BOOST_ROOT}} x ${{env.BOOST_ROOT}}/download.tar.bz2 -y
-        7z -o${{env.BOOST_ROOT}} x ${{env.BOOST_ROOT}}/download.tar -y
-        cp -r boost_*/* .
+        7z -o${{env.BOOST_ROOT}} x ${{env.BOOST_ROOT}}/download.tar.bz2 -y -bd
+        7z -o${{env.BOOST_ROOT}} x ${{env.BOOST_ROOT}}/download.tar -y -bd
+        echo "extracted ok!"
+        cd ${{env.BOOST_ROOT}} && cp -r boost_*/* .
       shell: bash
       if: steps.cache-boost.outputs.cache-hit != 'true'
 
