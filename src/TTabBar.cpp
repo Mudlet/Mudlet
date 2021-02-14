@@ -57,11 +57,11 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
     }
 }
 
-void TStyle::setNamedTabState(const QString& text, const bool state, QSet<QString>& effect)
+void TStyle::setNamedTabState(const QString& profileName, const bool state, QSet<QString>& effect)
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabData(i).toString() == text) {
+        if (mpTabBar->tabData(i).toString() == profileName) {
             textIsInATab = true;
             break;
         }
@@ -72,9 +72,9 @@ void TStyle::setNamedTabState(const QString& text, const bool state, QSet<QStrin
     }
 
     if (state) {
-        effect.insert(text);
+        effect.insert(profileName);
     } else {
-        effect.remove(text);
+        effect.remove(profileName);
     }
 }
 
@@ -91,11 +91,11 @@ void TStyle::setIndexedTabState(const int index, const bool state, QSet<QString>
     }
 }
 
-bool TStyle::namedTabState(const QString& text, const QSet<QString>& effect) const
+bool TStyle::namedTabState(const QString& profileName, const QSet<QString>& effect) const
 {
     bool textIsInATab = false;
     for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
-        if (mpTabBar->tabData(i).toString() == text) {
+        if (mpTabBar->tabData(i).toString() == profileName) {
             textIsInATab = true;
             break;
         }
@@ -105,7 +105,7 @@ bool TStyle::namedTabState(const QString& text, const QSet<QString>& effect) con
         return false;
     }
 
-    return effect.contains(text);
+    return effect.contains(profileName);
 }
 
 bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
@@ -147,15 +147,15 @@ QString TTabBar::tabName(const int index) const
     return result;
 }
 
-int TTabBar::tabIndex(const QString& name) const
+int TTabBar::tabIndex(const QString& profileName) const
 {
     int index = -1;
-    if (name.isEmpty()) {
+    if (profileName.isEmpty()) {
         return index;
     }
     const int total = count();
     while (++index < total) {
-        if (!tabData(index).toString().compare(name)) {
+        if (!tabData(index).toString().compare(profileName)) {
             return index;
         }
     }
@@ -172,9 +172,9 @@ void TTabBar::removeTab(int index)
     }
 }
 
-void TTabBar::removeTab(const QString& name)
+void TTabBar::removeTab(const QString& profileName)
 {
-    int index = tabIndex(name);
+    int index = tabIndex(profileName);
     if (index > -1) {
         setTabBold(index, false);
         setTabItalic(index, false);
