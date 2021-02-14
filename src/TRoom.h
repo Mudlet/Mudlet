@@ -165,7 +165,7 @@ public:
     QMap<QString, Qt::PenStyle> customLinesStyle;
     QMap<QString, bool> customLinesArrow;
 
-    bool highlight= false;
+    bool highlight = false;
     QColor highlightColor;
     QColor highlightColor2;
     float highlightRadius = 0.0f;

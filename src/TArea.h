@@ -96,7 +96,7 @@ private:
     TArea() { qFatal("FATAL: illegal default constructor use of TArea()"); };
 
 
-    QMap<QString, QString> readJsonUserData(const QJsonObject& obj) const;
+    void readJsonUserData(const QJsonObject& obj);
     void writeJsonUserData(QJsonObject&) const;
 
     void readJsonLabels(const QJsonObject&);

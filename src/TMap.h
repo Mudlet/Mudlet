@@ -267,7 +267,7 @@ public slots:
 private:
     const QString createFileHeaderLine(QString, QChar);
     void writeJsonUserData(QJsonObject&) const;
-    QMap<QString, QString> readJsonUserData(const QJsonObject&) const;
+    void readJsonUserData(const QJsonObject&);
 
     QStringList mStoredMessages;
 

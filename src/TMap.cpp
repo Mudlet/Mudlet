@@ -43,29 +43,6 @@
 #include <QBuffer>
 #include "post_guard.h"
 
-// A common set of predefined QStrings so that there are no duplicated
-// QStringLiteral(...)s in this file:
-static const QString scAREAS{QStringLiteral("areas")};
-static const QString scANONYMOUS_AREA_NAME{QStringLiteral("anonymousAreaName")};
-static const QString scAREA_COUNT{QStringLiteral("areaCount")};
-static const QString scCOLOR_24RGB{QStringLiteral("color24RGB")};
-static const QString scCOLOR_32RGBA{QStringLiteral("color32RGBA")};
-static const QString scCUSTOM_ENV_COLORS{QStringLiteral("customEnvColors")};
-static const QString scDEFAULT_AREA_NAME{QStringLiteral("defaultAreaName")};
-static const QString scENV_TO_COLOR_MAPPING{QStringLiteral("envToColorMapping")};
-static const QString scFORMAT_VERSION{QStringLiteral("formatVersion")};
-static const QString scID{QStringLiteral("id")};
-static const QString scLABEL_COUNT{QStringLiteral("labelCount")};
-static const QString scMAP_SYMBOL_FUDGE_FACTOR{QStringLiteral("mapSymbolFontFudgeFactor")};
-static const QString scMAP_SYMBOL_FONT_DETAILS{QStringLiteral("mapSymbolFontDetails")};
-static const QString scONLY_USE_MAP_SYMBOL_FONT{QStringLiteral("onlyMapSymbolFontToBeUsed")};
-static const QString scPLAYER_ROOM_COLORS{QStringLiteral("playerRoomColors")};
-static const QString scPLAYER_OUTER_DIA_PERCENTAGE{QStringLiteral("playerRoomOuterDiameterPercentage")};
-static const QString scPLAYER_INNER_DIA_PERCENTAGE{QStringLiteral("playerRoomInnerDiameterPercentage")};
-static const QString scPLAYER_ROOM_STYLE{QStringLiteral("playerRoomStyle")};
-static const QString scPLAYERS_ROOM_ID{QStringLiteral("playersRoomId")};
-static const QString scROOM_COUNT{QStringLiteral("roomCount")};
-static const QString scUSER_DATA{QStringLiteral("userData")};
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
@@ -2684,13 +2661,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 
     mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
     mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
-    QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     mProgressDialogLabelsTotal = 0;
-    while (itArea.hasNext()) {
-        itArea.next();
-        auto pA = itArea.value();
-        if (pA) {
-            mProgressDialogLabelsTotal += pA->mMapLabels.size();
+    for (const auto area : mpRoomDB->getAreaMap()) {
+        if (area) {
+            mProgressDialogLabelsTotal += area->mMapLabels.size();
         }
     }
 
@@ -2726,7 +2700,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     QJsonObject mapObj;
-    mapObj.insert(scFORMAT_VERSION, static_cast<double>(1.000));
+    mapObj.insert(QLatin1String("formatVersion"), static_cast<double>(1.000));
 
     writeJsonUserData(mapObj);
 
@@ -2750,13 +2724,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsCount = 0;
     bool abort = false;
-    itArea.toFront();
     QJsonArray areasArray;
-    while (itArea.hasNext()) {
-        itArea.next();
-        auto pA = itArea.value();
-        if (pA) {
-            pA->writeJsonArea(areasArray);
+    for (const auto area : mpRoomDB->getAreaMap()) {
+        if (area) {
+            area->writeJsonArea(areasArray);
         }
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(true, true, 0)) {
@@ -2773,21 +2744,21 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     }
 
     const QJsonValue areasValue{areasArray};
-    mapObj.insert(scAREAS, areasValue);
+    mapObj.insert(QLatin1String("areas"), areasValue);
 
     // Should Qt change things so that the order in the file is not
     // alphabetically sorted but instead dependent on actually insertion order
     // then these must be precalculated and put first - as they are needed to
     // drive the progress dialogue:
-    mapObj.insert(scAREA_COUNT, static_cast<double>(areaIdsList.count()));
-    mapObj.insert(scROOM_COUNT, static_cast<double>(mProgressDialogRoomsCount));
-    mapObj.insert(scLABEL_COUNT, static_cast<double>(mProgressDialogLabelsTotal));
+    mapObj.insert(QLatin1String("areaCount"), static_cast<double>(areaIdsList.count()));
+    mapObj.insert(QLatin1String("roomCount"), static_cast<double>(mProgressDialogRoomsCount));
+    mapObj.insert(QLatin1String("labelCount"), static_cast<double>(mProgressDialogLabelsTotal));
 
     const QJsonValue defaultAreaNameValue{mDefaultAreaName};
-    mapObj.insert(scDEFAULT_AREA_NAME, defaultAreaNameValue);
+    mapObj.insert(QLatin1String("defaultAreaName"), defaultAreaNameValue);
 
     const QJsonValue anonymousAreaNameValue{mUnnamedAreaName};
-    mapObj.insert(scANONYMOUS_AREA_NAME, anonymousAreaNameValue);
+    mapObj.insert(QLatin1String("anonymousAreaName"), anonymousAreaNameValue);
 
     if (!mEnvColors.isEmpty()) {
         QJsonObject envColorObj;
@@ -2797,7 +2768,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
             envColorObj.insert(QString::number(itEnvColor.key()), static_cast<double>(itEnvColor.value()));
         }
         const QJsonValue mEnvColorsValue{envColorObj};
-        mapObj.insert(scENV_TO_COLOR_MAPPING, mEnvColorsValue);
+        mapObj.insert(QLatin1String("envToColorMapping"), mEnvColorsValue);
     }
 
     QJsonObject playerRoomIdHashObj;
@@ -2807,7 +2778,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         playerRoomIdHashObj.insert(itplayerRoomIdHash.key(), static_cast<double>(itplayerRoomIdHash.value()));
     }
     const QJsonValue playerRoomIdHashsValue{playerRoomIdHashObj};
-    mapObj.insert(scPLAYERS_ROOM_ID, playerRoomIdHashsValue);
+    mapObj.insert(QLatin1String("playersRoomId"), playerRoomIdHashsValue);
 
     QJsonArray customEnvColorArray;
     QMapIterator<int, QColor> itCustomEnvColor(mCustomEnvColors);
@@ -2817,7 +2788,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         // Should insert an array value into the customEnvColorObj with the key
         // "colorRGBA"
         writeJsonColor(customEnvColorObj, itCustomEnvColor.value());
-        customEnvColorObj.insert(scID, QJsonValue{itCustomEnvColor.key()});
+        customEnvColorObj.insert(QLatin1String("id"), QJsonValue{itCustomEnvColor.key()});
         // Covert the customEnvColorObj into a QJsonValue:
         const QJsonValue customEnvColorValue{customEnvColorObj};
         // Now append this object onto the array:
@@ -2826,11 +2797,11 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     // Convert the array of all the mCustomEnvColors into a QJsonValue so we
     // can add it to the map object:
     QJsonValue mCustomEnvColorsValue{customEnvColorArray};
-    mapObj.insert(scCUSTOM_ENV_COLORS, mCustomEnvColorsValue);
+    mapObj.insert(QLatin1String("customEnvColors"), mCustomEnvColorsValue);
 
-    mapObj.insert(scMAP_SYMBOL_FONT_DETAILS, mMapSymbolFont.toString());
-    mapObj.insert(scMAP_SYMBOL_FUDGE_FACTOR, static_cast<double>(mMapSymbolFontFudgeFactor));
-    mapObj.insert(scONLY_USE_MAP_SYMBOL_FONT, mIsOnlyMapSymbolFontToBeUsed);
+    mapObj.insert(QLatin1String("mapSymbolFontDetails"), mMapSymbolFont.toString());
+    mapObj.insert(QLatin1String("mapSymbolFontFudgeFactor"), static_cast<double>(mMapSymbolFontFudgeFactor));
+    mapObj.insert(QLatin1String("onlyMapSymbolFontToBeUsed"), mIsOnlyMapSymbolFontToBeUsed);
 
     QJsonArray playerRoomColorsArray;
     QJsonObject playerRoomOuterColorObj;
@@ -2842,10 +2813,10 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     playerRoomColorsArray.append(playerRoomOuterColorValue);
     playerRoomColorsArray.append(playerRoomInnerColorValue);
     QJsonValue playerRoomColorsValue{playerRoomColorsArray};
-    mapObj.insert(scPLAYER_ROOM_COLORS, playerRoomColorsValue);
-    mapObj.insert(scPLAYER_ROOM_STYLE, static_cast<double>(mPlayerRoomStyle));
-    mapObj.insert(scPLAYER_OUTER_DIA_PERCENTAGE, static_cast<double>(mPlayerRoomOuterDiameterPercentage));
-    mapObj.insert(scPLAYER_INNER_DIA_PERCENTAGE, static_cast<double>(mPlayerRoomInnerDiameterPercentage));
+    mapObj.insert(QLatin1String("playerRoomColors"), playerRoomColorsValue);
+    mapObj.insert(QLatin1String("playerRoomStyle"), static_cast<double>(mPlayerRoomStyle));
+    mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
+    mapObj.insert(QLatin1String("playerRoomInnerDiameterPercentage"), static_cast<double>(mPlayerRoomInnerDiameterPercentage));
 
     mpProgressDialog->setLabelText(tr("Exporting JSON map file from %1 - writing data to file:\n"
                                       "%2 ...").arg(mProfileName, destination));
@@ -2895,8 +2866,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     // Read all the base level stuff:
     QJsonObject mapObj{doc.object()};
     double formatVersion = 0.0f;
-    if (mapObj.contains(scFORMAT_VERSION) && mapObj[scFORMAT_VERSION].isDouble()) {
-        formatVersion = mapObj[scFORMAT_VERSION].toDouble();
+    if (mapObj.contains(QLatin1String("formatVersion")) && mapObj[QLatin1String("formatVersion")].isDouble()) {
+        formatVersion = mapObj[QLatin1String("formatVersion")].toDouble();
         if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 1.0000 || formatVersion > 1.0000) {
             // We only handle 1.000f right now (0.001f was borked, 0.002f
             // didn't include room symbol color, 0.003 is the same as 1.000
@@ -2909,15 +2880,15 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         return {false, QStringLiteral("no version number detected")};
     }
 
-    if (!mapObj.contains(scAREAS) || !mapObj.value(scAREAS).isArray()) {
+    if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
         return {false, QStringLiteral("no areas detected")};
     }
 
-    mProgressDialogAreasTotal = qRound(mapObj[scAREA_COUNT].toDouble());
+    mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
     mProgressDialogAreasCount = 0;
-    mProgressDialogRoomsTotal = qRound(mapObj[scROOM_COUNT].toDouble());
+    mProgressDialogRoomsTotal = qRound(mapObj[QLatin1String("roomCount")].toDouble());
     mProgressDialogRoomsCount = 0;
-    mProgressDialogLabelsTotal = qRound(mapObj[scLABEL_COUNT].toDouble());
+    mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
     mpProgressDialog = new QProgressDialog(tr("Import JSON map data to %1\n"
                                               "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
@@ -2942,19 +2913,19 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
 
-    mDefaultAreaName = mapObj[scDEFAULT_AREA_NAME].toString();
-    mUnnamedAreaName = mapObj[scANONYMOUS_AREA_NAME].toString();
-    QString mapSymbolFontText = mapObj[scMAP_SYMBOL_FONT_DETAILS].toString();
-    float mapSymbolFontFudgeFactor = (qRound(mapObj[scMAP_SYMBOL_FUDGE_FACTOR].toDouble() * 1000.0)) / 1000;
-    bool isOnlyMapSymbolFontToBeUsed = mapObj[scONLY_USE_MAP_SYMBOL_FONT].toBool();
-    int playerRoomStyle = qRound(mapObj[scPLAYER_ROOM_STYLE].toDouble());
-    quint8 playerRoomOuterDiameterPercentage = qRound(mapObj[scPLAYER_OUTER_DIA_PERCENTAGE].toDouble());
-    quint8 playerRoomInnerDiameterPercentage = qRound(mapObj[scPLAYER_INNER_DIA_PERCENTAGE].toDouble());
+    mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
+    float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
+    int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
+    quint8 playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
+    quint8 playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
     QColor playerRoomOuterColor;
     QColor playerRoomInnerColor;
 
-    if (mapObj.contains(scPLAYER_ROOM_COLORS) && mapObj.value(scPLAYER_ROOM_COLORS).isArray()) {
-        QJsonArray playerRoomColorArray = mapObj.value(scPLAYER_ROOM_COLORS).toArray();
+    if (mapObj.contains(QLatin1String("playerRoomColors")) && mapObj.value(QLatin1String("playerRoomColors")).isArray()) {
+        QJsonArray playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
         if (playerRoomColorArray.size() == 2 && playerRoomColorArray.at(0).isObject() && playerRoomColorArray.at(1).isObject()) {
             playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject());
             playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject());
@@ -2962,12 +2933,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     }
 
     QMap<int, int> envColors;
-    if (mapObj.contains(scENV_TO_COLOR_MAPPING) && mapObj.value(scENV_TO_COLOR_MAPPING).isObject()) {
-        const QJsonObject envColorObj{mapObj.value(scENV_TO_COLOR_MAPPING).toObject()};
+    if (mapObj.contains(QLatin1String("envToColorMapping")) && mapObj.value(QLatin1String("envToColorMapping")).isObject()) {
+        const QJsonObject envColorObj{mapObj.value(QLatin1String("envToColorMapping")).toObject()};
         if (!envColorObj.isEmpty()) {
-            const QList<QString> keys = envColorObj.keys();
-            for (int i = 0, total = keys.count(); i < total; ++i) {
-                QString key = keys.at(i);
+            for (auto& key : envColorObj.keys()) {
                 bool isOk = false;
                 int index = key.toInt(&isOk);
                 if (isOk && envColorObj.value(key).isDouble()) {
@@ -2979,17 +2948,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     }
 
     QMap<int, QColor> customEnvColors;
-    if (mapObj.contains(scCUSTOM_ENV_COLORS) && mapObj.value(scCUSTOM_ENV_COLORS).isArray()) {
-        const QJsonArray customEnvColorArray = mapObj.value(scCUSTOM_ENV_COLORS).toArray();
+    if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
+        const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
         if (!customEnvColorArray.isEmpty()) {
-            for (int index = 0, total = customEnvColorArray.count(); index < total; ++index) {
-                const QJsonObject customEnvColorObj{customEnvColorArray.at(index).toObject()};
-                if (customEnvColorObj.contains(scID)
-                    && ((customEnvColorObj.contains(scCOLOR_32RGBA) && customEnvColorObj.value(scCOLOR_32RGBA).isArray())
-                        ||(customEnvColorObj.contains(scCOLOR_24RGB) && customEnvColorObj.value(scCOLOR_24RGB).isArray()))
-                    && customEnvColorObj.value(scID).isDouble()) {
+            for (auto customEnvColorValue : qAsConst(customEnvColorArray)) {
+                const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
+                if (customEnvColorObj.contains(QLatin1String("id"))
+                    && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
+                        ||(customEnvColorObj.contains(QLatin1String("color24RGB")) && customEnvColorObj.value(QLatin1String("color24RGB")).isArray()))
+                    && customEnvColorObj.value(QLatin1String("id")).isDouble()) {
 
-                    const int id{customEnvColorObj.value(scID).toInt()};
+                    const int id{customEnvColorObj.value(QLatin1String("id")).toInt()};
                     const QColor color{readJsonColor(customEnvColorObj)};
                     customEnvColors.insert(id, color);
                 }
@@ -2998,12 +2967,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     }
 
     QHash<QString, int> playersRoomId;
-    if (mapObj.contains(scPLAYERS_ROOM_ID) && mapObj.value(scPLAYERS_ROOM_ID).isObject()) {
-        const QJsonObject playersRoomIdObj{mapObj.value(scPLAYERS_ROOM_ID).toObject()};
+    if (mapObj.contains(QLatin1String("playersRoomId")) && mapObj.value(QLatin1String("playersRoomId")).isObject()) {
+        const QJsonObject playersRoomIdObj{mapObj.value(QLatin1String("playersRoomId")).toObject()};
         if (!playersRoomIdObj.isEmpty()) {
-            QList<QString> keys = playersRoomIdObj.keys();
-            for (int index = 0, total = keys.count(); index < total; ++index) {
-                const QString profileName{keys.at(index)};
+            for (auto& profileName : playersRoomIdObj.keys()) {
                 if (playersRoomIdObj.value(profileName).isDouble()) {
                     playersRoomId.insert(profileName, playersRoomIdObj.value(profileName).toInt());
                 }
@@ -3013,15 +2980,15 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
 
     TRoomDB* pNewRoomDB = new TRoomDB(this);
     bool abort = false;
-    for (int i = 0, total = mapObj.value(scAREAS).toArray().count(); i < total; ++i) {
+    for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         TArea* pArea = new TArea(this, pNewRoomDB);
-        auto [id, name] = pArea->readJsonArea(mapObj.value(scAREAS).toArray(), i);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
             abort = true;
             break;
         }
-        // This will populate the TRoomDB::areas and TRoomDB:areaNameMap:
+        // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
         pNewRoomDB->addArea(pArea, id, name);
     }
     if (abort) {
@@ -3085,25 +3052,22 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
         userDataObj.insert(itDataItem.key(), jsonValue);
     }
     const QJsonValue jsonValue{userDataObj};
-    obj.insert(scUSER_DATA, jsonValue);
+    obj.insert(QLatin1String("userData"), jsonValue);
 }
 
 // Takes a userData object and parses all its elements
-QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj) const
+void TMap::readJsonUserData(const QJsonObject& obj)
 {
-    QMap<QString, QString> results;
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
-        return results;
+        return;
     }
 
-    QStringList keys = obj.keys();
-    for (int i = 0, total = keys.count(); i < total; ++i) {
-        if (obj.value(keys.at(i)).isString()) {
-            results.insert(keys.at(i), obj.value(keys.at(i)).toString());
+    for (auto& key : obj.keys()) {
+        if (obj.value(key).isString()) {
+            mUserData.insert(key, obj.value(key).toString());
         }
     }
-    return results;
 }
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
@@ -3117,17 +3081,17 @@ void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
     if (color.alpha() < 255) {
         colorRGBAArray.append(static_cast<double>(color.alpha()));
         QJsonValue colorRGBAValue{colorRGBAArray};
-        obj.insert(scCOLOR_32RGBA, colorRGBAValue);
+        obj.insert(QLatin1String("color32RGBA"), colorRGBAValue);
     } else {
         QJsonValue colorRGBAValue{colorRGBAArray};
-        obj.insert(scCOLOR_24RGB, colorRGBAValue);
+        obj.insert(QLatin1String("color24RGB"), colorRGBAValue);
     }
 }
 
 QColor TMap::readJsonColor(const QJsonObject& obj)
 {
-    if (!(   (obj.contains(scCOLOR_32RGBA) && obj.value(scCOLOR_32RGBA).isArray())
-          || (obj.contains(scCOLOR_24RGB) && obj.value(scCOLOR_24RGB).isArray()))) {
+    if (!(   (obj.contains(QLatin1String("color32RGBA")) && obj.value(QLatin1String("color32RGBA")).isArray())
+          || (obj.contains(QLatin1String("color24RGB")) && obj.value(QLatin1String("color24RGB")).isArray()))) {
         // Return a null color if one was not found
         return QColor();
     }
@@ -3138,11 +3102,11 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     int green = 0;
     int blue = 0;
     int alpha = 255;
-    if (obj.contains(scCOLOR_32RGBA)) {
-        colorRGBAArray = obj.value(scCOLOR_32RGBA).toArray();
+    if (obj.contains(QLatin1String("color32RGBA"))) {
+        colorRGBAArray = obj.value(QLatin1String("color32RGBA")).toArray();
         hasAlpha = true;
     } else {
-        colorRGBAArray = obj.value(scCOLOR_24RGB).toArray();
+        colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
     int size = colorRGBAArray.size();
     if ((size == 3 || size == 4)

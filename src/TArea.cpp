@@ -46,20 +46,6 @@ static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
 
-static const QString scCOLORS{QStringLiteral("colors")};
-static const QString scCOORDINATES{QLatin1String("coordinates")};
-static const QString scGRID_MODE{QStringLiteral("gridMode")};
-static const QString scID{QStringLiteral("id")};
-static const QString scIMAGE{QStringLiteral("image")};
-static const QString scLABELS{QStringLiteral("labels")};
-static const QString scNAME{QStringLiteral("name")};
-static const QString scROOM_COUNT{QStringLiteral("roomCount")};
-static const QString scROOMS{QStringLiteral("rooms")};
-static const QString scSCALED{QStringLiteral("scaled")};
-static const QString scSHOW_ON_TOP{QStringLiteral("showOnTop")};
-static const QString scSIZE{QLatin1String("size")};
-static const QString scTEXT{QStringLiteral("text")};
-static const QString scUSER_DATA{QStringLiteral("userData")};
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : min_x(0)
@@ -73,7 +59,7 @@ TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 , zoneAreaRef( 0 )
 , mpRoomDB( pRDB )
 , mIsDirty( false )
-, mpMap( pMap )
+, mpMap(pMap)
 {
 }
 
@@ -611,13 +597,13 @@ void TArea::writeJsonArea(QJsonArray& array) const
 {
     QJsonObject areaObj;
     const int id = mpRoomDB->getAreaID(const_cast<TArea*>(this));
-    areaObj.insert(scID, static_cast<double>(id));
+    areaObj.insert(QLatin1String("id"), static_cast<double>(id));
 
     const QJsonValue areaNameValue{mpRoomDB->getAreaNamesMap().value(id)};
-    areaObj.insert(scNAME, areaNameValue);
+    areaObj.insert(QLatin1String("name"), areaNameValue);
 
     if (gridMode) {
-        areaObj.insert(scGRID_MODE, true);
+        areaObj.insert(QLatin1String("gridMode"), true);
     }
 
     writeJsonUserData(areaObj);
@@ -631,7 +617,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
     }
-    areaObj.insert(scROOM_COUNT, roomCount);
+    areaObj.insert(QLatin1String("roomCount"), roomCount);
 
     QJsonArray roomsArray;
     int currentRoomCount = 0;
@@ -653,7 +639,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
         mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
     }
     QJsonValue roomsValue{roomsArray};
-    areaObj.insert(scROOMS, roomsValue);
+    areaObj.insert(QLatin1String("rooms"), roomsValue);
     mpMap->getCurrentProgressRoomCount();
 
     // Process the labels after the rooms so that the first area shows something
@@ -667,14 +653,14 @@ void TArea::writeJsonArea(QJsonArray& array) const
 std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex)
 {
     const QJsonObject areaObj{array.at(areaIndex).toObject()};
-    const int id = areaObj.value(scID).toInt();
-    const QString name{areaObj.value(scNAME).toString()};
-    gridMode = areaObj.value(scGRID_MODE).toBool();
-    mUserData = readJsonUserData(areaObj.value(scUSER_DATA).toObject());
+    const int id = areaObj.value(QLatin1String("id")).toInt();
+    const QString name{areaObj.value(QLatin1String("name")).toString()};
+    gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
+    readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
     int roomCount = 0;
-    for (int roomIndex = 0, total = areaObj.value(scROOMS).toArray().count(); roomIndex < total; ++roomIndex) {
+    for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
-        int roomId = pR->readJsonRoom(areaObj.value(scROOMS).toArray(), roomIndex, id);
+        int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
         rooms.insert(roomId);
         // This also sets the room id for the TRoom:
         mpRoomDB->addRoom(roomId, pR, true);
@@ -690,7 +676,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         mpMap->incrementJsonProgressDialog(false, true, roomCount % 10);
     }
 
-    if (areaObj.contains(scLABELS) && areaObj.value(scLABELS).isArray()) {
+    if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
     return {id, name};
@@ -710,25 +696,23 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
         userDataObj.insert(itDataItem.key(), userDataValue);
     }
     const QJsonValue userDatasValue{userDataObj};
-    obj.insert(scUSER_DATA, userDatasValue);
+    obj.insert(QLatin1String("userData"), userDatasValue);
 }
 
 // Takes a userData object and parses all its elements
-QMap<QString, QString> TArea::readJsonUserData(const QJsonObject& obj) const
+void TArea::readJsonUserData(const QJsonObject& obj)
 {
     QMap<QString, QString> results;
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
-        return results;
+        return;
     }
 
-    QStringList keys = obj.keys();
-    for (int i = 0, total = keys.count(); i < total; ++i) {
-        if (obj.value(keys.at(i)).isString()) {
-            results.insert(keys.at(i), obj.value(keys.at(i)).toString());
+    for (auto& key : obj.keys()) {
+        if (obj.value(key).isString()) {
+            mUserData.insert(key, obj.value(key).toString());
         }
     }
-    return results;
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
@@ -749,21 +733,21 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
         }
     }
     QJsonValue labelsValue{labelArray};
-    obj.insert(scLABELS, labelsValue);
+    obj.insert(QLatin1String("labels"), labelsValue);
 }
 
 // obj is the (area) container that contains the label array
 void TArea::readJsonLabels(const QJsonObject& obj)
 {
-    const QJsonArray labelsArray = obj.value(scLABELS).toArray();
+    const QJsonArray labelsArray = obj.value(QLatin1String("labels")).toArray();
 
     if (labelsArray.isEmpty()) {
         // No labels at all in this area
         return;
     }
 
-    for (int index = 0, total = labelsArray.count(); index < total; ++index) {
-        readJsonLabel(labelsArray.at(index).toObject());
+    for (const auto labelValue : labelsArray) {
+        readJsonLabel(labelValue.toObject());
         if (mpMap->incrementJsonProgressDialog(false, false, 1)) {
             // Cancel has been hit - so give up straight away:
             return;
@@ -775,16 +759,16 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
 {
     QJsonObject labelObj;
 
-    labelObj.insert(scID, static_cast<double>(id));
+    labelObj.insert(QLatin1String("id"), static_cast<double>(id));
 
-    writeJson3DCoordinates(labelObj, scCOORDINATES, pLabel->pos);
+    writeJson3DCoordinates(labelObj, QLatin1String("coordinates"), pLabel->pos);
 
-    writeJsonSize(labelObj, scSIZE, pLabel->size);
+    writeJsonSize(labelObj, QLatin1String("size"), pLabel->size);
 
     if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text", "Default text if a label is created in mapper with no text")))) {
         // Don't include the text if it is am image:
         QJsonValue textValue{pLabel->text};
-        labelObj.insert(scTEXT, textValue);
+        labelObj.insert(QLatin1String("text"), textValue);
     }
 
     if (!(pLabel->fgColor.red() == defaultLabelForeground.red()
@@ -809,7 +793,7 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         colorsArray.append(foregroundColorValue);
         colorsArray.append(backgroundColorValue);
         QJsonValue colorsValue{colorsArray};
-        labelObj.insert(scCOLORS, colorsValue);
+        labelObj.insert(QLatin1String("colors"), colorsValue);
     }
 
     QList<QByteArray> pixmapData = convertImageToBase64Data(pLabel->pix);
@@ -819,12 +803,12 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
         imageArray.append(imageLineValue);
     }
     const QJsonValue imageValue{imageArray};
-    labelObj.insert(scIMAGE, imageValue);
+    labelObj.insert(QLatin1String("image"), imageValue);
 
-    // (bool) pLabal->highlight is not saved as it is only used during editing
-    labelObj.insert(scSHOW_ON_TOP, pLabel->showOnTop);
+    // (bool) pLabel->highlight is not saved as it is only used during editing
+    labelObj.insert(QLatin1String("showOnTop"), pLabel->showOnTop);
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
-    labelObj.insert(scSCALED, !pLabel->noScaling);
+    labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
 
     const QJsonValue labelValue{labelObj};
     array.append(labelValue);
@@ -834,23 +818,23 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 {
     TMapLabel label;
 
-    int labelId = labelObj.value(scID).toInt();
+    int labelId = labelObj.value(QLatin1String("id")).toInt();
 
-    label.pos = readJson3DCoordinates(labelObj, scCOORDINATES);
+    label.pos = readJson3DCoordinates(labelObj, QLatin1String("coordinates"));
 
-    label.size = readJsonSize(labelObj, scSIZE);
+    label.size = readJsonSize(labelObj, QLatin1String("size"));
 
-    if (labelObj.contains(scTEXT) && labelObj.value(scTEXT).isString()) {
-        label.text = labelObj.value(scTEXT).toString();
+    if (labelObj.contains(QLatin1String("text")) && labelObj.value(QLatin1String("text")).isString()) {
+        label.text = labelObj.value(QLatin1String("text")).toString();
     }
 
-    if (labelObj.contains(scCOLORS) && labelObj.value(scCOLORS).isArray() && labelObj.value(scCOLORS).toArray().size() == 2) {
+    if (labelObj.contains(QLatin1String("colors")) && labelObj.value(QLatin1String("colors")).isArray() && labelObj.value(QLatin1String("colors")).toArray().size() == 2) {
         // For an image the colors are not used and tend to be set to black, if
         // so skip them. Unfortunately because of the way QColour s are
         // assembled the operator== is too picky for our purposes as even the
         // way the colour was put together (color spec type) can make them NOT
         // seem to be the same when we'd think they were...
-        QJsonArray colorsArray = labelObj.value(scCOLORS).toArray();
+        QJsonArray colorsArray = labelObj.value(QLatin1String("colors")).toArray();
         label.fgColor = TMap::readJsonColor(colorsArray.at(0).toObject());
         label.bgColor = TMap::readJsonColor(colorsArray.at(1).toObject());
     } else {
@@ -858,16 +842,16 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
         label.bgColor = defaultLabelBackground;
     }
 
-    QJsonArray imageArray = labelObj.value(scIMAGE).toArray();
+    QJsonArray imageArray = labelObj.value(QLatin1String("image")).toArray();
     QList<QByteArray> pixmapData;
     for (int i = 0, total = imageArray.size(); i < total; ++i) {
         pixmapData.append(imageArray.at(i).toString().toLatin1());
     }
     label.pix = convertBase64DataToImage(pixmapData);
 
-    label.showOnTop = labelObj.value(scSHOW_ON_TOP).toBool();
+    label.showOnTop = labelObj.value(QLatin1String("showOnTop")).toBool();
 
-    label.noScaling = !labelObj.value(scSCALED).toBool(true);
+    label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
 
     mMapLabels.insert(labelId, label);
 }
