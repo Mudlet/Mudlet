@@ -1111,15 +1111,15 @@ void TTextEdit::slot_popupMenu()
         return;
     }
     QString cmd;
-    bool isFunction;
+    int luaReference{0};
     if (mPopupCommands.contains(pA->text())) {
         cmd = mPopupCommands[pA->text()].first;
-        isFunction = mPopupCommands[pA->text()].second;
+        luaReference = mPopupCommands[pA->text()].second;
     }
-    if (!isFunction) {
+    if (!luaReference) {
         mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
     } else {
-        mpHost->mLuaInterpreter.callAnonymousFunction(cmd.toInt(), QStringLiteral("echoPopup"));
+        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoPopup"));
     }
 }
 
@@ -1174,14 +1174,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    bool isFunction = mpBuffer->mLinkStore.getIsLinkFunction(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
+                    int luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex()).value(0, false);
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        if (!isFunction){
+                        if (!luaReference){
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
-                            mpHost->mLuaInterpreter.callAnonymousFunction(func.toInt(), QStringLiteral("echoLink"));
+                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, QStringLiteral("echoLink"));
                         }
                         return;
                     }
@@ -1259,17 +1259,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QVector<bool> isFunction = mpBuffer->mLinkStore.getIsLinkFunction(mpBuffer->buffer.at(y).at(x).linkIndex());
+                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
                                 pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = std::make_pair(command[i], isFunction.value(i, false));
+                                mPopupCommands[hint[i]] = std::make_pair(command[i], luaReference.value(i, 0));
                             } else {
                                 pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = {command[i], isFunction.value(i, false)};
+                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
                             }
                             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }

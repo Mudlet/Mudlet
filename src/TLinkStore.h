@@ -23,6 +23,7 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
+#include <QVector>
 #include "post_guard.h"
 
 class Host;
@@ -32,7 +33,7 @@ class TLinkStore {
 
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
-    QMap<int, QVector<bool>> mIsFunction;
+    QMap<int, QVector<int>> mReferenceStore;
 
     int mLinkID;
     int maxLinks;
@@ -42,13 +43,13 @@ public:
 
     explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
-    int addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<bool> isFunctionList = QVector<bool>());
+    int addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>());
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
     QStringList getLinksConst(int id) const;
     QStringList getHintsConst(int id) const;
-    QVector<bool> getIsLinkFunction(int id) const;
+    QVector<int> getReference(int id) const;
 
     int getCurrentLinkID() const;
 

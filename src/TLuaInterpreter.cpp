@@ -9097,38 +9097,88 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
 int TLuaInterpreter::insertLink(lua_State* L)
 {
-    QStringList sL;
     int n = lua_gettop(L);
-    int s = 1;
-    bool b = false;
-    // N/U:     bool gotBool = false;
-    for (; s <= n; s++) {
-        if (lua_isstring(L, s)) {
-            QString qs = lua_tostring(L, s);
-            sL << qs;
-        } else if (lua_isboolean(L, s)) {
-            // N/U:             gotBool = true;
-            b = lua_toboolean(L, s);
+    int funcRef{0};
+    bool useCurrentFormat{false};
+    QString windowName{QStringLiteral("main")};
+    QString singleHint, singleFunction{QString()}, text;
+    if (n < 4) {
+        text = getVerifiedString(L, __func__, 1, "text");
+        if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
+            lua_pushfstring(L, "insertLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        if (lua_isfunction(L, 2)) {
+            lua_pushvalue(L, 2);
+            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        } else {
+            singleFunction = lua_tostring(L, 2);
+        }
+        singleHint = getVerifiedString(L, __func__, 3, "hint");
+    }
+    if (n == 4) {
+        bool isBool{false};
+        if (lua_isboolean(L, 4)) {
+            isBool = true;
+            useCurrentFormat = lua_toboolean(L, 4);
+        }
+        if (isBool) {
+            text = getVerifiedString(L, __func__, 1, "text");
+            singleHint = getVerifiedString(L, __func__, 3, "hint");
+            if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
+                lua_pushfstring(L, "insertLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
+                return lua_error(L);
+            }
+            if (lua_isfunction(L, 2)) {
+                lua_pushvalue(L, 2);
+                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            } else {
+                singleFunction = lua_tostring(L, 2);
+            }
+        } else {
+            windowName = getVerifiedString(L, __func__, 1, "window name");
+            text = getVerifiedString(L, __func__, 2, "text");
+            singleHint = getVerifiedString(L, __func__, 4, "hint");
+            if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
+                lua_pushfstring(L, "insertLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
+                return lua_error(L);
+            }
+            if (lua_isfunction(L, 3)) {
+                lua_pushvalue(L, 3);
+                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            } else {
+                singleFunction = lua_tostring(L, 3);
+            }
         }
     }
 
-    if (sL.size() < 4) {
-        sL.prepend("main");
-    }
-    if (sL.size() < 4) {
-        lua_pushstring(L, "insertLink: wrong number of params or wrong type of params");
-        return lua_error(L);
+    if (n > 4) {
+        windowName = getVerifiedString(L, __func__, 1, "window name");
+        text = getVerifiedString(L, __func__, 2, "text");
+        singleHint = getVerifiedString(L, __func__, 4, "hint");
+        useCurrentFormat = getVerifiedBool(L, __func__, 5, "useCurrentFormat");
+        if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
+            lua_pushfstring(L, "insertLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        if (lua_isfunction(L, 3)) {
+            lua_pushvalue(L, 3);
+            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        } else {
+            singleFunction = lua_tostring(L, 3);
+        }
     }
 
-    QString windowName(sL[0]);
-    QString printScreen(sL[1]);
-    QStringList command;
+
+    QStringList function;
     QStringList hint;
-    command << sL[2];
-    hint << sL[3];
+    QVector<int> luaReference;
+    function << singleFunction;
+    hint << singleHint;
+    luaReference << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(printScreen, command, hint, b);
+    console->insertLink(text, function, hint, useCurrentFormat, luaReference);
     return 0;
 }
 
@@ -9138,7 +9188,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     QString windowName;
     QStringList _hintList;
     QStringList _commandList;
-    QVector<bool> isFunctionList;
+    QVector<int> luaReference;
     bool customFormat = false;
     int s = 1;
     int n = lua_gettop(L);
@@ -9159,13 +9209,13 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         if (lua_type(L, -1) == LUA_TSTRING) {
             QString cmd = lua_tostring(L, -1);
             _commandList << cmd;
-            isFunctionList << false;
+            luaReference << 0;
         }
 
         if (lua_type(L, -1) == LUA_TFUNCTION){
             lua_pushvalue(L, -1);
-            _commandList << QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
-            isFunctionList << true;
+            _commandList << QString();
+            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
@@ -9196,7 +9246,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(txt, _commandList, _hintList, customFormat, isFunctionList);
+    console->insertLink(txt, _commandList, _hintList, customFormat, luaReference);
     return 0;
 }
 
@@ -9272,7 +9322,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     QString windowName;
     QStringList hintList;
     QStringList commandList;
-    QVector<bool> isFunctionList;
+    QVector<int> luaReference;
     bool customFormat = false;
     int s = 1;
     int n = lua_gettop(L);
@@ -9292,12 +9342,12 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         if (lua_type(L, -1) == LUA_TSTRING) {
             QString cmd = lua_tostring(L, -1);
             commandList << cmd;
-            isFunctionList << false;
+            luaReference << 0;
         }
         if (lua_type(L, -1) == LUA_TFUNCTION){
             lua_pushvalue(L, -1);
-            commandList << QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
-            isFunctionList << true;
+            commandList << QString();
+            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
@@ -9328,7 +9378,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     }
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, commandList, hintList, customFormat, isFunctionList);
+    console->echoLink(text, commandList, hintList, customFormat, luaReference);
     return 0;
 }
 
@@ -9336,11 +9386,11 @@ int TLuaInterpreter::echoPopup(lua_State* L)
 int TLuaInterpreter::echoLink(lua_State* L)
 {
     int n = lua_gettop(L);
-    bool isFunction{false};
+    int funcRef{0};
     bool useCurrentFormat{false};
     QString windowName{QStringLiteral("main")};
-    QString singleHint, singleFunction, text;
-    if (n == 3) {
+    QString singleHint, singleFunction{QString()}, text;
+    if (n < 4) {
         text = getVerifiedString(L, __func__, 1, "text");
         singleHint = getVerifiedString(L, __func__, 3, "hint");
         if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
@@ -9348,9 +9398,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
             return lua_error(L);
         }
         if (lua_isfunction(L, 2)) {
-            isFunction = true;
             lua_pushvalue(L, 2);
-            singleFunction = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
         } else {
             singleFunction = lua_tostring(L, 2);
         }
@@ -9369,9 +9418,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
                 return lua_error(L);
             }
             if (lua_isfunction(L, 2)) {
-                isFunction = true;
                 lua_pushvalue(L, 2);
-                singleFunction = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
             } else {
                 singleFunction = lua_tostring(L, 2);
             }
@@ -9384,9 +9432,8 @@ int TLuaInterpreter::echoLink(lua_State* L)
                 return lua_error(L);
             }
             if (lua_isfunction(L, 3)) {
-                isFunction = true;
                 lua_pushvalue(L, 3);
-                singleFunction = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
             } else {
                 singleFunction = lua_tostring(L, 3);
             }
@@ -9403,24 +9450,22 @@ int TLuaInterpreter::echoLink(lua_State* L)
             return lua_error(L);
         }
         if (lua_isfunction(L, 3)) {
-            isFunction = true;
             lua_pushvalue(L, 3);
-            singleFunction = QString::number(luaL_ref(L, LUA_REGISTRYINDEX));
+            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
         } else {
             singleFunction = lua_tostring(L, 3);
         }
     }
 
-
     QStringList function;
     QStringList hint;
-    QVector<bool> isFunctionList;
+    QVector<int> luaReference;
     function << singleFunction;
     hint << singleHint;
-    isFunctionList << isFunction;
+    luaReference << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, function, hint, useCurrentFormat, isFunctionList);
+    console->echoLink(text, function, hint, useCurrentFormat, luaReference);
     return 0;
 }
 
@@ -12375,10 +12420,9 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
         if (lua_isstring(L, -1)) {
             err += lua_tostring(L, -1);
         }
-        QString function = "anonymous Lua function";
-        logError(err, name, function);
+        logError(err, name, QStringLiteral("anonymous Lua function"));
         if (mudlet::debugMode) {
-            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running script " << function << " (" << function << ")\nError: " << err.c_str() << "\n" >> 0;
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: ERROR running anonymous Lua function (" << name << ")\nError: " << err.c_str() << "\n" >> 0;
         }
     }
     lua_pop(L, lua_gettop(L));
@@ -12407,7 +12451,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 {
     lua_State* L = pGlobalLua;
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
-    QString name = "label callback event";
+    QString name = QStringLiteral("label callback event");
 
     if (qE) {
         // Create Lua table with QEvent data if needed
@@ -12460,7 +12504,6 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             // Push y()
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
-
             return callReference(L, name, 1);
         }
         // These are QEvents
@@ -12483,7 +12526,6 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             // Push y()
             lua_pushnumber(L, qME->y());
             lua_setfield(L, -2, QStringLiteral("y").toUtf8().constData());
-
             return callReference(L, name, 1);
         }
         case (QEvent::Leave): {
@@ -12532,7 +12574,6 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_setfield(L, -2, QStringLiteral("angleDeltaX").toUtf8().constData());
             lua_pushnumber(L, qME->angleDelta().y());
             lua_setfield(L, -2, QStringLiteral("angleDeltaY").toUtf8().constData());
-
             return callReference(L, name, 1);
         }
         default: {

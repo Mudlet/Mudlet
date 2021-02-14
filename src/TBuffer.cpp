@@ -261,9 +261,9 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<bool> isFunctionList)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
 {
-    int id = mLinkStore.addLinks(mpHost, command, hint, isFunctionList);
+    int id = mLinkStore.addLinks(mpHost, command, hint, luaReference);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -2979,7 +2979,7 @@ bool TBuffer::deleteLines(int from, int to)
     }
 }
 
-bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<bool> isFunctionList)
+bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -3012,7 +3012,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     }
                 }
                 if (linkID == 0) {
-                    linkID = mLinkStore.addLinks(mpHost, linkFunction, linkHint, isFunctionList);
+                    linkID = mLinkStore.addLinks(mpHost, linkFunction, linkHint, luaReference);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }
