@@ -2997,6 +2997,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
         mpProgressDialog = nullptr;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
+        delete pNewRoomDB;
         return {false, QStringLiteral("aborted by user")};
     }
 
