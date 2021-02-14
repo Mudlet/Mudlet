@@ -1726,7 +1726,9 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
         roomObj.insert(QLatin1String("hash"), hashForRoomIDValue);
     }
 
-    writeJsonHighlight(roomObj);
+    // Not currently done in the binary map format so don't save it here either;
+    // reader code left active in case that situation changes:
+    // writeJsonHighlight(roomObj);
 
     writeJsonExits(roomObj);
 
@@ -2285,6 +2287,9 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
     }
 }
 
+// Not currently used (it isn't saved in the binary format either) but reserved
+// in case we do desire it - leaving the reader code in place so that if it
+// does get used then no change to the format is needed:
 void TRoom::writeJsonHighlight(QJsonObject& obj) const
 {
     bool noColor = (highlightColor == scDefaultHighlightForeground) && (highlightColor2 == scDefaultHighlightBackground);
