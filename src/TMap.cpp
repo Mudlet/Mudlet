@@ -3008,8 +3008,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     mapSymbolFont.fromString(mapSymbolFontText);
     mapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((isOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
                                                                      |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                     |QFont::PreferNoShaping
-                                                                     ));
+                                                                     |QFont::PreferNoShaping));
 
     mMapSymbolFont.swap(mapSymbolFont);
     mMapSymbolFontFudgeFactor = mapSymbolFontFudgeFactor;
