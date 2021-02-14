@@ -266,7 +266,7 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-    const bool firstLaunch = false;
+    bool firstLaunch = false;
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
