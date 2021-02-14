@@ -857,7 +857,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(true);
 
         checkBox_showDefaultArea->show();
-        checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->mpRoomDB->getDefaultAreaName()));
+        checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->getDefaultAreaName()));
         checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
 
         pushButton_showGlyphUsage->setEnabled(true);
@@ -2449,7 +2449,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
             if (isAreaWidgetInNeedOfResetting) {
                 // Corner case fixup:
-                pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->mpRoomDB->getDefaultAreaName());
+                pHost->mpMap->mpMapper->showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
             }
 
             // If a map was loaded

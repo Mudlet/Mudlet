@@ -654,10 +654,10 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
 
     QColor roomColor;
     int roomEnvironment = pRoom->environment;
-    if (mpMap->envColors.contains(roomEnvironment)) {
-        roomEnvironment = mpMap->envColors[roomEnvironment];
+    if (mpMap->mEnvColors.contains(roomEnvironment)) {
+        roomEnvironment = mpMap->mEnvColors[roomEnvironment];
     } else {
-        if (!mpMap->customEnvColors.contains(roomEnvironment)) {
+        if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
             roomEnvironment = 1;
         }
     }
@@ -681,8 +681,8 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QFont& mapN
     case 16:    roomColor = mpHost->mLightBlack_2;      break;
     // clang-format on
     default: //user defined room color
-        if (mpMap->customEnvColors.contains(roomEnvironment)) {
-            roomColor = mpMap->customEnvColors[roomEnvironment];
+        if (mpMap->mCustomEnvColors.contains(roomEnvironment)) {
+            roomColor = mpMap->mCustomEnvColors[roomEnvironment];
         } else {
             if (16 < roomEnvironment && roomEnvironment < 232) {
                 quint8 base = roomEnvironment - 16;
@@ -3649,16 +3649,16 @@ void T2DMap::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this);
     if (color.isValid()) {
-        auto environmentId = mpMap->customEnvColors.size() + 257 + 16;
-        if (mpMap->customEnvColors.contains(environmentId)) {
+        auto environmentId = mpMap->mCustomEnvColors.size() + 257 + 16;
+        if (mpMap->mCustomEnvColors.contains(environmentId)) {
             // find a new environment ID to use, starting with the latest
             // 'safe' number so the new environment is last in the dialog
             do {
                 environmentId++;
-            } while (mpMap->customEnvColors.contains(environmentId));
+            } while (mpMap->mCustomEnvColors.contains(environmentId));
         }
 
-        mpMap->customEnvColors[environmentId] = color;
+        mpMap->mCustomEnvColors[environmentId] = color;
         slot_changeColor();
     }
     repaint();
@@ -3684,7 +3684,7 @@ void T2DMap::slot_changeColor()
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto colour = selectedItem->text();
 
-            mpMap->customEnvColors.remove(colour.toInt());
+            mpMap->mCustomEnvColors.remove(colour.toInt());
             repaint();
         });
 
@@ -3721,7 +3721,7 @@ void T2DMap::slot_changeColor()
         pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
     }
 
-    QMapIterator<int, QColor> it(mpMap->customEnvColors);
+    QMapIterator<int, QColor> it(mpMap->mCustomEnvColors);
     while (it.hasNext()) {
         it.next();
         QColor c;
@@ -3736,7 +3736,7 @@ void T2DMap::slot_changeColor()
     }
     listWidget->sortItems();
 
-    if (dialog->exec() == QDialog::Accepted && mpMap->customEnvColors.contains(mChosenRoomColor)) {
+    if (dialog->exec() == QDialog::Accepted && mpMap->mCustomEnvColors.contains(mChosenRoomColor)) {
         // Only proceed if OK - "Cancel" now prevents change AND check for a valid
         // color here rather than inside the room change loop as before (only test
         // once rather than for each room)

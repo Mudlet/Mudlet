@@ -403,7 +403,7 @@ void XMLimport::readEnvColor()
     int id = attributes().value(QStringLiteral("id")).toString().toInt();
     int color = attributes().value(QStringLiteral("color")).toString().toInt();
 
-    mpHost->mpMap->envColors[id] = color;
+    mpHost->mpMap->mEnvColors[id] = color;
 }
 
 void XMLimport::readAreas()

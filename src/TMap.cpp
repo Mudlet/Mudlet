@@ -36,28 +36,21 @@
 #include "pre_guard.h"
 #include <QElapsedTimer>
 #include <QFileDialog>
+#include <QJsonParseError>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPainter>
 #include <QBuffer>
 #include "post_guard.h"
 
+
 TMap::TMap(Host* pH, const QString& profileName)
-: mpRoomDB(new TRoomDB(this))
+: mDefaultAreaName(tr("Default Area"))
+, mUnnamedAreaName(tr("Unnamed Area"))
+, mpRoomDB(new TRoomDB(this))
 , mpHost(pH)
 , mProfileName(profileName)
-, m2DPanMode(false)
-, mLeftDown(false)
-, mRightDown(false)
-, m2DPanXStart(0.0f)
-, m2DPanYStart(0.0f)
-, mTargetID(0)
-#if defined(INCLUDE_3DMAPPER)
-, mpM(Q_NULLPTR)
-#endif
-, mpMapper(Q_NULLPTR)
-, mMapGraphNeedsUpdate(true)
-, mNewMove(true)
+, mpMapper(nullptr)
 // default map version that new maps will get
 , mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
@@ -76,19 +69,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(17)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
-, mMapSymbolFontFudgeFactor(1.0)
-, mIsOnlyMapSymbolFontToBeUsed(false)
-// These three are actually set to values from the Host class but initialising
-// them to the same defaults here keeps Coverity happy:
-, mPlayerRoomStyle(0)
-, mPlayerRoomOuterDiameterPercentage(120)
-, mPlayerRoomInnerDiameterPercentage(70)
-, mIsFileViewingRecommended(false)
-, mpNetworkAccessManager(Q_NULLPTR)
-, mpProgressDialog(Q_NULLPTR)
-, mpNetworkReply(Q_NULLPTR)
-, mExpectedFileSize(0)
-, mImportRunning(false)
 {
     mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
                                     // It needs to be set (for when writing new
@@ -98,22 +78,22 @@ TMap::TMap(Host* pH, const QString& profileName)
                                     // preference dialog.
     mVersion = mDefaultVersion;     // This is overwritten during a map restore and
                                     // is the loaded file version
-    customEnvColors[257] = mpHost->mRed_2;
-    customEnvColors[258] = mpHost->mGreen_2;
-    customEnvColors[259] = mpHost->mYellow_2;
-    customEnvColors[260] = mpHost->mBlue_2;
-    customEnvColors[261] = mpHost->mMagenta_2;
-    customEnvColors[262] = mpHost->mCyan_2;
-    customEnvColors[263] = mpHost->mWhite_2;
-    customEnvColors[264] = mpHost->mBlack_2;
-    customEnvColors[265] = mpHost->mLightRed_2;
-    customEnvColors[266] = mpHost->mLightGreen_2;
-    customEnvColors[267] = mpHost->mLightYellow_2;
-    customEnvColors[268] = mpHost->mLightBlue_2;
-    customEnvColors[269] = mpHost->mLightMagenta_2;
-    customEnvColors[270] = mpHost->mLightCyan_2;
-    customEnvColors[271] = mpHost->mLightWhite_2;
-    customEnvColors[272] = mpHost->mLightBlack_2;
+    mCustomEnvColors[257] = mpHost->mRed_2;
+    mCustomEnvColors[258] = mpHost->mGreen_2;
+    mCustomEnvColors[259] = mpHost->mYellow_2;
+    mCustomEnvColors[260] = mpHost->mBlue_2;
+    mCustomEnvColors[261] = mpHost->mMagenta_2;
+    mCustomEnvColors[262] = mpHost->mCyan_2;
+    mCustomEnvColors[263] = mpHost->mWhite_2;
+    mCustomEnvColors[264] = mpHost->mBlack_2;
+    mCustomEnvColors[265] = mpHost->mLightRed_2;
+    mCustomEnvColors[266] = mpHost->mLightGreen_2;
+    mCustomEnvColors[267] = mpHost->mLightYellow_2;
+    mCustomEnvColors[268] = mpHost->mLightBlue_2;
+    mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+    mCustomEnvColors[270] = mpHost->mLightCyan_2;
+    mCustomEnvColors[271] = mpHost->mLightWhite_2;
+    mCustomEnvColors[272] = mpHost->mLightBlack_2;
     unitVectors[1] = QVector3D(0, -1, 0);
     unitVectors[2] = QVector3D(1, -1, 0);
     unitVectors[3] = QVector3D(-1, -1, 0);
@@ -164,30 +144,30 @@ TMap::~TMap()
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();
-    envColors.clear();
+    mEnvColors.clear();
     mRoomIdHash.clear();
     mTargetID = 0;
     mPathList.clear();
     mDirList.clear();
     mWeightList.clear();
-    customEnvColors.clear();
+    mCustomEnvColors.clear();
     // Need to restore the default colours:
-    customEnvColors[257] = mpHost->mRed_2;
-    customEnvColors[258] = mpHost->mGreen_2;
-    customEnvColors[259] = mpHost->mYellow_2;
-    customEnvColors[260] = mpHost->mBlue_2;
-    customEnvColors[261] = mpHost->mMagenta_2;
-    customEnvColors[262] = mpHost->mCyan_2;
-    customEnvColors[263] = mpHost->mWhite_2;
-    customEnvColors[264] = mpHost->mBlack_2;
-    customEnvColors[265] = mpHost->mLightRed_2;
-    customEnvColors[266] = mpHost->mLightGreen_2;
-    customEnvColors[267] = mpHost->mLightYellow_2;
-    customEnvColors[268] = mpHost->mLightBlue_2;
-    customEnvColors[269] = mpHost->mLightMagenta_2;
-    customEnvColors[270] = mpHost->mLightCyan_2;
-    customEnvColors[271] = mpHost->mLightWhite_2;
-    customEnvColors[272] = mpHost->mLightBlack_2;
+    mCustomEnvColors[257] = mpHost->mRed_2;
+    mCustomEnvColors[258] = mpHost->mGreen_2;
+    mCustomEnvColors[259] = mpHost->mYellow_2;
+    mCustomEnvColors[260] = mpHost->mBlue_2;
+    mCustomEnvColors[261] = mpHost->mMagenta_2;
+    mCustomEnvColors[262] = mpHost->mCyan_2;
+    mCustomEnvColors[263] = mpHost->mWhite_2;
+    mCustomEnvColors[264] = mpHost->mBlack_2;
+    mCustomEnvColors[265] = mpHost->mLightRed_2;
+    mCustomEnvColors[266] = mpHost->mLightGreen_2;
+    mCustomEnvColors[267] = mpHost->mLightYellow_2;
+    mCustomEnvColors[268] = mpHost->mLightBlue_2;
+    mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+    mCustomEnvColors[270] = mpHost->mLightCyan_2;
+    mCustomEnvColors[271] = mpHost->mLightWhite_2;
+    mCustomEnvColors[272] = mpHost->mLightBlack_2;
     roomidToIndex.clear();
     // Not used:    pixNameTable.clear();
     // Not used:    pixTable.clear();
@@ -1073,9 +1053,9 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     ofs << mSaveVersion;
-    ofs << envColors;
+    ofs << mEnvColors;
     ofs << mpRoomDB->getAreaNamesMap();
-    ofs << customEnvColors;
+    ofs << mCustomEnvColors;
     ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion < 19) {
         // Save the data in the map user data for older versions
@@ -1108,7 +1088,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << _oldList;
         }
         ofs << pA->zLevels;
-        ofs << pA->exits;
+        ofs << pA->mAreaExits;
         ofs << pA->gridMode;
         ofs << pA->max_x;
         ofs << pA->max_y;
@@ -1264,6 +1244,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             }
             ofs << oldCharacterCode;
         }
+
         if (mSaveVersion >= 21) {
             ofs << pR->mSymbolColor;
         } else {
@@ -1476,11 +1457,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if (mVersion >= 4) {
-            ifs >> envColors;
+            ifs >> mEnvColors;
             mpRoomDB->restoreAreaMap(ifs);
         }
         if (mVersion >= 5) {
-            ifs >> customEnvColors;
+            ifs >> mCustomEnvColors;
         }
         if (mVersion >= 7) {
             ifs >> mpRoomDB->hashToRoomID;
@@ -1495,12 +1476,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
                 ifs >> mMapSymbolFont;
-                if (mVersion < 21 && mMapSymbolFont.toString().split(QLatin1Char(',')).count() > 15) {
+                if ((mVersion < 21) && mMapSymbolFont.toString().split(QLatin1String(",")).size() > 15) {
                     // We need to clean up the effects of using QFont(string)
                     // for a format 17 or 18 below - as this fix went in before
                     // 21 was used it only has to be used for map formats 19 and
                     // 20:
-                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1Char(',')).mid(0, 10).join(QLatin1Char(',')));
+                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1String(",")).mid(0, 10).join(QLatin1String(",")));
                 }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
@@ -1564,7 +1545,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
                 ifs >> pA->zLevels;
-                ifs >> pA->exits;
+                ifs >> pA->mAreaExits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
                 ifs >> pA->max_y;
@@ -1694,22 +1675,22 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             mpRoomDB->restoreSingleRoom(i, pT);
         }
 
-        customEnvColors[257] = mpHost->mRed_2;
-        customEnvColors[258] = mpHost->mGreen_2;
-        customEnvColors[259] = mpHost->mYellow_2;
-        customEnvColors[260] = mpHost->mBlue_2;
-        customEnvColors[261] = mpHost->mMagenta_2;
-        customEnvColors[262] = mpHost->mCyan_2;
-        customEnvColors[263] = mpHost->mWhite_2;
-        customEnvColors[264] = mpHost->mBlack_2;
-        customEnvColors[265] = mpHost->mLightRed_2;
-        customEnvColors[266] = mpHost->mLightGreen_2;
-        customEnvColors[267] = mpHost->mLightYellow_2;
-        customEnvColors[268] = mpHost->mLightBlue_2;
-        customEnvColors[269] = mpHost->mLightMagenta_2;
-        customEnvColors[270] = mpHost->mLightCyan_2;
-        customEnvColors[271] = mpHost->mLightWhite_2;
-        customEnvColors[272] = mpHost->mLightBlack_2;
+        mCustomEnvColors[257] = mpHost->mRed_2;
+        mCustomEnvColors[258] = mpHost->mGreen_2;
+        mCustomEnvColors[259] = mpHost->mYellow_2;
+        mCustomEnvColors[260] = mpHost->mBlue_2;
+        mCustomEnvColors[261] = mpHost->mMagenta_2;
+        mCustomEnvColors[262] = mpHost->mCyan_2;
+        mCustomEnvColors[263] = mpHost->mWhite_2;
+        mCustomEnvColors[264] = mpHost->mBlack_2;
+        mCustomEnvColors[265] = mpHost->mLightRed_2;
+        mCustomEnvColors[266] = mpHost->mLightGreen_2;
+        mCustomEnvColors[267] = mpHost->mLightYellow_2;
+        mCustomEnvColors[268] = mpHost->mLightBlue_2;
+        mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+        mCustomEnvColors[270] = mpHost->mLightCyan_2;
+        mCustomEnvColors[271] = mpHost->mLightWhite_2;
+        mCustomEnvColors[272] = mpHost->mLightBlack_2;
 
         QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                                         "consistency details..." )
@@ -1760,7 +1741,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     folder = mudlet::getMudletPath(mudlet::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
-    entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
 
     if (entries.isEmpty()) {
         return false;
@@ -1832,7 +1813,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 5) {
-        // customEnvColors
+        // mCustomEnvColors
         QMap<int, QColor> _dummyQMapIntQColor;
         ifs >> _dummyQMapIntQColor;
     }
@@ -1862,7 +1843,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> areaID;
             ifs >> pA.rooms;
             ifs >> pA.zLevels;
-            ifs >> pA.exits;
+            ifs >> pA.mAreaExits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
             ifs >> pA.max_y;
@@ -2541,7 +2522,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     return;
                 }
 
-                if (file.open(QFile::ReadOnly | QFile::Text)) {
+                if (file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
                     QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
                     postMessage(infoMsg);
 
@@ -2651,6 +2632,537 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+/*
+ * Notes on the format version numbers in JSON files - we use this to track any
+ * changes in a major.minor number format, the minor number is to be three
+ * digits long.
+ *
+ * 0.002 was the first published draft
+ * 0.003 changed the format to encapsulate the room symbol as an object
+ * which contains text and a color which was added separately during the
+ * development of the JSON handling code. Also refactored the storage of
+ * colors to identify whether there is an alpha component or not in the
+ * array of values.
+ * 1.000 is identical to 0.003 - but changed to make sense from a release point
+ * of view.
+ *
+ * Currently only version 1.000 is expected or handled
+ */
+std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
+{
+    QString destination{dest};
+    if (!dest.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
+        destination.append(QLatin1String(".json"));
+    }
+
+    if (mpProgressDialog) {
+        return {false, QStringLiteral("import or export already in progress")};
+    }
+
+    mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
+    mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
+    mProgressDialogLabelsTotal = 0;
+    for (const auto area : mpRoomDB->getAreaMap()) {
+        if (area) {
+            mProgressDialogLabelsTotal += area->mMapLabels.size();
+        }
+    }
+
+    mpProgressDialog = new QProgressDialog(tr("Exporting JSON map data from %1\n"
+                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                           .arg(mProfileName,
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogAreasTotal),
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogRoomsTotal),
+                                                QLatin1String("0"),
+                                                QString::number(mProgressDialogLabelsTotal)),
+                                           tr("Abort"),
+                                           0,
+                                           mProgressDialogRoomsTotal,
+                                           mpHost->mpConsole);
+    mpProgressDialog->setValue(0);
+    mpProgressDialog->setWindowModality(Qt::NonModal);
+    mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
+    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setMinimumWidth(500);
+    mpProgressDialog->setAutoClose(false);
+    mpProgressDialog->setAutoReset(false);
+    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
+    qApp->processEvents();
+    QFile file(destination);
+    if (!file.open(QFile::OpenMode(QFile::Text|QFile::WriteOnly))) {
+        qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+        mpProgressDialog->close();
+        mpProgressDialog = nullptr;
+        return {false, QStringLiteral("could not open save file \"%1\"").arg(destination)};
+    }
+
+    QJsonObject mapObj;
+    mapObj.insert(QLatin1String("formatVersion"), static_cast<double>(1.000));
+
+    writeJsonUserData(mapObj);
+
+    QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
+    QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
+    areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
+    QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
+#else
+    QSet<int> areaIdsSet = areaRawIdsList.toSet();
+    areaIdsSet.unite(areaNameRawIdsList.toSet());
+    QList<int> areaIdsList = areaIdsSet.toList();
+#endif
+    if (areaIdsList.count() > 1) {
+        std::sort(areaIdsList.begin(), areaIdsList.end());
+    }
+
+    mProgressDialogAreasCount = 0;
+    mProgressDialogRoomsCount = 0;
+    mProgressDialogLabelsCount = 0;
+    bool abort = false;
+    QJsonArray areasArray;
+    for (const auto area : mpRoomDB->getAreaMap()) {
+        if (area) {
+            area->writeJsonArea(areasArray);
+        }
+        ++mProgressDialogAreasCount;
+        if (incrementJsonProgressDialog(true, true, 0)) {
+            abort = true;
+            break;
+        }
+    }
+    if (abort) {
+        file.close();
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+        mpProgressDialog->close();
+        mpProgressDialog = nullptr;
+        return {false, QStringLiteral("aborted by user")};
+    }
+
+    const QJsonValue areasValue{areasArray};
+    mapObj.insert(QLatin1String("areas"), areasValue);
+
+    // Should Qt change things so that the order in the file is not
+    // alphabetically sorted but instead dependent on actually insertion order
+    // then these must be precalculated and put first - as they are needed to
+    // drive the progress dialogue:
+    mapObj.insert(QLatin1String("areaCount"), static_cast<double>(areaIdsList.count()));
+    mapObj.insert(QLatin1String("roomCount"), static_cast<double>(mProgressDialogRoomsCount));
+    mapObj.insert(QLatin1String("labelCount"), static_cast<double>(mProgressDialogLabelsTotal));
+
+    const QJsonValue defaultAreaNameValue{mDefaultAreaName};
+    mapObj.insert(QLatin1String("defaultAreaName"), defaultAreaNameValue);
+
+    const QJsonValue anonymousAreaNameValue{mUnnamedAreaName};
+    mapObj.insert(QLatin1String("anonymousAreaName"), anonymousAreaNameValue);
+
+    if (!mEnvColors.isEmpty()) {
+        QJsonObject envColorObj;
+        QMapIterator<int, int> itEnvColor(mEnvColors);
+        while (itEnvColor.hasNext()) {
+            itEnvColor.next();
+            envColorObj.insert(QString::number(itEnvColor.key()), static_cast<double>(itEnvColor.value()));
+        }
+        const QJsonValue mEnvColorsValue{envColorObj};
+        mapObj.insert(QLatin1String("envToColorMapping"), mEnvColorsValue);
+    }
+
+    QJsonObject playerRoomIdHashObj;
+    QHashIterator<QString, int> itplayerRoomIdHash(mRoomIdHash);
+    while (itplayerRoomIdHash.hasNext()) {
+        itplayerRoomIdHash.next();
+        playerRoomIdHashObj.insert(itplayerRoomIdHash.key(), static_cast<double>(itplayerRoomIdHash.value()));
+    }
+    const QJsonValue playerRoomIdHashsValue{playerRoomIdHashObj};
+    mapObj.insert(QLatin1String("playersRoomId"), playerRoomIdHashsValue);
+
+    QJsonArray customEnvColorArray;
+    QMapIterator<int, QColor> itCustomEnvColor(mCustomEnvColors);
+    while (itCustomEnvColor.hasNext()) {
+        itCustomEnvColor.next();
+        QJsonObject customEnvColorObj{};
+        // Should insert an array value into the customEnvColorObj with the key
+        // "colorRGBA"
+        writeJsonColor(customEnvColorObj, itCustomEnvColor.value());
+        customEnvColorObj.insert(QLatin1String("id"), QJsonValue{itCustomEnvColor.key()});
+        // Covert the customEnvColorObj into a QJsonValue:
+        const QJsonValue customEnvColorValue{customEnvColorObj};
+        // Now append this object onto the array:
+        customEnvColorArray.append(customEnvColorValue);
+    }
+    // Convert the array of all the mCustomEnvColors into a QJsonValue so we
+    // can add it to the map object:
+    QJsonValue mCustomEnvColorsValue{customEnvColorArray};
+    mapObj.insert(QLatin1String("customEnvColors"), mCustomEnvColorsValue);
+
+    mapObj.insert(QLatin1String("mapSymbolFontDetails"), mMapSymbolFont.toString());
+    mapObj.insert(QLatin1String("mapSymbolFontFudgeFactor"), static_cast<double>(mMapSymbolFontFudgeFactor));
+    mapObj.insert(QLatin1String("onlyMapSymbolFontToBeUsed"), mIsOnlyMapSymbolFontToBeUsed);
+
+    QJsonArray playerRoomColorsArray;
+    QJsonObject playerRoomOuterColorObj;
+    QJsonObject playerRoomInnerColorObj;
+    writeJsonColor(playerRoomOuterColorObj, mPlayerRoomOuterColor);
+    writeJsonColor(playerRoomInnerColorObj, mPlayerRoomInnerColor);
+    QJsonValue playerRoomOuterColorValue{playerRoomOuterColorObj};
+    QJsonValue playerRoomInnerColorValue{playerRoomInnerColorObj};
+    playerRoomColorsArray.append(playerRoomOuterColorValue);
+    playerRoomColorsArray.append(playerRoomInnerColorValue);
+    QJsonValue playerRoomColorsValue{playerRoomColorsArray};
+    mapObj.insert(QLatin1String("playerRoomColors"), playerRoomColorsValue);
+    mapObj.insert(QLatin1String("playerRoomStyle"), static_cast<double>(mPlayerRoomStyle));
+    mapObj.insert(QLatin1String("playerRoomOuterDiameterPercentage"), static_cast<double>(mPlayerRoomOuterDiameterPercentage));
+    mapObj.insert(QLatin1String("playerRoomInnerDiameterPercentage"), static_cast<double>(mPlayerRoomInnerDiameterPercentage));
+
+    mpProgressDialog->setLabelText(tr("Exporting JSON map file from %1 - writing data to file:\n"
+                                      "%2 ...").arg(mProfileName, destination));
+    mpProgressDialog->setValue(0);
+    // Hide the cancel button as we can't stop now:
+    mpProgressDialog->setCancelButton(nullptr);
+    file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
+    file.close();
+
+    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    mpProgressDialog->close();
+    mpProgressDialog = nullptr;
+
+    return {file.error() == QFileDevice::NoError,
+                ((file.error() == QFileDevice::NoError) ? QString() : QStringLiteral("could not export file, reason: %1").arg(file.errorString()))};
+}
+
+std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
+{
+    const QString oldDefaultAreaName{mDefaultAreaName};
+    const QString oldUnnamedName{mUnnamedAreaName};
+
+    if (mpProgressDialog) {
+        return {false, QStringLiteral("import or export already in progress")};
+    }
+
+    QFile file(source);
+    if (!file.open(QFile::ReadOnly)) {
+        qWarning().noquote().nospace() << "TMap::readJsonMapFile(...) WARNING - Could not open JSON file \"" << source << "\".";
+        return {false, QStringLiteral("could not open file \"%1\"").arg(source)};
+    }
+
+    QByteArray mapData = file.readAll();
+    file.close();
+    QJsonParseError jsonErr;
+    QJsonDocument doc(QJsonDocument::fromJson(mapData, &jsonErr));
+    if (jsonErr.error != QJsonParseError::NoError) {
+        return {false, QStringLiteral("could not parse file \"%1\", reason: \"%2\" at offset %3")
+                    .arg(source, jsonErr.errorString(), QString::number(jsonErr.offset))};
+    }
+
+    if (doc.isEmpty()) {
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - no Json file data detected, this is not a Mudlet JSON map file.";
+        return {false, QStringLiteral("empty Json file, no map data detected")};
+    }
+
+    // Read all the base level stuff:
+    QJsonObject mapObj{doc.object()};
+    double formatVersion = 0.0f;
+    if (mapObj.contains(QLatin1String("formatVersion")) && mapObj[QLatin1String("formatVersion")].isDouble()) {
+        formatVersion = mapObj[QLatin1String("formatVersion")].toDouble();
+        if (qFuzzyCompare(1.0, formatVersion + 1.0) || formatVersion < 1.0000 || formatVersion > 1.0000) {
+            // We only handle 1.000f right now (0.001f was borked, 0.002f
+            // didn't include room symbol color, 0.003 is the same as 1.000
+            // but the numbered was changed for release into the wild):
+            qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was found: " << formatVersion << "and it is not okay.";
+            return {false, QStringLiteral("invalid version: %1 detected").arg(formatVersion, 0, 'f', 3, QLatin1Char('0'))};
+        }
+    } else {
+        qDebug().nospace().noquote() << "TMap::readJsonMapFile(\"" << source << "\") INFO - Version information was not found, this is not likely to be a Mudlet JSON map file.";
+        return {false, QStringLiteral("no version number detected")};
+    }
+
+    if (!mapObj.contains(QLatin1String("areas")) || !mapObj.value(QLatin1String("areas")).isArray()) {
+        return {false, QStringLiteral("no areas detected")};
+    }
+
+    mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
+    mProgressDialogAreasCount = 0;
+    mProgressDialogRoomsTotal = qRound(mapObj[QLatin1String("roomCount")].toDouble());
+    mProgressDialogRoomsCount = 0;
+    mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
+    mProgressDialogLabelsCount = 0;
+    mpProgressDialog = new QProgressDialog(tr("Import JSON map data to %1\n"
+                                              "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                                   .arg(mProfileName,
+                                                        QLatin1String("0"),
+                                                        QString::number(mProgressDialogAreasTotal),
+                                                        QLatin1String("0"),
+                                                        QString::number(mProgressDialogRoomsTotal),
+                                                        QLatin1String("0"),
+                                                        QString::number(mProgressDialogLabelsTotal)),
+                                           tr("Abort"),
+                                           0,
+                                           mProgressDialogRoomsTotal,
+                                           mpHost->mpConsole);
+    mpProgressDialog->setValue(0);
+    mpProgressDialog->setWindowModality(Qt::NonModal);
+    mpProgressDialog->setWindowTitle(tr("Map JSON import", "This is a title of a progress window."));
+    mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
+    mpProgressDialog->setMinimumWidth(500);
+    mpProgressDialog->setAutoClose(false);
+    mpProgressDialog->setAutoReset(false);
+    mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
+    qApp->processEvents();
+
+    mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
+    float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
+    int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
+    quint8 playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
+    quint8 playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
+    QColor playerRoomOuterColor;
+    QColor playerRoomInnerColor;
+
+    if (mapObj.contains(QLatin1String("playerRoomColors")) && mapObj.value(QLatin1String("playerRoomColors")).isArray()) {
+        QJsonArray playerRoomColorArray = mapObj.value(QLatin1String("playerRoomColors")).toArray();
+        if (playerRoomColorArray.size() == 2 && playerRoomColorArray.at(0).isObject() && playerRoomColorArray.at(1).isObject()) {
+            playerRoomOuterColor = readJsonColor(playerRoomColorArray.at(0).toObject());
+            playerRoomInnerColor = readJsonColor(playerRoomColorArray.at(1).toObject());
+        }
+    }
+
+    QMap<int, int> envColors;
+    if (mapObj.contains(QLatin1String("envToColorMapping")) && mapObj.value(QLatin1String("envToColorMapping")).isObject()) {
+        const QJsonObject envColorObj{mapObj.value(QLatin1String("envToColorMapping")).toObject()};
+        if (!envColorObj.isEmpty()) {
+            for (auto& key : envColorObj.keys()) {
+                bool isOk = false;
+                int index = key.toInt(&isOk);
+                if (isOk && envColorObj.value(key).isDouble()) {
+                    int value = envColorObj.value(key).toInt();
+                    envColors.insert(index, value);
+                }
+            }
+        }
+    }
+
+    QMap<int, QColor> customEnvColors;
+    if (mapObj.contains(QLatin1String("customEnvColors")) && mapObj.value(QLatin1String("customEnvColors")).isArray()) {
+        const QJsonArray customEnvColorArray = mapObj.value(QLatin1String("customEnvColors")).toArray();
+        if (!customEnvColorArray.isEmpty()) {
+            for (auto customEnvColorValue : qAsConst(customEnvColorArray)) {
+                const QJsonObject customEnvColorObj{customEnvColorValue.toObject()};
+                if (customEnvColorObj.contains(QLatin1String("id"))
+                    && ((customEnvColorObj.contains(QLatin1String("color32RGBA")) && customEnvColorObj.value(QLatin1String("color32RGBA")).isArray())
+                        ||(customEnvColorObj.contains(QLatin1String("color24RGB")) && customEnvColorObj.value(QLatin1String("color24RGB")).isArray()))
+                    && customEnvColorObj.value(QLatin1String("id")).isDouble()) {
+
+                    const int id{customEnvColorObj.value(QLatin1String("id")).toInt()};
+                    const QColor color{readJsonColor(customEnvColorObj)};
+                    customEnvColors.insert(id, color);
+                }
+            }
+        }
+    }
+
+    QHash<QString, int> playersRoomId;
+    if (mapObj.contains(QLatin1String("playersRoomId")) && mapObj.value(QLatin1String("playersRoomId")).isObject()) {
+        const QJsonObject playersRoomIdObj{mapObj.value(QLatin1String("playersRoomId")).toObject()};
+        if (!playersRoomIdObj.isEmpty()) {
+            for (auto& profileName : playersRoomIdObj.keys()) {
+                if (playersRoomIdObj.value(profileName).isDouble()) {
+                    playersRoomId.insert(profileName, playersRoomIdObj.value(profileName).toInt());
+                }
+            }
+        }
+    }
+
+    TRoomDB* pNewRoomDB = new TRoomDB(this);
+    bool abort = false;
+    for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
+        TArea* pArea = new TArea(this, pNewRoomDB);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
+        ++mProgressDialogAreasCount;
+        if (incrementJsonProgressDialog(false, true, 0)) {
+            abort = true;
+            break;
+        }
+        // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
+        pNewRoomDB->addArea(pArea, id, name);
+    }
+    if (abort) {
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+        mpProgressDialog->close();
+        mpProgressDialog = nullptr;
+        mDefaultAreaName = oldDefaultAreaName;
+        mUnnamedAreaName = oldUnnamedName;
+        delete pNewRoomDB;
+        return {false, QStringLiteral("aborted by user")};
+    }
+
+    mCustomEnvColors.swap(customEnvColors);
+    mEnvColors.swap(envColors);
+    mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
+    QFont mapSymbolFont;
+    mapSymbolFont.fromString(mapSymbolFontText);
+    mapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((isOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
+                                                                     |QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
+                                                                     |QFont::PreferNoShaping));
+
+    mMapSymbolFont.swap(mapSymbolFont);
+    mMapSymbolFontFudgeFactor = mapSymbolFontFudgeFactor;
+    mPlayerRoomInnerColor = playerRoomInnerColor;
+    mPlayerRoomInnerDiameterPercentage = playerRoomInnerDiameterPercentage;
+    mPlayerRoomOuterColor = playerRoomOuterColor;
+    mPlayerRoomOuterDiameterPercentage = playerRoomOuterDiameterPercentage;
+    mPlayerRoomStyle = playerRoomStyle;
+    mRoomIdHash = playersRoomId;
+    qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
+
+    // This is it - the point at which the new map gets activated:
+    TRoomDB* pOldRoomDB = mpRoomDB;
+    mpRoomDB = pNewRoomDB;
+    audit();
+    if (mpMapper) {
+        mpMapper->mp2dMap->init();
+        mpMapper->updateAreaComboBox();
+        mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        mpMapper->show();
+        update();
+    }
+    delete pOldRoomDB;
+    mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    mpProgressDialog->close();
+    mpProgressDialog = nullptr;
+    return {true, QString()};
+}
+
+void TMap::writeJsonUserData(QJsonObject& obj) const
+{
+    QJsonObject userDataObj;
+    if (mUserData.isEmpty()) {
+        // Skip creating a user data array if it will be empty:
+        return;
+    }
+    QMapIterator<QString, QString> itDataItem(mUserData);
+    while (itDataItem.hasNext()) {
+        itDataItem.next();
+        const QJsonValue jsonValue{itDataItem.value()};
+        userDataObj.insert(itDataItem.key(), jsonValue);
+    }
+    const QJsonValue jsonValue{userDataObj};
+    obj.insert(QLatin1String("userData"), jsonValue);
+}
+
+// Takes a userData object and parses all its elements
+void TMap::readJsonUserData(const QJsonObject& obj)
+{
+    if (obj.isEmpty()) {
+        // Skip doing anything more if there is nothing to do:
+        return;
+    }
+
+    for (auto& key : obj.keys()) {
+        if (obj.value(key).isString()) {
+            mUserData.insert(key, obj.value(key).toString());
+        }
+    }
+}
+
+// Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
+// supplied object.
+void TMap::writeJsonColor(QJsonObject& obj, const QColor& color)
+{
+    QJsonArray colorRGBAArray;
+    colorRGBAArray.append(static_cast<double>(color.red()));
+    colorRGBAArray.append(static_cast<double>(color.green()));
+    colorRGBAArray.append(static_cast<double>(color.blue()));
+    if (color.alpha() < 255) {
+        colorRGBAArray.append(static_cast<double>(color.alpha()));
+        QJsonValue colorRGBAValue{colorRGBAArray};
+        obj.insert(QLatin1String("color32RGBA"), colorRGBAValue);
+    } else {
+        QJsonValue colorRGBAValue{colorRGBAArray};
+        obj.insert(QLatin1String("color24RGB"), colorRGBAValue);
+    }
+}
+
+QColor TMap::readJsonColor(const QJsonObject& obj)
+{
+    if (!(   (obj.contains(QLatin1String("color32RGBA")) && obj.value(QLatin1String("color32RGBA")).isArray())
+          || (obj.contains(QLatin1String("color24RGB")) && obj.value(QLatin1String("color24RGB")).isArray()))) {
+        // Return a null color if one was not found
+        return QColor();
+    }
+
+    QJsonArray colorRGBAArray;
+    bool hasAlpha = false;
+    int red = 0;
+    int green = 0;
+    int blue = 0;
+    int alpha = 255;
+    if (obj.contains(QLatin1String("color32RGBA"))) {
+        colorRGBAArray = obj.value(QLatin1String("color32RGBA")).toArray();
+        hasAlpha = true;
+    } else {
+        colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
+    }
+    int size = colorRGBAArray.size();
+    if ((size == 3 || size == 4)
+        && colorRGBAArray.at(0).isDouble()
+        && colorRGBAArray.at(1).isDouble()
+        && colorRGBAArray.at(2).isDouble()) {
+
+        red = qRound(colorRGBAArray.at(0).toDouble());
+        green = qRound(colorRGBAArray.at(1).toDouble());
+        blue = qRound(colorRGBAArray.at(2).toDouble());
+        return QColor(red, green, blue);
+    }
+
+    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        return QColor(red, green, blue, alpha);
+    }
+
+    return QColor();
+}
+
+
+bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment)
+{
+    if (isRoomNotLabel) {
+        mProgressDialogRoomsCount += increment;
+    } else {
+        mProgressDialogLabelsCount += increment;
+    }
+
+    mpProgressDialog->setValue(mProgressDialogRoomsCount);
+    if (isExportNotImport) {
+        mpProgressDialog->setLabelText(tr("Exporting JSON map data from %1\n"
+                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                       .arg(mProfileName,
+                                            QString::number(mProgressDialogAreasCount),
+                                            QString::number(mProgressDialogAreasTotal),
+                                            QString::number(mProgressDialogRoomsCount),
+                                            QString::number(mProgressDialogRoomsTotal),
+                                            QString::number(mProgressDialogLabelsCount),
+                                            QString::number(mProgressDialogLabelsTotal)));
+    } else {
+        mpProgressDialog->setLabelText(tr("Importing JSON map data to %1\n"
+                                          "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
+                                       .arg(mProfileName,
+                                            QString::number(mProgressDialogAreasCount),
+                                            QString::number(mProgressDialogAreasTotal),
+                                            QString::number(mProgressDialogRoomsCount),
+                                            QString::number(mProgressDialogRoomsTotal),
+                                            QString::number(mProgressDialogLabelsCount),
+                                            QString::number(mProgressDialogLabelsTotal)));
+    }
+    qApp->processEvents();
+    return mpProgressDialog->wasCanceled();
+}
+
 void TMap::update()
 {
 #if defined(INCLUDE_3DMAPPER)
@@ -2679,10 +3191,10 @@ QColor TMap::getColor(int id)
     }
 
     int env = room->environment;
-    if (envColors.contains(env)) {
-        env = envColors[env];
+    if (mEnvColors.contains(env)) {
+        env = mEnvColors.value(env);
     } else {
-        if (!customEnvColors.contains(env)) {
+        if (!mCustomEnvColors.contains(env)) {
             env = 1;
         }
     }
@@ -2704,7 +3216,7 @@ QColor TMap::getColor(int id)
     case 15:    color = mpHost->mLightWhite_2;      break;
     case 16:    color = mpHost->mLightBlack_2;      break;
     default: //user defined room color
-        if (!customEnvColors.contains(env)) {
+        if (!mCustomEnvColors.contains(env)) {
             if (16 < env && env < 232) {
                 quint8 base = env - 16;
                 quint8 r = base / 36;
@@ -2721,7 +3233,7 @@ QColor TMap::getColor(int id)
             }
             break;
         }
-        color = customEnvColors[env];
+        color = mCustomEnvColors.value(env);
     }
     return color;
 }
