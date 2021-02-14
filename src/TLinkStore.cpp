@@ -20,14 +20,14 @@
 #include "TLinkStore.h"
 #include "Host.h"
 
-int TLinkStore::addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<int>& luaReference)
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference)
 {
     if (++mLinkID > maxLinks) {
         mLinkID = 1;
     }
 
     // Used to unref lua objects in the registry to avoid memory leaks
-    if (mLinkStore.contains(mLinkID)){
+    if (pH && mLinkStore.contains(mLinkID)){
         QStringList oldLinks = mLinkStore.value(mLinkID);
         QVector<int> oldReference = mReferenceStore.value(mLinkID);
         for (int i = 0, total = oldLinks.size(); i < total; ++i) {

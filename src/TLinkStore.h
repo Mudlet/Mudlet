@@ -43,7 +43,7 @@ public:
 
     explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
-    int addLinks(Host *pH, const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>());
+    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
