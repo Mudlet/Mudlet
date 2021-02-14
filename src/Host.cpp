@@ -343,7 +343,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
-, mShowInfo(true)
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
@@ -395,6 +394,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mMapInfoContributors(QSet<QString>{"Short"})
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
