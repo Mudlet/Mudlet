@@ -133,8 +133,15 @@ if [ "${DEPLOY}" = "deploy" ]; then
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
     if [ "${public_test_build}" == "true" ]; then
+      echo "=== Downloading release feed ==="
+      downloadedfeed=$(mktemp)
+      wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/x86_64" --output-document="$downloadedfeed"
+      echo "=== Generating a changelog ==="
+      cd "${SOURCE_DIR}" || exit
+      changelog=$(lua "${SOURCE_DIR}/CI/generate-ptb-changelog.lua" --releasefile "${downloadedfeed}")
+
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION}${MUDLET_VERSION_BUILD}" || true
+      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
 
       # release registration and uploading will be manual for the time being
     else
