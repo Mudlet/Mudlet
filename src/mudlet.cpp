@@ -319,6 +319,8 @@ mudlet::mudlet()
         mAutolog = false;
     }
 
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
     mpButtonConnect->setObjectName(QStringLiteral("connect"));
@@ -1012,12 +1014,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
-}
-
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 }
 
 // As we are currently only using files from a resource file we only need to
