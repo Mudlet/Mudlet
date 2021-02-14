@@ -7091,7 +7091,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int b = getVerifiedInt(L, __func__, 4, "b");
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
-    host.mpMap->customEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
     return 0;
 }
 
@@ -7277,7 +7277,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
             return warnArgumentValue(L, __func__, QStringLiteral("string '%1' is not a valid area name").arg(name));
-        } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
+        } else if (name == host.mpMap->getDefaultAreaName()) {
             return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
@@ -8118,29 +8118,33 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_settable(L, -3);
 
     lua_pushstring(L, "FgColor");
-    lua_newtable(L);
-    lua_pushstring(L, "r");
-    lua_pushinteger(L, label.fgColor.red());
-    lua_settable(L, -3);
-    lua_pushstring(L, "g");
-    lua_pushinteger(L, label.fgColor.green());
-    lua_settable(L, -3);
-    lua_pushstring(L, "b");
-    lua_pushinteger(L, label.fgColor.blue());
-    lua_settable(L, -3);
+    {
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, label.fgColor.red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, label.fgColor.green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, label.fgColor.blue());
+        lua_settable(L, -3);
+    }
     lua_settable(L, -3);
 
     lua_pushstring(L, "BgColor");
-    lua_newtable(L);
-    lua_pushstring(L, "r");
-    lua_pushinteger(L, label.bgColor.red());
-    lua_settable(L, -3);
-    lua_pushstring(L, "g");
-    lua_pushinteger(L, label.bgColor.green());
-    lua_settable(L, -3);
-    lua_pushstring(L, "b");
-    lua_pushinteger(L, label.bgColor.blue());
-    lua_settable(L, -3);
+    {
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, label.bgColor.red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, label.bgColor.green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, label.bgColor.blue());
+        lua_settable(L, -3);
+    }
     lua_settable(L, -3);
 }
 
@@ -9477,31 +9481,37 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mpMap->customEnvColors.empty()) {
+    if (!host.mpMap->mCustomEnvColors.empty()) {
         lua_newtable(L);
-        QList<int> colorList = host.mpMap->customEnvColors.keys();
-        for (int& idx : colorList) {
+        QList<int> colorList = host.mpMap->mCustomEnvColors.keys();
+        for (auto idx : colorList) {
             lua_pushnumber(L, idx);
             lua_newtable(L);
             // red component
             {
                 lua_pushnumber(L, 1);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].red());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).red());
+                lua_settable(L, -3);
             }
             // green component
             {
                 lua_pushnumber(L, 2);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].green());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).green());
+                lua_settable(L, -3);
             }
             // blue component
             {
                 lua_pushnumber(L, 3);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].blue());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).blue());
+                lua_settable(L, -3);
             }
-            lua_settable(L, -3); //matches in regex
+            // alpha component
+            {
+                lua_pushnumber(L, 4);
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).alpha());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
         }
     } else {
         lua_newtable(L);
@@ -10280,7 +10290,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
-            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->mpRoomDB->getDefaultAreaName());
+            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->getDefaultAreaName());
         }
         host.mpMap->mpMapper->mp2dMap->repaint();
         host.mpMap->mpMapper->update();
@@ -13625,6 +13635,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
+    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
@@ -15236,6 +15248,46 @@ int TLuaInterpreter::showNotification(lua_State* L)
     mudlet::self()->mTrayIcon.show();
     mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
     return 0;
+}
+
+int TLuaInterpreter::exportJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+    }
+
+    auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
+    if (dest.isEmpty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to write to must be provided"));
+    }
+
+    if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::importJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+    }
+
+    auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
+    if (source.isEmpty()) {
+        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to read to must be provided"));
+    }
+
+    if (auto [result, message] = pHost->mpMap->readJsonMapFile(source); !result) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo

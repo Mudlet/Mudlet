@@ -33,6 +33,9 @@
 #include <QApplication>
 #include <QColor>
 #include <QFont>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMap>
 #include <QNetworkReply>
 #include <QPixmap>
@@ -59,6 +62,12 @@ class MapInfoContributorManager;
 class TMap : public QObject
 {
     Q_OBJECT
+
+    // Moved from TRoomDB - but as one is used in the TRoomDB constructor they
+    // must be defined before the TRoomDB instance with this TMap on creation
+    // is created:
+    QString mDefaultAreaName;
+    QString mUnnamedAreaName;
 
 public:
     Q_DISABLE_COPY(TMap)
@@ -128,32 +137,50 @@ public:
     void setMmpMapLocation(const QString &location);
     QString getMmpMapLocation() const;
 
+    // has setRoomNamesShown ever been called on this map?
+    bool getRoomNamesPresent();
+    // show room labels on the map?
+    bool getRoomNamesShown();
+    void setRoomNamesShown(bool shown);
+
+    std::pair<bool, QString> writeJsonMapFile(const QString&);
+    std::pair<bool, QString> readJsonMapFile(const QString&);
+    int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
+    bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
+    QString getDefaultAreaName() const { return mDefaultAreaName; }
+    QString getUnnamedAreaName() const { return mUnnamedAreaName; }
+
+    QColor getColor(int id);
+
+    static void writeJsonColor(QJsonObject&, const QColor&);
+    static QColor readJsonColor(const QJsonObject&);
+
 
     TRoomDB* mpRoomDB;
-    QMap<int, int> envColors;
+    QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
     QString mProfileName;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
     QHash<QString, int> mRoomIdHash;
-    bool m2DPanMode;
-    bool mLeftDown;
-    bool mRightDown;
-    float m2DPanXStart;
-    float m2DPanYStart;
-    int mTargetID;
+    bool m2DPanMode = false;
+    bool mLeftDown = false;
+    bool mRightDown = false;
+    float m2DPanXStart = 0.0f;
+    float m2DPanYStart = 0.0f;
+    int mTargetID = 0;
     QList<int> mPathList;
     QList<QString> mDirList;
     QList<int> mWeightList;
-    QMap<int, QColor> customEnvColors;
+    QMap<int, QColor> mCustomEnvColors;
     QMap<int, QVector3D> unitVectors;
 
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
 #if defined(INCLUDE_3DMAPPER)
-    QPointer<GLWidget> mpM;
+    QPointer<GLWidget> mpM = nullptr;
 #endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
@@ -202,15 +229,9 @@ public:
     // different users could have differing requirement for symbol sizing
     // depending on font usage, language, symbol choice, etc. but this has not
     // (yet) made (user) adjustable:
-    qreal mMapSymbolFontFudgeFactor;
+    qreal mMapSymbolFontFudgeFactor = 1.0;
     // Disables font substitution if set:
-    bool mIsOnlyMapSymbolFontToBeUsed;
-
-    // has setRoomNamesShown ever been called on this map?
-    bool getRoomNamesPresent();
-    // show room labels on the map?
-    bool getRoomNamesShown();
-    void setRoomNamesShown(bool shown);
+    bool mIsOnlyMapSymbolFontToBeUsed = false;
 
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
@@ -218,19 +239,20 @@ public:
     // Base color(s) for the player room in the mappers:
     QColor mPlayerRoomOuterColor;
     QColor mPlayerRoomInnerColor;
+    // These three are actually set to values from the Host class but initialising
+    // them to the same defaults here keeps Coverity happy:
     // Mode selected - 0 is closest to original style:
-    quint8 mPlayerRoomStyle;
+    quint8 mPlayerRoomStyle = 0;
     // Percentage of the room size (actually width) for the outer diameter of
     // the circular marking, integer percentage clamped in the preferences
     // between 200 and 50 - default 120:
-    quint8 mPlayerRoomOuterDiameterPercentage;
+    quint8 mPlayerRoomOuterDiameterPercentage = 120;
     // Percentage of the outer size for the inner diameter of the circular
     // marking, integer percentage clamped in the preferences between 83 and 0,
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
+    quint8 mPlayerRoomInnerDiameterPercentage = 70;
 
-    QColor getColor(int id);
 
     MapInfoContributorManager* mMapInfoContributorManager;
 
@@ -244,6 +266,8 @@ public slots:
 
 private:
     const QString createFileHeaderLine(QString, QChar);
+    void writeJsonUserData(QJsonObject&) const;
+    void readJsonUserData(const QJsonObject&);
 
     QStringList mStoredMessages;
 
@@ -257,16 +281,25 @@ private:
     QList<QString> mMapAuditErrors;
 
     // Are things so bad the user needs to check the log (ignored if messages ARE already sent to screen)
-    bool mIsFileViewingRecommended;
+    bool mIsFileViewingRecommended = false;;
 
     // Moved and revised from dlgMapper:
-    QNetworkAccessManager* mpNetworkAccessManager;
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
 
-    QProgressDialog* mpProgressDialog;
-    QNetworkReply* mpNetworkReply;
+    QNetworkReply* mpNetworkReply = nullptr;
     QString mLocalMapFileName;
-    int mExpectedFileSize;
-    bool mImportRunning;
+    int mExpectedFileSize = 0;
+    bool mImportRunning = false;
+
+    QProgressDialog* mpProgressDialog = nullptr;
+    // Using during updates of text in progress dialog partially from other
+    // classes:
+    int mProgressDialogAreasTotal = 0;
+    int mProgressDialogAreasCount = 0;
+    int mProgressDialogRoomsTotal = 0;
+    int mProgressDialogRoomsCount = 0;
+    int mProgressDialogLabelsTotal = 0;
+    int mProgressDialogLabelsCount = 0;
 };
 
 #endif // MUDLET_TMAP_H
