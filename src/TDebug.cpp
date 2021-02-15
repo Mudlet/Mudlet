@@ -30,7 +30,8 @@
 const QChar TDebug::csmContinue = QChar(0xFFFF);
 
 QMap<const Host*, QPair<QString, QChar>> TDebug::smIdentifierMap;
-QSet<QChar> TDebug::smUsedIdentifiers;
+QQueue<QChar> TDebug::smAvailableIdentifiers;
+bool TDebug::initialised = false;
 QQueue<TDebugMessage> TDebug::smMessageQueue;
 
 TDebug::TDebug(const QColor& c, const QColor& d)
@@ -169,17 +170,17 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
 /* static */ void TDebug::addHost(Host* pHost)
 {
+    if (!initialised) {
+        smAvailableIdentifiers << QLatin1Char('A') << QLatin1Char('B') << QLatin1Char('C') << QLatin1Char('D') << QLatin1Char('E') << QLatin1Char('F') << QLatin1Char('G') << QLatin1Char('H')
+                               << QLatin1Char('I') << QLatin1Char('J') << QLatin1Char('K') << QLatin1Char('L') << QLatin1Char('M') << QLatin1Char('N') << QLatin1Char('O') << QLatin1Char('P')
+                               << QLatin1Char('Q') << QLatin1Char('R') << QLatin1Char('S') << QLatin1Char('T') << QLatin1Char('U') << QLatin1Char('V') << QLatin1Char('X') << QLatin1Char('Y')
+                               << QLatin1Char('Z');
+        initialised = true;
+    }
+
     if (!pHost) {
         return;
     }
-    static const QString validIdentifiers{"123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"};
-    static const int maxIdCount = validIdentifiers.size();
-    int tryCount = -1;
-    do {
-        if (!TDebug::smUsedIdentifiers.contains(validIdentifiers.at(++tryCount))) {
-            break;
-        }
-    } while (tryCount < maxIdCount);
 
     QString hostName = pHost->getName();
     // Take a deep-copy to prevent RVO of the Host::getName() method from
@@ -187,13 +188,12 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     // - so this copy can persist independently of the original when the latter
     // goes away:
     hostName.detach();
-    if (TDebug::smUsedIdentifiers.contains(validIdentifiers.at(tryCount))) {
+    if (TDebug::smAvailableIdentifiers.isEmpty()) {
         // Run out of identifers - fall back to '?'
         QPair<QString, QChar> newIdentifier = qMakePair(hostName, QLatin1Char('?'));
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     } else {
-        QPair<QString, QChar> newIdentifier = qMakePair(hostName, validIdentifiers.at(tryCount));
-        TDebug::smUsedIdentifiers.insert(validIdentifiers.at(tryCount));
+        QPair<QString, QChar> newIdentifier = qMakePair(hostName, smAvailableIdentifiers.dequeue());
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
     TDebug localMessage(Qt::blue, Qt::white);
@@ -204,7 +204,11 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 
 /* static */ void TDebug::removeHost(Host* pHost)
 {
-    TDebug::smIdentifierMap.remove(pHost);
+    auto identifier = TDebug::smIdentifierMap.take(pHost);
+    if (identifier.second != QLatin1Char('?') && identifier.second != QLatin1Char('*') && identifier.second != QLatin1Char('!')) {
+        // is a normal identifier so push it in at the back of the queue for reuse:
+        smAvailableIdentifiers.enqueue(identifier.second);
+    }
     TDebug localMessage(Qt::darkGray, Qt::white);
     localMessage << QStringLiteral("Profile '%1' ended.\n").arg(pHost->getName()) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);

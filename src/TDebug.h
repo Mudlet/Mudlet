@@ -55,8 +55,9 @@ class TDebug
     // debug message - the first value is used to create a table to display on
     // changes and the second value is what short identifier is used:
     static QMap<const Host*, QPair<QString, QChar>> smIdentifierMap;
-    // Used to prevent reuse of the same identifier in the same application run:
-    static QSet<QChar> smUsedIdentifiers;
+    // Used to order identifier in the same application run:
+    static QQueue<QChar> smAvailableIdentifiers;
+    static bool initialised;
     // This is a temporary bodge until we can decouple the Central Debug
     // Console from having to be associated with a Host (Profile) instance,
     // as that prevents it from being created until a profile has - which makes
