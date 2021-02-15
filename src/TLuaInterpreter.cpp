@@ -6574,22 +6574,25 @@ int TLuaInterpreter::exists(lua_State* L)
     QString name = getVerifiedString(L, __func__, 1, "name");
     QString type = getVerifiedString(L, __func__, 2, "type");
     Host& host = getHostFromLua(L);
-    int cnt = 0;
+    int count = 0;
     type = type.toLower();
-    if (type == "timer") {
-        cnt += host.getTimerUnit()->mLookupTable.count(name);
-    } else if (type == "trigger") {
-        cnt += host.getTriggerUnit()->mLookupTable.count(name);
-    } else if (type == "alias") {
-        cnt += host.getAliasUnit()->mLookupTable.count(name);
-    } else if (type == "keybind") {
-        cnt += host.getKeyUnit()->mLookupTable.count(name);
-    } else if (type == "button") {
-        cnt += host.getActionUnit()->findActionsByName(name).size();
-    } else if (type == "script") {
-        cnt += host.getScriptUnit()->findScriptId(name).size();
+    if (type == QStringLiteral("timer")) {
+        count = host.getTimerUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("trigger")) {
+        count = host.getTriggerUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("alias")) {
+        count = host.getAliasUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("keybind")) {
+        count = host.getKeyUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("button")) {
+        count = host.getActionUnit()->findActionsByName(name).size();
+    } else if (type == QStringLiteral("script")) {
+        count = host.getScriptUnit()->findScriptId(name).size();
+    } else {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
-    lua_pushnumber(L, cnt);
+    lua_pushnumber(L, count);
     return 1;
 }
 
