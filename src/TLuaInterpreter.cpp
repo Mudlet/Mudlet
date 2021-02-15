@@ -15250,6 +15250,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
 int TLuaInterpreter::exportJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
@@ -15270,6 +15271,7 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
 int TLuaInterpreter::importJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
