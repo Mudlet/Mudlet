@@ -1,11 +1,11 @@
-name: Build Mudlet
+name: Build PTB test Mudlet
 on:
   push:
     branches: [master, development]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
   compile-mudlet:
@@ -115,11 +115,11 @@ jobs:
         # If not available, use other methods
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
+        # multiple versions of GCC available in Actions - update to latest
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 9
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 9
+        sudo update-alternatives --set gcc /usr/bin/gcc-9
+        sudo update-alternatives --set g++ /usr/bin/g++-9
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -260,16 +260,16 @@ jobs:
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
 
-    # - name: Setup tmate session for debugging
-    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-    #   uses: mxschmitt/action-tmate@v3
-    #   env:
-    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-    #     RUNNER_OS: ${{runner.os}}
-    #     DEPLOY: ${{matrix.deploy}}
-    #     DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-    #     DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-    #     DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+    - name: Setup tmate session for debugging
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      uses: mxschmitt/action-tmate@v3
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
 
     - name: (Linux/macOS) package Mudlet

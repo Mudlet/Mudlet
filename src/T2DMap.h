@@ -40,6 +40,7 @@ class Host;
 class TArea;
 class TMap;
 class TRoom;
+class MapInfoProperties;
 
 class QCheckBox;
 class QComboBox;
@@ -137,7 +138,7 @@ public:
     qreal mOy;
     int mOz;
     bool mShiftMode;
-    bool mShowInfo;
+    QComboBox* mapInfo_combobox;
     QComboBox* arealist_combobox;
     QPointer<QDialog> mpCustomLinesDialog;
     int mCustomLinesRoomFrom;
@@ -158,7 +159,7 @@ public:
     bool mMapperUseAntiAlias;
 
     // Controls if the mapper is in view-only mode
-    bool mMapViewOnly;
+    bool mMapViewOnly = true;
 
     bool mLabelHighlighted;
     bool mMoveLabel;
@@ -225,13 +226,15 @@ public slots:
     void slot_newMap();
 
 private:
+    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, bool showRoomNames, const int, const float, const float, const bool, const QMap<int, QPointF>&);
-    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
-    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>&);
+    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const bool, const QMap<int, QPointF>&);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
+    int paintMapInfoContributor(QPainter&, int xOffset, int yOffset, const MapInfoProperties& properties);
+    void paintAreaExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
 

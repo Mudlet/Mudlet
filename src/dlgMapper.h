@@ -30,7 +30,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-
 class Host;
 class TMap;
 #if defined(INCLUDE_3DMAPPER)
@@ -51,11 +50,12 @@ public:
     void updateAreaComboBox();
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
-    void resetAreaComboBoxToPlayerRoomArea();
+    void resetAreaComboBoxToPlayerRoomArea();    
+
+    void updateInfoContributors();
 
 public slots:
     void slot_bubbles();
-    void slot_info();
     void slot_toggleShowRoomIDs(int s);
     void slot_toggleShowRoomNames(int s);
     void slot_toggleStrongHighlight(int v);
