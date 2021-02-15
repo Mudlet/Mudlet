@@ -797,12 +797,20 @@ int TLuaInterpreter::getProfileName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushstring(L, host.getName().toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileTabNumber
+int TLuaInterpreter::getProfileTabNumber(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
     auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
     if (profileIndex != -1) {
         lua_pushnumber(L, profileIndex + 1);
-        return 2;
+        return 1;
     }
-    return 1;
+
+    return warnArgumentValue(L, __func__, "could not retrieve the tab number");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandSeparator
@@ -13635,6 +13643,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
