@@ -1481,7 +1481,6 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
                         }
                     }
                 }
-                qDebug() << removeList;
                 QMapIterator<QString, QStringList> it2(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it2.hasNext()) {
                     it2.next();
@@ -1545,7 +1544,6 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
     for (int i = 5; i <= lua_gettop(L); i++) {
         actionInfo << lua_tostring(L, i);
     }
-    qDebug() << actionInfo;
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
         if (host.mpMap->mpMapper) {
@@ -9457,7 +9455,6 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     std::string label = getVerifiedString(L, __func__, 1, "label").toStdString();
     std::string markup = getVerifiedString(L, __func__, 2, "markup").toStdString();
     Host& host = getHostFromLua(L);
-    //qDebug()<<"CSS: name:"<<label<<"<"<<markup<<">";
     host.mpConsole->setLabelStyleSheet(label, markup);
     return 0;
 }
