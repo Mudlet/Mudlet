@@ -91,10 +91,10 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        infoText = QStringLiteral("%1 (%3)\n")
-                           .arg(!room->name.isEmpty() && room->name != QString::number(room->getId()) ? QStringLiteral("%1/%2").arg(room->name, QString::number(room->getId()))
-                                                                                                      : QString::number(room->getId()),
-                                areaName);
+        auto roomName = room->name.remove(QRegularExpression("[.,/]$")).trimmed();
+        auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
+            QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
+        infoText = QStringLiteral("%1 (%2)\n").arg(roomFragment, areaName);
     }
     return MapInfoProperties{false, false, infoText, infoColor};
 }
