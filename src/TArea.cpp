@@ -101,7 +101,6 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
         }
         kS[x][y].insert(z, id);
     }
-    //qDebug()<< "kS="<<kS;
     return kS;
 }
 

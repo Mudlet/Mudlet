@@ -1385,7 +1385,6 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
