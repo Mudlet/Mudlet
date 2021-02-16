@@ -396,12 +396,14 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         case QNetworkAccessManager::HeadOperation:
             break;
         case QNetworkAccessManager::CustomOperation:
-            event.mArgumentList << QString("sys%sHttpError").arg(reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString());
+            event.mArgumentList << QStringLiteral("sysCustomHttpError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
+                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         case QNetworkAccessManager::UnknownOperation:
             break;
@@ -442,12 +444,12 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     case QNetworkAccessManager::CustomOperation:
         event.mArgumentList << QString("sysCustomHttpDone");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QString(reply->readAll());
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
             break;
     case QNetworkAccessManager::UnknownOperation:
         break;
