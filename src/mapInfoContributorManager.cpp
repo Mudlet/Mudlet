@@ -39,12 +39,14 @@ void MapInfoContributorManager::registerContributor(const QString& name, MapInfo
     }
     ordering.append(name);
     contributors.insert(name, callback);
+    emit signal_contributorsUpdated();
 }
 
 bool MapInfoContributorManager::removeContributor(const QString& name)
 {
     mpHost->mMapInfoContributors.remove(name);
     ordering.removeOne(name);
+    emit signal_contributorsUpdated();
     return contributors.remove(name) > 0;
 }
 
@@ -54,9 +56,7 @@ bool MapInfoContributorManager::enableContributor(const QString &name) {
     }
     mpHost->mMapInfoContributors.insert(name);
     mpHost->mpMap->update();
-    if (mpHost->mpMap->mpMapper != nullptr) {
-        mpHost->mpMap->mpMapper->updateInfoContributors();
-    }
+    emit signal_contributorsUpdated();
     return true;
 }
 
@@ -66,9 +66,7 @@ bool MapInfoContributorManager::disableContributor(const QString &name) {
     }
     mpHost->mMapInfoContributors.remove(name);
     mpHost->mpMap->update();
-    if (mpHost->mpMap->mpMapper != nullptr) {
-        mpHost->mpMap->mpMapper->updateInfoContributors();
-    }
+    emit signal_contributorsUpdated();
     return true;
 }
 

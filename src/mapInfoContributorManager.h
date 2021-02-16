@@ -41,9 +41,9 @@ struct MapInfoProperties
 
 using MapInfoCallback = std::function<MapInfoProperties(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)>;
 
-class MapInfoContributorManager : QObject
+class MapInfoContributorManager : public QObject
 {
-    Q_DECLARE_TR_FUNCTIONS(MapInfoContributorManager)
+    Q_OBJECT
 
 public:
     MapInfoContributorManager(QObject* parent, Host* ph);
@@ -56,6 +56,9 @@ public:
     QList<QString> &getContributorKeys();
     MapInfoProperties fullInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
     MapInfoProperties shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor);
+
+signals:
+    void signal_contributorsUpdated();
 
 private:
     QList<QString> ordering;

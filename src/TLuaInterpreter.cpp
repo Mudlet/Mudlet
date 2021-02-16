@@ -15352,7 +15352,6 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         lua_pop(L, nResult);
         return MapInfoProperties{ isBold, isItalic, text, color };
     });
-    host.mpMap->mpMapper->updateInfoContributors();
 
     lua_pushboolean(L, true);
     return 1;
@@ -15366,7 +15365,6 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
     if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-    host.mpMap->mpMapper->updateInfoContributors();
     lua_pushboolean(L, true);
     return 1;
 }
