@@ -1992,7 +1992,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         const QHash<QString, QStringList> defaultScripts = {
                 {QStringLiteral(":/run-lua-code-v4.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/echo.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/send-text-to-all-games.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/deleteOldProfiles.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
                 {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
