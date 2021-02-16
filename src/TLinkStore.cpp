@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
+#include "Host.h"
 
 int TLinkStore::addLinks(const QStringList& links, const QStringList& hints)
 {
