@@ -15250,16 +15250,17 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
 int TLuaInterpreter::exportJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
     if (dest.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to write to must be provided"));
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
     }
 
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
@@ -15270,16 +15271,17 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
 int TLuaInterpreter::importJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
     if (source.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to read to must be provided"));
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to read to must be provided");
     }
 
     if (auto [result, message] = pHost->mpMap->readJsonMapFile(source); !result) {
