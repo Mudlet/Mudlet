@@ -594,6 +594,7 @@ public:
     static int killMapInfo(lua_State*);
     static int enableMapInfo(lua_State*);
     static int disableMapInfo(lua_State*);
+    static int getProfileTabNumber(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
