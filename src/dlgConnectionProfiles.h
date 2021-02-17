@@ -116,6 +116,7 @@ private:
     void writeSecurePassword(const QString& profile, const QString& pass) const;
     void deleteSecurePassword(const QString& profile) const;
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
+    void reallyDeleteProfile(const QString& profile);
     void setItemName(QListWidgetItem*, const QString&) const;
     QIcon customIcon(const QString&) const;
     void addLetterToProfileSearch(const int);

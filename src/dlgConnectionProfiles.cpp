@@ -614,6 +614,11 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    reallyDeleteProfile(profile);
+}
+
+void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
+{
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
     dir.removeRecursively();
 
@@ -630,6 +635,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
+// if this profile has been used
 void dlgConnectionProfiles::slot_deleteProfile()
 {
     if (!profiles_tree_widget->currentItem()) {
@@ -638,12 +644,19 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
+        // shortcut - don't show profile deletion confirmation if there is no data to delete
+        reallyDeleteProfile(profile);
+        return;
+    }
+
     QUiLoader loader;
 
     QFile file(QStringLiteral(":/ui/delete_profile_confirmation.ui"));
     file.open(QFile::ReadOnly);
 
-    auto * delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
 
     if (!delete_profile_dialog) {
@@ -652,7 +665,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>(QStringLiteral("delete_profile_lineedit"));
     delete_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("delete_button"));
-    auto * cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
+    auto* cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
 
     if (!delete_profile_lineedit || !delete_button || !cancel_button) {
         return;
@@ -665,6 +678,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_lineedit->setFocus();
     delete_button->setEnabled(false);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
+    delete_profile_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
