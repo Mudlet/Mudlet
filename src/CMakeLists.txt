@@ -470,17 +470,17 @@ if(APPLE)
   set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
   set_target_properties(mudlet PROPERTIES
-    MACOSX_FRAMEWORK_BUNDLE_VERSION ${APP_VERSION}
-    MACOSX_FRAMEWORK_IDENTIFIER org.mudlet.mudlet
-    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${APP_VERSION}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}
+    MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
+    MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}
   )
 
   if(${APP_BUILD} MATCHES "-ptb.+")
-    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_ptb.icns)
+    set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE_ICON_FILE icons/mudlet_ptb.icns)
   elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
-    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_dev.icns)
+    set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE_ICON_FILE icons/mudlet_dev.icns)
   else()
-    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet.icns)
+    set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE_ICON_FILE icons/mudlet.icns)
   endif()
 endif()
 
