@@ -475,9 +475,9 @@ if(APPLE)
     MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${MACOS_FW_LIB_VERSION}
   )
 
-  if(APP_BUILD matches "-ptb.+")
+  if(${APP_BUILD} matches "-ptb.+")
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_ptb.icns)
-  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  elseif((${APP_BUILD} matches "-dev.+") or (${APP_BUILD} matches "-test.+"))
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_dev.icns)
   else()
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet.icns)
