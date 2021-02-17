@@ -84,14 +84,14 @@ QList<QString> &MapInfoContributorManager::getContributorKeys()
 
 MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor)
 {
-    Q_UNUSED("selectionSize");
-    Q_UNUSED("displayAreaId");
+    Q_UNUSED(selectionSize);
+    Q_UNUSED(displayAreaId);
 
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
-        static const QRegularExpression trailingPunctuation("[.,/]+$");
+        static const QRegularExpression trailingPunctuation(QStringLiteral("[.,/]+$"));
         auto roomName = QString(room->name).remove(trailingPunctuation).trimmed();
         auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
             QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
