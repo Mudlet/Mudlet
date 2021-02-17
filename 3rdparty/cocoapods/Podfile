@@ -5,5 +5,5 @@ project 'Empty'
 
 target 'Empty' do
 	use_frameworks!
-	pod 'Sparkle', '= 1.22'
+	pod 'Sparkle', '= 1.21'
 end
