@@ -477,7 +477,7 @@ if(APPLE)
 
   if(${APP_BUILD} MATCHES "-ptb.+")
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_ptb.icns)
-  elseif((${APP_BUILD} MATCHES "-dev.+") or (${APP_BUILD} MATCHES "-test.+"))
+  elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_dev.icns)
   else()
     set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet.icns)
