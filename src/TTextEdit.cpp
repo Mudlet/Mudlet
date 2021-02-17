@@ -1658,13 +1658,6 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     int startPos = std::max(0, mPA.x());
     int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
-    if (showTimestamps) {
-        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
-        QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
-                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
-        textLines = result;
-    }
 
     if (mPA.y() == mPB.y()) {
         // Is a single line, so trim characters off the beginning and end
@@ -1685,6 +1678,14 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         if (!textLines.at(offset).isEmpty()) {
             textLines[offset] = textLines.at(offset).left(1 + endPos);
         }
+    }
+
+     if (showTimestamps) {
+        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
+        QStringList result;
+        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
+                               [](const QString& text, const QString& timestamp) { return timestamp + text; });
+        textLines = result;
     }
 
     return textLines.join(newlineChar);
