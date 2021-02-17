@@ -901,7 +901,8 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPA.setX(xind+1);
+    mDragStart.setX(xind + 1);
+    mPA.setX(xind + 1);
 
     yind = mPB.y();
     xind = mPB.x();
@@ -911,7 +912,23 @@ void TTextEdit::expandSelectionToWords()
             break;
         }
     }
-    mPB.setX(xind-1);
+    mDragSelectionEnd.setX(xind - 1);
+    mPB.setX(xind - 1);
+}
+
+void TTextEdit::expandSelectionToLine(int y)
+{
+    if (!(y < mpBuffer->lineBuffer.size())) {
+        return;
+    }
+    unHighlight();
+    mDragStart.setX(0);
+    mDragStart.setY(y);
+    mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+    mDragSelectionEnd.setY(y);
+    normaliseSelection();
+    highlightSelection();
+    mMouseTracking = true;
 }
 
 
@@ -1151,15 +1168,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting && (y < mpBuffer->lineBuffer.size())) {
-            unHighlight();
-            mDragStart.setX(0);
-            mDragStart.setY(y);
-            mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
-            mDragSelectionEnd.setY(y);
-            normaliseSelection();
-            highlightSelection();
-            mMouseTracking = true;
+        if (mCtrlSelecting) {
+            expandSelectionToLine(y);
             event->accept();
             return;
         }
@@ -1198,6 +1208,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
                 mMouseTrackLevel = 3;
+            }
+
+            if (mMouseTrackLevel == 3){
+                expandSelectionToLine(y);
+                event->accept();
+                return;
             }
 
             if (y >= mpBuffer->lineBuffer.size()) {
