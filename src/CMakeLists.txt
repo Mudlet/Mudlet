@@ -449,13 +449,12 @@ if(APPLE)
   set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
                                           MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
 
-#  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
   file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
   file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
   file(GLOB DIC_FILES "*.dic")
   file(GLOB AFF_FILES "*.aff")
   target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES})
-  
+
   foreach(FILE ${MUDLET_LUA_FILES})
     string(REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" PATH_IN_BUNDLE ${FILE} )
     get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
@@ -469,6 +468,20 @@ if(APPLE)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
   endforeach()
   set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+  set_target_properties(mudlet PROPERTIES
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${MACOS_FW_LIB_VERSION}
+    MACOSX_FRAMEWORK_IDENTIFIER org.mudlet.mudlet
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${MACOS_FW_LIB_VERSION}
+  )
+
+  if(APP_BUILD matches "-ptb.+")
+    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_ptb.icns)
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet_dev.icns)
+  else()
+    set_target_properties(mudlet PROPERTIES MACOSX_FRAMEWORK_ICON_FILE icons/mudlet.icns)
+  endif()
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
