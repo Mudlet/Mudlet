@@ -139,6 +139,9 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
+        # Use latest available XCode
+        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+
     - name: (Linux) Install non-vcpkg dependencies
       if: runner.os == 'Linux'
       run: |
