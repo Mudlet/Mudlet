@@ -5318,17 +5318,12 @@ int TLuaInterpreter::setPopup(lua_State* L)
     int n = lua_gettop(L);
 
     // console name is an optional first argument
-    if (n > 4) {
+    if (n > 2) {
         windowName = WINDOW_NAME(L, s++);
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s++);
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5342,7 +5337,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         lua_pop(L, 1);
     }
     if (!lua_istable(L, ++s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5358,7 +5353,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
+        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
         return lua_error(L);
     }
 
