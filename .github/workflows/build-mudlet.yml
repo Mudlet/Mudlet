@@ -233,7 +233,7 @@ jobs:
       run: |
         ${{github.workspace}}\CI\validate_deployment.ps1
         ${{github.workspace}}\CI\appveyor.set-build-info.ps1
-        
+
     - name: (Linux/macOS) Set build info
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: |
@@ -270,7 +270,7 @@ jobs:
       run: '${{github.workspace}}\CI\after_success.ps1'
       env:
         BUILD_FOLDER: '${{runner.workspace}}\b\ninja'
-      
+
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS'
       working-directory: '${{runner.workspace}}/b/ninja'
