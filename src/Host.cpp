@@ -451,6 +451,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
+    if (mudlet::self()->firstLaunch) {
+        QTimer::singleShot(0, this, [this]() {
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+        });
+    }
+
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
     connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
