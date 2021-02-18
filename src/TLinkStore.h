@@ -55,6 +55,9 @@ public:
 
     QStringList getCurrentLinks() const;
     void setCurrentLinks(const QStringList& links);
+
+private:
+    void freeReference(Host* pH, const QVector<int>& luaReference);
 };
 
 #endif //MUDLET_TLINKSTORE_H
