@@ -190,7 +190,7 @@ jobs:
 
         New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin" -ErrorAction Ignore
 
-         SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
+        SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
         SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
 
