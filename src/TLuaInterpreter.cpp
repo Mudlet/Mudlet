@@ -5353,7 +5353,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
+        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
         return lua_error(L);
     }
 
