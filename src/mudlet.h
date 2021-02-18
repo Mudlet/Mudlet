@@ -266,7 +266,7 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-
+    bool firstLaunch = false;
     void showChangelogIfUpdated();
 
     bool showMapAuditErrors() const { return mshowMapAuditErrors; }
@@ -532,7 +532,6 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadMaps();
     void migrateDebugConsole(Host* currentHost);
-    static bool firstLaunch();
     QString autodetectPreferredLanguage();
     void installModulesList(Host*, QStringList);
     void setupTrayIcon();
