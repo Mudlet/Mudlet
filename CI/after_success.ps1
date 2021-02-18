@@ -181,9 +181,10 @@ if (($Env:APPVEYOR_REPO_TAG -ne "true" -and -not ((Test-Path Env:GITHUB_REF) -an
     $Script:DownloadedFeed = [System.IO.Path]::GetTempFileName()
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
-    pushd "$Script:BuildFolder\CI\"
-    $Script:Changelog = lua "$Script:BuildFolder\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
-    popd
+    Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
+    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
+    Pop-Location
+    Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 

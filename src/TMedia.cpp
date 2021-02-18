@@ -428,11 +428,11 @@ void TMedia::writeFile(QNetworkReply* reply)
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << mediaData.getMediaAbsolutePathFileName();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
+            event.mArgumentList << QLatin1String("Couldn't open the destination file for writing (permission errors?)");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -444,11 +444,11 @@ void TMedia::writeFile(QNetworkReply* reply)
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't save to the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << mediaData.getMediaAbsolutePathFileName();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QLatin1String("unableToWriteLocalFile");
+            event.mArgumentList << QLatin1String("Couldn't write downloaded content into the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             reply->deleteLater();
@@ -473,7 +473,7 @@ void TMedia::writeFile(QNetworkReply* reply)
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-                event.mArgumentList << QLatin1String("failureToWriteLocalFile");
+                event.mArgumentList << QLatin1String("Couldn't save to the destination file");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << mediaData.getMediaAbsolutePathFileName();
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -622,10 +622,15 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         if (state == QMediaPlayer::StoppedState) {
             TEvent mediaFinished{};
             mediaFinished.mArgumentList.append("sysMediaFinished");
-            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().request().url().fileName());
+            mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().request().url().path());
+#else
             mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().canonicalUrl().fileName());
-            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().canonicalUrl().path());
+#endif
+            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
             if (mpHost) {
@@ -649,7 +654,11 @@ TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, const QString& abso
         TMediaPlayer pTestPlayer = itTMediaPlayer.next();
 
         if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+            if (pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
+#else
             if (pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
+#endif
                 pPlayer = pTestPlayer;
                 pPlayer.setMediaData(mediaData);
                 pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaVolume());
@@ -679,7 +688,11 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
         TMediaPlayer pTestPlayer = itTMediaPlayer.next();
 
         if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+            if (!pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
+#else
             if (!pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
+#endif
                 if (pTestPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet && pTestPlayer.getMediaData().getMediaPriority() > maxMediaPriority) {
                     maxMediaPriority = pTestPlayer.getMediaData().getMediaPriority();
                 }
@@ -712,7 +725,11 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
         if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             if (!mediaData.getMediaKey().isEmpty() && !pTestPlayer.getMediaData().getMediaKey().isEmpty()
                 && mediaData.getMediaKey() == pTestPlayer.getMediaData().getMediaKey()) { // Does it have the same key?
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+                if (!pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)
+#else
                 if (!pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)
+#endif
                     || (!mediaData.getMediaUrl().isEmpty() && !pTestPlayer.getMediaData().getMediaUrl().isEmpty()
                         && mediaData.getMediaUrl() != pTestPlayer.getMediaData().getMediaUrl())) { // Is it a different sound or music than specified?
                     TMediaData stopMediaData = pTestPlayer.getMediaData();

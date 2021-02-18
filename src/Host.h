@@ -576,8 +576,9 @@ public:
 
     double mLineSize;
     double mRoomSize;
-    bool mShowInfo;
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode;
+    bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
     QString mServerGUI_Package_version;
@@ -621,7 +622,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
-    void slot_purgeTimers();
+    void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);

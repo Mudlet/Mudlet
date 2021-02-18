@@ -380,7 +380,8 @@ void GLWidget::paintGL()
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-            painter.drawText(width() / 3, height() / 2, "no map or no valid position on map");
+            auto message = mpMap->mpRoomDB->size() == 0 ? tr("You do not have a map yet - load one, or start mapping from scratch to begin.") : tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size()); 
+            painter.drawText(width() / 3, height() / 2, message);
             painter.end();
 
             glLoadIdentity();
@@ -755,10 +756,10 @@ void GLWidget::paintGL()
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 1.0};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -876,7 +877,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -902,7 +903,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1165,10 +1166,10 @@ void GLWidget::paintGL()
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 0.2};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -1286,7 +1287,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -1312,7 +1313,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1558,10 +1559,10 @@ void GLWidget::paintGL()
 
                 float mc3[] = {0.2, 0.2, 0.6, 0.2};
                 int env = pR->environment;
-                if (mpMap->envColors.contains(env)) {
-                    env = mpMap->envColors[env];
+                if (mpMap->mEnvColors.contains(env)) {
+                    env = mpMap->mEnvColors[env];
                 } else {
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         env = 1;
                     }
                 }
@@ -1680,7 +1681,7 @@ void GLWidget::paintGL()
                     mc3[3] = 0.2;
                     break;
                 default: //user defined room color
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         if (16 < env && env < 232)
                         {
                             quint8 base = env - 16;
@@ -1706,7 +1707,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor& _c = mpMap->customEnvColors[env];
+                    QColor& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1862,10 +1863,10 @@ void GLWidget::paintGL()
             glEnd();
 
             int env = pR->environment;
-            if (mpMap->envColors.contains(env)) {
-                env = mpMap->envColors[env];
+            if (mpMap->mEnvColors.contains(env)) {
+                env = mpMap->mEnvColors[env];
             } else {
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     env = 1;
                 }
             }
@@ -1983,7 +1984,7 @@ void GLWidget::paintGL()
                 mc3[3] = 255.0 / 255.0;
                 break;
             default: //user defined room color
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     if (16 < env && env < 232)
                     {
                         quint8 base = env - 16;
@@ -2009,7 +2010,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor& _c = mpMap->customEnvColors[env];
+                QColor& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();

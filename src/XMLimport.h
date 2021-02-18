@@ -49,7 +49,7 @@ class TVar;
 
 class XMLimport : public QXmlStreamReader
 {
-    Q_DECLARE_TR_FUNCTIONS(XMLimport) // Needed so we can use tr() even though XMLimport is NOT derived from QObject
+    Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
 public:
     XMLimport(Host*);
@@ -58,6 +58,8 @@ public:
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
+    const QString YES = QStringLiteral("yes");
+
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
 
@@ -88,6 +90,7 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
+    void readMapInfoContributors();
     void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);
@@ -105,6 +108,8 @@ private:
     QString readScriptElement();
 
     void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
+
+    bool readDefaultTrueBool(QString name);
 
     QPointer<Host> mpHost;
     QString mPackageName;
