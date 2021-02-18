@@ -493,7 +493,7 @@ if(APPLE)
     get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
     set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
   endforeach()
-  set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+  set_source_files_properties(${DIC_FILES} ${AFF_FILES} ${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)
