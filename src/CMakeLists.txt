@@ -458,13 +458,13 @@ if(APPLE)
   if(${APP_BUILD} MATCHES "-ptb.+")
     set_target_properties(mudlet PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_ptb.icns
-      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION} ${APP_BUILD}
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
     )
     file(GLOB ICON_FILE "icons/mudlet_ptb.icns")
   elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
     set_target_properties(mudlet PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_dev.icns
-      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION} ${APP_BUILD}
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
     )
     file(GLOB ICON_FILE "icons/mudlet_dev.icns")
   else()
