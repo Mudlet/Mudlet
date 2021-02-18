@@ -5318,17 +5318,12 @@ int TLuaInterpreter::setPopup(lua_State* L)
     int n = lua_gettop(L);
 
     // console name is an optional first argument
-    if (n > 4) {
+    if (n > 2) {
         windowName = WINDOW_NAME(L, s++);
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s++);
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5341,8 +5336,8 @@ int TLuaInterpreter::setPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    if (!lua_istable(L, ++s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+    if (!lua_istable(L, s++)) {
+        lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
