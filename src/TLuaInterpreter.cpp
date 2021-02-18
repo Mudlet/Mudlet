@@ -5336,7 +5336,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
-    if (!lua_istable(L, s++)) {
+    if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
