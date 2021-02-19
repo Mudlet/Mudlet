@@ -1773,12 +1773,12 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Standaard Gebied</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="49"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Naamloze Gebied</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="439"/>
