@@ -2032,7 +2032,8 @@ and there is enough space. The download operation has failed.</source>
       <location filename="../src/TMap.cpp" line="3142"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт данных карты JSON из %1
+Области: %2 из: %3   Комнаты: %4 из: %5   Метки: %6 из: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2686"/>
@@ -5055,7 +5056,9 @@ Count</source>
       <source>
                           These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                           </source>
-      <translation type="unfinished"/>
+      <translation>
+                          Эти люди навсегда останутся в памяти&lt;br&gt;за их щедрую финансовую поддержку &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patureon&lt;/a&gt;:
+                          </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1068"/>
