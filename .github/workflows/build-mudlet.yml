@@ -62,7 +62,7 @@ jobs:
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-deleteme
+        key: ${{matrix.os}}-qt-${{matrix.qt}}
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -71,7 +71,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.0'
+        aqtversion: '==1.1.0' # avoid regression with Qt 5.14+
 
 
     - name: Restore Boost cache
@@ -282,19 +282,6 @@ jobs:
         fi
 
         ${{github.workspace}}/CI/travis.after_success.sh
-      env:
-        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-        RUNNER_OS: ${{runner.os}}
-        DEPLOY: ${{matrix.deploy}}
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      timeout-minutes: 30
-      if: runner.os == 'macOS'
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
