@@ -18,5 +18,17 @@
   "AdjustableContainer.disconnect": {
     "message": "Rozłącz się ",
     "description": "disconnect your container from the border frame"
+  },
+  "Mudlet.prefixOk": {
+    "message": "[  OK  ]  - ",
+    "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixWarn": {
+    "message": "[ WARN ]  - ",
+    "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
+  },
+  "Mudlet.prefixInfo": {
+    "message": "[ INFO ]  - ",
+    "description": "Start of the line for messages informing the player about something. Keep at 12 characters length for nice alignment!"
   }
 }
