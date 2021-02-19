@@ -145,9 +145,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
   fi
 
   # delete keychain just in case
-  if [ ! -z "$MACOS_SIGNING_PASS" ]; then
-    security delete-keychain $KEYCHAIN
-  fi
+  # if [ ! -z "$MACOS_SIGNING_PASS" ]; then
+  #   security delete-keychain $KEYCHAIN
+  # fi
 
   export DEPLOY_URL
 fi
