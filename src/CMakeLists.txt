@@ -31,18 +31,21 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  if(APP_BUILD MATCHES "^-ptb.+")
-    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  elseif((APP_BUILD MATCHES "^-dev.+") OR (APP_BUILD MATCHES "^-test.+"))
-    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  else()
+  # Neither BUILD nor APP_BUILD does not seem to be available?
+
+  # if(APP_BUILD matches "-ptb.+")
+  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  # else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  endif()
+  # endif()
 endif()
 
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
+    AltFocusMenuBarDisable.cpp
     ctelnet.cpp
     discord.cpp
     dlgAboutDialog.cpp
@@ -58,6 +61,7 @@ set(mudlet_SRCS
     dlgPackageExporter.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
+    dlgRoomSymbol.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -76,8 +80,8 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LuaInterface.cpp
     main.cpp
+    mapInfoContributorManager.cpp
     mudlet.cpp
-    MxpTag.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -100,6 +104,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMapLabel.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
@@ -118,6 +123,7 @@ set(mudlet_SRCS
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
+    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
@@ -158,6 +164,7 @@ set(mudlet_UIS
     ui/notes_editor.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
+    ui/room_symbol.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
     ui/source_editor_find_area.ui
@@ -171,6 +178,7 @@ set(mudlet_UIS
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    AltFocusMenuBarDisable.h
     ctelnet.h
     discord.h
     dlgAboutDialog.h
@@ -186,6 +194,7 @@ set(mudlet_HDRS
     dlgPackageExporter.h
     dlgProfilePreferences.h
     dlgRoomExits.h
+    dlgRoomSymbol.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
@@ -203,8 +212,8 @@ set(mudlet_HDRS
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
+    mapInfoContributorManager.h
     mudlet.h
-    MxpTag.h
     post_guard.h
     pre_guard.h
     ScriptUnit.h
@@ -233,6 +242,7 @@ set(mudlet_HDRS
     TLuaInterpreter.h
     TMainConsole.h
     TMap.h
+    TMapLabel.h
     TMatchState.h
     TMedia.h
     TMxpBRTagHandler.h
@@ -252,6 +262,7 @@ set(mudlet_HDRS
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
+    MxpTag.h
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
@@ -319,7 +330,6 @@ find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
-find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
@@ -374,6 +384,9 @@ if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
+# One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
+target_compile_definitions(communi PUBLIC IRC_STATIC)
+
 target_link_libraries(
   mudlet
   communi
@@ -390,7 +403,6 @@ target_link_libraries(
   Qt5::OpenGL
   Qt5::UiTools
   Qt5::Widgets
-  YAJL::YAJL
   ZIP::ZIP
   ZLIB::ZLIB
   qt5keychain)
@@ -436,6 +448,27 @@ if(APPLE)
   endif(USE_UPDATER)
   set_target_properties(mudlet PROPERTIES MACOSX_BUNDLE ON
                                           MACOSX_BUNDLE_BUNDLE_NAME Mudlet)
+
+#  set_source_files_properties(${QT_TRANSLATIONS} PROPERTIES MACOSX_PACKAGE_LOCATION translations)
+  file(GLOB_RECURSE MUDLET_LUA_FILES LIST_DIRECTORIES true "mudlet-lua/*")
+  file(GLOB_RECURSE LUA_TRANSLATIONS LIST_DIRECTORIES true "../translations/lua/*")
+  file(GLOB DIC_FILES "*.dic")
+  file(GLOB AFF_FILES "*.aff")
+  target_sources(mudlet PRIVATE ${MUDLET_LUA_FILES} ${LUA_TRANSLATIONS} ${DIC_FILES} ${AFF_FILES})
+  
+  foreach(FILE ${MUDLET_LUA_FILES})
+    string(REPLACE ${CMAKE_CURRENT_SOURCE_DIR} "" PATH_IN_BUNDLE ${FILE} )
+    get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
+    set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/${PATH_IN_BUNDLE})
+  endforeach()
+  foreach(FILE ${LUA_TRANSLATIONS})
+    # convert relative paths to absolute ones, necessary for the ../translations
+    file(REAL_PATH ${FILE} FILE)
+    string(REPLACE ${CMAKE_SOURCE_DIR}/translations "" PATH_IN_BUNDLE ${FILE} )
+    get_filename_component(PATH_IN_BUNDLE "${PATH_IN_BUNDLE}" DIRECTORY)
+    set_source_files_properties(${FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/translations/${PATH_IN_BUNDLE})
+  endforeach()
+  set_source_files_properties(${DIC_FILES} ${AFF_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 target_compile_options(mudlet PRIVATE -Wno-deprecated)

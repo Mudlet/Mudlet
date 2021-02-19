@@ -3,7 +3,8 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -489,7 +490,11 @@ void dlgIRC::slot_onTextEntered()
         lineEdit->clear();
     } else if (input.length() > 1) {
         QString error;
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
+#else
         QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
+#endif
         if (commandParser->commands().contains(command))
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(QStringLiteral("<"), QStringLiteral("&lt;")).replace(QStringLiteral(">"), QStringLiteral("&gt;")));
         else
@@ -635,6 +640,7 @@ void dlgIRC::slot_onAnchorClicked(const QUrl& link)
 
 void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
 {
+    Q_UNUSED(alt)
     QString newNick = QStringLiteral("%1_%2").arg(reserved, QString::number(rand() % 10000));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick)));
     connection->setNickName(newNick);
@@ -712,6 +718,13 @@ QString dlgIRC::getMessageTarget(IrcMessage* msg, const QString& bufferName)
         target = msgPrivate->target();
         break;
     }
+    default:
+        // Other message types are not expected - I hope - SlySven
+        qWarning().noquote().nospace() << "dlgIRC::getMessageTarget(..., \""
+                                       << bufferName
+                                       << "\") WARNING - message of type: "
+                                       << msg->type()
+                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
     }
     return target;
 }
@@ -789,7 +802,11 @@ QStringList dlgIRC::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << dlgIRC::DefaultChannels;
     } else {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        channels = channelstr.split(QStringLiteral(" "), Qt::SkipEmptyParts);
+#else
         channels = channelstr.split(QStringLiteral(" "), QString::SkipEmptyParts);
+#endif
     }
     return channels;
 }

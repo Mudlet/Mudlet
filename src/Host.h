@@ -419,7 +419,6 @@ public:
     bool mFORCE_SAVE_ON_EXIT;
 
     bool mSslTsl;
-    bool mAutoReconnect;
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
@@ -559,6 +558,7 @@ public:
     QColor mWhite_2;
     QColor mFgColor_2;
     QColor mBgColor_2;
+    QColor mRoomBorderColor;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;
@@ -578,8 +578,9 @@ public:
 
     double mLineSize;
     double mRoomSize;
-    bool mShowInfo;
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode;
+    bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
     QString mServerGUI_Package_version;
@@ -589,6 +590,7 @@ public:
     QColor mCommandLineFgColor;
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
+    bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
@@ -623,7 +625,7 @@ signals:
 
 private slots:
     void slot_reloadModules();
-    void slot_purgeTimers();
+    void slot_purgeTemps();
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -645,8 +647,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    QString mBufferIncomingData;
 
     QFile mErrorLogFile;
 
@@ -678,12 +678,6 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
-
-    QPushButton* uninstallButton;
-    QListWidget* packageList;
-    QListWidget* moduleList;
-    QPushButton* moduleUninstallButton;
-    QPushButton* moduleInstallButton;
 
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value

@@ -234,7 +234,9 @@ bool AliasUnit::processDataStream(const QString& data)
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
     Lua->set_lua_string(QStringLiteral("command"), data);
     bool state = false;
-    for (auto alias : mAliasRootNodeList) {
+    //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
+    auto copyOfNodeList = mAliasRootNodeList;
+    for (auto alias : copyOfNodeList) {
         // = data.replace( "\n", "" );
         if (alias->match(data)) {
             state = true;

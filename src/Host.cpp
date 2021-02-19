@@ -200,7 +200,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, hostname, id)
-, mpDlgIRC(nullptr)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -215,7 +214,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(QStringLiteral(";;"))
-, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
 , mEnableMSP(true)
@@ -223,17 +221,15 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerMXPenabled(true)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
-, mMediaLocationGMCP(QString())
-, mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
-, mFORCE_SAVE_ON_EXIT(false)
+, mFORCE_SAVE_ON_EXIT(true)
 , mSslTsl(false)
+, mSslIgnoreExpired(false)
+, mSslIgnoreSelfSigned(false)
+, mSslIgnoreAll(false)
 , mUseProxy(false)
-, mProxyAddress(QString())
 , mProxyPort(0)
-, mProxyUsername(QString())
-, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
@@ -246,8 +242,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsCurrentLogFileInHtmlFormat(false)
 , mIsNextLogFileInHtmlFormat(false)
 , mIsLoggingTimestamps(false)
-, mLogDir(QString())
-, mLogFileName(QString())
 , mLogFileNameFormat(QLatin1String("yyyy-MM-dd#HH-mm-ss")) // In the past we have used "yyyy-MM-dd#hh-mm-ss" but we always want a 24-hour clock
 , mResetProfile(false)
 , mScreenHeight(25)
@@ -302,6 +296,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(QColorConstants::LightGray)
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
+, mRoomBorderColor(QColorConstants::LightGray)
 #else
 , mBlack(Qt::black)
 , mLightBlack(Qt::darkGray)
@@ -341,6 +336,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWhite_2(Qt::lightGray)
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
+, mRoomBorderColor(Qt::lightGray)
 #endif
 , mMapStrongHighlight(false)
 , mLogStatus(false)
@@ -349,7 +345,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
 , mRoomSize(0.5)
-, mShowInfo(true)
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
@@ -360,11 +355,17 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
+, mMapperShowRoomBorders(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
+, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mpDlgIRC(nullptr)
+, mpDlgProfilePreferences(nullptr)
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
+, mLuaInterface(nullptr)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -393,10 +394,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerColor(Qt::white)
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
-, mProfileStyleSheet(QString())
-, mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mMapInfoContributors(QSet<QString>{"Short"})
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -457,9 +457,18 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
+    if (mudlet::self()->firstLaunch) {
+        QTimer::singleShot(0, this, [this]() {
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+        });
+    }
+
     connect(&mTelnet, &cTelnet::signal_disconnected, this, [this](){ purgeTimer.start(1min); });
     connect(&mTelnet, &cTelnet::signal_connected, this, [this](){ purgeTimer.stop(); });
-    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTimers);
+    connect(&purgeTimer, &QTimer::timeout, this, &Host::slot_purgeTemps);
+
+    // enable by default in case of offline connection; if the profile connects - timer will be disabled
+    purgeTimer.start(1min);
 }
 
 Host::~Host()
@@ -621,7 +630,7 @@ std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const
         mInstalledModules[moduleName] = moduleStringList;
         return {true, QString()};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
@@ -634,7 +643,7 @@ std::pair<bool, QString> Host::getModuleSync(const QString& moduleName)
         QStringList moduleStringList = mInstalledModules[moduleName];
         return {true, moduleStringList[1]};
     }
-    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+    return {false, QStringLiteral("module name '%1' not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -715,6 +724,12 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
     } else {
         filename_xml = QStringLiteral("%1/%2.xml").arg(directory_xml, saveName);
+    }
+
+
+    if (mIsProfileLoadingSequence) {
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        return std::make_tuple(false, filename_xml, QStringLiteral("profile loading is in progress"));
     }
 
     QDir dir_xml;
@@ -1026,7 +1041,11 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+        commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
+#else
         commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
+#endif
     } else {
         // don't split command if the command separator is blank
         commandList << cmd;
@@ -1070,7 +1089,7 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         while (itStopWatch.hasNext()) {
             itStopWatch.next();
             if (itStopWatch.value()->name() == name) {
-                return qMakePair(0, QStringLiteral("a stopwatch with id %1 called \"%2\" already exists").arg(QString::number(itStopWatch.key()), name));
+                return qMakePair(0, QStringLiteral("stopwatch with id %1 called '%2' already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
     }
@@ -1161,7 +1180,7 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1171,12 +1190,12 @@ QPair<bool, QString> Host::startStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already running").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already running").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::startStopWatch(int id)
@@ -1200,7 +1219,7 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1210,12 +1229,12 @@ QPair<bool, QString> Host::stopStopWatch(const QString& name)
             return qMakePair(true, QString());
         }
 
-        return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already stopped").arg(name, QString::number(watchId)));
+        return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already stopped").arg(name, QString::number(watchId)));
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::stopStopWatch(const int id)
@@ -1239,7 +1258,7 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(name));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(name));
         }
     }
 
@@ -1252,13 +1271,13 @@ QPair<bool, QString> Host::resetStopWatch(const QString& name)
         if (name.isEmpty()) {
             return qMakePair(false, QStringLiteral("the first unnamed stopwatch (id:%1) was already reset").arg(watchId));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) was already reset").arg(name, QString::number(watchId)));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) was already reset").arg(name, QString::number(watchId)));
         }
     }
 
     // This should, indeed, be:
     Q_UNREACHABLE();
-    return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" (id:%2) not found").arg(name, QString::number(watchId)));
+    return qMakePair(false, QStringLiteral("stopwatch with name '%1' (id:%2) not found").arg(name, QString::number(watchId)));
 }
 
 QPair<bool, QString> Host::resetStopWatch(const int id)
@@ -1312,7 +1331,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
             itStopWatch.next();
             if (itStopWatch.value()->name() == newName) {
                 if (itStopWatch.key() != id) {
-                    return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
+                    return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(itStopWatch.key())));
                 } else {
                     // Trivial case - the stopwatch is already called by the NEW name:
                     return qMakePair(true, QString());
@@ -1372,12 +1391,12 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
         if (currentName.isEmpty()) {
             return qMakePair(false, QLatin1String("no unnamed stopwatches found"));
         } else {
-            return qMakePair(false, QStringLiteral("stopwatch with name \"%1\" not found").arg(currentName));
+            return qMakePair(false, QStringLiteral("stopwatch with name '%1' not found").arg(currentName));
         }
     }
 
     if (isAlreadyUsed) {
-        return qMakePair(false, QStringLiteral("the name \"%1\" is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
+        return qMakePair(false, QStringLiteral("the name '%1' is already in use for another stopwatch (id:%2)").arg(newName, QString::number(alreadyUsedId)));
     }
 
     if (currentName == newName) {
@@ -1398,15 +1417,21 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 {
     mTriggerUnit.processDataStream(data, line);
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
 }
 
-// When Mudlet is running in online mode, deleted timers are cleaned up in bulk
+// When Mudlet is running in online mode, deleted temp* objects are cleaned up in bulk
 // on every new line. When in offline mode, new lines don't come - so they are
 // cleaned up in bulk periodically.
-void Host::slot_purgeTimers()
+void Host::slot_purgeTemps()
 {
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
+    mTriggerUnit.doCleanup();
+    mKeyUnit.doCleanup();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -2663,7 +2688,7 @@ QPair<bool, QStringList> Host::getLines(const QString& windowName, const int lin
     auto pC = mpConsole->mSubConsoleMap.value(windowName);
     if (!pC) {
         QStringList failMessage;
-        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
+        failMessage << QStringLiteral("mini console, user window or buffer '%1' not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
     return qMakePair(true, pC->getLines(lineFrom, lineTo));
@@ -2682,7 +2707,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        return {false, QStringLiteral("label with the name \"%1\" exists already. userwindow name has to be unique").arg(name)};
+        return {false, QStringLiteral("label with the name '%1' already exists").arg(name)};
     }
 
     auto hostName(getName());
@@ -2695,7 +2720,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         dockwidget = new TDockWidget(this, name);
         dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         dockwidget->setContentsMargins(0, 0, 0, 0);
-        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
+        dockwidget->setFeatures(QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetFloatable);
         dockwidget->setWindowTitle(name);
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
@@ -2715,7 +2740,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         console->setFontSize(10);
     }
     if (!console || !dockwidget) {
-        return {false, QStringLiteral("cannot create userwindow \"%1\": name collision").arg(name)};
+        return {false, QStringLiteral("userwindow '%1' already exists").arg(name)};
     }
 
     // The name is used in BOTH the QMaps of all user created TConsole
@@ -2785,10 +2810,10 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         if (!pW) {
             pC->resize(width, height);
             pC->move(x, y);
-            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+            return {false, QStringLiteral("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
         }
     }
-    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
+    return {false, QStringLiteral("miniconsole/userwindow '%1' already exists").arg(name)};
 }
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
@@ -2805,9 +2830,9 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
             return {true, QString()};
         }
     } else if (pL) {
-        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+        return {false, QStringLiteral("label '%1' already exists").arg(name)};
     } else if (pC) {
-        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
+        return {false, QStringLiteral("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
     return {false, QString()};
 
@@ -3080,7 +3105,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pN = mpConsole->mSubCommandLineMap.value(name);
 
     if (!pD && windowname.toLower() != QLatin1String("main")) {
-        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+        return {false, QStringLiteral("window '%1' not found").arg(windowname)};
     }
 
     if (pD) {
@@ -3119,7 +3144,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {true, QString()};
     }
 
-    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+    return {false, QStringLiteral("element '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
@@ -3468,9 +3493,14 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
         QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
-    } else {
-        return false;
     }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setConsoleBackgroundImage(imgPath, mode);
+        return true;
+    }
+    return false;
 }
 
 bool Host::resetBackgroundImage(const QString &name)

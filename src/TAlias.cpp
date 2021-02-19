@@ -57,6 +57,14 @@ TAlias::~TAlias()
         return;
     }
     mpHost->getAliasUnit()->unregisterAlias(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TAlias::setName(const QString& name)
@@ -65,7 +73,7 @@ void TAlias::setName(const QString& name)
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getAliasUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
 bool TAlias::match(const QString& toMatch)

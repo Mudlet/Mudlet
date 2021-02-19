@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,10 +31,12 @@
 
 static jmp_buf buf;
 
-LuaInterface::LuaInterface(Host* pH) : mpHost(pH), L(), depth()
+LuaInterface::LuaInterface(Host* pH)
+: mHostID(pH->getHostID())
+, depth()
+, interpreter(pH->getLuaInterpreter())
+, L()
 {
-    interpreter = mpHost->getLuaInterpreter();
-    mHostID = mpHost->getHostID();
     varUnit.reset(new VarUnit());
     //set our panic function
     lua_atpanic(interpreter->pGlobalLua, &onPanic);
@@ -781,8 +784,8 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 void LuaInterface::getVars(bool hide)
 {
     //returns the base item
-    QTime t;
-    t.start();
+    // QElapsedTimer t;
+    // t.start();
     L = interpreter->pGlobalLua;
     lua_pushnil(L);
     depth = 0;
@@ -798,5 +801,5 @@ void LuaInterface::getVars(bool hide)
     varUnit->setBase(g);
     varUnit->addVariable(g);
     iterateTable(L, LUA_GLOBALSINDEX, g, hide);
-    //FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
+    // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }

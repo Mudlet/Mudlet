@@ -170,18 +170,29 @@ mudlet::mudlet()
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
 , mReplaySpeed(1)
-, version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
+, mpMainToolBar(nullptr)
+, version(QStringLiteral("Mudlet " APP_VERSION APP_BUILD))
 , mpCurrentActiveHost(nullptr)
+, mAutolog(false)
+, mpTabBar(nullptr)
 , mIsLoadingLayout(false)
 , mHasSavedLayout(false)
 , mpAboutDlg(nullptr)
 , mpModuleDlg(nullptr)
 , mpPackageManagerDlg(nullptr)
+, mConnectionDialog(nullptr)
 , mShowIconsOnDialogs(true)
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
+, mEditorTextOptions()
+, moduleTable(nullptr)
+#if defined(INCLUDE_UPDATER)
+, updater(nullptr)
+#endif
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
+, mpDlgProfilePreferences(nullptr)
+, mainPane(nullptr)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -193,13 +204,57 @@ mudlet::mudlet()
 , mpLabelReplayTime(nullptr)
 , mpTimerReplay(nullptr)
 , mpToolBarReplay(nullptr)
-, moduleTable(nullptr)
+, triggersShortcut(nullptr)
+, showMapShortcut(nullptr)
+, inputLineShortcut(nullptr)
+, optionsShortcut(nullptr)
+, notepadShortcut(nullptr)
+, packagesShortcut(nullptr)
+, modulesShortcut(nullptr)
+, multiViewShortcut(nullptr)
+, connectShortcut(nullptr)
+, disconnectShortcut(nullptr)
+, reconnectShortcut(nullptr)
+, mpActionReplay(nullptr)
+, mpActionAbout(nullptr)
+, mpButtonAbout(nullptr)
+, mpActionAliases(nullptr)
+, mpActionButtons(nullptr)
+, mpButtonConnect(nullptr)
+, mpActionConnect(nullptr)
+, mpActionDisconnect(nullptr)
+, mpActionFullScreenView(nullptr)
+, mpActionHelp(nullptr)
+, mpActionDiscord(nullptr)
+, mpActionIRC(nullptr)
+, mpButtonDiscord(nullptr)
+, mpActionKeys(nullptr)
+, mpActionMapper(nullptr)
+, mpActionMultiView(nullptr)
+, mpActionReportIssue(nullptr)
+, mpActionNotes(nullptr)
+, mpActionOptions(nullptr)
+, mpButtonPackageManagers(nullptr)
+, mpActionPackageManager(nullptr)
+, mpActionModuleManager(nullptr)
+, mpActionPackageExporter(nullptr)
+, mpActionReconnect(nullptr)
+, mpActionScripts(nullptr)
+, mpActionTimers(nullptr)
+, mpActionTriggers(nullptr)
+, mpActionVariables(nullptr)
+, packageList(nullptr)
+, uninstallButton(nullptr)
+, installButton(nullptr)
+, mpModuleTableHost(nullptr)
+, moduleUninstallButton(nullptr)
+, moduleInstallButton(nullptr)
+, moduleHelpButton(nullptr)
 , mshowMapAuditErrors(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
-, mpDlgProfilePreferences(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -252,8 +307,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     // TODO: Do not enable this option currently - although the user can drag
-    // the tabs the underlying main TConsoles do not move and then it means that
-    // the wrong title can be shown over the wrong window.
+    // the tabs, the underlying main TConsoles do not move with multiview enabled
     mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
@@ -278,6 +332,8 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -620,6 +676,8 @@ mudlet::mudlet()
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
     loadMaps();
+
+    setupTrayIcon();
 }
 
 QSettings* mudlet::getQSettings()
@@ -642,7 +700,7 @@ void mudlet::initEdbee()
 
     auto grammarManager = edbee->grammarManager();
     // We only need the single Lua lexer, probably ever
-    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+    grammarManager->readGrammarFile(QLatin1String(":/edbee_defaults/Lua.tmLanguage"));
 
     //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
     loadLuaFunctionList();
@@ -751,7 +809,7 @@ void mudlet::loadMaps()
                                   {QStringLiteral("en_sg"), tr("English (Singapore)")},
                                   {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
                                   {QStringLiteral("en_us"), tr("English (United States)")},
-                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")}, 
+                                  {QStringLiteral("en_us_large"), tr("English (United States, Large)", "This dictionary contains larger vocabulary.")},
                                   {QStringLiteral("en_za"), tr("English (South Africa)")},
                                   {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
                                   {QStringLiteral("es"), tr("Spanish")},
@@ -977,12 +1035,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
-}
-
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -1350,7 +1402,6 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
@@ -1469,7 +1520,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
@@ -1501,9 +1553,11 @@ void mudlet::slot_uninstall_package()
     if (!pH) {
         return;
     }
-    QListWidgetItem* pI = packageList->currentItem();
-    if (pI) {
-        pH->uninstallPackage(pI->text(), 0);
+    auto selectedPackages = packageList->selectedItems();
+    if (!selectedPackages.empty()) {
+        for (auto package : selectedPackages) {
+            pH->uninstallPackage(package->text(), 0);
+        }
     }
     packageList->clear();
     packageList->addItems(pH->mInstalledPackages);
@@ -2458,7 +2512,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2606,56 +2660,6 @@ void mudlet::slot_irc()
 void mudlet::slot_discord()
 {
     openWebPage(mMudletDiscordInvite);
-}
-
-void mudlet::updateMudletDiscordInvite()
-{
-    QDir dir;
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (!dir.mkpath(cacheDir)) {
-        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
-        return;
-    }
-
-    auto manager = new QNetworkAccessManager(this);
-    auto diskCache = new QNetworkDiskCache(this);
-    diskCache->setCacheDirectory(cacheDir);
-    manager->setCache(diskCache);
-
-
-    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
-    QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
-    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
-    QNetworkReply* getReply = manager->get(request);
-
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
-        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
-        getReply->deleteLater();
-    });
-
-    connect(getReply,
-            &QNetworkReply::finished,
-            this,
-            std::bind(
-                    [=](QNetworkReply* reply) {
-                        if (reply->error() != QNetworkReply::NoError) {
-                            return;
-                        }
-
-                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
-                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
-                        if (inviteKey == QJsonValue::Undefined) {
-                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
-                            return;
-                        }
-
-                        mMudletDiscordInvite = inviteKey.toString();
-                        reply->deleteLater();
-                    },
-                    getReply));
 }
 
 void mudlet::slot_reconnect()
@@ -2893,12 +2897,6 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->mLuaInterpreter.loadGlobal();
     pHost->hideMudletsVariables();
 
-    pHost->mBlockStopWatchCreation = false;
-    pHost->getScriptUnit()->compileAll();
-    pHost->mIsProfileLoadingSequence = false;
-
-    pHost->updateAnsi16ColorsInTable();
-
     //do modules here
     QMapIterator<QString, int> it(pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
@@ -2908,17 +2906,23 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
         moduleEntry << it.key();
         moduleOrder[it.value()] = moduleEntry;
     }
+
+    //First load modules with negative number priority
     QMapIterator<int, QStringList> it2(moduleOrder);
+    while (it2.hasNext() && it2.peekNext().key() < 0) {
+        it2.next();
+        mudlet::installModulesList(pHost, it2.value());
+    }
+
+    pHost->mBlockStopWatchCreation = false;
+    pHost->getScriptUnit()->compileAll();
+    pHost->updateAnsi16ColorsInTable();
+
+    //Load rest of modules after scripts
     while (it2.hasNext()) {
         it2.next();
         QStringList modules = it2.value();
-        for (int i = 0; i < modules.size(); i++) {
-            QStringList entry = pHost->mInstalledModules[modules[i]];
-            pHost->installPackage(entry[0], 1);
-            //we repeat this step here b/c we use the same installPackage method for initial loading,
-            //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-            pHost->mInstalledModules[modules[i]] = entry;
-        }
+        mudlet::installModulesList(pHost, modules);
     }
 
     // install default packages
@@ -2927,6 +2931,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     }
 
     packagesToInstallList.clear();
+
+    pHost->mIsProfileLoadingSequence = false;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -2942,6 +2948,17 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     } else {
         QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+    }
+}
+
+void mudlet::installModulesList(Host* pHost, QStringList modules)
+{
+    for (int i = 0; i < modules.size(); i++) {
+        QStringList entry = pHost->mInstalledModules[modules[i]];
+        pHost->installPackage(entry[0], 1);
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        pHost->mInstalledModules[modules[i]] = entry;
     }
 }
 
@@ -3268,7 +3285,8 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
 {
-    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : 0) | (isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : 0));
+    mEditorTextOptions = QTextOption::Flags((isTabsAndSpacesToBeShown ? QTextOption::ShowTabsAndSpaces : QTextOption::Flag())
+                                           |(isLinesAndParagraphsToBeShown ? QTextOption::ShowLineAndParagraphSeparators : QTextOption::Flag()));
     emit signal_editorTextOptionsChanged(mEditorTextOptions);
 }
 
@@ -3302,7 +3320,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
             QString entryInArchive(zs.name);
-            QString pathInArchive(entryInArchive.section(QLatin1Literal("/"), 0, -2));
+            QString pathInArchive(entryInArchive.section(QStringLiteral("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
@@ -3389,14 +3407,13 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 //loads the luaFunctionList for use by the edbee Autocompleter
 bool mudlet::loadLuaFunctionList()
 {
-    QFile* jsonFile = new QFile(QStringLiteral(":/lua-function-list.json"));
-    if (!jsonFile->open(QFile::ReadOnly)) {
+    auto jsonFile = QFile(QStringLiteral(":/lua-function-list.json"));
+    if (!jsonFile.open(QFile::ReadOnly)) {
         return false;
     }
 
-    const QByteArray data = jsonFile->readAll();
-
-    jsonFile->close();
+    const QByteArray data = jsonFile.readAll();
+    jsonFile.close();
 
     auto json_doc = QJsonDocument::fromJson(data);
 
@@ -3727,6 +3744,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Removes the normal click to activate "About Mudlet" action and move it
     // to a new menu which also contains a "goto updater" option
 
+    if (mpActionAboutWithUpdates) {
+        mpMainToolBar->removeAction(mpActionAboutWithUpdates);
+    }
+
     // First change the existing button:
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         mpActionAbout->setIcon(QIcon(":/icons/mudlet_information.png"));
@@ -3753,7 +3774,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
     // Now insert our new button after the current QAction/QToolButton
-    mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
+    mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
 
@@ -4623,3 +4644,17 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     menuBar()->setStyleSheet(styleSheet);
 }
 
+void mudlet::setupTrayIcon()
+{
+    mTrayIcon.setIcon(windowIcon());
+    auto menu = new QMenu(this);
+    auto hideTrayAction = new QAction(tr("Hide tray icon"), this);
+    connect(hideTrayAction, &QAction::triggered, this, [=]() {
+       mTrayIcon.hide();
+    });
+    menu->addAction(hideTrayAction);
+    auto exitAction = new QAction(tr("Exit"), this);
+    connect(exitAction, &QAction::triggered, this, &mudlet::close);
+    menu->addAction(exitAction);
+    mTrayIcon.setContextMenu(menu);
+}

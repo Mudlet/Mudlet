@@ -27,6 +27,7 @@
 
 
 #include "pre_guard.h"
+#include <QElapsedTimer>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
@@ -202,8 +203,8 @@ public:
     QTimer* mpLuaSendPasswordTimer;
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
-    double networkLatency;
-    QTime networkLatencyTime;
+    double networkLatencyTime;
+    QElapsedTimer networkLatencyTimer;
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
@@ -301,9 +302,11 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting;
-    QTime timeOffset;
-    QTime mConnectionTime;
-    int lastTimeOffset;
+    QTimer* mTimerLogin;
+    QTimer* mTimerPass;
+    QElapsedTimer mRecordingChunkTimer;
+    QElapsedTimer mConnectionTimer;
+    int mRecordLastChunkMSecTimeOffset;
     bool enableCHARSET;
     bool enableATCP;
     bool enableGMCP;
@@ -332,6 +335,9 @@ private:
     // Set when mpLuaSendPasswordTimer is started (on successful connection) and
     // reset on timeout of that timer (or disconnection)
     bool mLuaSendPasswordEnable{false};
+
+    // server problem w/ not terminating IAC SB: only warn once
+    bool mIncompleteSB;
 
 private slots:
 #if !defined(QT_NO_SSL)

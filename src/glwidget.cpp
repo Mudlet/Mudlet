@@ -258,11 +258,6 @@ void GLWidget::topView()
     update();
 }
 
-
-void GLWidget::goRoom(const QString& s)
-{
-}
-
 void GLWidget::setScale(int angle)
 {
     mScale = 150 / ((float)angle + 300);
@@ -385,7 +380,8 @@ void GLWidget::paintGL()
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-            painter.drawText(width() / 3, height() / 2, "no map or no valid position on map");
+            auto message = mpMap->mpRoomDB->size() == 0 ? tr("You do not have a map yet - load one, or start mapping from scratch to begin.") : tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size()); 
+            painter.drawText(width() / 3, height() / 2, message);
             painter.end();
 
             glLoadIdentity();
@@ -760,10 +756,10 @@ void GLWidget::paintGL()
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 1.0};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -881,7 +877,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -907,7 +903,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1170,10 +1166,10 @@ void GLWidget::paintGL()
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 0.2};
                         int env = pExit->environment;
-                        if (mpMap->envColors.contains(env)) {
-                            env = mpMap->envColors[env];
+                        if (mpMap->mEnvColors.contains(env)) {
+                            env = mpMap->mEnvColors[env];
                         } else {
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
                             }
                         }
@@ -1291,7 +1287,7 @@ void GLWidget::paintGL()
                             mc3[3] = 0.2;
                             break;
                         default: //user defined room color
-                            if (!mpMap->customEnvColors.contains(env)) {
+                            if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
                                     quint8 base = env - 16;
@@ -1317,7 +1313,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->customEnvColors[env];
+                            QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1563,10 +1559,10 @@ void GLWidget::paintGL()
 
                 float mc3[] = {0.2, 0.2, 0.6, 0.2};
                 int env = pR->environment;
-                if (mpMap->envColors.contains(env)) {
-                    env = mpMap->envColors[env];
+                if (mpMap->mEnvColors.contains(env)) {
+                    env = mpMap->mEnvColors[env];
                 } else {
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         env = 1;
                     }
                 }
@@ -1685,7 +1681,7 @@ void GLWidget::paintGL()
                     mc3[3] = 0.2;
                     break;
                 default: //user defined room color
-                    if (!mpMap->customEnvColors.contains(env)) {
+                    if (!mpMap->mCustomEnvColors.contains(env)) {
                         if (16 < env && env < 232)
                         {
                             quint8 base = env - 16;
@@ -1711,7 +1707,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor& _c = mpMap->customEnvColors[env];
+                    QColor& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1867,10 +1863,10 @@ void GLWidget::paintGL()
             glEnd();
 
             int env = pR->environment;
-            if (mpMap->envColors.contains(env)) {
-                env = mpMap->envColors[env];
+            if (mpMap->mEnvColors.contains(env)) {
+                env = mpMap->mEnvColors[env];
             } else {
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     env = 1;
                 }
             }
@@ -1988,7 +1984,7 @@ void GLWidget::paintGL()
                 mc3[3] = 255.0 / 255.0;
                 break;
             default: //user defined room color
-                if (!mpMap->customEnvColors.contains(env)) {
+                if (!mpMap->mCustomEnvColors.contains(env)) {
                     if (16 < env && env < 232)
                     {
                         quint8 base = env - 16;
@@ -2014,7 +2010,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor& _c = mpMap->customEnvColors[env];
+                QColor& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();
@@ -2249,38 +2245,31 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    Q_UNUSED(event)
     mPanMode = false;
 }
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    //int delta = e->delta() / 8 / 15;
-    if (e->delta() < 0) {
+    int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    bool used = false;
+    if (yDelta) {
         if (abs(mScale) < 0.3) {
-            mScale -= 0.01;
+            mScale += 0.01 * yDelta;
         } else {
-            mScale -= 0.03;
+            mScale += 0.03 * yDelta;
         }
         makeCurrent();
         resizeGL(width(), height());
         doneCurrent();
         update();
-        e->accept();
-        return;
+        used = true;
     }
-    if (e->delta() > 0) {
-        if (abs(mScale) < 0.3) {
-            mScale += 0.01;
-        } else {
-            mScale += 0.03;
-        }
-        makeCurrent();
-        resizeGL(width(), height());
-        doneCurrent();
-        update();
-        e->accept();
-        return;
-    }
-    e->ignore();
-    return;
+
+    // Space for future use of xDelta - depending on what that is the update
+    // may need to be moved out of the YDelta part
+    Q_UNUSED(xDelta)
+
+    e->setAccepted(used);
 }
