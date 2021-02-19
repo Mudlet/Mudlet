@@ -1,4 +1,4 @@
-# 4.12 - in development
+# [Unreleased] 4.12 - in development
 
 <details>
 <summary>
@@ -9,7 +9,7 @@ This version will be the first to use this changelog file for gathering notes
  
 </details>
 
- # 4.11 - to be released soon
+ # [Unreleased] 4.11 - to be released soon
 
 <details>
 <summary>
