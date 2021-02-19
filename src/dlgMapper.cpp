@@ -36,6 +36,8 @@
 #include <QProgressDialog>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 : QWidget( parent )
 , mpMap( pM )
@@ -255,7 +257,7 @@ void dlgMapper::show2dView()
         d2buttons->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
-        QTimer::singleShot(100, [this]() {
+        QTimer::singleShot(100ms, [this]() {
             d3buttons->setVisible(false);
             d2buttons->setVisible(true);
         });
