@@ -1266,7 +1266,7 @@ rooms:</translation>
       <location filename="../src/TArea.cpp" line="767"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>no text</translation>
     </message>
   </context>
   <context>
@@ -1824,12 +1824,12 @@ map with others relying on the original format.</translation>
     <message>
       <location filename="../src/TMap.cpp" line="48"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Default Area</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="49"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Unnamed Area</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="439"/>
