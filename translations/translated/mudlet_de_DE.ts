@@ -2040,13 +2040,15 @@ Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
       <location filename="../src/TMap.cpp" line="2821"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>Exportiere JSON Kartendaten von %1 - Schreibe Daten in Datei:
+%2 ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2893"/>
       <source>Import JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importiere JSON Kartendaten nach %1
+Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2908"/>
@@ -2058,7 +2060,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="3152"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation>Exportiere JSON Kartendaten nach %1
+      <translation>Importiere JSON Kartendaten nach %1
 Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     </message>
     <message>
@@ -3718,7 +3720,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der unverändert ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
@@ -3791,7 +3793,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der unverändert ans Spiel gesendet werden soll (optional)</translation>
     </message>
   </context>
   <context>
@@ -7873,7 +7875,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der unverändert ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -12268,7 +12270,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der unverändert ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
@@ -12361,7 +12363,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der unverändert ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="201"/>
