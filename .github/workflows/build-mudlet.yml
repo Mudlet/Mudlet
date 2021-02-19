@@ -96,10 +96,6 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ failure() }}
-
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v6
@@ -291,6 +287,11 @@ jobs:
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 15
+      if: runner.os == 'macOS'
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
