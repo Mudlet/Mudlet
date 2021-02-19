@@ -1,31 +1,14 @@
 # [Unreleased] 4.12 - in development
 
-<details>
-<summary>
 This version will be the first to use this changelog file for gathering notes
-</summary> 
- 
- tbd
- 
-</details>
 
  # [Unreleased] 4.11 - to be released soon
 
-<details>
-<summary>
 This release is currently prepared outside of this changelog file
-</summary> 
- 
- tbd
-
-</details>
 
 # 4.10 – extra command lines, background images, and more
 
-<details>
-<summary>
 This release has been a long time coming, thanks to the vagaries of obtaining a new code signing certificate for our Windows builds. Consequently there are a lot of changes which made it into Mudlet 4.10. Let’s go over some of the highlights!
-</summary> 
 
 ## What is Mudlet?
 
@@ -199,13 +182,10 @@ This massive piece of work would not be possible without all of you :)
 
 **4.10.1** fixes the slowness in the 2D mapper, the keepcolor feature in replace(), emoji width are back as they were before, and the new CHARSET function accepts ASCII and ISO variants (for game admins).
 
-</details>
 
 # 4.9 – Public Test Builds & ANSI art
-<details>
-<summary>
+
 We’ve improved Mudlet’s editor and highlighting as well as even more improved art display. Also, you can now every day receive new Mudlet developments with our Public Test Build (PTB) version!
-</summary> 
 
 ## Public Test Builds
 
@@ -290,13 +270,10 @@ Thanks to all translators: Alan Sneath (alsneath), Leris, Marco “M0lid3us” T
 
 **4.9.1** fixes issues with the MXP links in miniconsoles and hboxes/vboxes of 0 width, which prevented some UIs from loading.
 
-</details>
 
 # 4.8 – Drag and drop packages, custom cursors, and amazing maps
-<details>
-<summary>
+
 This is an amazing release that adds drag and drop packages, custom cursors, draggable labels and more! Mudlet is now more powerful than ever for building stunning, modern interfaces for MUDs.
-</summary> 
 
 ## Drag and drop packages
 
@@ -462,15 +439,12 @@ Thanks to all translators: DarkApocalypse , Dawid Chomaniuk (pd.chomaniuk), Jell
 
 **4.8.1** restores Geyser’s :new() behaviour to be as-is and adds :new2() which won’t make a hidden element appear.
 
-</details>
 
 <!--
 
 # 4.x – this is just a template: copy above and edit later
-<details>
-<summary>
+
 This is the summary paragraph, briefly explaining some of the most important changes already
-</summary> 
 
 ## Feature #1
 
@@ -511,7 +485,6 @@ Thanks to all translators for their work in this: (remove these brackets and add
 
 **4.x.y** this line explains how a minor release version after 4.x proper improved upon it, most probably some bug hotfix
 
-</details>
 
 > Written with [StackEdit](https://stackedit.io/).
 
