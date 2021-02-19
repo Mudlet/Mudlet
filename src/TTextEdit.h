@@ -143,6 +143,7 @@ private:
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
     void expandSelectionToWords();
+    void expandSelectionToLine(int);
 
     int mFontHeight;
     int mFontWidth;

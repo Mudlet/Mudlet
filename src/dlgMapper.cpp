@@ -113,23 +113,22 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    mpMap->customEnvColors[257] = mpHost->mRed_2;
-    mpMap->customEnvColors[258] = mpHost->mGreen_2;
-    mpMap->customEnvColors[259] = mpHost->mYellow_2;
-    mpMap->customEnvColors[260] = mpHost->mBlue_2;
-    mpMap->customEnvColors[261] = mpHost->mMagenta_2;
-    mpMap->customEnvColors[262] = mpHost->mCyan_2;
-    mpMap->customEnvColors[263] = mpHost->mWhite_2;
-    mpMap->customEnvColors[264] = mpHost->mBlack_2;
-    mpMap->customEnvColors[265] = mpHost->mLightRed_2;
-    mpMap->customEnvColors[266] = mpHost->mLightGreen_2;
-    mpMap->customEnvColors[267] = mpHost->mLightYellow_2;
-    mpMap->customEnvColors[268] = mpHost->mLightBlue_2;
-    mpMap->customEnvColors[269] = mpHost->mLightMagenta_2;
-    mpMap->customEnvColors[270] = mpHost->mLightCyan_2;
-    mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
-    mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
-
+    mpMap->mCustomEnvColors[257] = mpHost->mRed_2;
+    mpMap->mCustomEnvColors[258] = mpHost->mGreen_2;
+    mpMap->mCustomEnvColors[259] = mpHost->mYellow_2;
+    mpMap->mCustomEnvColors[260] = mpHost->mBlue_2;
+    mpMap->mCustomEnvColors[261] = mpHost->mMagenta_2;
+    mpMap->mCustomEnvColors[262] = mpHost->mCyan_2;
+    mpMap->mCustomEnvColors[263] = mpHost->mWhite_2;
+    mpMap->mCustomEnvColors[264] = mpHost->mBlack_2;
+    mpMap->mCustomEnvColors[265] = mpHost->mLightRed_2;
+    mpMap->mCustomEnvColors[266] = mpHost->mLightGreen_2;
+    mpMap->mCustomEnvColors[267] = mpHost->mLightYellow_2;
+    mpMap->mCustomEnvColors[268] = mpHost->mLightBlue_2;
+    mpMap->mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+    mpMap->mCustomEnvColors[270] = mpHost->mLightCyan_2;
+    mpMap->mCustomEnvColors[271] = mpHost->mLightWhite_2;
+    mpMap->mCustomEnvColors[272] = mpHost->mLightBlack_2;
     auto menu = new QMenu(this);
     info_pushButton->setMenu(menu);
 
@@ -141,7 +140,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     //stops inheritance of palette from mpConsole->mpMainFrame
     setPalette(QApplication::palette());
-    updateInfoContributors();
+
+    connect(mpMap->mMapInfoContributorManager, &MapInfoContributorManager::signal_contributorsUpdated, this, &dlgMapper::slot_updateInfoContributors);
+    slot_updateInfoContributors();
+
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -332,7 +334,7 @@ void dlgMapper::slot_switchArea(const int index)
 }
 #endif
 
-void dlgMapper::updateInfoContributors()
+void dlgMapper::slot_updateInfoContributors()
 {
     info_pushButton->menu()->clear();
     auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), info_pushButton);

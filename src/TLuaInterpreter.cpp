@@ -37,6 +37,7 @@
 #include "TForkedProcess.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -799,6 +800,19 @@ int TLuaInterpreter::getProfileName(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileTabNumber
+int TLuaInterpreter::getProfileTabNumber(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
+    if (profileIndex != -1) {
+        lua_pushnumber(L, profileIndex + 1);
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, "could not retrieve the tab number");
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandSeparator
 int TLuaInterpreter::getCommandSeparator(lua_State* L)
 {
@@ -1481,7 +1495,6 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
                         }
                     }
                 }
-                qDebug() << removeList;
                 QMapIterator<QString, QStringList> it2(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it2.hasNext()) {
                     it2.next();
@@ -1545,7 +1558,6 @@ int TLuaInterpreter::addMapEvent(lua_State* L)
     for (int i = 5; i <= lua_gettop(L); i++) {
         actionInfo << lua_tostring(L, i);
     }
-    qDebug() << actionInfo;
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
         if (host.mpMap->mpMapper) {
@@ -5320,11 +5332,9 @@ int TLuaInterpreter::setPopup(lua_State* L)
     int n = lua_gettop(L);
 
     // console name is an optional first argument
-    if (n > 4) {
+    if (n > 2) {
         windowName = WINDOW_NAME(L, s++);
     }
-
-    QString txt = getVerifiedString(L, __func__, s++, "txt");
 
     if (!lua_istable(L, s)) {
         lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
@@ -6594,22 +6604,25 @@ int TLuaInterpreter::exists(lua_State* L)
     QString name = getVerifiedString(L, __func__, 1, "name");
     QString type = getVerifiedString(L, __func__, 2, "type");
     Host& host = getHostFromLua(L);
-    int cnt = 0;
+    int count = 0;
     type = type.toLower();
-    if (type == "timer") {
-        cnt += host.getTimerUnit()->mLookupTable.count(name);
-    } else if (type == "trigger") {
-        cnt += host.getTriggerUnit()->mLookupTable.count(name);
-    } else if (type == "alias") {
-        cnt += host.getAliasUnit()->mLookupTable.count(name);
-    } else if (type == "keybind") {
-        cnt += host.getKeyUnit()->mLookupTable.count(name);
-    } else if (type == "button") {
-        cnt += host.getActionUnit()->findActionsByName(name).size();
-    } else if (type == "script") {
-        cnt += host.getScriptUnit()->findScriptId(name).size();
+    if (type == QStringLiteral("timer")) {
+        count = host.getTimerUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("trigger")) {
+        count = host.getTriggerUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("alias")) {
+        count = host.getAliasUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("keybind")) {
+        count = host.getKeyUnit()->mLookupTable.count(name);
+    } else if (type == QStringLiteral("button")) {
+        count = host.getActionUnit()->findActionsByName(name).size();
+    } else if (type == QStringLiteral("script")) {
+        count = host.getScriptUnit()->findScriptId(name).size();
+    } else {
+        return warnArgumentValue(L, __func__, QStringLiteral(
+            "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
-    lua_pushnumber(L, cnt);
+    lua_pushnumber(L, count);
     return 1;
 }
 
@@ -7109,7 +7122,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int b = getVerifiedInt(L, __func__, 4, "b");
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
-    host.mpMap->customEnvColors[id] = QColor(r, g, b, alpha);
+    host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
     return 0;
 }
 
@@ -7295,7 +7308,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             return warnArgumentValue(L, __func__, "an empty string is not a valid area name");
         } else if (!host.mpMap->mpRoomDB->getAreaNamesMap().values().contains(name)) {
             return warnArgumentValue(L, __func__, QStringLiteral("string '%1' is not a valid area name").arg(name));
-        } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
+        } else if (name == host.mpMap->getDefaultAreaName()) {
             return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
@@ -8136,29 +8149,33 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_settable(L, -3);
 
     lua_pushstring(L, "FgColor");
-    lua_newtable(L);
-    lua_pushstring(L, "r");
-    lua_pushinteger(L, label.fgColor.red());
-    lua_settable(L, -3);
-    lua_pushstring(L, "g");
-    lua_pushinteger(L, label.fgColor.green());
-    lua_settable(L, -3);
-    lua_pushstring(L, "b");
-    lua_pushinteger(L, label.fgColor.blue());
-    lua_settable(L, -3);
+    {
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, label.fgColor.red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, label.fgColor.green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, label.fgColor.blue());
+        lua_settable(L, -3);
+    }
     lua_settable(L, -3);
 
     lua_pushstring(L, "BgColor");
-    lua_newtable(L);
-    lua_pushstring(L, "r");
-    lua_pushinteger(L, label.bgColor.red());
-    lua_settable(L, -3);
-    lua_pushstring(L, "g");
-    lua_pushinteger(L, label.bgColor.green());
-    lua_settable(L, -3);
-    lua_pushstring(L, "b");
-    lua_pushinteger(L, label.bgColor.blue());
-    lua_settable(L, -3);
+    {
+        lua_newtable(L);
+        lua_pushstring(L, "r");
+        lua_pushinteger(L, label.bgColor.red());
+        lua_settable(L, -3);
+        lua_pushstring(L, "g");
+        lua_pushinteger(L, label.bgColor.green());
+        lua_settable(L, -3);
+        lua_pushstring(L, "b");
+        lua_pushinteger(L, label.bgColor.blue());
+        lua_settable(L, -3);
+    }
     lua_settable(L, -3);
 }
 
@@ -9531,7 +9548,6 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     std::string label = getVerifiedString(L, __func__, 1, "label").toStdString();
     std::string markup = getVerifiedString(L, __func__, 2, "markup").toStdString();
     Host& host = getHostFromLua(L);
-    //qDebug()<<"CSS: name:"<<label<<"<"<<markup<<">";
     host.mpConsole->setLabelStyleSheet(label, markup);
     return 0;
 }
@@ -9555,31 +9571,37 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
 int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mpMap->customEnvColors.empty()) {
+    if (!host.mpMap->mCustomEnvColors.empty()) {
         lua_newtable(L);
-        QList<int> colorList = host.mpMap->customEnvColors.keys();
-        for (int& idx : colorList) {
+        QList<int> colorList = host.mpMap->mCustomEnvColors.keys();
+        for (auto idx : colorList) {
             lua_pushnumber(L, idx);
             lua_newtable(L);
             // red component
             {
                 lua_pushnumber(L, 1);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].red());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).red());
+                lua_settable(L, -3);
             }
             // green component
             {
                 lua_pushnumber(L, 2);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].green());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).green());
+                lua_settable(L, -3);
             }
             // blue component
             {
                 lua_pushnumber(L, 3);
-                lua_pushnumber(L, host.mpMap->customEnvColors[idx].blue());
-                lua_settable(L, -3); //match in matches
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).blue());
+                lua_settable(L, -3);
             }
-            lua_settable(L, -3); //matches in regex
+            // alpha component
+            {
+                lua_pushnumber(L, 4);
+                lua_pushnumber(L, host.mpMap->mCustomEnvColors.value(idx).alpha());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
         }
     } else {
         lua_newtable(L);
@@ -10358,7 +10380,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
-            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->mpRoomDB->getDefaultAreaName());
+            host.mpMap->mpMapper->showArea->setCurrentText(host.mpMap->getDefaultAreaName());
         }
         host.mpMap->mpMapper->mp2dMap->repaint();
         host.mpMap->mpMapper->update();
@@ -13692,10 +13714,13 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "exportJsonMap", TLuaInterpreter::exportJsonMap);
+    lua_register(pGlobalLua, "importJsonMap", TLuaInterpreter::importJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15305,6 +15330,48 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
+int TLuaInterpreter::exportJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
+    if (dest.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
+    }
+
+    if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
+int TLuaInterpreter::importJsonMap(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
+    if (source.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to read to must be provided");
+    }
+
+    if (auto [result, message] = pHost->mpMap->readJsonMapFile(source); !result) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#registerMapInfo
 int TLuaInterpreter::registerMapInfo(lua_State* L)
 {
@@ -15367,7 +15434,6 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         lua_pop(L, nResult);
         return MapInfoProperties{ isBold, isItalic, text, color };
     });
-    host.mpMap->mpMapper->updateInfoContributors();
 
     lua_pushboolean(L, true);
     return 1;
@@ -15381,7 +15447,6 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
     if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-    host.mpMap->mpMapper->updateInfoContributors();
     lua_pushboolean(L, true);
     return 1;
 }
