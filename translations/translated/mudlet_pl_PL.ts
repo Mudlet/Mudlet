@@ -9566,12 +9566,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="4630"/>
       <source>Hide tray icon</source>
-      <translation type="unfinished"/>
+      <translation>Ukryj ikonę z zasobnika</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4635"/>
       <source>Exit</source>
-      <translation type="unfinished"/>
+      <translation>Zamknij</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="240"/>
@@ -9881,14 +9881,14 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="981"/>
       <source>CP667 (Mazovia)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP667 (Mazovia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="982"/>
       <location filename="../src/mudlet.cpp" line="983"/>
       <source>CP737 (DOS Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP737 (DOS Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="984"/>
@@ -9907,13 +9907,13 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="987"/>
       <source>CP869 (DOS Greek 2)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP869 (DOS Greek 2)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="988"/>
       <source>CP1161 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP1161 (Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="989"/>
@@ -9995,7 +9995,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="2790"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Centralna konsola debugowania</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="511"/>
@@ -10006,13 +10006,13 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="491"/>
       <source>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</source>
-      <translation type="unfinished"/>
+      <translation>Publiczna kompilacja testowa szybciej zyskuje nowe funkcje, a Ty pomagasz nam szybciej znaleźć w nich problemy. Zauważył coś dziwnego? Daj nam znać jak najszybciej!</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="959"/>
       <source>GBK (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GBK (Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="960"/>
@@ -11956,12 +11956,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użyj tego przycisku, aby zamknąć okno dialogowe bez zmiany czegokolwiek.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
       <source>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kliknij element, aby go edytować/zmienić. Aby usunąć specjalne wyjście ustaw identyfikator lokacji na zero.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2048"/>
@@ -12105,12 +12105,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Kolor do użycia dla symbolu(-ów) lokacji</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="147"/>
       <source>Symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Kolor symbolu</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="154"/>
