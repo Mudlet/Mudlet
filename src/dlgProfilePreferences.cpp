@@ -2966,7 +2966,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
 #endif
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
             label->hide();
             label->setText(tr("Updating themes from colorsublime.github.io..."));
         });
