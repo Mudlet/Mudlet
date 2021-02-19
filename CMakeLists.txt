@@ -142,7 +142,7 @@ if(USE_UPDATER)
                      "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")
 endif()
 
-if(UNIX)
+if(APPLE)
   if(USE_UPDATER)
     git_submodule_init(
       CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt" SUBMODULE_PATH
