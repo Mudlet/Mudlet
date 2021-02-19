@@ -67,6 +67,7 @@
 #include "post_guard.h"
 
 #include <limits>
+using namespace std::chrono_literals;
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
@@ -187,7 +188,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mp
 
     initLuaGlobals();
 
-    purgeTimer.start(2000);
+    purgeTimer.start(2s);
 }
 
 TLuaInterpreter::~TLuaInterpreter()
