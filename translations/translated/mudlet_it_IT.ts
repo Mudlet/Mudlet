@@ -8375,7 +8375,13 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
 &lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are currently unable to be synced, only &lt;b&gt;.xml&lt;/b&gt; packages are able to be synchronized across profiles at the moment.&lt;/i&gt;&lt;/p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;I Moduli sono un modo di utilizzare dei package condividendoli fra differenti profili di gioco - a differenza dei package normali che sono installati per un singolo profilo.&lt;/p&gt;
+&lt;p&gt;I Moduli sono caricati in ordine di priorità (il numero 1 sarà caricato prima del 2 e via di seguito), moduli con la medesima priorità saranno caricati in ordine alfabetico.&lt;/p&gt;
+&lt;p&gt;I Moduli con priorità negativa saranno caricati prima degli script dei package.&lt;/p&gt;
+&lt;p&gt;L'opzione &lt;b&gt;&lt;i&gt;Sincronizza&lt;/i&gt;&lt;/b&gt; se abilitata, ricarica automaticamente il modulo in tutti i profili quando viene salvato &lt;b&gt;su disco&lt;/b&gt; nel &lt;b&gt;profilo&lt;/b&gt; corrente. Per consentire a più profili di utilizzare lo stesso modulo è sufficiente installarlo in ognuno di questi utilizzando il gestore dei moduli (da aprire quando il profilo desiderato è in primo piano).&lt;/p&gt;&lt;p&gt;
+&lt;i&gt;Nota: moduli con estensione &lt;b&gt;.zip&lt;/b&gt; o &lt;b&gt;.mpackage&lt;/b&gt; non possono essere sincronizzati. La sincronizzazione funziona attualmente solo con package con estensione &lt;b&gt;.xml&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;
+&lt;p&gt;Ad ogni operazione di salvataggio viene fatto un backup nella cartella, &lt;i&gt;moduleBackups&lt;/i&gt;, all'interno della cartella del profilo di Mudlet.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="129"/>
