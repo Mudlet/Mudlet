@@ -576,6 +576,7 @@ public:
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int getHTTP(lua_State* L);
+    static int customHTTP(lua_State* L);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
@@ -627,6 +628,7 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
+    static int performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
     void handleHttpOK(QNetworkReply*);
     static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
 #if defined(Q_OS_WIN32)

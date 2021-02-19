@@ -398,6 +398,14 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         case QNetworkAccessManager::HeadOperation:
             break;
         case QNetworkAccessManager::CustomOperation:
+            event.mArgumentList << QStringLiteral("sysCustomHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
         case QNetworkAccessManager::UnknownOperation:
             break;
@@ -436,6 +444,14 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         break;
 
     case QNetworkAccessManager::CustomOperation:
+        event.mArgumentList << QString("sysCustomHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
     case QNetworkAccessManager::UnknownOperation:
         break;
@@ -12685,18 +12701,31 @@ int TLuaInterpreter::getAvailableFonts(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHTTP
 int TLuaInterpreter::putHTTP(lua_State* L)
 {
+    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PutOperation, QStringLiteral("put"));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#customHTTP
+int TLuaInterpreter::customHTTP(lua_State* L)
+{
+    auto customMethod = getVerifiedString(L, __func__, 1, "http method");
+    return performHttpRequest(L, __func__, 1, QNetworkAccessManager::CustomOperation, customMethod);
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb)
+{
     auto& host = getHostFromLua(L);
 
     QString dataToPost;
-    if (!lua_isstring(L, 1) && !lua_isstring(L, 4)) {
-        lua_pushfstring(L, "putHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+    if (!lua_isstring(L, pos + 1) && !lua_isstring(L, pos + 4)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (data to send as string expected, got %s!)", functionName, pos + 1, luaL_typename(L, pos + 1));
         return lua_error(L);
     }
-    if (lua_isstring(L, 1)) {
-        dataToPost = lua_tostring(L, 1);
+    if (lua_isstring(L, pos + 1)) {
+        dataToPost = lua_tostring(L, pos + 1);
     }
 
-    QString urlString = getVerifiedString(L, __func__, 2, "remote url");
+    QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
     QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
@@ -12706,20 +12735,22 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     QNetworkRequest request = QNetworkRequest(url);
     mudlet::self()->setNetworkRequestDefaults(url, request);
 
-    if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
-        lua_pushfstring(L, "putHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
+    if (!lua_istable(L, pos + 3) && !lua_isnoneornil(L, pos + 3)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (headers as a table expected, got %s!)", functionName, pos + 3, luaL_typename(L, 3));
         return lua_error(L);
     }
-    if (lua_istable(L, 3)) {
+    if (lua_istable(L, pos + 3)) {
         lua_pushnil(L);
-        while (lua_next(L, 3) != 0) {
+        while (lua_next(L, pos + 3) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
                 QString cmd = lua_tostring(L, -1);
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
-                                "putHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                functionName,
+                                pos + 3,
                                 luaL_typename(L, -2),
                                 luaL_typename(L, -1));
                 return lua_error(L);
@@ -12731,18 +12762,18 @@ int TLuaInterpreter::putHTTP(lua_State* L)
 
     QByteArray fileToUpload;
     QString fileLocation;
-    if (!lua_isstring(L, 4) && !lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "putHTTP: bad argument #4 type (file to send as string location expected, got %s!)", luaL_typename(L, 4));
+    if (!lua_isstring(L, pos + 4) && !lua_isnoneornil(L, pos + 4)) {
+        lua_pushfstring(L, "%s: bad argument #%d type (file to send as string location expected, got %s!)", functionName, pos + 4, luaL_typename(L, 4));
         return lua_error(L);
     }
-    if (lua_isstring(L, 4)) {
-        fileLocation = lua_tostring(L, 4);
+    if (lua_isstring(L, pos + 4)) {
+        fileLocation = lua_tostring(L, pos + 4);
     }
 
     if (!fileLocation.isEmpty()) {
         QFile file(fileLocation);
         if (!file.open(QFile::ReadOnly)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
+            return warnArgumentValue(L, functionName, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
         }
 
         fileToUpload = file.readAll();
@@ -12750,10 +12781,21 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     }
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+
+    QNetworkReply* reply;
+    switch (operation) {
+        case QNetworkAccessManager::PostOperation:
+            reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+            break;
+        case QNetworkAccessManager::PutOperation:
+            reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+            break;
+        default:
+            reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, verb.toUtf8(), fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+    };
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "putHTTP: script is uploading data to " << reply->url().toString() << "\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> 0;
     }
 
     lua_pushboolean(L, true);
@@ -12812,79 +12854,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
-    auto& host = getHostFromLua(L);
-
-    QString dataToPost;
-    if (!lua_isstring(L, 1) && !lua_isstring(L, 4)) {
-        lua_pushfstring(L, "postHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    if (lua_isstring(L, 1)) {
-        dataToPost = lua_tostring(L, 1);
-    }
-
-    QString urlString = getVerifiedString(L, __func__, 2, "remote url");
-    QUrl url = QUrl::fromUserInput(urlString);
-    if (!url.isValid()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("url is invalid, reason: %1").arg(url.errorString()));
-    }
-
-    QNetworkRequest request = QNetworkRequest(url);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
-
-    if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
-        lua_pushfstring(L, "postHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-    }
-    if (lua_istable(L, 3)) {
-        lua_pushnil(L);
-        while (lua_next(L, 3) != 0) {
-            // key at index -2 and value at index -1
-            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                QString cmd = lua_tostring(L, -1);
-                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
-            } else {
-                lua_pushfstring(L,
-                                "postHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                                luaL_typename(L, -2),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-            // removes value, but keeps key for next iteration
-            lua_pop(L, 1);
-        }
-    }
-
-    QByteArray fileToUpload;
-    QString fileLocation;
-    if (!lua_isstring(L, 4) && !lua_isnoneornil(L, 4)) {
-        lua_pushfstring(L, "postHTTP: bad argument #4 type (file to send as string location expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    }
-    if (lua_isstring(L, 4)) {
-        fileLocation = lua_tostring(L, 4);
-    }
-
-    if (!fileLocation.isEmpty()) {
-        QFile file(fileLocation);
-        if (!file.open(QFile::ReadOnly)) {
-            return warnArgumentValue(L, __func__, QStringLiteral("couldn't open '%1', is the location correct and do you have permissions to it?").arg(fileLocation));
-        }
-
-        fileToUpload = file.readAll();
-        file.close();
-    }
-
-    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
-
-    if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("postHTTP: script is uploading data to %1\n").arg(reply->url().toString()) >> 0;
-    }
-
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return performHttpRequest(L, __func__, 0, QNetworkAccessManager::PostOperation, QStringLiteral("post"));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#deleteHTTP
@@ -13633,6 +13603,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "getHTTP", TLuaInterpreter::getHTTP);
+    lua_register(pGlobalLua, "customHTTP", TLuaInterpreter::customHTTP);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
