@@ -50,7 +50,7 @@
     <message>
       <location filename="../src/Host.cpp" line="456"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="837"/>
@@ -2016,7 +2016,7 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="2686"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Eksport mapy do JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2821"/>
@@ -2471,7 +2471,7 @@ nie było możliwe jej odzyskanie, stracona!</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Obszar o identyfikatorze %1 już istnieje!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
@@ -5483,7 +5483,7 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="340"/>
       <source>None</source>
       <comment>Don&apos;t show the map overlay, &apos;none&apos; meaning no map overlay styled are enabled</comment>
-      <translation type="unfinished"/>
+      <translation>Brak</translation>
     </message>
   </context>
   <context>
@@ -7958,7 +7958,8 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/main.cpp" line="254"/>
       <source>Copyright © 2008-2021  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Prawa autorskie © 2008-2021  Deweloperzy Mudlet
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -9770,19 +9771,19 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="957"/>
       <source>ASCII (Basic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ASCII (Basic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="958"/>
       <source>UTF-8 (Recommended)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>UTF-8 (zalecane)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="963"/>
       <source>ISO 8859-1 (Western European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-1 (Western European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="964"/>
@@ -9873,7 +9874,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="979"/>
       <source>CP437 (OEM Font)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP437 (OEM Font)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="980"/>
@@ -10017,19 +10018,19 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
       <location filename="../src/mudlet.cpp" line="960"/>
       <source>GB18030 (Chinese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>GB18030 (Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="961"/>
       <source>Big5-ETen (Taiwan)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-ETen (Taiwan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="962"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>Big5-HKSCS (Hong Kong)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1210"/>
@@ -10039,17 +10040,17 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="1210"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorytet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1210"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Synchronizuj</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1210"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Lokalizacja modułu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1249"/>
@@ -10059,17 +10060,17 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="1324"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer modułów - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1432"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Załaduj moduł Mudleta</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1439"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Załaduj moduł Mudleta:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1439"/>
@@ -10092,13 +10093,13 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="1851"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Załaduj powtórkę Mudleta.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Wyłączone, dopóki profil nie zostanie załadowany.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1887"/>
       <location filename="../src/mudlet.cpp" line="3161"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Załaduj powtórkę Mudleta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2616"/>
@@ -10118,12 +10119,12 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Profil &quot;%1&quot; uruchomiony w trybie offline.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3063"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nie można załadować powtórki, ponieważ w tym lub innym profilu jest już uruchomiona inna.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3080"/>
@@ -10133,7 +10134,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.
     <message>
       <location filename="../src/mudlet.cpp" line="3083"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Powtórz każdy krok z krótszym czasem między kolejnymi krokami.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3087"/>
@@ -10779,7 +10780,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="253"/>
       <source>Allow server to download and play media</source>
-      <translation type="unfinished"/>
+      <translation>Zezwalaj serwerowi na pobieranie i odtwarzanie multimediów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="256"/>
@@ -10789,7 +10790,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="305"/>
       <source>Enable MSP  (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MSP (Mud Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="501"/>
@@ -11184,7 +11185,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3288"/>
       <source>Force CHARSET negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Wymuszenie negocjowania CHARSET wyłączone</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3390"/>
@@ -11622,7 +11623,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3483"/>
       <source>Report all Codepoint problems immediately</source>
-      <translation type="unfinished"/>
+      <translation>Natychmiast zgłoś wszystkie problemy z Codepoint</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3541"/>
@@ -12040,7 +12041,8 @@ Trasy</translation>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Waga
+wyjścia</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
@@ -12098,7 +12100,7 @@ or LUA script</source>
       <location filename="../src/ui/room_symbol.ui" line="14"/>
       <location filename="../src/ui/room_symbol.ui" line="112"/>
       <source>Room symbol</source>
-      <translation type="unfinished"/>
+      <translation>Symbol lokacji</translation>
     </message>
     <message>
       <location filename="../src/ui/room_symbol.ui" line="141"/>
