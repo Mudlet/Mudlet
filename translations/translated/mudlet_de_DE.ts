@@ -48,7 +48,7 @@
     <message>
       <location filename="../src/Host.cpp" line="456"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Text, der zum Spiel gesendet werden soll</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="837"/>
@@ -2027,13 +2027,14 @@ und dass es genug Speicherplatz gibt. Der Download ist fehlgeschlagen.</translat
       <location filename="../src/TMap.cpp" line="3142"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Exportiere JSON Kartendaten von %1
+Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2686"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>JSON Kartenexport</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2821"/>
@@ -2051,13 +2052,14 @@ Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
       <location filename="../src/TMap.cpp" line="2908"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>JSON Kartenimport</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3152"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Exportiere JSON Kartendaten nach %1
+Gebiet %2 von %3   Raum %4 von %5   Markierung %6 von %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2307"/>
@@ -2499,7 +2501,7 @@ Linie verbunden, die nicht wiederhergestellt werden konnte und verloren ist!</tr
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Gebiet mit ID %1 existiert bereits!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
