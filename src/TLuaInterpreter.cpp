@@ -448,8 +448,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
     case QNetworkAccessManager::UnknownOperation:
         break;
