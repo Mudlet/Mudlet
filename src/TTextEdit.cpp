@@ -1282,7 +1282,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                             QAction* pA;
                             if (i < hint.size()) {
                                 pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = std::make_pair(command[i], luaReference.value(i, 0));
+                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
                                 mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
