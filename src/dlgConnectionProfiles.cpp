@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2016-2018, 2020-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -32,10 +32,14 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QDir>
 #include <QRandomGenerator>
 #include <QSettings>
 #include <sstream>
+#include <chrono>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
@@ -51,7 +55,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
                  "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
-                 "Cleft of Dimensions"})
+                 "Cleft of Dimensions", "CoreMUD"})
 {
     setupUi(this);
 
@@ -239,11 +243,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
-    notificationArea->hide();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
-    notificationAreaMessageBox->hide();
+    clearNotificationArea();
 
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl()) {
@@ -282,6 +282,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         mCustomIconColors.append(QColor::fromHsv(i, 192, 255));
         mCustomIconColors.append(QColor::fromHsv(i, 128, 255));
     }
+
+    mSearchTextTimer.setInterval(1s);
+    mSearchTextTimer.setSingleShot(true);
+    QCoreApplication::instance()->installEventFilter(this);
+    connect(&mSearchTextTimer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_reenableAllProfileItems);
+}
+
+dlgConnectionProfiles::~dlgConnectionProfiles()
+{
+    QCoreApplication::instance()->removeEventFilter(this);
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -604,6 +614,11 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    reallyDeleteProfile(profile);
+}
+
+void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
+{
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
     dir.removeRecursively();
 
@@ -620,6 +635,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
+// if this profile has been used
 void dlgConnectionProfiles::slot_deleteProfile()
 {
     if (!profiles_tree_widget->currentItem()) {
@@ -628,12 +644,19 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
+    QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
+        // shortcut - don't show profile deletion confirmation if there is no data to delete
+        reallyDeleteProfile(profile);
+        return;
+    }
+
     QUiLoader loader;
 
     QFile file(QStringLiteral(":/ui/delete_profile_confirmation.ui"));
     file.open(QFile::ReadOnly);
 
-    auto * delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
+    auto* delete_profile_dialog = dynamic_cast<QDialog*>(loader.load(&file, this));
     file.close();
 
     if (!delete_profile_dialog) {
@@ -642,7 +665,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
     delete_profile_lineedit = delete_profile_dialog->findChild<QLineEdit*>(QStringLiteral("delete_profile_lineedit"));
     delete_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("delete_button"));
-    auto * cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
+    auto* cancel_button = delete_profile_dialog->findChild<QPushButton*>(QStringLiteral("cancel_button"));
 
     if (!delete_profile_lineedit || !delete_button || !cancel_button) {
         return;
@@ -655,6 +678,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_lineedit->setFocus();
     delete_button->setEnabled(false);
     delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
+    delete_profile_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
@@ -769,7 +793,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
                              "or any of the many RPG systems based on the d20 ruleset.");
     } else if (hostUrl == QStringLiteral("stickmud.com")) {
-        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Upon maturing to level 5, join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
+        return QStringLiteral("StickMUD is a free, medieval fantasy game with a graphical user interface and a depth of features. You are welcomed into the game world with maps and dashboards to complement your imagination. Newbies escape quickly into game play with minimal study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park and learn by playing. Challenge non-player characters to gain experience, advance level and maximize your stats. Between battles, sit on the enchanted bench under the Tree to rapidly heal and reduce wait time. Signs in the park present game features such as races, clans and guilds. Read up on teasers about the adventures on the path ahead like dragons, castles and sailing. Join a guild and learn the ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train skills in both craft and combat aligned with your guild. Participate in frequent game-wide events to earn points exchanged for gold, experience or skill training. Heroes and villains alike are invited! Role play is optional and player vs. player combat is allowed in much of the game. StickMUD was born in Finland in June 1991 and is now hosted in Canada. Our diverse community of players and active game engineers are ready to welcome new players like you to one of the best text-based multi-player games ever!");
     } else if (hostUrl == QStringLiteral("reinosdeleyenda.es")) {
         return QStringLiteral(
                 "The oldest Spanish free mud with more than 20 years of running history.\n\n"
@@ -809,6 +833,10 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
     } else if (hostUrl == QStringLiteral("fierymud.org")) {
         return QStringLiteral(
                 "The original vision of FieryMUD was to create a challanging MUD for advanced players. This new reborne Fiery is a hope to bring back the goals of the past by inflicting certain death on unsuspecting players. FieryMUD will continue to grow and change through the coming years and those players who seek challenge and possess imagination will come in search of what the 3D world fails to offer them.");
+
+    } else if (hostUrl == QStringLiteral("coremud.org")) {
+        return QStringLiteral("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\".\n\nCore is one of the most distant settlements known to mankind, most famous for its lucrative yet oppressive mines, but more than mankind can be found here...\n\nCore is a diverse group of 9 races in total, all vying for recognition or profits, or both, working for The Company, the megalithic entity running the colony itself.\n\nTo The Company, everything is secondary to profits.\n\nIt is up to you to determine how best to survive in this environment, whether that be through combat training, superior mining skills, or technical prowess.\n\nCore MUD is always free to play and features a fun and supportive atmosphere. Roleplaying is encouraged but not mandatory.\n\nMining is your primary source of income, but there are multiple ways to scrape together a few credits... or a few million.\n\nCore Mud also features an economy which is player-driven.  Players own merchandise shops featuring energy weaponry or useful tools, pubs featuring assorted alcoholic (of course) and non-alcoholic beverages, and clinics for healing, to name a few.\n\nCome join us today!");
+
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -900,6 +928,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_url = QStringLiteral("mudlet.org");
+        }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            host_url = QStringLiteral("coremud.org");
         }
     }
     host_name_entry->setText(host_url);
@@ -1007,8 +1038,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("StickMUD")) {
-            host_port = QStringLiteral("8680");
-            port_ssl_tsl->setChecked(true);
+            host_port = QStringLiteral("7680");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             host_port = QStringLiteral("4000");
@@ -1020,6 +1051,10 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Fierymud")) {
             host_port = QStringLiteral("4000");
+        }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            host_port = QStringLiteral("4000");
+            port_ssl_tsl->setChecked(false);
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_port = QStringLiteral("23");
@@ -1151,6 +1186,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
                                  "<center><a href='https://www.reinosdeleyenda.es/foro/'>Forums</a></center>\n"
                                  "<center><a href='https://wiki.reinosdeleyenda.es/'>Wiki</a></center>\n");
         }
+        if (profile_name == QStringLiteral("CoreMUD")) {
+            val = QStringLiteral("<center><a href='https://coremud.org/'>coremud.org</a></center>");
+        }
     }
     website_entry->setText(val);
 
@@ -1233,12 +1271,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         port_entry->setPalette(mRegularPalette);
 
         if (notificationAreaMessageBox->text() == profileLoadedMessage) {
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
-            notificationAreaMessageBox->setText(QString());
+            clearNotificationArea();
         }
     }
 }
@@ -1441,6 +1474,12 @@ void dlgConnectionProfiles::fillout_form()
     if (!deletedDefaultMuds.contains(mudServer)) {
         pItem = new QListWidgetItem();
         setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("cleftofdimensions.net"), 0, mudServer), QStringLiteral(":/icons/cleftofdimensions.png"));
+    }
+
+    mudServer = QStringLiteral("CoreMUD");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pItem = new QListWidgetItem();
+        setupMudProfile(pItem, mudServer, getDescription(QStringLiteral("coremud.org"), 0, mudServer), QStringLiteral(":/icons/coremud_icon.jpg"));
     }
 
 
@@ -1865,10 +1904,12 @@ void dlgConnectionProfiles::slot_load()
     loadProfile(false);
     QDialog::accept();
 }
+
 void dlgConnectionProfiles::slot_connectToServer()
 {
     loadProfile(true);
 }
+
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     QString profile_name = profile_name_entry->text().trimmed();
@@ -1965,7 +2006,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         const QHash<QString, QStringList> defaultScripts = {
                 {QStringLiteral(":/run-lua-code-v4.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/echo.xml"), {QStringLiteral("*")}},
-                {QStringLiteral(":/send-text-to-all-games.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/deleteOldProfiles.xml"), {QStringLiteral("*")}},
                 {QStringLiteral(":/CF-loader.xml"), {QStringLiteral("carrionfields.net")}},
                 {QStringLiteral(":/run-tests.xml"), {QStringLiteral("mudlet.org")}},
@@ -1994,11 +2034,7 @@ bool dlgConnectionProfiles::validateProfile()
 {
     bool valid = true;
 
-    notificationArea->hide();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
-    notificationAreaMessageBox->clear();
+    clearNotificationArea();
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
@@ -2129,11 +2165,7 @@ bool dlgConnectionProfiles::validateProfile()
         if (valid) {
             port_entry->setPalette(mOKPalette);
             host_name_entry->setPalette(mOKPalette);
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
+            clearNotificationArea();
             validName = true;
             validPort = true;
             validUrl = true;
@@ -2233,6 +2265,17 @@ QList<QListWidgetItem*> dlgConnectionProfiles::findData(const QListWidget& listW
     return results;
 }
 
+QList<int> dlgConnectionProfiles::findProfilesBeginningWith(const QString& what) const
+{
+    QList<int> results;
+    for (int index = 0, total = profiles_tree_widget->count(); index < total; ++index) {
+        if (profiles_tree_widget->item(index)->data(csmNameRole).toString().startsWith(what, Qt::CaseInsensitive)) {
+            results.append(index);
+        }
+    }
+    return results;
+}
+
 void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name) const
 {
     if (!pI) {
@@ -2240,23 +2283,7 @@ void dlgConnectionProfiles::setItemName(QListWidgetItem* pI, const QString& name
         return;
     }
 
-// This section of code not currently wanted but retained for another day
-//    // Set to one larger than wanted so that do loop can contain the decrementor
-//    int fontSize = 11;
-//    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
-//    // For an icon of size 120x30 allow another 20 underneath it for the text:
-//    QRect textRectangle(0, 0, 119, 19);
-//    QRect testRect;
-//    do {
-//        font.setPointSize(--fontSize);
-//        QFontMetrics fm(font);
-//        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, name);
-//    } while (fontSize > 1 && !textRectangle.contains(testRect));
-
-    QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
-    pI->setFont(font);
     pI->setData(csmNameRole, name);
-    pI->setText(name);
     pI->setData(Qt::AccessibleTextRole, item_profile_accessName.arg(name));
     pI->setData(Qt::AccessibleDescriptionRole, item_profile_accessDesc);
 }
@@ -2299,7 +2326,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
     do {
         font.setPointSize(--fontSize);
         QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextSingleLine, text);
+        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter|Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
@@ -2313,7 +2340,143 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text) const
             pt.setPen(Qt::white);
         }
         pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextSingleLine, text);
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter|Qt::TextWordWrap, text);
     }
     return QIcon(background);
+}
+
+void dlgConnectionProfiles::clearNotificationArea()
+{
+    notificationArea->hide();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->clear();
+}
+
+void dlgConnectionProfiles::slot_reenableAllProfileItems()
+{
+    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        profiles_tree_widget->item(i)->setFlags(profiles_tree_widget->item(i)->flags() | Qt::ItemIsEnabled);
+    }
+}
+
+bool dlgConnectionProfiles::eventFilter(QObject* obj, QEvent* event)
+{
+    if (obj == profiles_tree_widget && event->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        switch (keyEvent->key()) {
+            // Process all the keys that could be used in a profile name
+            // fortunately we limit this to a sub-set of ASCII because we also use
+            // it for a directory name - based on "allowedChars" list in
+            // validateProfile() i.e.:
+            // ". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"
+        default:
+            // For other keys handle them as normal:
+            return QObject::eventFilter(obj, event);
+
+        case Qt::Key_Escape:
+            // Clear the search:
+            mSearchText.clear();
+            slot_reenableAllProfileItems();
+            // Eat (filter) this event so it goes no further:
+            return true;
+
+        case Qt::Key_Period:
+        case Qt::Key_Space:
+        case Qt::Key_Underscore:
+        case Qt::Key_0:
+        case Qt::Key_1:
+        case Qt::Key_2:
+        case Qt::Key_3:
+        case Qt::Key_4:
+        case Qt::Key_5:
+        case Qt::Key_6:
+        case Qt::Key_7:
+        case Qt::Key_8:
+        case Qt::Key_9:
+        case Qt::Key_Minus:
+        case Qt::Key_NumberSign:
+        case Qt::Key_Ampersand:
+        case Qt::Key_A:
+        case Qt::Key_B:
+        case Qt::Key_C:
+        case Qt::Key_D:
+        case Qt::Key_E:
+        case Qt::Key_F:
+        case Qt::Key_G:
+        case Qt::Key_H:
+        case Qt::Key_I:
+        case Qt::Key_J:
+        case Qt::Key_K:
+        case Qt::Key_L:
+        case Qt::Key_M:
+        case Qt::Key_N:
+        case Qt::Key_O:
+        case Qt::Key_P:
+        case Qt::Key_Q:
+        case Qt::Key_R:
+        case Qt::Key_S:
+        case Qt::Key_T:
+        case Qt::Key_U:
+        case Qt::Key_V:
+        case Qt::Key_W:
+        case Qt::Key_X:
+        case Qt::Key_Y:
+        case Qt::Key_Z:
+            if (keyEvent->modifiers() & ~(Qt::ShiftModifier)) {
+                // There is a modifier in play OTHER than the shift one so treat
+                // it as normal:
+                return QObject::eventFilter(obj, event);
+            }
+
+            if (!mSearchTextTimer.isActive()) {
+                // Too long since the last keypress so forget any previously
+                // entered keypresses:
+                mSearchText.clear();
+            }
+            mSearchTextTimer.stop();
+            addLetterToProfileSearch(keyEvent->key());
+            // Restart the timeout for another keypress:
+            mSearchTextTimer.start();
+            // Eat (filter) this event so it goes no further:
+            return true;
+        }
+    }
+
+    // standard event processing
+    return QObject::eventFilter(obj, event);
+}
+
+void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
+{
+    if ((key < 0) || (key > 128)) {
+        // out of range of normal ASCII keys
+        return;
+    }
+
+    // As it happens the values for key correspond to those of the corresponding
+    // ASCII (upper-case for letters) character codes
+    mSearchText.append(QLatin1Char(static_cast<unsigned char>(key)));
+    auto indexes = findProfilesBeginningWith(mSearchText);
+
+    if (indexes.isEmpty()) {
+        // No matches at all so clearing search term and reset all profiles to
+        // be enabled:
+        mSearchText.clear();
+        slot_reenableAllProfileItems();
+        return;
+    }
+
+    for (int i = 0, total = profiles_tree_widget->count(); i < total; ++i) {
+        auto flags = profiles_tree_widget->item(i)->flags();
+        if (indexes.isEmpty() || !indexes.contains(i)) {
+            flags &= ~Qt::ItemIsEnabled;
+        } else {
+            flags |= Qt::ItemIsEnabled;
+        }
+        profiles_tree_widget->item(i)->setFlags(flags);
+    }
+
+    profiles_tree_widget->setCurrentRow(indexes.first());
 }

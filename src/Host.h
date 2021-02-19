@@ -576,8 +576,9 @@ public:
 
     double mLineSize;
     double mRoomSize;
-    bool mShowInfo;
+    QSet<QString> mMapInfoContributors;
     bool mBubbleMode;
+    bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel;
     QString mServerGUI_Package_version;

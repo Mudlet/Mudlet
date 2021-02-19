@@ -293,8 +293,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     // TODO: Do not enable this option currently - although the user can drag
-    // the tabs the underlying main TConsoles do not move and then it means that
-    // the wrong title can be shown over the wrong window.
+    // the tabs, the underlying main TConsoles do not move with multiview enabled
     mpTabBar->setMovable(false);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
@@ -319,6 +318,8 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1015,12 +1016,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
-}
-
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -1386,7 +1381,6 @@ void mudlet::slot_module_clicked(QTableWidgetItem* pItem)
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
     QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     QTableWidgetItem* itemPath = moduleTable->item(i, 3);
-    qDebug() << itemPath->text();
     if (!entry || !checkStatus || !itemPriority || !mpModuleTableHost->mInstalledModules.contains(entry->text())) {
         moduleHelpButton->setDisabled(true);
         if (checkStatus) {
@@ -1505,7 +1499,8 @@ void mudlet::slot_package_manager()
     }
 
     mpPackageManagerDlg->raise();
-    mpPackageManagerDlg->show();
+    mpPackageManagerDlg->showNormal();
+    mpPackageManagerDlg->activateWindow();
 }
 
 void mudlet::slot_install_package()
@@ -2496,7 +2491,7 @@ void mudlet::slot_update_shortcuts()
         dactionNotepad->setShortcut(QKeySequence());
 
         packagesShortcut = new QShortcut(packagesKeySequence, this);
-        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(packagesShortcut.data(), &QShortcut::activated, this, &mudlet::slot_package_manager);
         dactionPackageManager->setShortcut(QKeySequence());
 
         modulesShortcut = new QShortcut(packagesKeySequence, this);
@@ -2644,60 +2639,6 @@ void mudlet::slot_irc()
 void mudlet::slot_discord()
 {
     openWebPage(mMudletDiscordInvite);
-}
-
-void mudlet::updateMudletDiscordInvite()
-{
-    QDir dir;
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (!dir.mkpath(cacheDir)) {
-        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
-        return;
-    }
-
-    auto manager = new QNetworkAccessManager(this);
-    auto diskCache = new QNetworkDiskCache(this);
-    diskCache->setCacheDirectory(cacheDir);
-    manager->setCache(diskCache);
-
-
-    QUrl url(QStringLiteral("https://discord.com/api/guilds/283581582550237184/widget.json"));
-    QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
-    QNetworkReply* getReply = manager->get(request);
-
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-    connect(getReply, &QNetworkReply::errorOccurred, this, [=](QNetworkReply::NetworkError) {
-#else
-    connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
-#endif
-        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
-        getReply->deleteLater();
-    });
-
-    connect(getReply,
-            &QNetworkReply::finished,
-            this,
-            std::bind(
-                    [=](QNetworkReply* reply) {
-                        if (reply->error() != QNetworkReply::NoError) {
-                            return;
-                        }
-
-                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
-                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
-                        if (inviteKey == QJsonValue::Undefined) {
-                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
-                            return;
-                        }
-
-                        mMudletDiscordInvite = inviteKey.toString();
-                        reply->deleteLater();
-                    },
-                    getReply));
 }
 
 void mudlet::slot_reconnect()

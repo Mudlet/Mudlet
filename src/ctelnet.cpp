@@ -642,17 +642,12 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
 
     if (mpHost->mAllowToSendCommand) {
         std::string outData;
-        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-            "be encoded into the range that is acceptable for the character\n"
-            "encoding that is currently set {\"%1\"} for the game server.\n"
-            "It may not understand what is sent to it.\n"
-            "Note: this warning will only be issued once, even if this happens again, until\n"
-            "the encoding is changed.";
+        auto errorMsgTemplate = "[ WARN ]  - Tried to send '%1' to the game, but it is unlikely to understand it.";
         if (!mEncoding.isEmpty()) {
             if (outgoingDataEncoder) {
                 if ((!mEncodingWarningIssued) && (!outgoingDataCodec->canEncode(data))) {
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QLatin1String(mEncoding));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                 }
@@ -677,7 +672,7 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent)
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((!mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                     QString errorMsg = tr(errorMsgTemplate,
-                                          "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                                          "%1 is the command that was sent to the game.").arg(data);
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -2340,7 +2335,7 @@ void cTelnet::postMessage(QString msg)
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
             } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
-                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);
+                mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (quint8 _i = 0; _i < body.size(); ++_i) {
                     QString temp = body.at(_i);
@@ -2747,7 +2742,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
-            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {

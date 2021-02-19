@@ -30,7 +30,6 @@
 #include <QPointer>
 #include "post_guard.h"
 
-
 class Host;
 class TMap;
 #if defined(INCLUDE_3DMAPPER)
@@ -55,7 +54,6 @@ public:
 
 public slots:
     void slot_bubbles();
-    void slot_info();
     void slot_toggleShowRoomIDs(int s);
     void slot_toggleShowRoomNames(int s);
     void slot_toggleStrongHighlight(int v);
@@ -63,6 +61,7 @@ public slots:
     void slot_togglePanel();
     void slot_roomSize(int d);
     void slot_lineSize(int d);
+    void slot_updateInfoContributors();
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Only used in newer Qt versions
     void slot_switchArea(const int);
