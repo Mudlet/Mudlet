@@ -188,7 +188,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mp
 
     initLuaGlobals();
 
-    purgeTimer.start(2min);
+    purgeTimer.start(2s);
 }
 
 TLuaInterpreter::~TLuaInterpreter()
