@@ -48,7 +48,7 @@
     <message>
       <location filename="../src/Host.cpp" line="456"/>
       <source>Text to send to the game</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare al gioco</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="837"/>
@@ -2033,37 +2033,41 @@ e che ci sia sufficiente spazio disco. L'operazione di download è fallita.</tra
       <location filename="../src/TMap.cpp" line="3142"/>
       <source>Exporting JSON map data from %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Esportazione dati mappa JSON in %1
+Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2686"/>
       <source>Map JSON export</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Esporta mappa JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2821"/>
       <source>Exporting JSON map file from %1 - writing data to file:
 %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>Esportazione file mappa JSON da %1 - scrittura file:
+%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2893"/>
       <source>Import JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importa dati mappa JSON in %1
+Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2908"/>
       <source>Map JSON import</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Importa mappa JSON</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="3152"/>
       <source>Importing JSON map data to %1
 Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...</source>
-      <translation type="unfinished"/>
+      <translation>Importa dati mappa JSON in %1
+Aree: %2 di: %3   Stanze: %4 di: %5   Etichette: %6 di: %7...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2307"/>
@@ -2509,7 +2513,7 @@ non è stato possibile recuperarla, è andata persa!</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="504"/>
       <source>Area with ID %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>L'area con ID %1 esiste già!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="523"/>
@@ -3737,7 +3741,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
       <location filename="../src/ui/actions_main_area.ui" line="269"/>
       <location filename="../src/ui/actions_main_area.ui" line="289"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="286"/>
@@ -3810,7 +3814,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="174"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
     </message>
   </context>
   <context>
@@ -7891,7 +7895,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -12286,7 +12290,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="89"/>
@@ -12379,7 +12383,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game as-is (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare direttamente al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="201"/>
