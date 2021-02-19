@@ -1,3 +1,25 @@
+# 4.12 - in development
+
+<details>
+<summary>
+This version will be the first to use this changelog file for gathering notes
+</summary> 
+ 
+ tbd
+ 
+</details>
+
+ # 4.11 - to be released soon
+
+<details>
+<summary>
+This release is currently prepared outside of this changelog file
+</summary> 
+ 
+ tbd
+
+</details>
+
 # 4.10 – extra command lines, background images, and more
 
 <details>
