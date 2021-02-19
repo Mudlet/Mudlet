@@ -437,13 +437,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
     mpBufferSearchBox->setPlaceholderText("Search ...");
-    QPalette comandLinePalette;
-    comandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
-    comandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    comandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    comandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
-    comandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-    mpBufferSearchBox->setPalette(comandLinePalette);
+    QPalette commandLinePalette;
+    commandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
+    commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
+    commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
+    commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
+    commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
+    mpBufferSearchBox->setPalette(commandLinePalette);
     mpBufferSearchBox->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
@@ -541,14 +541,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
     buttonLayerSpacer->setAutoFillBackground(true);
-    buttonLayerSpacer->setPalette(comandLinePalette);
+    buttonLayerSpacer->setPalette(commandLinePalette);
     mpButtonMainLayer->setAutoFillBackground(true);
-    mpButtonMainLayer->setPalette(comandLinePalette);
+    mpButtonMainLayer->setPalette(commandLinePalette);
 
     buttonLayer->setAutoFillBackground(true);
-    buttonLayer->setPalette(comandLinePalette);
+    buttonLayer->setPalette(commandLinePalette);
 
-    layerCommandLine->setPalette(comandLinePalette);
+    layerCommandLine->setPalette(commandLinePalette);
 
     changeColors();
 
@@ -927,6 +927,16 @@ void TConsole::changeColors()
         if (mpCommandLine) {
             auto styleSheet = mpCommandLine->styleSheet();
             mpCommandLine->setStyleSheet(QString());
+            // CHECK: This seems to be a, possibly iffy, attempt to combine a
+            // QPalette with a style-sheet - though the Qt Documentation does
+            // seem to say one should not mix QPalettes with styles/stylesheets!
+            QPalette commandLinePalette;
+            commandLinePalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
+            commandLinePalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
+            commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
+            commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
+            mpCommandLine->setPalette(commandLinePalette);
+            mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
