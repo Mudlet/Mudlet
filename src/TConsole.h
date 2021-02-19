@@ -33,6 +33,7 @@
 
 #include "pre_guard.h"
 #include <QDataStream>
+#include <QElapsedTimer>
 #include <QHBoxLayout>
 #include <QFile>
 #include <QLabel>
@@ -96,7 +97,7 @@ public:
     void cut();
     void paste();
     void appendBuffer();
-    void appendBuffer(TBuffer);
+    void appendBuffer(const TBuffer&);
     int getButtonState();
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -113,6 +114,7 @@ public:
         mWrapAt = pos;
         buffer.setWrapAt(pos);
     }
+    int getWrapAt();
 
     void setIndentCount(int count)
     {
@@ -134,7 +136,7 @@ public:
     void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
-    void setMiniConsoleCmdVisible(bool);
+    void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
@@ -142,22 +144,20 @@ public:
     void print(const QString& msg);
     void print(const char*);
     void printSystemMessage(const QString& msg);
-    void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
     bool hasSelection();
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
+    void refreshView() const;
     void raiseMudletMousePressOrReleaseEvent(QMouseEvent*, const bool);
-    bool setMiniConsoleFontSize(int);
-    bool setMiniConsoleFont(const QString& font);
+    bool setFontSize(int);
+    bool setFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
     void setLink(const QStringList& linkFunction, const QStringList& linkHint);
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void finalize();
-    void runTriggers(int);
     void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -168,9 +168,6 @@ public:
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&, int saveVersion = 0);
-    bool loadMap(const QString&);
-    bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
@@ -203,13 +200,11 @@ public:
     QWidget* layerEdit;
     QColor mBgColor;
     int mButtonState;
-    TBuffer mClipboard;
     QColor mCommandBgColor;
     QColor mCommandFgColor;
 
     QString mConsoleName;
     QString mCurrentLine;
-    int mDeletedLines;
     QString mDisplayFontName;
     int mDisplayFontSize;
     QFont mDisplayFont;
@@ -244,7 +239,7 @@ public:
     QScrollBar* mpHScrollBar;
 
 
-    QTime mProcessingTime;
+    QElapsedTimer mProcessingTimer;
     bool mRecordReplay;
     QFile mReplayFile;
     QDataStream mReplayStream;
@@ -255,9 +250,8 @@ public:
     bool mTriggerEngineMode;
 
     QPoint mUserCursor;
-    bool mWindowIsHidden;
     int mWrapAt;
-    QLineEdit* networkLatency;
+    QLineEdit* mpLineEdit_networkLatency;
     QPoint P_begin;
     QPoint P_end;
     QString mProfileName;
@@ -276,12 +270,6 @@ public:
     QString mBgImagePath;
     bool mHScrollBarEnabled;
 
-signals:
-    // Raised when new data is incoming to trigger Alert handling in mudlet
-    // class, second argument is true for a lower priority indication when
-    // locally produced information is painted into main console
-    void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
-
 
 public slots:
     void slot_searchBufferUp();
@@ -290,10 +278,6 @@ public slots:
     void slot_stop_all_triggers(bool);
     void slot_toggleLogging();
 
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
@@ -301,9 +285,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
 
-private:
-    void refreshMiniConsole() const;
 
+private:
     ConsoleType mType;
 };
 

@@ -331,7 +331,7 @@ end
 --- adds elements to connect containers to borders into the right click menu
 function Adjustable.Container:addConnectMenu()
     local label = self.adjLabel
-    local menuTxt = self.Locale.connectTo and self.Locale.connectTo.message or "Connect To:"
+    local menuTxt = self.Locale.connectTo.message
     label:addMenuLabel("Connect To: ")
     label:findMenuElement("Connect To: "):echo(menuTxt, "nocolor", "c")
     local menuParent = self.rCLabel.MenuItems
@@ -344,7 +344,7 @@ function Adjustable.Container:addConnectMenu()
         label:findMenuElement("Connect To: ."..v):echo(menuTxt, "nocolor")
         label:setMenuAction("Connect To: ."..v, function() closeAllLevels(self.rCLabel) self:connectToBorder(v) end)
     end
-    menuTxt = self.Locale.disconnect and self.Locale.disconnect.message or "Disconnect "
+    menuTxt = self.Locale.disconnect.message
     label:addMenuLabel("Disconnect ")
     label:setMenuAction("Disconnect ", function() closeAllLevels(self.rCLabel) self:disconnect() end)
     label:findMenuElement("Disconnect "):echo(menuTxt, "nocolor", "c")
@@ -462,6 +462,11 @@ end
 -- @param lockStyle the lockstyle used to lock the container, 
 -- the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
+-- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
+-- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
+-- full:        The container gets fully locked without any margin left for the right click menu.
+-- border:      Keeps the borders of the container visible while locked.
+
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
@@ -709,6 +714,7 @@ function Adjustable.Container:save(slot, dir)
     dir = dir or self.defaultDir
     local saveDir = string.format("%s%s.lua", dir, self.name)
     local mainTable = {}
+    mainTable.slot = {}
     local mytable = {}
 
     -- check if there are already saved settings and if so load them to the mainTable
@@ -717,7 +723,7 @@ function Adjustable.Container:save(slot, dir)
     end
 
     if slot then
-        mainTable[slot] = mytable
+        mainTable.slot[slot] = mytable
     else
         mytable = mainTable
     end
@@ -749,19 +755,25 @@ end
 -- @see Adjustable.Container:save
 function Adjustable.Container:load(slot, dir)
     local mytable = {}
+    mytable.slot = {}
     assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.load: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
     assert(dir == nil or type(dir) == "string" , "Adjustable.Container.load: bad argument #2 type (directory as string expected, got "..type(dir).."!)")
     dir = dir or self.defaultDir
     local loadDir = string.format("%s%s.lua", dir, self.name)
-    if io.exists(loadDir) then
-        table.load(loadDir, mytable)
-    else
-        return "Adjustable.Container.load: Couldn't load settings from " .. loadDir
+    if not (io.exists(loadDir)) then
+        return string.format("Adjustable.Container.load: Couldn't load settings from %s", loadDir)
+    end
+
+    local ok = pcall(table.load, loadDir, mytable)
+    if not ok then
+        self:deleteSaveFile()
+        debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
+        return false
     end
 
     -- if slot settings not found load default settings
     if slot then
-        mytable = mytable[slot] or mytable
+        mytable = mytable.slot[slot] or mytable
     end
 
     mytable.windowname = mytable.windowname or "main"

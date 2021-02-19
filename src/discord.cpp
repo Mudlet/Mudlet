@@ -30,8 +30,6 @@
 // Uncomment this to provide some additional qDebug() output:
 // #define DEBUG_DISCORD 1
 
-QReadWriteLock Discord::smReadWriteLock;
-
 QString Discord::smUserName;
 QString Discord::smUserId;
 QString Discord::smDiscriminator;
@@ -43,7 +41,7 @@ Discord::Discord(QObject* parent)
 , mLoaded{}
 // For details see https://discord.com/developers/docs/rich-presence/how-to#initialization
 // Initialise with a nullptr one with Mudlet's own ID
-// N. B. for testing the following MUDs have registered:
+// NB: for testing the following MUDs have registered:
 // "midmud"  is "460618737712889858", has "server-icon", "exventure" and "mudlet" icons
 // "carinus" is "438335628942376960", has "server-icon" and "mudlet" icons
 // "wotmud"  is "464945517156106240", has "mudlet", "ajar_(red|green|yellow|blue|white|grey|brown)"
@@ -266,12 +264,10 @@ void Discord::timerEvent(QTimerEvent* event)
 
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
-    Discord::smReadWriteLock.lockForWrite(); // Will block until gets lock
     Discord::smUserName = request->username;
     Discord::smUserId = request->userId;
     Discord::smDiscriminator = request->discriminator;
     Discord::smAvatar = request->avatar;
-    Discord::smReadWriteLock.unlock();
 
 #if defined(DEBUG_DISCORD)
     qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
@@ -283,14 +279,8 @@ void Discord::handleDiscordReady(const DiscordUser* request)
 QStringList Discord::getDiscordUserDetails() const
 {
     QStringList results;
-    if (Discord::smReadWriteLock.tryLockForRead()) {
-        results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
-        // Make a deep copy whilst we hold a lock on the details to avoid the
-        // writer {handleDiscordReady(...)} having to invoking the C-o-W itself.
-        results.detach();
-        Discord::smReadWriteLock.unlock();
-    }
-
+    results << Discord::smUserName << Discord::smUserId << Discord::smDiscriminator << Discord::smAvatar;
+    results.detach();
     return results;
 }
 
@@ -392,7 +382,7 @@ void Discord::UpdatePresence()
     }
 
     // Coverity thinks that pDiscordPresence could be a nullptr here, which
-    // would be bad {CID 1473922} so lets test for that and abort:
+    // would be bad {CID 1473922} so let's test for that and abort:
     if (!pDiscordPresence) {
         qCritical().noquote() << "Discord::UpdatePresence() CRITICAL - pDiscordPresence is unexpectedly a nullptr, unable to proceed with this procedure, please report this to Mudlet Makers!";
         return;

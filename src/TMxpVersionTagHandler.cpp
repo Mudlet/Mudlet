@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@bvirginmedia.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,8 @@
 
 TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
+    Q_UNUSED(ctx)
+    Q_UNUSED(tag)
     const QString& version = client.getVersion();
 
     QString payload = scmVersionString.arg(version);

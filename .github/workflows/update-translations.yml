@@ -1,18 +1,15 @@
 name: Update texts for translators
-on:
-  push:
-    branches:
-      - 'release-**'
 
+on:
   schedule:
     - cron: '0 0 * * fri'
-  repository_dispatch:
-    types: update-translations
+
+  workflow_dispatch:
 
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
-    if: github.repository == 'Kebap/Mudlet'
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
     - uses: actions/checkout@v2
       with:

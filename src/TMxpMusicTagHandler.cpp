@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Mike Conley - sousesider[at]gmail.com           *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@bvirginmedia.com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,12 +18,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TMedia.h"
+#include "TMediaData.h"
 #include "TMxpMusicTagHandler.h"
 #include "TMxpClient.h"
 
 TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
+    Q_UNUSED(ctx)
     TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
