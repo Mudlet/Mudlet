@@ -37,6 +37,7 @@
 #include "TForkedProcess.h"
 #include "TMapLabel.h"
 #include "TRoomDB.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -66,6 +67,7 @@
 #include "post_guard.h"
 
 #include <limits>
+using namespace std::chrono_literals;
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
         {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
@@ -186,7 +188,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mp
 
     initLuaGlobals();
 
-    purgeTimer.start(2000);
+    purgeTimer.start(2s);
 }
 
 TLuaInterpreter::~TLuaInterpreter()
@@ -797,6 +799,19 @@ int TLuaInterpreter::getProfileName(lua_State* L)
     Host& host = getHostFromLua(L);
     lua_pushstring(L, host.getName().toUtf8().constData());
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileTabNumber
+int TLuaInterpreter::getProfileTabNumber(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
+    if (profileIndex != -1) {
+        lua_pushnumber(L, profileIndex + 1);
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, "could not retrieve the tab number");
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandSeparator
@@ -5304,17 +5319,12 @@ int TLuaInterpreter::setPopup(lua_State* L)
     int n = lua_gettop(L);
 
     // console name is an optional first argument
-    if (n > 4) {
+    if (n > 2) {
         windowName = WINDOW_NAME(L, s++);
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s++);
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5328,7 +5338,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
         lua_pop(L, 1);
     }
     if (!lua_istable(L, ++s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5344,7 +5354,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
+        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
         return lua_error(L);
     }
 
@@ -13641,6 +13651,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "killMapInfo", TLuaInterpreter::killMapInfo);
     lua_register(pGlobalLua, "enableMapInfo", TLuaInterpreter::enableMapInfo);
     lua_register(pGlobalLua, "disableMapInfo", TLuaInterpreter::disableMapInfo);
+    lua_register(pGlobalLua, "getProfileTabNumber", TLuaInterpreter::getProfileTabNumber);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     QStringList additionalLuaPaths;
@@ -15250,16 +15261,17 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exportJsonMap
 int TLuaInterpreter::exportJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     auto dest = getVerifiedString(L, __func__, 1, "export pathFileName");
     if (dest.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to write to must be provided"));
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to write to must be provided");
     }
 
     if (auto [result, message] = pHost->mpMap->writeJsonMapFile(dest); !result) {
@@ -15270,16 +15282,17 @@ int TLuaInterpreter::exportJsonMap(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#importJsonMap
 int TLuaInterpreter::importJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
-        return warnArgumentValue(L, __func__, QStringLiteral("no map present or loaded"));
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
     auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
     if (source.isEmpty()) {
-        return warnArgumentValue(L, __func__, QStringLiteral("a non-empty path and file name to read to must be provided"));
+        return warnArgumentValue(L, __func__, "a non-empty path and file name to read to must be provided");
     }
 
     if (auto [result, message] = pHost->mpMap->readJsonMapFile(source); !result) {
@@ -15352,7 +15365,6 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         lua_pop(L, nResult);
         return MapInfoProperties{ isBold, isItalic, text, color };
     });
-    host.mpMap->mpMapper->updateInfoContributors();
 
     lua_pushboolean(L, true);
     return 1;
@@ -15366,7 +15378,6 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
     if (!host.mpMap->mMapInfoContributorManager->removeContributor(name)) {
         return warnArgumentValue(L, __func__, QStringLiteral("map info '%1' does not exist").arg(name));
     }
-    host.mpMap->mpMapper->updateInfoContributors();
     lua_pushboolean(L, true);
     return 1;
 }

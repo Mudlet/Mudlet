@@ -76,6 +76,8 @@
 #include <zip.h>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -318,6 +320,8 @@ mudlet::mudlet()
     } else {
         mAutolog = false;
     }
+
+    firstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
     mpButtonConnect = new QToolButton(this);
     mpButtonConnect->setText(tr("Connect"));
@@ -1012,12 +1016,6 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
-}
-
-// returns true if this is the first launch of Mudlet on this machine
-bool mudlet::firstLaunch()
-{
-    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -2856,7 +2854,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
 void mudlet::processEventLoopHack()
 {
-    QTimer::singleShot(1, this, &mudlet::processEventLoopHack_timerRun);
+    QTimer::singleShot(1ms, this, &mudlet::processEventLoopHack_timerRun);
 }
 
 void mudlet::processEventLoopHack_timerRun()

@@ -53,6 +53,8 @@
 #include <QSslError>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 // Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
 // suboptions - change the value to 2 to get a bit more detail about the sizes
 // of the messages
@@ -481,8 +483,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTimer.start();
-    mTimerLogin->start(2000);
-    mTimerPass->start(3000);
+    mTimerLogin->start(2s);
+    mTimerPass->start(3s);
 
     emit signal_connected(mpHost);
 

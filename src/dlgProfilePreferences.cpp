@@ -2037,7 +2037,7 @@ void dlgProfilePreferences::loadMap()
             label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
         }
     }
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // Restore setting immediately before we used it
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
@@ -2077,7 +2077,7 @@ void dlgProfilePreferences::saveMap()
     }
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 }
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
@@ -2242,7 +2242,7 @@ void dlgProfilePreferences::copyMap()
 
     if (!pHost->mpConsole->saveMap(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
-        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -2267,7 +2267,7 @@ void dlgProfilePreferences::copyMap()
 
     if (thisProfileLatestMapFile.fileName().isEmpty()) {
         label_mapFileActionResult->setText(tr("Could not copy the map - failed to work out which map file we just saved the map as!"));
-        QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
         return;
     }
 
@@ -2285,7 +2285,7 @@ void dlgProfilePreferences::copyMap()
 
         if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+            QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
             continue; // Try again with next profile
         } else {
             label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
@@ -2301,7 +2301,7 @@ void dlgProfilePreferences::copyMap()
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
     // - I thinK - so use QList<QString> thoughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
-    QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile
     // are accessing it...
@@ -2966,7 +2966,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     connect(getReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
 #endif
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
+        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
             label->hide();
             label->setText(tr("Updating themes from colorsublime.github.io..."));
         });

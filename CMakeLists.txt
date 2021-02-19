@@ -38,11 +38,8 @@ cmake_minimum_required(VERSION 3.3)
 if(APPLE)
   # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
-
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS
-                                           # X supports 10.11 and up, but some
-                                           # tools are not provided as bottles
-                                           # for that anymore.
+  # minimum supported version by Apple
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
 project(mudlet)
