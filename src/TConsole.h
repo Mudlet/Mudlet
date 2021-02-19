@@ -155,7 +155,7 @@ public:
     bool setFont(const QString& font);
     bool setConsoleBackgroundImage(const QString&, int);
     bool resetConsoleBackgroundImage();
-    void setLink(const QStringList& linkFunction, const QStringList& linkHint);
+    void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void showStatistics();

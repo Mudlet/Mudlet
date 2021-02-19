@@ -5272,13 +5272,24 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLink
 int TLuaInterpreter::setLink(lua_State* L)
 {
-    QString windowName;
+    QString windowName, linkFunction{QString()};
+    int funcRef{0};
     int s = 1;
     if (lua_gettop(L) > 2) {
         windowName = WINDOW_NAME(L, s++);
     }
 
-    QString linkFunction = getVerifiedString(L, __func__, s++, "command");
+    if (!(lua_isstring(L, s) || lua_isfunction(L, s))) {
+        lua_pushfstring(L, "setLink: bad argument #%d type (command as string or function expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    if (lua_isfunction(L, s)) {
+        lua_pushvalue(L, s++);
+        funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        linkFunction = lua_tostring(L, s++);
+    }
+
     QString linkHint = getVerifiedString(L, __func__, s++, "tooltip");
 
     Host& host = getHostFromLua(L);
@@ -5286,9 +5297,11 @@ int TLuaInterpreter::setLink(lua_State* L)
     _linkFunction << linkFunction;
     QStringList _linkHint;
     _linkHint << linkHint;
+    QVector<int> _linkReference;
+    _linkReference << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->setLink(_linkFunction, _linkHint);
+    console->setLink(_linkFunction, _linkHint, _linkReference);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();
@@ -5302,6 +5315,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     QString windowName = "";
     QStringList _hintList;
     QStringList _commandList;
+    QVector<int> luaReference;
     int s = 1;
     int n = lua_gettop(L);
 
@@ -5309,14 +5323,11 @@ int TLuaInterpreter::setPopup(lua_State* L)
     if (n > 4) {
         windowName = WINDOW_NAME(L, s++);
     }
-    if (!lua_isstring(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
-        return lua_error(L);
-    }
-    QString txt = lua_tostring(L, s++);
+
+    QString txt = getVerifiedString(L, __func__, s++, "txt");
 
     if (!lua_istable(L, s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5325,12 +5336,19 @@ int TLuaInterpreter::setPopup(lua_State* L)
         if (lua_type(L, -1) == LUA_TSTRING) {
             QString cmd = lua_tostring(L, -1);
             _commandList << cmd;
+            luaReference << 0;
+        }
+
+        if (lua_type(L, -1) == LUA_TFUNCTION) {
+            lua_pushvalue(L, -1);
+            _commandList << QString();
+            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
     if (!lua_istable(L, ++s)) {
-        lua_pushstring(L, "setPopup: wrong argument type");
+        lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
     lua_pushnil(L);
@@ -5346,12 +5364,12 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
+        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
         return lua_error(L);
     }
 
     auto console = CONSOLE(L, windowName);
-    console->setLink(_commandList, _hintList);
+    console->setLink(_commandList, _hintList, luaReference);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();

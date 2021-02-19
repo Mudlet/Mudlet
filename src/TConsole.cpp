@@ -1629,9 +1629,9 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
     return std::make_tuple(true, text, start, length);
 }
 
-void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
+void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
 {
-    buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
+    buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference);
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }
