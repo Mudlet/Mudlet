@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>692</width>
-    <height>270</height>
+    <height>370</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -122,6 +122,9 @@
        <widget class="QLineEdit" name="lineEdit_trigger_command">
         <property name="toolTip">
          <string>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+        </property>
+        <property name="placeholderText">
+         <string>Text to send to the game as-is (optional)</string>
         </property>
        </widget>
       </item>
@@ -631,10 +634,7 @@
         <property name="checked">
          <bool>false</bool>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
-         <property name="spacing">
-          <number>3</number>
-         </property>
+        <layout class="QGridLayout" name="gridLayout">
          <property name="leftMargin">
           <number>3</number>
          </property>
@@ -647,7 +647,27 @@
          <property name="bottomMargin">
           <number>3</number>
          </property>
-         <item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_foregroundColor">
+           <property name="text">
+            <string>Foreground</string>
+           </property>
+           <property name="buddy">
+            <cstring>pushButtonFgColor</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_backgroundColor">
+           <property name="text">
+            <string>Background</string>
+           </property>
+           <property name="buddy">
+            <cstring>pushButtonBgColor</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
           <widget class="QPushButton" name="pushButtonFgColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -656,11 +676,11 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Foreground</string>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="1" column="1">
           <widget class="QPushButton" name="pushButtonBgColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -669,10 +689,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Background</string>
-           </property>
-           <property name="flat">
-            <bool>false</bool>
+            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
            </property>
           </widget>
          </item>

@@ -24,7 +24,6 @@
 
 #include "pre_guard.h"
 #include <QMap>
-#include <QMutex>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -45,8 +44,12 @@ public:
 
     std::list<TScript*> getScriptRootNodeList()
     {
-        QMutexLocker locker(&mScriptUnitLock);
         return mScriptRootNodeList;
+    }
+
+    QMap<int, TScript*> getScriptList()
+    {
+        return mScriptMap;
     }
 
     TScript* getScript(int id);
@@ -58,8 +61,8 @@ public:
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
     int getNewID();
-    QMutex mScriptUnitLock;
     QList<TScript*> uninstallList;
+    QVector<int> findScriptId(const QString& name) const;
 
 private:
     ScriptUnit() = default;

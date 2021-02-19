@@ -124,6 +124,20 @@ describe("Tests StringUtils.lua functions", function()
       local actual = str:split(":")
       assert.same(expected, actual)
     end)
+
+    it("should default to splitting on a space", function()
+      local str = "This is a test"
+      local expected = { "This", "is", "a", "test" }
+      local actual = str:split()
+      assert.same(expected, actual)
+    end)
+
+    it("should return a table with the characters that make up the string if empty string is used for the delimiter", function()
+      local str = "This is a test"
+      local expected = {"T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "t", "e", "s", "t"}
+      local actual = str:split("")
+      assert.same(expected, actual)
+    end)
   end)
 
   describe("string.starts(str, prefix)", function()
@@ -180,6 +194,56 @@ describe("Tests StringUtils.lua functions", function()
       local str = "This is a test"
       assert.equals(str, string.trim(str))
       assert.equals(str, str:trim())
+    end)
+  end)
+
+  describe("f(str)", function()
+    it("should return a string with no interpolation as itself", function()
+      local str = "This is a test"
+      local expected = str
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should return a string with simple interpolation", function()
+      local str = "This is a {'test'}"
+      local expected = "This is a test"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should execute simple expressions within the interpolation characters", function()
+      local str = "2 + 2 = {2+2}"
+      local expected = "2 + 2 = 4"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should be able to interpolate local variables", function()
+      local str = "The secret sauce is {secret}"
+      local secret = "well known"
+      local expected = "The secret sauce is well known"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should evaluate more complex expressions/functions in interpolation", function()
+      local testFunc = function(msg)
+        return msg:title()
+      end
+      local mesg = "sir"
+      local str = "This is just a test, good {testFunc(mesg)}"
+      local expected = "This is just a test, good Sir"
+      local actual = f(str)
+      assert.equals(expected, actual)
+    end)
+
+    it("should be able to handle two or more interpolations in a single string", function()
+      local str = "This is a {test}. Do make sure to check {2+2} your belongings. {getMudletVersion('string')}"
+      local test = "complete success"
+      local expected = "This is a complete success. Do make sure to check 4 your belongings. " .. getMudletVersion('string')
+      local actual = f(str)
+      assert.equals(expected, actual)
     end)
   end)
 end)

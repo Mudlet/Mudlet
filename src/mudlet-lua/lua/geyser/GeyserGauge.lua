@@ -141,6 +141,12 @@ function Geyser.Gauge:setAlignment(alignment)
   self.formatTable = self.text.formatTable
 end
 
+--- Sets the color of the text on the gauge
+-- @param color the color you want the text to be
+function Geyser.Gauge:setFgColor(color)
+  self.text:setFgColor(color)
+end
+
 --- Sets the text on the gauge, overwrites inherited echo function.
 -- @param text The text to set.
 function Geyser.Gauge:echo(message, color, format)
@@ -248,5 +254,13 @@ function Geyser.Gauge:new (cons, container)
   if cons.message then me:echo(me.message) end
   
   --print("  New in " .. self.name .. " : " .. me.name)
+  return me
+end
+
+-- Overridden constructor to use add2
+function Geyser.Gauge:new2 (cons, container)
+  cons = cons or {}
+  cons.useAdd2 = true
+  local me = self:new(cons, container)
   return me
 end

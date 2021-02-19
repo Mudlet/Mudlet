@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<ScriptGroup isActive="yes" isFolder="yes">
+			<name>CF_Loader</name>
+			<packageName>CF_Loader</packageName>
+			<script></script>
+			<eventHandlerList />
+			<Script isActive="yes" isFolder="no">
+				<name>CF_Loader</name>
+				<packageName></packageName>
+				<script>function downloadPkg(a,b)
+  echo("****Downloading package.")
+  downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://github.com/Rahsael/CFGUI/releases/latest/download/CFGUI.zip")
+end
+
+function installReady(event, file)
+  if file ~= getMudletHomeDir().."/CFGUI.zip" then return end
+  if not io.exists(getMudletHomeDir().."/CFGUI.zip") then 
+    cecho([[&lt;gold&gt;To download the Carrion Fields Mudlet client, please copy and paste the following code into the command line:
+    
+lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://github.com/Rahsael/CFGUI/releases/latest/download/CFGUI.zip")
+    
+]])
+    return
+  end
+  
+  cecho([[
+  
+&lt;maroon&gt;*&lt;gold&gt; Your Carrion Fields client was successfully downloaded.
+ 
+]])
+  cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing... &lt;gray&gt;(this will take a few seconds.)\r\n")
+  tempTimer(2, [[installPackage(getMudletHomeDir().."/CFGUI.zip")]])
+  uninstallPackage("CF_Loader")
+end
+
+registerAnonymousEventHandler("sysConnectionEvent", "downloadPkg")
+registerAnonymousEventHandler("sysDownloadDone", "installReady")</script>
+				<eventHandlerList />
+			</Script>
+		</ScriptGroup>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

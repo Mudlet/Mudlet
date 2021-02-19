@@ -117,7 +117,6 @@ void ScriptUnit::removeScriptRootNode(TScript* pT)
 
 TScript* ScriptUnit::getScript(int id)
 {
-    QMutexLocker locker(&mScriptUnitLock);
     if (mScriptMap.find(id) != mScriptMap.end()) {
         return mScriptMap.value(id);
     } else {
@@ -158,6 +157,7 @@ void ScriptUnit::unregisterScript(TScript* pT)
         removeScript(pT);
         return;
     } else {
+        removeScript(pT);
         removeScriptRootNode(pT);
         return;
     }
@@ -169,8 +169,6 @@ void ScriptUnit::addScript(TScript* pT)
     if (!pT) {
         return;
     }
-
-    QMutexLocker locker(&mScriptUnitLock);
 
     if (!pT->getID()) {
         pT->setID(getNewID());
@@ -205,4 +203,15 @@ void ScriptUnit::compileAll()
             script->compileAll();
         }
     }
+}
+
+QVector<int> ScriptUnit::findScriptId(const QString& name) const
+{
+    QVector<int> Ids;
+    for (auto script : mScriptMap) {
+        if (script->getName() == name) {
+            Ids.append(script->getID());
+        }
+    }
+    return Ids;
 }

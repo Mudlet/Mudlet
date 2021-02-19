@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QStyleOption>
 #include <QPainter>
+#include <QVariant>
 #include "post_guard.h"
 
 void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const
@@ -36,7 +37,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption *option, QPa
         QString tabName = mpTabBar->tabData(mpTabBar->tabAt(option->rect.center())).toString();
         QFont font = widget->font();
         bool isStyleChanged = false;
-        if (mBoldTabsSet.contains(tabName)||mItalicTabsSet.contains(tabName)||mUnderlineTabsSet.contains(tabName)) {
+        if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
             painter->save();
             font.setBold(mBoldTabsSet.contains(tabName));
             font.setItalic(mItalicTabsSet.contains(tabName));
@@ -118,14 +119,14 @@ bool TStyle::indexedTabState(const int index, const QSet<QString>& effect) const
 
 QSize TTabBar::tabSizeHint(int index) const
 {
-    if (mStyle.tabBold(index)||mStyle.tabItalic(index)||mStyle.tabUnderline(index)) {
+    if (mStyle.tabBold(index) || mStyle.tabItalic(index) || mStyle.tabUnderline(index)) {
         const QSize s = QTabBar::tabSizeHint(index);
         const QFontMetrics fm(font());
         // Note that this method must use (because it is associated with sizing
         // the text to show) the (possibly Qt modified to include an
         // accelarator) actual tabText and not the profile name that we have
         // stored in the tabData:
-        const int w = fm.width(tabText(index));
+        const int w = fm.horizontalAdvance(tabText(index));
 
         QFont f = font();
         f.setBold(mStyle.tabBold(index));
@@ -133,10 +134,51 @@ QSize TTabBar::tabSizeHint(int index) const
         f.setUnderline(mStyle.tabUnderline(index));
         const QFontMetrics bfm(f);
 
-        const int bw = bfm.width(tabText(index));
+        const int bw = bfm.horizontalAdvance(tabText(index));
 
         return {s.width() - w + bw, s.height()};
-    } else {
-        return QTabBar::tabSizeHint(index);
+    }
+    return QTabBar::tabSizeHint(index);
+}
+
+QString TTabBar::tabName(const int index) const
+{
+    QString result{tabData(index).toString()};
+    return result;
+}
+
+int TTabBar::tabIndex(const QString& name) const
+{
+    int index = -1;
+    if (name.isEmpty()) {
+        return index;
+    }
+    const int total = count();
+    while (++index < total) {
+        if (!tabData(index).toString().compare(name)) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+void TTabBar::removeTab(int index)
+{
+    if (index >= 0 && index < count()) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
+    }
+}
+
+void TTabBar::removeTab(const QString& name)
+{
+    int index = tabIndex(name);
+    if (index > -1) {
+        setTabBold(index, false);
+        setTabItalic(index, false);
+        setTabUnderline(index, false);
+        QTabBar::removeTab(index);
     }
 }

@@ -26,82 +26,30 @@
 #include "Host.h"
 #include "TEvent.h"
 #include "mudlet.h"
+#include "TMediaData.h"
 
-class TMediaData
-{
-public:
-    enum MediaProtocol { MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
+#include "pre_guard.h"
+#include <QMediaPlayer>
+#include "post_guard.h"
 
-    enum MediaType { MediaTypeSound = 1, MediaTypeMusic = 2, MediaTypeNotSet = 0 };
-
-    enum MediaVolume { MediaVolumeMax = 100, MediaVolumeHigh = 75, MediaVolumeDefault = 50, MediaVolumeLow = 25, MediaVolumeMin = 1, MediaVolumePreload = 0 };
-
-    enum MediaLoops { MediaLoopsDefault = 1, MediaLoopsRepeat = -1 };
-
-    enum MediaPriority { MediaPriorityMax = 100, MediaPriorityHigh = 75, MediaPriorityDefault = 50, MediaPriorityLow = 25, MediaPriorityMin = 1, MediaPriorityNotSet = 0 };
-
-    enum MediaContinue { MediaContinueDefault = true, MediaContinueRestart = false };
-
-    TMediaData()
-    {
-        mMediaProtocol = MediaProtocolNotSet;
-        mMediaType = MediaTypeNotSet;
-        mMediaVolume = MediaVolumeDefault;
-        mMediaLoops = MediaLoopsDefault;
-        mMediaPriority = MediaPriorityNotSet;
-        mMediaContinue = MediaContinueDefault;
-    }
-
-    int getMediaProtocol() { return mMediaProtocol; }
-    void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
-    int getMediaType() { return mMediaType; }
-    void setMediaType(int mediaType) { mMediaType = mediaType; }
-    QString getMediaFileName() { return mMediaFileName; }
-    void setMediaFileName(QString mediaFileName) { mMediaFileName = mediaFileName; }
-    int getMediaVolume() { return mMediaVolume; }
-    void setMediaVolume(int mediaVolume) { mMediaVolume = mediaVolume; }
-    int getMediaLoops() { return mMediaLoops; }
-    void setMediaLoops(int mediaLoops) { mMediaLoops = mediaLoops; }
-    int getMediaPriority() { return mMediaPriority; }
-    void setMediaPriority(int mediaPriority) { mMediaPriority = mediaPriority; }
-    bool getMediaContinue() { return mMediaContinue; }
-    void setMediaContinue(bool mediaContinue) { mMediaContinue = mediaContinue; }
-    QString getMediaTag() { return mMediaTag; }
-    void setMediaTag(QString mediaTag) { mMediaTag = mediaTag; }
-    QString getMediaUrl() { return mMediaUrl; }
-    void setMediaUrl(QString mediaUrl) { mMediaUrl = mediaUrl; }
-    QString getMediaKey() { return mMediaUrl; }
-    void setMediaKey(QString mediaKey) { mMediaKey = mediaKey; }
-    QString getMediaAbsolutePathFileName() { return mMediaAbsolutePathFileName; }
-    void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
-
-private:
-    int mMediaProtocol;
-    int mMediaType;
-    QString mMediaFileName;
-    int mMediaVolume;
-    int mMediaLoops;
-    int mMediaPriority;
-    bool mMediaContinue;
-    QString mMediaTag;
-    QString mMediaUrl;
-    QString mMediaKey;
-    QString mMediaAbsolutePathFileName;
-};
 
 class TMediaPlayer
 {
 public:
-    TMediaPlayer() {}
+    TMediaPlayer()
+        : mpHost(nullptr)
+        , mMediaData()
+        , mMediaPlayer(nullptr)
+        , initialized(false)
+        {}
     ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-    {
-        mpHost = pHost;
-        mMediaPlayer = new QMediaPlayer(pHost);
-        mMediaData = mediaData;
-        initialized = true;
-    }
+        : mpHost(pHost)
+        , mMediaData(mediaData)
+        , mMediaPlayer(new QMediaPlayer(pHost))
+        , initialized(true)
+        {}
 
     TMediaData getMediaData() { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
@@ -112,7 +60,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer;
-    bool initialized = false;
+    bool initialized;
 };
 
 class TMedia : public QObject
@@ -127,11 +75,13 @@ public:
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
+    bool purgeMediaCache();
 
 private:
+    void stopAllMediaPlayers();
     QUrl parseUrl(TMediaData& mediaData);
-    bool isValidUrl(QUrl& url);
-    bool isFileRelative(TMediaData& mediaData);
+    static bool isValidUrl(QUrl& url);
+    static bool isFileRelative(TMediaData& mediaData);
     QStringList parseFileNameList(TMediaData& mediaData, QDir& dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
@@ -141,21 +91,21 @@ private:
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
-    bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
-    void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
+    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
+    bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
+    void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
 
     void play(TMediaData& mediaData);
 
-    TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
-    QString parseJSONByMediaFileName(QJsonObject& json);
-    int parseJSONByMediaVolume(QJsonObject& json);
-    int parseJSONByMediaPriority(QJsonObject& json);
-    int parseJSONByMediaLoops(QJsonObject& json);
-    TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
-    QString parseJSONByMediaTag(QJsonObject& json);
-    QString parseJSONByMediaUrl(QJsonObject& json);
-    QString parseJSONByMediaKey(QJsonObject& json);
+    static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
+    static QString parseJSONByMediaFileName(QJsonObject& json);
+    static int parseJSONByMediaVolume(QJsonObject& json);
+    static int parseJSONByMediaPriority(QJsonObject& json);
+    static int parseJSONByMediaLoops(QJsonObject& json);
+    static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
+    static QString parseJSONByMediaTag(QJsonObject& json);
+    static QString parseJSONByMediaUrl(QJsonObject& json);
+    static QString parseJSONByMediaKey(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);

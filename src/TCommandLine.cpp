@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,17 +24,24 @@
 
 
 #include "Host.h"
-#include <QRegularExpression>
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TSplitter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
 
+#include "pre_guard.h"
+#include <QKeyEvent>
+#include <QRegularExpression>
+#include <QScrollBar>
+#include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
+, mCommandLineName(QStringLiteral("main"))
 , mpHost(pHost)
+, mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 , mTabCompletionCount()
@@ -52,10 +59,10 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 
     setFont(mpHost->getDisplayFont());
 
-    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+    mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
     mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+    mRegularPalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
 
     setPalette(mRegularPalette);
 
@@ -74,11 +81,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     QPlainTextEdit::event(event);
     adjustHeight();
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
-        mHistoryBuffer = -1;
-    } else {
-        mHistoryBuffer = 0;
-    }
+    mHistoryBuffer = 0;
     if (mTabCompletionOld != toPlainText()) {
         mUserKeptOnTyping = true;
         mAutoCompletionCount = -1;
@@ -90,12 +93,12 @@ void TCommandLine::processNormalKey(QEvent* event)
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
-    if (mpKeyUnit->processDataStream(keyEvent->key(), (int)keyEvent->modifiers())) {
+    if (mpKeyUnit->processDataStream(static_cast<Qt::Key>(keyEvent->key()), static_cast<Qt::KeyboardModifiers>(keyEvent->modifiers()))) {
         keyEvent->accept();
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 // This function overrides the QWidget::event() and should return true if the
@@ -107,9 +110,16 @@ bool TCommandLine::event(QEvent* event)
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
         auto* ke = dynamic_cast<QKeyEvent*>(event);
+        if (!ke) {
+            // Something is wrong -
+            qCritical().noquote() << "TCommandLine::event(QEvent*) CRITICAL - a QEvent that is supposed to be a QKeyEvent is not dynmically castable to the latter - so the processing of this event "
+                                     "has been aborted - please report this to Mudlet Makers.";
+            // Indicate that we don't want to touch this event with a barge-pole!
+            return false;
+        }
 
         // Shortcut for keypad keys
-        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
+        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(static_cast<Qt::Key>(ke->key()), static_cast<Qt::KeyboardModifiers>(ke->modifiers()))) {
             ke->accept();
             return true;
 
@@ -122,22 +132,18 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped.clear();
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 mLastCompletion.clear();
                 break;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 // other than just a <SHIFT> one; may actaully be configured as
                 // a non-breaking space when used with a modifier!
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Backtab:
             // <BACKTAB> is usually internally generated by SHIFT used in
@@ -154,21 +160,22 @@ bool TCommandLine::event(QEvent* event)
                 }
                 ke->accept();
                 return true;
+            }
 
-            } else if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) ==  Qt::NoModifier) {
+            if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) ==  Qt::NoModifier) {
                 // Process as plain <BACKTAB> - (ignoring implicit <SHIFT>)
                 handleTabCompletion(false);
                 adjustHeight();
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 // other than just the ignored <SHIFT> and the possible <CTRL>:
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Tab:
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
@@ -197,9 +204,8 @@ bool TCommandLine::event(QEvent* event)
             // CHECKME: What about system foreground application switching?
             if (keybindingMatched(ke)) {
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_unknown:
             qWarning() << "ERROR: key unknown!";
@@ -208,11 +214,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Backspace:
             if ((ke->modifiers() & (allModifiers & ~(Qt::ControlModifier|Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Ignore state of <CTRL> and <SHIFT> keys
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -223,23 +225,19 @@ bool TCommandLine::event(QEvent* event)
                 QPlainTextEdit::event(event);
 
                 adjustHeight();
-
                 return true;
-            } else if (keybindingMatched(ke)) {
+            }
+
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 // other than <CTRL> and/or <SHIFT>
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Delete:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
@@ -253,11 +251,12 @@ bool TCommandLine::event(QEvent* event)
                 QPlainTextEdit::event(event);
                 adjustHeight();
                 return true;
-            } else if (keybindingMatched(ke)) {
-                return true;
-            } else {
-                break;
             }
+
+            if (keybindingMatched(ke)) {
+                return true;
+            }
+            break;
 
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
@@ -266,6 +265,7 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mLowerPane->hide();
                 mpConsole->buffer.mCursorY = mpConsole->buffer.size();
                 mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
+                mpConsole->mUpperPane->mCursorX = 0;
                 mpConsole->mUpperPane->mIsTailMode = true;
                 mpConsole->mUpperPane->updateScreenView();
                 mpConsole->mUpperPane->forceUpdate();
@@ -284,28 +284,16 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                mTabCompletionCount = -1;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 // other than just the Shift or just the Control modifiers
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Enter:
             // This is usually the Keypad one, so may come with
@@ -315,28 +303,16 @@ bool TCommandLine::event(QEvent* event)
                 // Do the "normal" return key action if no or just the keypad
                 // modifier is present:
                 enterCommand(ke);
-                mTabCompletionCount = -1;
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
-                mTabCompletionTyped.clear();
-                mUserKeptOnTyping = false;
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    clear();
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
-                adjustHeight();
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 // other than just the Keypad modifier
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Down:
 #if defined(Q_OS_MACOS)
@@ -358,18 +334,18 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
-                historyDown(ke);
+                historyMove(MOVE_DOWN);
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 // other than just the Control modifier (or keypad modifier on
                 // macOs)
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Up:
 #if defined(Q_OS_MACOS)
@@ -382,7 +358,6 @@ bool TCommandLine::event(QEvent* event)
                 moveCursor(QTextCursor::Up, QTextCursor::MoveAnchor);
                 ke->accept();
                 return true;
-
             }
 
 #if defined(Q_OS_MACOS)
@@ -392,18 +367,19 @@ bool TCommandLine::event(QEvent* event)
 #endif
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
-                historyUp(ke);
+                historyMove(MOVE_UP);
                 ke->accept();
                 return true;
 
-            } else if (keybindingMatched(ke)) {
+            }
+
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 // other than just the Control modifier (or keypad modifier on
                 // macOs)
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_Escape:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -414,46 +390,43 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 setPalette(mRegularPalette);
-                if (mpHost->mAutoClearCommandLineAfterSend) {
-                    mHistoryBuffer = -1;
-                } else {
-                    mHistoryBuffer = 0;
-                }
+                mHistoryBuffer = 0;
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollUp(mpHost->mScreenHeight);
+                mpConsole->scrollUp(0);
+                QTimer::singleShot(0, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
-                mpConsole->scrollDown(mpHost->mScreenHeight);
+                mpConsole->scrollDown(mpConsole->mUpperPane->getScreenHeight());
                 ke->accept();
                 return true;
 
-            } else if (keybindingMatched(ke)) {
+            }
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers,
                 return true;
-            } else {
-                break;
             }
+            break;
 
         case Qt::Key_C:
             if (((ke->modifiers() & allModifiers) == Qt::ControlModifier)
@@ -464,64 +437,80 @@ bool TCommandLine::event(QEvent* event)
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
+            }
 
-            } else if (keybindingMatched(ke)) {
+            if (keybindingMatched(ke)) {
                 // Process as a possible key binding if there are ANY modifiers
                 return true;
-            } else {
-                processNormalKey(event);
-                return false;
             }
+
+            processNormalKey(event);
+            return false;
+
         case Qt::Key_1:
             if (handleCtrlTabChange(ke, 1)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_2:
             if (handleCtrlTabChange(ke, 2)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_3:
             if (handleCtrlTabChange(ke, 3)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_4:
             if (handleCtrlTabChange(ke, 4)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_5:
             if (handleCtrlTabChange(ke, 5)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_6:
             if (handleCtrlTabChange(ke, 6)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_7:
             if (handleCtrlTabChange(ke, 7)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_8:
             if (handleCtrlTabChange(ke, 8)) {
                 return true;
             }
+            return false;
 
         case Qt::Key_9:
             if (handleCtrlTabChange(ke, 9)) {
                 return true;
             }
+            return false;
+
+        case Qt::Key_0:
+            if (handleCtrlTabChange(ke, 10)) {
+                return true;
+            }
+            return false;
 
         default:
             // Process as a possible key binding if there are ANY modifiers
             if (keybindingMatched(ke)) {
                 return true;
-
             }
 
             processNormalKey(event);
@@ -539,6 +528,10 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
 
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
+
+    // Make sure this profile's tab gets activated in multi-view mode:
+    mudlet::self()->activateProfile(mpHost);
+
     QPlainTextEdit::focusInEvent(event);
 }
 
@@ -554,10 +547,26 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
     QPlainTextEdit::focusOutEvent(event);
 }
 
+void TCommandLine::hideEvent(QHideEvent* event)
+{
+    if (hasFocus()) {
+        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+    }
+    QPlainTextEdit::hideEvent(event);
+}
+
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
+    // Workaround for SubCommandLines textCursor not visible in some situations
+    // SubCommandLines cannot autoresize
+    if (mType == SubCommandLine) {
+        if (lines <= 1) {
+            verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
+        }
+        return;
+    }
+    int fontH = QFontMetrics(font()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -566,6 +575,7 @@ void TCommandLine::adjustHeight()
     }
     int _baseHeight = fontH * lines;
     int _height = _baseHeight + fontH;
+
     if (_height < mpHost->commandLineMinimumHeight) {
         _height = mpHost->commandLineMinimumHeight;
     }
@@ -757,7 +767,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
                 } else {
                     QAction* pA = nullptr;
-                    if (mpConsole->isUsingSharedDictionary()) {
+                    auto mainConsole = mpConsole->mpHost->mpConsole;
+                    if (mainConsole->isUsingSharedDictionary()) {
                         pA = new QAction(tr("no suggestions (shared)",
                                                  // Intentional comment
                                                  "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
@@ -810,31 +821,58 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
+        // The use of accept here prevents this event from reaching any parent
+        // widget - like the TConsole containing this TCommandLine...
         event->accept();
+        mudlet::self()->activateProfile(mpHost);
         return;
     }
 
-    // Process any other possible mousePressEvent
+    // Process any other possible mousePressEvent - which is default popup
+    // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
+    Q_UNUSED(event)
     QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
+    mLastCompletion.clear();
+    mUserKeptOnTyping = false;
 
     QStringList _l = _t.split(QChar::LineFeed);
+
     for (int i = 0; i < _l.size(); i++) {
-        mpHost->send(_l[i]);
+        if (mType != MainCommandLine && mActionFunction) {
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+        } else {
+            mpHost->send(_l[i]);
+        }
+        // send command to your MiniConsole
+        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
+            mpConsole->printCommand(_l[i]);
+        }
     }
+
     if (!toPlainText().isEmpty()) {
-        mHistoryBuffer = 0;
+        if (mpHost->mAutoClearCommandLineAfterSend) {
+            mHistoryBuffer = 0;
+        } else {
+            mHistoryBuffer = 1;
+        }
         setPalette(mRegularPalette);
 
         mHistoryList.removeAll(toPlainText());
-        mHistoryList.push_front(toPlainText());
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
+        } else {
+            mHistoryList.push_front(toPlainText());
+        }
+        mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
         clear();
@@ -872,7 +910,14 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+#else
     QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
+#endif
+
+    wordList.append(commandLineSuggestions.values());
+
     if (direction) {
         mTabCompletionCount++;
     } else {
@@ -961,43 +1006,18 @@ void TCommandLine::handleAutoCompletion()
     mAutoCompletionCount = -1;
 }
 
-// cursor down: cycles chronologically through the command history.
-
-void TCommandLine::historyDown(QKeyEvent* event)
-{
-    if (mHistoryList.empty()) {
-        return;
-    }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
-        mHistoryBuffer--;
-        if (mHistoryBuffer >= mHistoryList.size()) {
-            mHistoryBuffer = mHistoryList.size() - 1;
-        }
-        if (mHistoryBuffer < 0) {
-            mHistoryBuffer = 0;
-        }
-        setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
-        adjustHeight();
-    } else {
-        mAutoCompletionCount--;
-        handleAutoCompletion();
-    }
-}
-
-// cursor up: turns on autocompletion mode and cycles through all possible matches
+// cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
-void TCommandLine::historyUp(QKeyEvent* event)
+void TCommandLine::historyMove(MoveDirection direction)
 {
     if (mHistoryList.empty()) {
         return;
     }
-    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0)) {
-        if (toPlainText().size() != 0) {
-            mHistoryBuffer++;
-        }
+    int shift = (direction == MOVE_UP ? 1 : -1);
+    if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().size() == 0) || !mpHost->mHighlightHistory) {
+        mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {
             mHistoryBuffer = mHistoryList.size() - 1;
         }
@@ -1005,10 +1025,14 @@ void TCommandLine::historyUp(QKeyEvent* event)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
-        selectAll();
+        if (mpHost->mHighlightHistory) {
+            selectAll();
+        } else {
+            moveCursor(QTextCursor::End);
+        }
         adjustHeight();
     } else {
-        mAutoCompletionCount++;
+        mAutoCompletionCount += shift;
         handleAutoCompletion();
     }
 }
@@ -1037,7 +1061,7 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
-    if (!mpHost||!mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
         return;
     }
 
@@ -1078,22 +1102,30 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     setTextCursor(c);
 }
 
-bool TCommandLine::handleCtrlTabChange(QKeyEvent* key, int tabNumber)
+bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
 {
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
 
-    if ((key->modifiers() & allModifiers) == Qt::ControlModifier) {
+    if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
         // let user-defined Ctrl+# keys match first - and only if the user hasn't created
         // then we fallback to tab switching
-        if (keybindingMatched(key)) {
+        if (keybindingMatched(ke)) {
+            // Ah the user HAS created a matching binding:
             return true;
-        } else if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
+        }
+
+        if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
             mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
-            key->accept();
+            ke->accept();
             return true;
         }
     }
 
+    if (keybindingMatched(ke)) {
+        return true;
+    }
+
+    processNormalKey(ke);
     return false;
 }
 
@@ -1136,4 +1168,44 @@ void TCommandLine::clearMarksOnWholeLine()
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
+}
+
+void TCommandLine::setAction(const int func){
+    releaseFunc(mActionFunction, func);
+    mActionFunction = func;
+}
+
+void TCommandLine::resetAction()
+{
+    if (mActionFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(mActionFunction);
+        mActionFunction = 0;
+    }
+}
+
+// This function deferences previous functions in the Lua registry.
+// This allows the functions to be safely overwritten.
+void TCommandLine::releaseFunc(const int existingFunction, const int newFunction)
+{
+    if (newFunction != existingFunction) {
+        mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
+    }
+}
+
+//This method adds word to internal suggestion list for command line tab auto completion
+void TCommandLine::addSuggestion(const QString& suggestion)
+{
+    commandLineSuggestions += suggestion;
+}
+
+//This method removes word from internal suggestion list for command line tab auto completion
+void TCommandLine::removeSuggestion(const QString& suggestion)
+{
+    commandLineSuggestions.remove(suggestion);
+}
+
+//This method clears all suggestions added for command line
+void TCommandLine::clearSuggestions()
+{
+    commandLineSuggestions.clear();
 }

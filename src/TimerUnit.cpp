@@ -26,6 +26,13 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
+TimerUnit::~TimerUnit()
+{
+    for (auto&& timer : qAsConst(mQTimerSet)) {
+        delete timer;
+    }
+}
+
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
     std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
@@ -61,7 +68,7 @@ void TimerUnit::compileAll()
 {
     for (auto timer : mTimerRootNodeList) {
         if (timer->isActive()) {
-            timer->mNeedsToBeCompiled = true;
+            timer->compileAll();
         }
     }
 }
@@ -98,7 +105,7 @@ void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPositi
     }
 
     mTimerMap.insert(pT->getID(), pT);
-    // kein lookup table eintrag siehe addTimer()
+    // no lookup table entry - see addTimer()
 }
 
 void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition, int childPosition)
@@ -159,20 +166,12 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
 
 TTimer* TimerUnit::getTimer(int id)
 {
-    if (mTimerMap.find(id) != mTimerMap.end()) {
-        return mTimerMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mTimerMap.value(id);
 }
 
 TTimer* TimerUnit::getTimerPrivate(int id)
 {
-    if (mTimerMap.find(id) != mTimerMap.end()) {
-        return mTimerMap.value(id);
-    } else {
-        return nullptr;
-    }
+    return mTimerMap.value(id);
 }
 
 bool TimerUnit::registerTimer(TTimer* pT)

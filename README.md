@@ -9,10 +9,6 @@
 <h4 align="center">Play immersive, multiplayer, pure-text RPGs on Mudlet.</h4>
 
 <p align="center">
-  <a href="http://mudlet.org/download/">
-    <img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development"
-         alt="Build status">
-  </a>
   <a href="https://discord.gg/kuYvMQ9">
     <img src="https://discordapp.com/api/guilds/283581582550237184/embed.png?style=shield">
   </a>
@@ -21,6 +17,14 @@
   </a>
   <a href="https://github.com/Mudlet/Mudlet/stargazers">
     <img src="https://img.shields.io/github/stars/Mudlet/Mudlet.svg"/>
+  </a>
+  <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
+    <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
+  </a>
+  <br>
+  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" alt="AppVeyor (Windows) CI Build status" style="max-width:100%;">
+  </a>
+  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" alt="Travis (Linux &amp; MacOs) CI Build status" style="max-width:100%;">
   </a>
 </p>
 

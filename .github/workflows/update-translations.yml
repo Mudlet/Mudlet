@@ -1,17 +1,17 @@
 name: Update texts for translators
-on:
-  push:
-    branches:
-      - 'release-**'
 
+on:
   schedule:
-    - cron:  '0 0 * * fri'
+    - cron: '0 0 * * fri'
+
+  workflow_dispatch:
 
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v2
       with:
         ref: development
         submodules: true
@@ -41,7 +41,7 @@ jobs:
           #### Brief overview of PR changes/additions
           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
           #### Motivation for adding to Mudlet
-          So translators can translate the new text before the upcoming release.:
+          So translators can translate the new text before the upcoming release.
         branch: update-texts-for-translators-${{ github.sha }}
         path: translations/
         commit-message: (autocommit) Updated text for translation

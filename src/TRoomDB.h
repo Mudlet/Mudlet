@@ -34,6 +34,11 @@ class TArea;
 class TMap;
 class TRoom;
 
+// well-known userData tags
+extern const QString ROOM_UI_SHOWNAME;
+extern const QString ROOM_UI_NAMEPOS;
+extern const QString ROOM_UI_NAMEFONT;  // global only
+extern const QString ROOM_UI_NAMESIZE;  // TODO
 
 class TRoomDB
 {
@@ -55,6 +60,7 @@ public:
     bool addArea(int id);
     int addArea(QString name);
     bool addArea(int id, QString name);
+    bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
     const QList<TRoom*> getRoomPtrList() const;
     const QList<TArea*> getAreaPtrList() const;
@@ -77,7 +83,6 @@ public:
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
     void restoreSingleRoom(int, TRoom*);
-    const QString getDefaultAreaName() { return mDefaultAreaName; }
 
     // This is for muds that provide hashes to rooms instead of IDs.
     // If it exists, we delete the info when deleting a room.
@@ -102,14 +107,24 @@ private:
     QMap<int, QString> areaNamesMap;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet; // Used during bulk room deletion
-    QString mUnnamedAreaName;
-    QString mDefaultAreaName;
 
-    friend class TRoom; //friend TRoom::~TRoom();
-    //friend class TMap;//bool TMap::restore(QString location);
-    //friend bool TMap::serialize(QDataStream &);
+    friend class TRoom;
     friend class XMLexport;
     friend class XMLimport;
 };
+
+// helpers to get/set bools from userdata, required for storing some bool
+// values there instead of upticking the map format
+bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue = false);
+
+// this needs to be inlined due to a compiler and/or Qt bug.
+static inline void setUserDataBool(QMap<QString, QString>& userData, const QString& key, bool value)
+{
+    if (value) {
+        userData[key] = QStringLiteral("1");
+    } else {
+        userData[key] = QStringLiteral("0");
+    }
+}
 
 #endif // MUDLET_TROOMDB_H

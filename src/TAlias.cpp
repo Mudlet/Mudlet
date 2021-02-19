@@ -24,6 +24,7 @@
 
 
 #include "Host.h"
+#include "TConsole.h"
 #include "TDebug.h"
 #include "mudlet.h"
 
@@ -34,6 +35,7 @@ TAlias::TAlias(TAlias* parent, Host* pHost)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -45,6 +47,7 @@ TAlias::TAlias(const QString& name, Host* pHost)
 , mModuleMember(false)
 , mModuleMasterFolder(false)
 , exportItem(true)
+, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -54,6 +57,14 @@ TAlias::~TAlias()
         return;
     }
     mpHost->getAliasUnit()->unregisterAlias(this);
+
+    if (isTemporary()) {
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(this);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        }
+    }
 }
 
 void TAlias::setName(const QString& name)
@@ -62,7 +73,7 @@ void TAlias::setName(const QString& name)
         mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
-    mpHost->getAliasUnit()->mLookupTable.insertMulti(name, this);
+    mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
 bool TAlias::match(const QString& toMatch)
@@ -105,11 +116,11 @@ bool TAlias::match(const QString& toMatch)
     int rc, i;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    int ovector[MAX_CAPTURE_GROUPS * 3];
 
     //cout <<" LINE="<<subject<<endl;
     if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
     } else {
         goto MUD_ERROR;
     }
@@ -117,7 +128,10 @@ bool TAlias::match(const QString& toMatch)
     if (rc < 0) {
         goto MUD_ERROR;
     } else if (rc == 0) {
-        qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+        if (mpHost->mpEditorDialog) {
+            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+        }
+        qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::cyan), QColor(Qt::black)) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> 0;
@@ -172,7 +186,7 @@ bool TAlias::match(const QString& toMatch)
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
+        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
@@ -182,7 +196,10 @@ bool TAlias::match(const QString& toMatch)
         } else if (rc < 0) {
             goto END;
         } else if (rc == 0) {
-            qDebug() << "CRITICAL ERROR: SHOULD NOT HAPPEN->pcre_info() got wrong num of cap groups ovector only has room for %d captured substrings\n";
+            if (mpHost->mpEditorDialog) {
+                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            }
+            qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
 
         for (i = 0; i < rc; i++) {
@@ -332,5 +349,15 @@ void TAlias::execute()
             return;
         }
     }
+
+    if (mRegisteredAnonymousLuaFunction) {
+        mpHost->mLuaInterpreter.call_luafunction(this);
+        return;
+    }
+
+    if (mScript.isEmpty()) {
+        return;
+    }
+
     mpHost->mLuaInterpreter.call(mFuncName, mName);
 }

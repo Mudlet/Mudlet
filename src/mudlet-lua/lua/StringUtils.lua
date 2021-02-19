@@ -65,14 +65,21 @@ end
 function string:split(delimiter)
   delimiter = delimiter or " "
   local result = { }
-  local from = 1
-  local delim_from, delim_to = string.find( self, delimiter, from  )
-  while delim_from do
-    table.insert( result, string.sub( self, from, delim_from - 1 ) )
-    from = delim_to + 1
-    delim_from, delim_to = string.find( self, delimiter, from  )
+
+  if delimiter == "" then
+    for i = 1, #self do
+      result[i] = self:sub(i,i)
+    end
+  else
+    local from = 1
+    local delim_from, delim_to = string.find( self, delimiter, from  )
+    while delim_from do
+      result[#result+1] = string.sub(self, from, delim_from - 1)
+      from = delim_to + 1
+      delim_from, delim_to = string.find( self, delimiter, from  )
+    end
+    result[#result+1] = string.sub(self, from)
   end
-  table.insert( result, string.sub( self, from  ) )
   return result
 end
 
@@ -104,4 +111,50 @@ function string:trim()
   else
     return self
   end
+end
+
+-- following functions fiddled with from https://github.com/hishamhm/f-strings/blob/master/F.lua and https://hisham.hm/2016/01/04/string-interpolation-in-lua/
+-- first bit patches load for lua 5.1.
+local load = load
+
+if _VERSION == "Lua 5.1" then
+  load = function(code, name, _, env)
+    local fn, err = loadstring(code, name)
+    if fn then
+      setfenv(fn, env)
+      return fn
+    end
+    return nil, err
+  end
+end
+
+function f(str)
+  local outer_env = _ENV or getfenv(1)
+  return (str:gsub("%b{}", function(block)
+    local code = block:match("{(.*)}")
+    local exp_env = {}
+    setmetatable(exp_env, {
+      __index = function(_, k)
+        local stack_level = 5
+        while debug.getinfo(stack_level, "") ~= nil do
+          local i = 1
+          repeat
+            local name, value = debug.getlocal(stack_level, i)
+            if name == k then
+              return value
+            end
+            i = i + 1
+          until name == nil
+          stack_level = stack_level + 1
+        end
+        return rawget(outer_env, k)
+      end,
+    })
+    local fn, err = load("return " .. code, "expression `" .. code .. "`", "t", exp_env)
+    if fn then
+      return tostring(fn())
+    else
+      error(err, 0)
+    end
+  end))
 end
