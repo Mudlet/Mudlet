@@ -2890,7 +2890,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source)
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
-    mpProgressDialog = new QProgressDialog(tr("Import JSON map data to %1\n"
+    mpProgressDialog = new QProgressDialog(tr("Importing JSON map data to %1\n"
                                               "Areas: %2 of: %3   Rooms: %4 of: %5   Labels: %6 of: %7...")
                                                    .arg(mProfileName,
                                                         QLatin1String("0"),
