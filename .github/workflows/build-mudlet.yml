@@ -292,6 +292,14 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 15
       if: runner.os == 'macOS'
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
