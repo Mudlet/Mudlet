@@ -121,6 +121,7 @@ public:
     void clearCaptureGroups();
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
+    bool callAnonymousFunction(const int func, QString name);
     bool callLabelCallbackEvent(const int func, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
@@ -609,6 +610,7 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    bool callReference(lua_State *L, QString name, int parameters);
     static bool getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);

@@ -23,14 +23,17 @@
 #include "pre_guard.h"
 #include <QMap>
 #include <QStringList>
+#include <QVector>
 #include "post_guard.h"
 
+class Host;
 // Keep together lists of links and hints associated
 class TLinkStore {
     inline static const int scmMaxLinks = 2000;
 
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
+    QMap<int, QVector<int>> mReferenceStore;
 
     int mLinkID;
     int maxLinks;
@@ -40,17 +43,21 @@ public:
 
     explicit TLinkStore(int maxLinks) : mLinkID(0), maxLinks(maxLinks) {}
 
-    int addLinks(const QStringList& links, const QStringList& hints);
+    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
 
     QStringList& getLinks(int id);
     QStringList& getHints(int id);
     QStringList getLinksConst(int id) const;
     QStringList getHintsConst(int id) const;
+    QVector<int> getReference(int id) const;
 
     int getCurrentLinkID() const;
 
     QStringList getCurrentLinks() const;
     void setCurrentLinks(const QStringList& links);
+
+private:
+    void freeReference(Host* pH, const QVector<int>& luaReference);
 };
 
 #endif //MUDLET_TLINKSTORE_H

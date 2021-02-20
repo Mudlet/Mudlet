@@ -42,6 +42,7 @@ add_test(NAME TEntityHandlerTest COMMAND TEntityHandlerTest)
 add_executable(TLinkStoreTest TLinkStoreTest.cpp ../src/TLinkStore.cpp ../src/TEntityResolver.cpp)
 add_test(NAME TLinkStoreTest COMMAND TLinkStoreTest)
 
+target_compile_definitions(TLinkStoreTest PRIVATE LinkStore_Test)
 
 file(GLOB MXP_SOURCE ../src/TMxp*.cpp ../src/MxpTag.cpp ../src/TEntityHandler.cpp ../src/TEntityResolver.cpp ../src/TStringUtils.cpp)
 list(FILTER MXP_SOURCE EXCLUDE REGEX ".*/src/TMxpMudlet.cpp")
