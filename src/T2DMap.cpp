@@ -2790,7 +2790,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 popup->popup(mapToGlobal(event->pos()));
                 return;
             }
-            // Else there is a map - though it mnight not have ANY rooms!
+            // Else there is a map - though it might not have ANY rooms!
 
             if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
                 mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
