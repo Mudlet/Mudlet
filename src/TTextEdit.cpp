@@ -118,11 +118,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    QPalette palette;
-    palette.setColor(QPalette::Text, mFgColor);
-    palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    palette.setColor(QPalette::Base, mBgColor);
-    setPalette(palette);
     showNewLines();
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
