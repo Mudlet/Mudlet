@@ -4056,7 +4056,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         return warnArgumentValue(L, __func__, QStringLiteral("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
     }
 
-    if (lua_result) {
+    if (!lua_result) {
         return warnArgumentValue(L, __func__, QStringLiteral("label name '%1' not found").arg(labelName));
     }
     lua_pushboolean(L, true);
