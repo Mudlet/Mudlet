@@ -71,7 +71,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.0' # avoid regression with Qt 5.14+
+        aqtversion: '==1.1.2'
 
 
     - name: Restore Boost cache
