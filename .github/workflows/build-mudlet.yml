@@ -62,7 +62,7 @@ jobs:
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
@@ -71,6 +71,8 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{steps.cache-qt.outputs.cache-hit}}
+        aqtversion: '==1.1.2'
+
 
     - name: Restore Boost cache
       uses: actions/cache@v2.1.4
@@ -93,10 +95,6 @@ jobs:
         cd $BOOST_ROOT && cp -r boost_*/* .
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ failure() }}
 
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
@@ -282,30 +280,7 @@ jobs:
         if [ "${RUNNER_OS}" = "Linux" ]; then
           sudo apt-get install libgstreamer-plugins-base1.0-0 -y
         fi
-      env:
-        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-        RUNNER_OS: ${{runner.os}}
-        DEPLOY: ${{matrix.deploy}}
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
 
-
-    # - name: Setup tmate session for debugging
-    #   if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-    #   uses: mxschmitt/action-tmate@v3
-    #   env:
-    #     BUILD_FOLDER: ${{runner.workspace}}/b/ninja
-    #     RUNNER_OS: ${{runner.os}}
-    #     DEPLOY: ${{matrix.deploy}}
-    #     DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-    #     DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-    #     DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-
-
-    - name: (Linux/macOS) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
-      run: |
         ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
@@ -314,6 +289,7 @@ jobs:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v2
