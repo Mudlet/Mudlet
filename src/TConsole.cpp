@@ -1120,7 +1120,7 @@ void TConsole::reset()
     }
 }
 
-void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat)
+void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
 {
     int x = P.x();
     int y = P.y();
@@ -1137,7 +1137,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.insertInLine(P, text, standardLinkFormat);
         }
 
-        buffer.applyLink(P, P2, func, hint);
+        buffer.applyLink(P, P2, func, hint, luaReference);
 
         if (y < mEngineCursor) {
             mUpperPane->needUpdate(mUserCursor.y(), mUserCursor.y() + 1);
@@ -1147,9 +1147,9 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
     } else {
         if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
+                buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
             } else {
-                buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat);
+                buffer.addLink(mTriggerEngineMode, text, func, hint, standardLinkFormat, luaReference);
             }
 
             mUpperPane->showNewLines();
@@ -1162,7 +1162,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
                 buffer.insertInLine(mUserCursor, text, standardLinkFormat);
             }
 
-            buffer.applyLink(P, P2, func, hint);
+            buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
                 int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
@@ -1261,9 +1261,9 @@ void TConsole::insertText(const QString& msg)
     insertText(msg, mUserCursor);
 }
 
-void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat)
+void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat, QVector<int> luaReference)
 {
-    insertLink(text, func, hint, mUserCursor, customFormat);
+    insertLink(text, func, hint, mUserCursor, customFormat, luaReference);
 }
 
 void TConsole::insertHTML(const QString& text)
@@ -1591,9 +1591,9 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
     return std::make_tuple(true, text, start, length);
 }
 
-void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
+void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
 {
-    buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
+    buffer.applyLink(P_begin, P_end, linkFunction, linkHint, linkReference);
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }
@@ -1686,13 +1686,13 @@ void TConsole::printCommand(QString& msg)
     }
 }
 
-void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat)
+void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hint, bool customFormat, QVector<int> luaReference)
 {
     if (customFormat) {
-        buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent);
+        buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
     } else {
         TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
-        buffer.addLink(mTriggerEngineMode, text, func, hint, f);
+        buffer.addLink(mTriggerEngineMode, text, func, hint, f, luaReference);
     }
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
