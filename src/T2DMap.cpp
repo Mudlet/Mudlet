@@ -1251,7 +1251,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         auto font(painter.font());
         font.setPointSize(10);
         painter.setFont(font);
-        auto message = mpMap->mpRoomDB->size() == 0 ? tr("You do not have a map yet - load one, or start mapping from scratch to begin.") : tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size()); 
+        auto message = mpMap->mpRoomDB
+                ? tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", "", mpMap->mpRoomDB->size())
+                : tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
         painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
         painter.restore();
         return;
@@ -2293,6 +2295,10 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
     if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
+    if (!mpMap||!mpMap->mpRoomDB) {
+        // No map loaded!
+        return;
+    }
     int x = event->x();
     int y = event->y();
     mPHighlight = QPoint(x, y);
@@ -2480,11 +2486,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             // But NOT if got one or more rooms already selected!
             TArea* pA = mpMap->mpRoomDB->getArea(mAreaID);
             if (pA) {
-                TArea* pArea = pA;
                 float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
                 float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
                 QPointF pc = QPointF(mx, my);
-                QSetIterator<int> itRoom = pArea->rooms;
+                QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
                     int currentRoomId = itRoom.next();
                     TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomId);
@@ -2572,12 +2577,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             // Not in a context menu, so start selection mode - including drag to select if not in viewOnly mode
             mMultiSelection = !mMapViewOnly;
             mMultiRect = QRect(event->pos(), event->pos());
-            int _roomID = mRoomID;
-            if (!mpMap->mpRoomDB->getRoom(_roomID)) {
+            if (!mpMap->mpRoomDB->getRoom(mRoomID)) {
                 return;
             }
-            int _areaID = mAreaID;
-            TArea* pArea = mpMap->mpRoomDB->getArea(_areaID);
+            TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
             if (!pArea) {
                 return;
             }
@@ -2586,8 +2589,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             if (!event->modifiers().testFlag(Qt::ControlModifier)) {
                 if (!mMapViewOnly) {
-                  // If control key NOT down then clear selection, and put up helpful text
-                  mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
+                    // If control key NOT down then clear selection, and put up helpful text
+                    mHelpMsg = tr("Drag to select multiple rooms or labels, release to finish...", "2D Mapper big, bottom of screen help message");
                 }
                 mMultiSelectionSet.clear();
             }
@@ -2680,7 +2683,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     }
 
-
     if (event->buttons() & Qt::RightButton) {
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true);
@@ -2723,38 +2725,37 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
         }
 
-        auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
         auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
-
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
-
             mMultiRect = QRect(event->pos(), event->pos());
             float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
             float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
-            QSetIterator<int> itRoom(pArea->getAreaRooms());
-            while (itRoom.hasNext()) { // Scan to find rooms in selection
-                int currentAreaRoom = itRoom.next();
-                TRoom *room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-                if (!room) {
-                    continue;
-                }
-                int rx = room->x * mRoomWidth + fx;
-                int ry = room->y * -1 * mRoomHeight + fy;
-                int rz = room->z;
-
-                int mx = event->pos().x();
-                int my = event->pos().y();
-                int mz = mOz;
-                if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
-                    if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
-                        mMultiSelectionSet.remove(currentAreaRoom);
-                    } else {
-                        mMultiSelectionSet.insert(currentAreaRoom);
+            if (pArea) {
+                QSetIterator<int> itRoom(pArea->getAreaRooms());
+                while (itRoom.hasNext()) { // Scan to find rooms in selection
+                    int currentAreaRoom = itRoom.next();
+                    TRoom *room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
+                    if (!room) {
+                        continue;
                     }
+                    int rx = room->x * mRoomWidth + fx;
+                    int ry = room->y * -1 * mRoomHeight + fy;
+                    int rz = room->z;
 
-                    if (!mMultiSelectionSet.empty()) {
-                        mMultiSelection = false;
+                    int mx = event->pos().x();
+                    int my = event->pos().y();
+                    int mz = mOz;
+                    if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
+                        if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
+                            mMultiSelectionSet.remove(currentAreaRoom);
+                        } else {
+                            mMultiSelectionSet.insert(currentAreaRoom);
+                        }
+
+                        if (!mMultiSelectionSet.empty()) {
+                            mMultiSelection = false;
+                        }
                     }
                 }
             }
@@ -2773,7 +2774,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     getCenterSelection();
             }
 
-            if (!playerRoom || !pArea) {
+            if (!mpMap||!mpMap->mpRoomDB) {
+                // No map loaded
                 auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
 
@@ -2788,6 +2790,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 popup->popup(mapToGlobal(event->pos()));
                 return;
             }
+            // Else there is a map - though it might not have ANY rooms!
 
             if (mMultiSelectionSet.isEmpty() && !mMapViewOnly) {
                 mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);

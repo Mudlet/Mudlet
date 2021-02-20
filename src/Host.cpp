@@ -3559,7 +3559,7 @@ void Host::createMapper(bool loadDefaultMap)
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
     mpDockableMapWidget->setWidget(pMap->mpMapper);
 
-    if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
+    if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
         pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
         QDateTime now(QDateTime::currentDateTime());
