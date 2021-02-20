@@ -707,6 +707,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
     }
 }
 
+// Does NOT act on the TMainConsole itself:
 bool TMainConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
     auto pC = mSubConsoleMap.value(name);
@@ -1063,6 +1064,7 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
 {
     if (name.isEmpty() || name.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         mFormatCurrent.setTextFormat(fgColor, bgColor, flags);
+        mSystemMessageBgColor = bgColor;
         return true;
     }
 
