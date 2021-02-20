@@ -51,7 +51,8 @@ public:
     TArea* getArea(int id);
     TArea* getRawArea(int, bool*);
     bool addRoom(int id);
-    int size() { return rooms.size(); }
+    int size() const { return rooms.size(); }
+    bool isEmpty() const { return rooms.isEmpty(); }
     bool removeRoom(int);
     void removeRoom(QSet<int>&);
     bool removeArea(int id);

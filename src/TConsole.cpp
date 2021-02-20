@@ -773,7 +773,8 @@ void TConsole::closeEvent(QCloseEvent* event)
         mpHost->modulesToWrite.clear();
         mpHost->saveProfile();
 
-        if (mpHost->mpMap->mpRoomDB->size() > 0) {
+        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
+            // There is a map loaded - but it *could* have no rooms at all!
             QDir dir_map;
             QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
             QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
@@ -811,7 +812,8 @@ void TConsole::closeEvent(QCloseEvent* event)
             if (!std::get<0>(result)) {
                 QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
                 goto ASK;
-            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
+            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
+                // There is a map loaded - but it *could* have no rooms at all!
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd#HH-mm-ss")));
