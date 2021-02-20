@@ -36,6 +36,9 @@
 cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
+  # needed for fetching Sparkle
+  cmake_minimum_required(VERSION 3.18)
+  # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()
 
@@ -147,12 +150,15 @@ if(APPLE)
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(
-        STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it..."
+        STATUS "Sparkle is missing, fetching it..."
       )
-      execute_process(
-        TIMEOUT 30
-        WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
-        COMMAND pod install)
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0-rc1/Sparkle-1.25.0rc1.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz"
+        TIMEOUT 60  # seconds
+        TLS_VERIFY ON
+      )
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz"
+        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz")
     endif()
   endif()
 endif()
