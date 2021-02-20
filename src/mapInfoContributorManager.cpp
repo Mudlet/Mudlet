@@ -92,7 +92,10 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     if (room) {
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         static const QRegularExpression trailingPunctuation(QStringLiteral("[.,/]+$"));
-        auto roomName = QString(room->name).remove(trailingPunctuation).trimmed();
+        auto roomName = QString(room->name);
+        if (mpHost->mMapViewOnly) {
+            roomName = roomName.remove(trailingPunctuation).trimmed();
+        }
         auto roomFragment = !roomName.isEmpty() && roomName != QString::number(room->getId()) ?
             QStringLiteral("%1 / %2").arg(roomName, QString::number(room->getId())) : QString::number(room->getId());
         infoText = QStringLiteral("%1 (%2)\n").arg(roomFragment, areaName);
