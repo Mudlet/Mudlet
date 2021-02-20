@@ -62,7 +62,7 @@ jobs:
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}
+        key: ${{matrix.os}}-qt-${{matrix.qt}}-testtest
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
