@@ -3436,6 +3436,8 @@ void T2DMap::slot_toggleMapViewOnly()
         mapModeEvent.mArgumentList.append(mMapViewOnly ? QStringLiteral("viewing") : QStringLiteral("editing"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapModeEvent);
+
+        update();
     }
 }
 
