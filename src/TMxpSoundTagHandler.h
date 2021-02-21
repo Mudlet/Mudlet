@@ -36,13 +36,5 @@ public:
     static QString extractUrl(MxpStartTag* tag);
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
-
-private:
-    inline static const QString ATTR_FNAME = QStringLiteral("fname");
-    inline static const QString ATTR_V = QStringLiteral("v");
-    inline static const QString ATTR_L = QStringLiteral("l");
-    inline static const QString ATTR_P = QStringLiteral("p");
-    inline static const QString ATTR_T = QStringLiteral("t");
-    inline static const QString ATTR_U = QStringLiteral("u");
 };
 #endif //MUDLET_TMXPSOUNDTAGHANDLER_H

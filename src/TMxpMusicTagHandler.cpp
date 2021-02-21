@@ -96,8 +96,8 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 
 QString TMxpMusicTagHandler::extractFileName(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_FNAME)) {
-        return tag->getAttributeValue(ATTR_FNAME);
+    if (tag->hasAttribute(QStringLiteral("fname"))) {
+        return tag->getAttributeValue(QStringLiteral("fname"));
     } else if (tag->getAttributesCount() > 0) {
         return tag->getAttrName(0);
     }
@@ -107,8 +107,8 @@ QString TMxpMusicTagHandler::extractFileName(MxpStartTag* tag)
 
 QString TMxpMusicTagHandler::extractVolume(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_V)) {
-        return tag->getAttributeValue(ATTR_V);
+    if (tag->hasAttribute(QStringLiteral("v"))) {
+        return tag->getAttributeValue(QStringLiteral("v"));
     } else if (tag->getAttributesCount() > 1) {
         return tag->getAttrName(1);
     }
@@ -118,8 +118,8 @@ QString TMxpMusicTagHandler::extractVolume(MxpStartTag* tag)
 
 QString TMxpMusicTagHandler::extractLoops(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_L)) {
-        return tag->getAttributeValue(ATTR_L);
+    if (tag->hasAttribute(QStringLiteral("l"))) {
+        return tag->getAttributeValue(QStringLiteral("l"));
     } else if (tag->getAttributesCount() > 2) {
         return tag->getAttrName(2);
     }
@@ -129,8 +129,8 @@ QString TMxpMusicTagHandler::extractLoops(MxpStartTag* tag)
 
 QString TMxpMusicTagHandler::extractMusicContinue(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_C)) {
-        return tag->getAttributeValue(ATTR_C);
+    if (tag->hasAttribute(QStringLiteral("c"))) {
+        return tag->getAttributeValue(QStringLiteral("c"));
     } else if (tag->getAttributesCount() > 3) {
         return tag->getAttrName(3);
     }
@@ -140,8 +140,8 @@ QString TMxpMusicTagHandler::extractMusicContinue(MxpStartTag* tag)
 
 QString TMxpMusicTagHandler::extractType(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_T)) {
-        return tag->getAttributeValue(ATTR_T);
+    if (tag->hasAttribute(QStringLiteral("t"))) {
+        return tag->getAttributeValue(QStringLiteral("t"));
     } else if (tag->getAttributesCount() > 4) {
         return tag->getAttrName(4);
     }
@@ -151,8 +151,8 @@ QString TMxpMusicTagHandler::extractType(MxpStartTag* tag)
 
 QString TMxpMusicTagHandler::extractUrl(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(ATTR_U)) {
-        return tag->getAttributeValue(ATTR_U);
+    if (tag->hasAttribute(QStringLiteral("u"))) {
+        return tag->getAttributeValue(QStringLiteral("u"));
     } else if (tag->getAttributesCount() > 5) {
         return tag->getAttrName(5);
     }
