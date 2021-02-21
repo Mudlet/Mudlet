@@ -28,6 +28,13 @@ class TMxpSoundTagHandler : public TMxpSingleTagHandler
 public:
     TMxpSoundTagHandler() : TMxpSingleTagHandler("SOUND") {}
 
+    static QString extractFileName(MxpStartTag* tag);
+    static QString extractVolume(MxpStartTag* tag);
+    static QString extractLoops(MxpStartTag* tag);
+    static QString extractPriority(MxpStartTag* tag);
+    static QString extractType(MxpStartTag* tag);
+    static QString extractUrl(MxpStartTag* tag);
+
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 #endif //MUDLET_TMXPSOUNDTAGHANDLER_H
