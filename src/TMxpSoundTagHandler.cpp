@@ -102,7 +102,7 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     return MXP_TAG_HANDLED;
 }
 
-QString extractFileName(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractFileName(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_FNAME)) {
         return tag->getAttributeValue(ATTR_FNAME);
@@ -113,7 +113,7 @@ QString extractFileName(MxpStartTag* tag)
     return QString();
 }
 
-QString extractVolume(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractVolume(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_V)) {
         return tag->getAttributeValue(ATTR_V);
@@ -124,7 +124,7 @@ QString extractVolume(MxpStartTag* tag)
     return QString();
 }
 
-QString extractLoops(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractLoops(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_L)) {
         return tag->getAttributeValue(ATTR_L);
@@ -135,7 +135,7 @@ QString extractLoops(MxpStartTag* tag)
     return QString();
 }
 
-QString extractPriority(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractPriority(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_P)) {
         return tag->getAttributeValue(ATTR_P);
@@ -146,7 +146,7 @@ QString extractPriority(MxpStartTag* tag)
     return QString();
 }
 
-QString extractType(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractType(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_T)) {
         return tag->getAttributeValue(ATTR_T);
@@ -157,7 +157,7 @@ QString extractType(MxpStartTag* tag)
     return QString();
 }
 
-QString extractUrl(MxpStartTag* tag)
+QString TMxpSoundTagHandler::extractUrl(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_U)) {
         return tag->getAttributeValue(ATTR_U);
