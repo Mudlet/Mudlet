@@ -37,6 +37,8 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger
 {
     Q_OBJECT
 
+    QString mFG_BG_BUTTON_SSHEET;
+
 public:
     Q_DISABLE_COPY(dlgColorTrigger)
     dlgColorTrigger(QWidget*, TTrigger*, const bool isBackground, const QString &title = QString());
@@ -56,6 +58,7 @@ public slots:
 
 private:
     void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
+    QString generateButtonStyleSheet(const QColor&, const bool isEnabled = true) const;
 
     QSignalMapper* mSignalMapper;
     TTrigger* mpTrigger;

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -785,6 +785,18 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                 << tr("line spacer")
                 << tr("color trigger")
                 << tr("prompt");
+
+#if defined(Q_OS_WIN32)
+// The default "windowsvista" style used nowadays on Windows 7 and later
+// has a nasty gotcha in that just setting the background color does not
+// work on later (Qt 5.12+) versions as the border seems to expand to cover
+// the whole of the button by default:
+    mFG_BG_BUTTON_SSHEET = mudlet::self()->forceWindowsVistaPButtonFix()
+            ? QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}")
+            : QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+#else
+    mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+#endif
 
     for (int i = 0; i < 50; i++) {
         auto pItem = new dlgTriggerPatternEdit(HpatternList);
@@ -8893,7 +8905,7 @@ void dlgTriggerEditor::slot_editorContextMenu()
     delete menu;
 }
 
-QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bool isEnabled)
+QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bool isEnabled) const
 {
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     if (color != QColorConstants::Transparent && color.isValid()) {
@@ -8901,14 +8913,11 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
     if (color != QColor("transparent") && color.isValid()) {
 #endif
         if (isEnabled) {
-            return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
-                    .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
-                         color.name());
+            return mFG_BG_BUTTON_SSHEET.arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"), color.name());
         }
 
         QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        return QStringLiteral("QPushButton {color: %1; background-color: %2; }")
-                .arg(QLatin1String("darkGray"), disabledColor.name());
+        return mFG_BG_BUTTON_SSHEET.arg(QLatin1String("darkGray"), disabledColor.name());
     } else {
         return QString();
     }

@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -115,6 +115,10 @@ class translation;
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
+
+#if defined(Q_OS_WIN32)
+    bool mForceWindowsVistaPButtonFix = false;
+#endif
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -319,6 +323,10 @@ public:
     void startAutoLogin(const QString&);
     int64_t getPhysicalMemoryTotal();
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
+#if defined(Q_OS_WIN32)
+    bool forceWindowsVistaPButtonFix() const { return mForceWindowsVistaPButtonFix; }
+#endif
+
 
     FontManager mFontManager;
     Discord mDiscord;

@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2015-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2018, 2020-2021 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -144,6 +144,9 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
                  SearchResultIsValue = 0x8
     };
 
+    // Needed to work around a (likely only Windows) issue:
+    QString mFG_BG_BUTTON_SSHEET;
+
 public:
     // This needs to be public so that the options can be used from the Host class:
     enum SearchOption {
@@ -198,7 +201,7 @@ public:
     void setThemeAndOtherSettings(const QString&);
     // Helper to ensure the foreground color for a button is always
     // readable/contrasts with the background when the latter is colored@
-    static QString generateButtonStyleSheet(const QColor& color, const bool isEnabled = true);
+    QString generateButtonStyleSheet(const QColor& color, const bool isEnabled = true) const;
     // Reader of the above - is a bit simple and may not work if the
     // stylesheetText has more that one item being styled with a "color" and
     // "background-color" attribute:

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2021 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -66,6 +66,7 @@
 #include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QStyleFactory>
 #include <QTableWidget>
 #include <QTextStream>
 #include <QTimer>
@@ -259,6 +260,16 @@ mudlet::mudlet()
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
     loadTranslators(mInterfaceLanguage);
 
+#if defined(Q_OS_WIN32)
+    if (QStyleFactory::keys().contains(QLatin1String("windowsvista"))) {
+        if (qApp->style()->objectName() == QLatin1String("windowsvista")) {
+            mForceWindowsVistaPButtonFix = true;
+            qDebug().nospace().noquote() << "mudlet::mudlet() INFO - \"windowsvista\" has been detected as the style factory in use!";
+        } else {
+            qDebug().nospace().noquote() << "mudlet::mudlet() INFO - \"windowsvista\" has NOT been detected as the style factory in use!";
+        }
+    }
+#endif
     setupUi(this);
     setUnifiedTitleAndToolBarOnMac(true);
     setContentsMargins(0, 0, 0, 0);

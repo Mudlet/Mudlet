@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2018-2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2018-2019, 2021 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -36,6 +36,18 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
 , mpTrigger(pT)
 , mIsBackground(isBackGround)
 {
+#if defined(Q_OS_WIN32)
+// The default "windowsvista" style used nowadays on Windows 7 and later
+// has a nasty gotcha in that just setting the background color does not
+// work on later (Qt 5.12+) versions as the border seems to expand to cover
+// the whole of the button by default:
+    mFG_BG_BUTTON_SSHEET = mudlet::self()->forceWindowsVistaPButtonFix()
+            ? QStringLiteral("QPushButton {color: %1; background-color: %2; border: 1px solid #8f8f91;}")
+            : QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+#else
+    mFG_BG_BUTTON_SSHEET = QStringLiteral("QPushButton {color: %1; background-color: %2;}");
+#endif
+
     // init generated dialog
     setupUi(this);
 
@@ -219,7 +231,7 @@ void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor
                         // Intentional comment to separate arguments
                         "Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places")
                      .arg(colorText, QString::number(ansiColor)));
-    pButton->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(color));
+    pButton->setStyleSheet(generateButtonStyleSheet(color));
 }
 
 void dlgColorTrigger::slot_rgbColorChanged()
@@ -230,7 +242,7 @@ void dlgColorTrigger::slot_rgbColorChanged()
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
-    label_rgbValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mRgbAnsiColor)
+    label_rgbValue->setStyleSheet(generateButtonStyleSheet(mRgbAnsiColor)
                                   .replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
 }
 
@@ -279,7 +291,7 @@ void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
     // the generated stylesheet:
-    label_grayValue->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(mGrayAnsiColor)
+    label_grayValue->setStyleSheet(generateButtonStyleSheet(mGrayAnsiColor)
                                    .replace(QLatin1String("QPushButton"), QLatin1String("QLabel")));
 
     if (horizontalSlider_gray->value() != sliderValue) {
@@ -410,5 +422,23 @@ void dlgColorTrigger::slot_moreColorsClicked()
 
     if (groupBox_grayScale->isHidden()) {
         groupBox_grayScale->show();
+    }
+}
+
+QString dlgColorTrigger::generateButtonStyleSheet(const QColor& color, const bool isEnabled) const
+{
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    if (color != QColorConstants::Transparent && color.isValid()) {
+#else
+    if (color != QColor("transparent") && color.isValid()) {
+#endif
+        if (isEnabled) {
+            return mFG_BG_BUTTON_SSHEET.arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"), color.name());
+        }
+
+        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
+        return mFG_BG_BUTTON_SSHEET.arg(QLatin1String("darkGray"), disabledColor.name());
+    } else {
+        return QString();
     }
 }
