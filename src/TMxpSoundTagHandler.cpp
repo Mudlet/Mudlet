@@ -102,7 +102,6 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     return MXP_TAG_HANDLED;
 }
 
-
 QString extractFileName(MxpStartTag* tag)
 {
     if (tag->hasAttribute(ATTR_FNAME)) {
