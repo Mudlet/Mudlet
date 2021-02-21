@@ -54,8 +54,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
                  "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
-                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields"
-                 "Cleft of Dimensions", "CoreMUD"})
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD", "Carrion Fields",
+                 "Cleft of Dimensions", "CoreMUD", "God Wars II", "Slothmud"})
 {
     setupUi(this);
 
