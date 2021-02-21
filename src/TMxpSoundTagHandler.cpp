@@ -91,12 +91,12 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
         } else {
             client.playMedia(mediaData);
         }
-    }
 
-    if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
-        client.stopMedia(mediaData);
-    } else {
-        client.playMedia(mediaData);
+        if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
+            client.stopMedia(mediaData);
+        } else {
+            client.playMedia(mediaData);
+        }
     }
 
     return MXP_TAG_HANDLED;
