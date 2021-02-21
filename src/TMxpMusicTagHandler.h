@@ -28,6 +28,21 @@ class TMxpMusicTagHandler : public TMxpSingleTagHandler
 public:
     TMxpMusicTagHandler() : TMxpSingleTagHandler("MUSIC") {}
 
+    static QString extractFileName(MxpStartTag* tag);
+    static QString extractVolume(MxpStartTag* tag);
+    static QString extractLoops(MxpStartTag* tag);
+    static QString extractMusicContinue(MxpStartTag* tag);
+    static QString extractType(MxpStartTag* tag);
+    static QString extractUrl(MxpStartTag* tag);
+
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
+
+private:
+    inline static const QString ATTR_FNAME = QStringLiteral("fname");
+    inline static const QString ATTR_V = QStringLiteral("v");
+    inline static const QString ATTR_L = QStringLiteral("l");
+    inline static const QString ATTR_C = QStringLiteral("c");
+    inline static const QString ATTR_T = QStringLiteral("t");
+    inline static const QString ATTR_U = QStringLiteral("u");
 };
 #endif //MUDLET_TMXPMUSICTAGHANDLER_H

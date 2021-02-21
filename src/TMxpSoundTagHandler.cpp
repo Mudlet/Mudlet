@@ -25,14 +25,22 @@
 TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    TMediaData mediaData {};
 
-    mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
-    mediaData.setMediaType(TMediaData::MediaTypeSound);
-    mediaData.setMediaFileName(tag->getAttributeValue("FName"));
+    QString fileName = extractFileName(tag);
 
-    if (tag->hasAttribute("V")) {
-        QString volume = tag->getAttributeValue("V");
+    if (!fileName.isEmpty()) {
+        QString volume = extractVolume(tag);
+        QString loops = extractLoops(tag);
+        QString priority = extractPriority(tag);
+        QString type = extractType(tag);
+        QString url = extractUrl(tag);
+
+        TMediaData mediaData {};
+
+        mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
+        mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+        mediaData.setMediaFileName(fileName);
 
         if (!volume.isEmpty()) {
             mediaData.setMediaVolume(volume.toInt());
@@ -44,11 +52,9 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
             } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
                 mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
             }
+        } else {
+            mediaData.setMediaVolume(TMediaData::MediaVolumeMax); // MSP the Max is the Default
         }
-    }
-
-    if (tag->hasAttribute("L")) {
-        QString loops = tag->getAttributeValue("L");
 
         if (!loops.isEmpty()) {
             mediaData.setMediaLoops(loops.toInt());
@@ -56,11 +62,9 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
             if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
                 mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
             }
+        } else {
+            mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
         }
-    }
-
-    if (tag->hasAttribute("P")) {
-        QString priority = tag->getAttributeValue("P");
 
         if (!priority.isEmpty()) {
             mediaData.setMediaPriority(priority.toInt());
@@ -70,22 +74,22 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
             } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
                 mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
             }
+        } else {
+            mediaData.setMediaPriority(TMediaData::MediaPriorityDefault);
         }
-    }
-
-    if (tag->hasAttribute("T")) {
-        QString type = tag->getAttributeValue("T");
 
         if (!type.isEmpty()) {
             mediaData.setMediaTag(type.toLower());
         }
-    }
-
-    if (tag->hasAttribute("U")) {
-        QString url = tag->getAttributeValue("U");
 
         if (!url.isEmpty()) {
             mediaData.setMediaUrl(url);
+        }
+
+        if (mediaData.getMediaFileName() == "Off" && mediaData.getMediaUrl().isEmpty()) {
+            client.stopMedia(mediaData);
+        } else {
+            client.playMedia(mediaData);
         }
     }
 
@@ -96,4 +100,71 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
     }
 
     return MXP_TAG_HANDLED;
+}
+
+
+QString extractFileName(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_FNAME)) {
+        return tag->getAttributeValue(ATTR_FNAME);
+    } else if (tag->getAttributesCount() > 0) {
+        return tag->getAttrName(0);
+    }
+
+    return QString();
+}
+
+QString extractVolume(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_V)) {
+        return tag->getAttributeValue(ATTR_V);
+    } else if (tag->getAttributesCount() > 1) {
+        return tag->getAttrName(1);
+    }
+
+    return QString();
+}
+
+QString extractLoops(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_L)) {
+        return tag->getAttributeValue(ATTR_L);
+    } else if (tag->getAttributesCount() > 2) {
+        return tag->getAttrName(2);
+    }
+
+    return QString();
+}
+
+QString extractPriority(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_P)) {
+        return tag->getAttributeValue(ATTR_P);
+    } else if (tag->getAttributesCount() > 3) {
+        return tag->getAttrName(3);
+    }
+
+    return QString();
+}
+
+QString extractType(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_T)) {
+        return tag->getAttributeValue(ATTR_T);
+    } else if (tag->getAttributesCount() > 4) {
+        return tag->getAttrName(4);
+    }
+
+    return QString();
+}
+
+QString extractUrl(MxpStartTag* tag)
+{
+    if (tag->hasAttribute(ATTR_U)) {
+        return tag->getAttributeValue(ATTR_U);
+    } else if (tag->getAttributesCount() > 5) {
+        return tag->getAttrName(5);
+    }
+
+    return QString();
 }
