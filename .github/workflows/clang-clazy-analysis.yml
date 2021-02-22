@@ -1,4 +1,4 @@
-name: Clang-Tidy and Clazy checks
+name: Static analysis checks
 on:
   push:
     branches: [master, development]
