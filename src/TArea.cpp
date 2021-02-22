@@ -701,7 +701,6 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
-    QMap<QString, QString> results;
     if (obj.isEmpty()) {
         // Skip doing anything more if there is nothing to do:
         return;

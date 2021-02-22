@@ -1074,7 +1074,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
-    QList<int> areasWithData; // TODO: Remove when versions < 17 are not an option
     while (itAreaList.hasNext()) {
         itAreaList.next();
         int areaID = itAreaList.key();
