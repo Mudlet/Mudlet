@@ -152,13 +152,13 @@ if(APPLE)
       message(
         STATUS "Sparkle is missing, fetching it..."
       )
-      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0-rc1/Sparkle-1.25.0rc1.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz"
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/1.25.0/Sparkle-1.25.0.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
         TIMEOUT 60  # seconds
         TLS_VERIFY ON
       )
-      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz"
+      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz"
         DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0rc1.tar.xz")
+      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-1.25.0.tar.xz")
     endif()
   endif()
 endif()
