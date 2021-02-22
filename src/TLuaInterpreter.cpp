@@ -1556,7 +1556,6 @@ int TLuaInterpreter::getMapMenus(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMapEvent
 int TLuaInterpreter::addMapEvent(lua_State* L)
 {
-    QString eventName, parent, displayName;
     QStringList actionInfo;
     QString uniqueName = getVerifiedString(L, __func__, 1, "uniquename");
     actionInfo << getVerifiedString(L, __func__, 2, "event name");
@@ -11343,7 +11342,6 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
 
     QString thing = QString(R"(return get_formatted_code(get_ast("%1"), {indent_chunk = '  ', right_margin = 100, max_text_width = 160, keep_comments = true}))").arg(escapedCode);
     int error = luaL_dostring(L, thing.toUtf8().constData());
-    QString n;
     if (error != 0) {
         std::string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
@@ -11403,7 +11401,6 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
                                  strlen(code.toUtf8().constData()),
                                  name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
 
-    QString n;
     if (error != 0) {
         std::string e = "Lua syntax error:";
         if (lua_isstring(L, 1)) {
@@ -12184,12 +12181,10 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
             }
         }
         lua_pop(L, lua_gettop(L));
-        //lua_settop(L, 0);
         if (error == 0) {
             return {true, returnValue};
-        } else {
-            return {false, returnValue};
         }
+        return {false, returnValue};
     } else {
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
@@ -12814,7 +12809,6 @@ int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, 
         while (lua_next(L, pos + 3) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                QString cmd = lua_tostring(L, -1);
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
@@ -12895,7 +12889,6 @@ int TLuaInterpreter::getHTTP(lua_State* L)
         while (lua_next(L, 2) != 0) {
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
-                QString cmd = lua_tostring(L, -1);
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,
@@ -12950,7 +12943,6 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
 
-                QString cmd = lua_tostring(L, -1);
                 request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
             } else {
                 lua_pushfstring(L,

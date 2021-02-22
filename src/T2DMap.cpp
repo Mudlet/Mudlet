@@ -2210,7 +2210,6 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         return;
     }
 
-    QString infoText;
     int roomID = mRoomID;
     if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
         if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
