@@ -21,8 +21,8 @@ jobs:
 
     - name: Retrieve latest PTB version
       run: |
-        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64 | jq ".releases[0].version")
-        export PTB_COMMIT=$(lua -e "print(os.getenv('PTB_VERSION'):match('.+\-(.+)\"$'))")
+        export PTB_VERSION=$(curl --silent https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64 | jq --raw-output ".releases[0].version")
+        export PTB_COMMIT=$(lua -e "print(os.getenv('PTB_VERSION'):match('.+\-(.+)$'))")
 
         echo "Latest PTB version is: $PTB_VERSION"
         echo "Latest PTB commit is: $PTB_COMMIT"
