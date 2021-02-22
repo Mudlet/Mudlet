@@ -12185,11 +12185,11 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         }
         lua_pop(L, lua_gettop(L));
         //lua_settop(L, 0);
-        if (error == 0) {
+        if (error == 0)
             return {true, returnValue};
-        } else {
+        else
             return {false, returnValue};
-        }
+
     } else {
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
