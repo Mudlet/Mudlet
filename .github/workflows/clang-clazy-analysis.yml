@@ -98,7 +98,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-10 10
         sudo update-alternatives --set clang /usr/bin/clang-10
         sudo update-alternatives --set clang++ /usr/bin/clang++-10
-        sudo update-alternatives --set clang++ /usr/bin/clang-tidy-10
+        sudo update-alternatives --set clang-tidy /usr/bin/clang-tidy-10
 
     - name: (Linux Clang) change compiler
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
