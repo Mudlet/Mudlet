@@ -15290,7 +15290,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     QString title = getVerifiedString(L, __func__, 1, "title");
     QString text = title;
     if (n >= 2) {
-        QString text = getVerifiedString(L, __func__, 2, "message");
+        text = getVerifiedString(L, __func__, 2, "message");
     }
     int notificationExpirationTime = 1;
     if (n >= 3) {
