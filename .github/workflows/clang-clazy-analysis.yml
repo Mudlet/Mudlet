@@ -90,7 +90,7 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install clazy pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
+        sudo apt-get install clazy clang-tidy pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
@@ -113,12 +113,22 @@ jobs:
     - name: (Linux) Setup Clang-Tidy and Clazy configuration
       if: runner.os == 'Linux'
       run: |
+        # Clazy configuration
         {
           echo "CLAZY_IGNORE_DIRS=.*lib_dir.*|.*3rdparty.*"
           echo "CLAZY_CHECKS=level0,level1,level2,isempty-vs-count,qhash-with-char-pointer-key,qproperty-type-mismatch"
         } >> "$GITHUB_ENV"
 
-    - name: Build Mudlet
+        # Clang-tidy configuration
+
+        # Configure which analyser to use
+        if [ "{{$matrix.buildname}}" = "clazy" ]; then
+          echo "ANALYSIS_TOOL=-DCMAKE_CXX_COMPILER=clazy" >> $GITHUB_ENV
+        else
+          echo "ANALYSIS_TOOL=-DCMAKE_CXX_CLANG_TIDY=clang-tidy" >> $GITHUB_ENV
+        fi
+
+    - name: Build Mudlet and run ${{matrix.buildname}}
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
@@ -131,7 +141,7 @@ jobs:
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_CXX_FLAGS=-Wno-everything
-          -DCMAKE_CXX_COMPILER=clazy
+          $ANALYSIS_TOOL
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
