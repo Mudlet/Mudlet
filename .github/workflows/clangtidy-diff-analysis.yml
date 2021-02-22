@@ -1,4 +1,4 @@
-name: Clang-Tidy checks for the diff only
+name: 🔍 Clang-Tidy checks for the diff only
 
 on: [pull_request]
 
