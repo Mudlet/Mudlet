@@ -3758,7 +3758,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
         return number >= 0 && number <= 255;
     };
 
-    if (lua_isstring(L, s)) {
+    if (lua_type(L, s) == LUA_TSTRING) {
         windowName = WINDOW_NAME(L, s++);
         r = getVerifiedInt(L, __func__, s, "red value 0-255");
         if (!validRange(r)) {
