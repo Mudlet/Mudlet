@@ -58,4 +58,4 @@ jobs:
         } >> "$GITHUB_ENV"
 
     - name: Install dblsqd client
-      run: npm install -g dblsqd-cli
+      run: sudo npm install -g dblsqd-cli
