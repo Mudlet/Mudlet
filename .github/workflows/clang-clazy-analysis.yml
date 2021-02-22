@@ -115,7 +115,7 @@ jobs:
       run: |
         # Clazy configuration
         {
-          echo "CLAZY_IGNORE_DIRS=.*lib_dir.*|.*3rdparty.*"
+          echo "CLAZY_IGNORE_DIRS=.*lib_dir.*|.*3rdparty.*|.*Qt.*"
           echo "CLAZY_CHECKS=level0,level1,level2,isempty-vs-count,qhash-with-char-pointer-key,qproperty-type-mismatch"
         } >> "$GITHUB_ENV"
 
