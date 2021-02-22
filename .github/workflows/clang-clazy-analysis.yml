@@ -115,7 +115,7 @@ jobs:
       run: |
         {
           echo "CLAZY_IGNORE_DIRS=.*lib_dir.*|.*3rdparty.*"
-          echo "CLAZY_CHECKS=level0,level1,level2,no-ctor-missing-parent-argument,isempty-vs-count,qhash-with-char-pointer-key,raw-environment-function,qproperty-type-mismatch"
+          echo "CLAZY_CHECKS=level0,level1,level2,isempty-vs-count,qhash-with-char-pointer-key,qproperty-type-mismatch"
         } >> "$GITHUB_ENV"
 
     - name: Build Mudlet
